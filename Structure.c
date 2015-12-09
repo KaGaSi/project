@@ -224,7 +224,7 @@ void ReadFIELD(Counts *Counts, BeadType **BeadType, MoleculeType **MoleculeType)
   fclose(fr);
 } //}}}
 
-// ReadMesoVsf() //{{{
+// ReadVsf() //{{{
 /**
  * Function reading bead id numbers from provided vsf file.
  * It pairs the bead ids with their bead types.
@@ -326,6 +326,17 @@ void ReadVsf(char *file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 
   fclose(fr);
 } //}}}
+
+void ReadStructure(char *file, Counts *Counts, BeadType *BeadType, Bead **Bead,
+                   MoleculeType *MoleculeType, Molecule **Molecule) {
+
+  // Counts is actually *Counts - so no &Counts
+  ReadFIELD(Counts, &BeadType, &MoleculeType);
+
+  // Counts is pointer, so *Counts to pass by value
+  // Bead is in reality **Bead, so no &Bead
+  ReadVsf(file, *Counts, BeadType, Bead);
+}
 
 // WriteVsf() //{{{
 /**
