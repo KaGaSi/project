@@ -6,8 +6,8 @@
 #include "Structure.h"
 #include "Aux.h"
 
-// ReadField() //{{{
-/**
+// ReadFIELD() //{{{
+/*
  * Function reading information about all bead types (name, mass, charge)
  * from 'species' lines in FIELD. Information about molecule types from
  * 'molecule' lines are read: number of molecule types, their names, number
@@ -225,7 +225,7 @@ void ReadFIELD(Counts *Counts, BeadType **BeadType, MoleculeType **MoleculeType)
 } //}}}
 
 // ReadVsf() //{{{
-/**
+/*
  * Function reading bead id numbers from provided vsf file.
  * It pairs the bead ids with their bead types.
  */
@@ -280,6 +280,19 @@ void ReadVsf(char *file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   while (strncmp(str, "atom", 1) == 0) {
     int id_new;
 
+//for (int i = 0; i < Counts.TypesOfBeads; i++) { //{{{
+//  printf("\n%d\n", i);
+//  printf("%s\n", BeadType[i].Name);
+//  printf("%lf\n", BeadType[i].Charge);
+//  printf("%lf\n", BeadType[i].Mass);
+//  printf("%d\n", BeadType[i].Number);
+//}
+//printf("\n%d\n", Counts.Bonded);
+//printf("%d\n", Counts.Unbonded);
+//printf("%d\n", Counts.TypesOfBeads);
+//printf("%d\n", Counts.TypesOfMolecules);
+//printf("%d\n", Counts.Molecules); //}}}
+
     // read bead id //{{{
     if (fscanf(fr, "%d", &id_new) != 1) {
       fprintf(stderr, "Cannot read bead <id> from %s file!\n", file);
@@ -327,16 +340,50 @@ void ReadVsf(char *file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   fclose(fr);
 } //}}}
 
-void ReadStructure(char *file, Counts *Counts, BeadType *BeadType, Bead **Bead,
-                   MoleculeType *MoleculeType, Molecule **Molecule) {
+// ReadStrucute() //{{{
+/*
+ * Function combining ReadFIELD() and ReasVsf() to read complete
+ * information about all beads and molecules
+ */
+/** Function reading information about beads and molecules from DL_MESO
+ * FIELD file (names, numbers, charge, mass, bonds) and assigning types to
+ * beads according to dl_meso.vsf structure file.
+ */
+void ReadStructure(char *file, Counts *Counts, BeadType **BeadType, Bead **Bead,
+                   MoleculeType **MoleculeType, Molecule **Molecule) {
 
   // Counts is actually *Counts - so no &Counts
-  ReadFIELD(Counts, &BeadType, &MoleculeType);
+  ReadFIELD(Counts, BeadType, MoleculeType);
+
+  // allocate memory for Molecule struct
+  *Molecule = malloc((*Counts).Molecules*sizeof(**Molecule));
+
+  // fill array of Molecule structs //{{{
+  int count = 0,
+      bead = (*Counts).Unbonded; // because Counts.whatever shouldn't change
+
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    for (int j = 0; j < (*MoleculeType)[i].Number; j++) {
+      (*Molecule)[count].Type = i;
+
+      // allocate memory for beads in molecule 'count'
+      (*Molecule)[count].Bead = malloc((*MoleculeType)[i].nBeads*sizeof(int));
+
+      for (int k = 0; k < (*MoleculeType)[i].nBeads; k++) {
+        (*Molecule)[count].Bead[k] = bead++;
+      }
+
+      count++;
+    }
+  } //}}}
+
+  // allocate memory for Bead struct
+  *Bead = malloc(((*Counts).Bonded+(*Counts).Unbonded)*sizeof(**Bead));
 
   // Counts is pointer, so *Counts to pass by value
   // Bead is in reality **Bead, so no &Bead
-  ReadVsf(file, *Counts, BeadType, Bead);
-}
+  ReadVsf(file, *Counts, *BeadType, Bead);
+} //}}}
 
 // WriteVsf() //{{{
 /**

@@ -45,32 +45,11 @@ int main(int argc, char *argv[]) {
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc.
 
-  // read information from FIELD
-  ReadFIELD(&Counts, &BeadType, &MoleculeType);
+  // vsf file name
+  char file[16];
+  strcpy(file, "dl_meso.vsf");
 
-  // allocate memory for Molecule struct
-  Molecule = malloc(Counts.Molecules*sizeof(*Molecule));
-
-  // fill array of Molecule structs //{{{
-  int count = 0,
-      bead = Counts.Unbonded; // because Counts.whatever shouldn't change
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].Number; j++) {
-      Molecule[count].Type = i;
-
-      // allocate memory for beads in molecule 'count'
-      Molecule[count].Bead = malloc(MoleculeType[i].nBeads*sizeof(int));
-
-      for (int k = 0; k < MoleculeType[i].nBeads; k++) {
-        Molecule[count].Bead[k] = bead++;
-      }
-
-      count++;
-    }
-  } //}}}
-
-  // allocate memory for Bead struct
-  Bead = malloc((Counts.Bonded+Counts.Unbonded)*sizeof(*Bead));
+  ReadStructure(file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // print information read from FIELD if option '-v' is used //{{{
   if (argc > 1 && strcmp(argv[1], "-v") == 0) {
@@ -108,13 +87,6 @@ int main(int argc, char *argv[]) {
       printf("}}\n");
     }
   } //}}}
-
-  // vsf file name
-  char file[16];
-  strcpy(file, "dl_meso.vsf");
-
-  // read bead ids from 'file' and assign them proper types
-  ReadVsf(file, Counts, BeadType, &Bead);
 
   if (argc > 1 && strcmp(argv[1], "-v") == 0) { //{{{
     printf("\n");
