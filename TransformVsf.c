@@ -4,38 +4,89 @@
 #include "CStructs.h"
 #include "Structure.h"
 
+void ErrorHelp(char cmd[50]) { //{{{
+    fprintf(stderr, "Usage:\n");
+    fprintf(stderr, "   TransformVsf <output.vsf> <options>\n\n");
+    fprintf(stderr, "   <output.vsf>    output structure file (*.vsf)\n");
+    fprintf(stderr, "   <options>\n");
+    fprintf(stderr, "      -v   verbose output\n");
+    fprintf(stderr, "      -h   print this help and exit\n");
+    fprintf(stderr, "      -i   use input .vsf file different from dl_meso.vsf\n\n");
+} //}}}
+
 int main(int argc, char *argv[]) {
 
-  // initial stuff -- printing command, argument checks, etc. //{{{
-  // print command
+  // check if correct number of arguments //{{{
+  if (argc < 2) {
+    fprintf(stderr, "Too little arguments!\n\n");
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
+
+  // -h option - print help and exit //{{{
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-h") == 0) {
+      printf("TransformVsf reads information from FIELD and\n");
+      printf("dl_meso.vsf files and creates .vsf structure file\n");
+      printf("used for visualisation of trajectory (.vcf files)\n");
+      printf("via VMD visualisation tool.\n\n");
+
+      printf("Usage:\n");
+      printf("   TransformVsf <output.vsf>\n\n");
+      printf("   <output.vsf>    output structure file (*.vsf)\n");
+      printf("   <options>\n");
+      printf("      -v   verbose output\n");
+      printf("      -h   print this help and exit\n");
+      printf("      -i   use input .vsf file different from dl_meso.vsf\n\n");
+      exit(0);
+    }
+  } //}}}
+
+  // print command to stdout //{{{
   for (int i = 0; i < argc; i++)
     printf(" %s", argv[i]);
-  putchar('\n');
+  putchar('\n'); //}}}
 
-  // sanity check for provided arguments (if any)
+  // <output.vsf> - file name of output structure file (must end with .vsf) //{{{
+  char output[32];
+  strcpy(output, argv[1]);
+
+  // test if <output.vsf> filename ends with '.vsf' (required by VMD)
+  char *dot = strrchr(output, '.');
+  if (!dot || strcmp(dot, ".vsf")) {
+    fprintf(stderr, "<output.vsf> does not have .vsf ending!\n");
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
+
+  // -i option - file name of input structure file //{{{
+  char input[32];
+  input[0] = '\0'; // check if -i option is used
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-h") != 0) {
-      fprintf(stderr, "Incorrect argument: %s!\n\n", argv[i]);
-      fprintf(stderr, "Possible arguments:\n");
-      fprintf(stderr,"   -v   verbose output\n");
-      fprintf(stderr,"   -h   print this help and exit\n\n");
-      exit(1);
+    if (strcmp(argv[i], "-i") == 0) {
+
+      // wrong argument to -i option //{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing argument to '-i' option ");
+        fprintf(stderr, "(or filename beginning with a dash)!\n");
+        exit(1);
+      }
+
+      // check if .vsf ending is present
+      char *vsf = strrchr(argv[i+1], '.');
+      if (!vsf || strcmp(vsf, ".vsf")) {
+        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      } //}}}
+
+      strcpy(input, argv[i+1]);
     }
   }
 
-  // print program description if option '-h' is used
-  if ((argc > 1 && strcmp(argv[1], "-h") == 0) ||
-      (argc > 2 && strcmp(argv[2], "-h") == 0)) {
-    printf("TransformVsf reads information from FIELD and\n");
-    printf("dl_meso.vsf files and creates input.vsf file used\n");
-    printf("for further analysis and visualisation of trajectory\n");
-    printf("(vcf files) via VMD visualisation tool.\n\n");
-
-    printf("Optional arguments:\n");
-    printf("   -v   verbose output\n");
-    printf("   -h   print this help and exit\n\n");
-    exit(0);
+  // -i option is not used
+  if (input[0] == '\0') {
+    strcpy(input, "dl_meso.vsf");
   } //}}}
 
   // variables - structures
@@ -45,11 +96,8 @@ int main(int argc, char *argv[]) {
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc.
 
-  // vsf file name
-  char file[16];
-  strcpy(file, "dl_meso.vsf");
-
-  ReadStructure(file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  // vsf input file name
+  ReadStructure(input, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // print information read from FIELD if option '-v' is used //{{{
   if (argc > 1 && strcmp(argv[1], "-v") == 0) {
@@ -108,9 +156,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // create & fill input.vsf file
-  strcpy(file, "input.vsf");
-  WriteVsf(file, Counts, BeadType, Bead, MoleculeType, Molecule);
+  // create & fill output vsf file
+  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
