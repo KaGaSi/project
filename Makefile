@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c11 -Wall -Werror -O3 -g
+CFLAGS = -std=c11 -Wall -Werror -O3
 LIBS = -lm
 
 SOURCES = TransformVsf.c Aux.c Structure.c
