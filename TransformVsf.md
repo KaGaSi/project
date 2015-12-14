@@ -2,20 +2,10 @@ Program TransformVsf {#TransformVsf}
 =====
 
 This program takes `.vsf` structure file and DL_MESO input file `FIELD` and
-transforms them into a different `.vsf` structure file.  This file contains
-more information than `.vsf` making it better for visualisation using VMD
-software.
-
-Name, mass and charge of every bead type is read from `species` lines in
-`FIELD`. The number of molecule types are read from `molecule` section.
-For each molecule type its name, the number of molecules of given type,
-the number of beads and bonds in the molecule type and the bonds
-themselves are read.
-
-Input structure file `.vsf` provides information about what bead is of
-which type.
-
-\todo Add possibility for bonds to be read from other file
+transforms them into a different `.vsf` structure file that is well suited
+for visualisation using VMD software. The output file contains name, mass
+and charge of every bead. In case of a bead in a molecule, it also contains
+its name and id.
 
 Required format of input .vsf structure file {#TransformVsf-Require}
 =====

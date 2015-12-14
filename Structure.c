@@ -341,16 +341,18 @@ void ReadVsf(char *file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 } //}}}
 
 // ReadStrucute() //{{{
-/*
- * Function combining ReadFIELD() and ReasVsf() to read complete
- * information about all beads and molecules
+/** Function reading information about beads and molecules from DL_MESO FIELD
+ * file and .vsf structure file.  Name, mass and charge of every bead type is
+ * read from `species` lines in `FIELD`. The number of molecule types are read
+ * from `molecule` section.  For each molecule type its name, the number of
+ * molecules of given type, the number of beads and bonds in the molecule type
+ * and the bonds themselves are read.  Input structure file provides
+ * information about what bead is of which type.
+ *
+ * \todo Add possibility for bonds to be read from other file
  */
-/** Function reading information about beads and molecules from DL_MESO
- * FIELD file (names, numbers, charge, mass, bonds) and assigning types to
- * beads according to dl_meso.vsf structure file.
- */
-void ReadStructure(char *file, Counts *Counts, BeadType **BeadType, Bead **Bead,
-                   MoleculeType **MoleculeType, Molecule **Molecule) {
+void ReadStructure(char *file, Counts *Counts, BeadType **BeadType, Bead
+    **Bead, MoleculeType **MoleculeType, Molecule **Molecule) {
 
   // Counts is actually *Counts - so no &Counts
   ReadFIELD(Counts, BeadType, MoleculeType);
