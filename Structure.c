@@ -520,3 +520,24 @@ void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
   // close structure file
   fclose(fw);
 } //}}}
+
+// ReadCoorOrdered() //{{{
+int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
+
+  // save first two lines containing '# <number>' and 't(imestep)' //{{{
+  int i = 0;
+  while (((*stuff)[i++] = getc(vcf_file)) != '\n')
+    ;
+  while (((*stuff)[i++] = getc(vcf_file)) != '\n')
+    ; //}}}
+
+  for (i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
+    if (fscanf(vcf_file, "%lf %lf %lf\n", &(*Bead)[i].Position.x,
+                                          &(*Bead)[i].Position.y,
+                                          &(*Bead)[i].Position.z) != 3) {
+      return (i+1); // don't want to return 0, since that generally means no error
+    }
+  }
+
+  return 0;
+} //}}}

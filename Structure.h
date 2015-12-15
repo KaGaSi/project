@@ -34,4 +34,6 @@ void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
  */
 void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
               MoleculeType *MoleculeType, Molecule *Molecule);
+
+int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff);
 #endif
