@@ -3,9 +3,28 @@ Program TransformVsf {#TransformVsf}
 
 This program takes `.vsf` structure file and DL_MESO input file `FIELD` and
 transforms them into a different `.vsf` structure file that is well suited
-for visualisation using VMD software. The output file contains name, mass
-and charge of every bead. In case of a bead in a molecule, it also contains
-its name and id.
+for visualisation using VMD software. A special file with bonds of any
+molecule type(s) can be used instead of bond information from `FIELD`. The
+output structure file contains name, mass and charge of every bead. In case
+of a bead in a molecule, it also contains its name and id.
+
+Usage:
+
+`TransformVsf <output.vsf> <options>`
+
+> `<output.vsf>` output structure file that must end with `.vsf`
+>
+> `<options>`
+> > `-i <name>`
+> > > use custom `.vsf` structure file instead of the default `dl_meso.vsf`
+> > > (must end with `.vsf`)
+> > `-b <name>`
+> > > file containing bond alternatives to `FIELD`
+> > `-v`
+> > > verbose output providing additional information not present in output
+> > > structure file
+> > `-h`
+> > > print help and exit
 
 Required format of input .vsf structure file {#TransformVsf-Require}
 =====
@@ -22,6 +41,8 @@ molecule). All atom lines specify VDW radius and atom name. If an atom is
 in a residue, its residue number is appended to the atom line.
 > `atom default radius 1.000000 name <name>`
 >
+> `...`
+>
 > `atom <id> radius 1.000000 name <name> resid <id>`
 >
 > `...`
@@ -35,15 +56,40 @@ allowed.
 Bond lines of `.vsf` are not read and are therefore irrelevant to
 `TransformVsf`.
 
+Required format of optional input bond file
+=====
+
+File with molecule structure must contain name of the molecule type (same
+as in `FIELD`) followed by number of bonds on the next line and on every
+subsequent line two index numbers corresponding to the two connected beads
+(bead numbers start from one and are ordered according to beads in `FIELD`
+section for the given molecule). The bead numbers does not have to be
+sorted in any way.
+
+Example of bond file:
+
+> `triangle`
+>
+> `3`
+>
+> `1 2`
+>
+> `3 1`
+>
+> `2 3`
+
+Bond information about molecule types not present in the bond file will be read
+from `FIELD`.
+
 Format of output .vsf structure file {#TransformVsf-output}
 =====
 
-Every atom line in the generated structure file contains bead's index
-number, mass, charge and name. Atom lines for beads in molecules also
-contain molecule's id number and the name of the type of molecule. The
-bond section of `output.vsf` lists all bonds one by one (i.e. no chains of
-bonds in the format `<id1>:: <id2>` are used). The file has the
-following format:
+Every atom line in the generated structure file contains bead's index number,
+mass, charge and name. Atom lines for beads in molecules also contain
+molecule's id number and the name of the type of molecule. The bond section of
+`output.vsf` lists all bonds one by one (i.e. no chains of bonds in the format
+`<id1>:: <id2>` are used). Information about which bonds belong to which
+molecule is provided as has comment. The file has the following format:
 > `atom default name <name> mass <m> charge <q>`
 >
 > `...`
@@ -55,14 +101,20 @@ following format:
 > `atom <id> name <name> mass <m> charge <q> segid <name> resid <id>`
 >
 > `...`
+> 
+> `# resid <id>`
 >
 > `<bonded bead id1>: <bonded bead id2>`
 >
 > `...`
 
 For VMD atom selection:
-* `segid <name>` selects all molecules with given name(s)
-* `resid <id>` selects molecule(s) with given index number(s)
-* `charge <q>` selects all beads with given charge(s) (double quotes are
-  required for negative charge)
-* `mass <m>` selects all beads with given mass(es)
+> `segid <name>`
+> > selects all molecules with given name(s)
+> `resid <id>`
+> > selects molecule(s) with given index number(s)
+> `charge <q>`
+> > selects all beads with given charge(s) (double quotes are required for
+> > negative charge)
+> `mass <m>`
+> > selects all beads with given mass(es)
