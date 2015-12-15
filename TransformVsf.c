@@ -17,13 +17,6 @@ void ErrorHelp(char cmd[50]) { //{{{
 
 int main(int argc, char *argv[]) {
 
-  // check if correct number of arguments //{{{
-  if (argc < 2) {
-    fprintf(stderr, "Too little arguments!\n\n");
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
-
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
@@ -43,6 +36,13 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  // check if correct number of arguments //{{{
+  if (argc < 2) {
+    fprintf(stderr, "Too little arguments!\n\n");
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
+
   // print command to stdout //{{{
   for (int i = 0; i < argc; i++)
     printf(" %s", argv[i]);
@@ -58,6 +58,16 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "<output.vsf> does not have .vsf ending!\n");
     ErrorHelp(argv[0]);
     exit(1);
+  } //}}}
+
+  // -v option - verbose output //{{{
+  bool verbose = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-v") == 0) {
+      verbose = true;
+
+      break;
+    }
   } //}}}
 
   // -i option - file name of input structure file //{{{
@@ -88,16 +98,6 @@ int main(int argc, char *argv[]) {
   // -i option is not used
   if (input[0] == '\0') {
     strcpy(input, "dl_meso.vsf");
-  } //}}}
-
-  // -v option - verbose output //{{{
-  bool verbose = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") == 0) {
-      verbose = true;
-
-      break;
-    }
   } //}}}
 
   // variables - structures
