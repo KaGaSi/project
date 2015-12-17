@@ -15,8 +15,12 @@
  * information about bonds in every molecule type. Total number of beads as
  * well as that of molecules is determined.
  */
+<<<<<<< HEAD
+void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType, MoleculeType **MoleculeType) {
+=======
 void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType,
     MoleculeType **MoleculeType) {
+>>>>>>> SelectedVcf
 
   // zeroize all Counts structure //{{{
   (*Counts).TypesOfBeads = 0;
@@ -296,8 +300,8 @@ void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType,
 
 // ReadVsf() //{{{
 /*
- * Function reading bead id numbers from provided vsf file. It pairs the
- * bead ids with their bead types.
+ * Function reading bead id numbers from provided vsf file.  It pairs the bead
+ * ids with their bead types.
  */
 void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 
@@ -398,8 +402,12 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 } //}}}
 
 // ReadStrucute() //{{{
+<<<<<<< HEAD
+/** Function reading information about beads and molecules from DL_MESO `FIELD`
+=======
 /**
  * Function reading information about beads and molecules from DL_MESO `FIELD`
+>>>>>>> SelectedVcf
  * file and a .vsf structure file.  Name, mass and charge of every bead type is
  * read from `species` lines in `FIELD`. The number of molecule types are read
  * from `molecule` section.  For each molecule type its name, the number of
@@ -408,17 +416,20 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
  * bead is of which type. Optional file with bond declarations provides
  * alternative for bonds of any molecule type in `FIELD`.
  */
-void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
-                   BeadType **BeadType, Bead **Bead,
-                   MoleculeType **MoleculeType, Molecule **Molecule) {
+void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts, BeadType
+    **BeadType, Bead **Bead, MoleculeType **MoleculeType, Molecule **Molecule)
+{
 
   // Counts is actually *Counts - so no &Counts
   ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
+<<<<<<< HEAD
+=======
 
-  // no bead types are used initially - to be adjusted in individual utilities //{{{
+  // no bead types are used initially - to be adjusted in individual utilities
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
     (*BeadType)[i].Use = false;
-  } //}}}
+  }
+>>>>>>> SelectedVcf
 
   // allocate memory for Molecule struct
   *Molecule = malloc((*Counts).Molecules*sizeof(**Molecule));

@@ -34,4 +34,25 @@ void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
  */
 void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
               MoleculeType *MoleculeType, Molecule *Molecule);
+
+/**
+ * \brief Function reading ordered coordinates from .vcf coordinate file.
+ *
+ * \param [in]  vcf_file   name of input .vcf coordinate file
+ * \param [in]  Counts     numbers of beads, molecules, etc.
+ * \param [out] Bead       coordinates of individual beads
+ * \param [out] stuff      first two line of a timestep
+ */
+int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff);
+
+/**
+ * \brief Function writing indexed coordinates to a .vcf file.
+ *
+ * \param [in] vcf_file   name of output .vcf coordinate file
+ * \param [in] Counts     numbers of beads, molecules, etc.
+ * \param [in] BeadType   information about bead types
+ * \param [in] Bead       coordinates of individual beads
+ * \param [in] stuff      array of chars containing comment line to place at the beginning
+ */
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff);
 #endif

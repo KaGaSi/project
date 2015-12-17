@@ -10,20 +10,13 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   TransformVsf <output.vsf> <options>\n\n");
   fprintf(stderr, "   <output.vsf>    output structure file (*.vsf)\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -i <name>  use input .vsf file different from dl_meso.vsf\n\n");
+  fprintf(stderr, "      -i <name>  use input .vsf file different from dl_meso.vsf\n");
   fprintf(stderr, "      -b <name>  file containing bond alternatives to FIELD\n");
   fprintf(stderr, "      -v         verbose output\n");
   fprintf(stderr, "      -h         print this help and exit\n");
 } //}}}
 
 int main(int argc, char *argv[]) {
-
-  // check if correct number of arguments //{{{
-  if (argc < 2) {
-    fprintf(stderr, "Too little arguments!\n\n");
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
 
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
@@ -37,7 +30,7 @@ int main(int argc, char *argv[]) {
       printf("   TransformVsf <output.vsf>\n\n");
       printf("   <output.vsf>    output structure file (*.vsf)\n");
       printf("   <options>\n");
-      printf("      -i   use input .vsf file different from dl_meso.vsf\n\n");
+      printf("      -i   use input .vsf file different from dl_meso.vsf\n");
       printf("      -b   file containing bond alternatives to FIELD\n");
       printf("      -v   verbose output\n");
       printf("      -h   print this help and exit\n");
@@ -45,30 +38,22 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  // check if correct number of arguments //{{{
+  if (argc < 2) {
+    fprintf(stderr, "Too little arguments!\n\n");
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
+
   // print command to stdout //{{{
   for (int i = 0; i < argc; i++)
     printf(" %s", argv[i]);
   putchar('\n'); //}}}
 
-  int count = 0; // count arguments
-
-  // <output.vsf> - file name of output structure file (must end with .vsf) //{{{
-  char output[32];
-  strcpy(output, argv[++count]);
-
-  // test if <output.vsf> filename ends with '.vsf' (required by VMD)
-  char *dot = strrchr(output, '.');
-  if (!dot || strcmp(dot, ".vsf")) {
-    fprintf(stderr, "<output.vsf> %s does not have .vsf ending!\n", output);
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
-
   // -i <name> option - filename of input structure file //{{{
   char vsf_file[32];
-  count++;
   vsf_file[0] = '\0'; // check if -i option is used
-  for (int i = count; i < argc; i++) {
+  for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-i") == 0) {
 
       // wrong argument to -i option
@@ -98,7 +83,7 @@ int main(int argc, char *argv[]) {
   // -b <name> option - filename of input bond file //{{{
   char bonds_file[32];
   bonds_file[0] = '\0'; // check if -b option is used
-  for (int i = count; i < argc; i++) {
+  for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-b") == 0) {
 
       // wrong argument to -i option
@@ -115,12 +100,26 @@ int main(int argc, char *argv[]) {
 
   // -v option - verbose output //{{{
   bool verbose = false;
-  for (int i = count; i < argc; i++) {
+  for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-v") == 0) {
       verbose = true;
 
       break;
     }
+  } //}}}
+
+  int count = 0; // count arguments
+
+  // <output.vsf> - file name of output structure file (must end with .vsf) //{{{
+  char output[32];
+  strcpy(output, argv[++count]);
+
+  // test if <output.vsf> filename ends with '.vsf' (required by VMD)
+  char *dot = strrchr(output, '.');
+  if (!dot || strcmp(dot, ".vsf")) {
+    fprintf(stderr, "<output.vsf> %s does not have .vsf ending!\n", output);
+    ErrorHelp(argv[0]);
+    exit(1);
   } //}}}
 
   // variables - structures
@@ -130,7 +129,7 @@ int main(int argc, char *argv[]) {
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc.
 
-  // vsf input file name
+  // read system information
   ReadStructure(vsf_file, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // print information read from FIELD if option '-v' is used //{{{
@@ -159,7 +158,11 @@ int main(int argc, char *argv[]) {
       printf(", Number =%4d", MoleculeType[i].Number);
       printf(", nBeads =%3d", MoleculeType[i].nBeads);
       printf(", nBonds =%3d", MoleculeType[i].nBonds);
-      printf(", Bonds in %s}\n", output);
+      if (bonds_file[0] == '\0') {
+        printf(", Bonds from '%s'}\n", vsf_file);
+      } else {
+        printf(", Bonds from '%s'}\n", bonds_file);
+      }
     }
   } //}}}
 

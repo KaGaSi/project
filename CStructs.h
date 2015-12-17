@@ -1,5 +1,8 @@
 #ifndef _CSTRUCTS_H_
 #define _CSTRUCTS_H_
+
+#include <stdbool.h>
+
 /**
  * \file
  * \brief Structures used by all analysis programs
@@ -35,6 +38,8 @@ typedef struct BeadType {
 
   double Charge, ///< charge of every bead of given type
          Mass; ///< mass of every bead of given type
+
+  bool Use; ///< indication if beads of given type are in coordinate .vcf file
 } BeadType; //}}}
 
 // MoleculeType //{{{
