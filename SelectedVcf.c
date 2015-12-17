@@ -15,11 +15,12 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <start>           number of timestep to start from\n");
   fprintf(stderr, "   <skip>            leave out every 'skip' steps\n");
   fprintf(stderr, "   <output.vcf>      output filename (vcf format)\n");
-  fprintf(stderr, "   <#> <type names>  number of bead types to save followed by their names\n");
+  fprintf(stderr, "   <type names>      names of bead types to save\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
   fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
   fprintf(stderr, "      -v             verbose output\n");
+  fprintf(stderr, "      -V             verbose output with comments from input .vcf file\n");
   fprintf(stderr, "      -h             print this help and exit\n");
 } //}}}
 
@@ -43,11 +44,12 @@ int main(int argc, char *argv[]) {
       printf("   <start>           number of timestep to start from\n");
       printf("   <skip>            leave out every 'skip' steps\n");
       printf("   <output.vcf>      output filename (vcf format)\n");
-      printf("   <#> <type names>  number of bead types to save followed by their names\n");
+      printf("   <type names>      names of bead types to save\n");
       printf("   <options>\n");
       printf("      -i <name>      use input .vsf file different from dl_meso.vsf\n");
       printf("      -b <name>      file containing bond alternatives to FIELD\n");
       printf("      -v             verbose output\n");
+      printf("      -V             verbose output with comments from input .vcf file\n");
       printf("      -h             print this help and exit\n");
       exit(0);
     }
@@ -123,7 +125,18 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  int count = 0; // count arguments
+  // -V option - verbose output with comments from input .vcf file //{{{
+  bool verbose2 = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-V") == 0) {
+      verbose = true;
+      verbose2 = true;
+
+      break;
+    }
+  } //}}}
+
+  int count = 0; // count mandatory arguments
 
   // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
   char input_vcf[32];
@@ -167,24 +180,6 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <#> - number of bead types to save //{{{
-  // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <skip>!\n");
-    ErrorHelp(argv[0]);
-    exit(1);
-  }
-  int number_of_saved = atoi(argv[count]); //}}}
-
-  // allocate memory for array holding bead type ids to save //{{{
-  int *saved_types;
-  saved_types = malloc(number_of_saved*sizeof(int));
-
-  // initialize array
-  for (int i = 0; i < number_of_saved; i++) {
-    saved_types[i] = -1;
-  } //}}}
-
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
@@ -196,30 +191,36 @@ int main(int argc, char *argv[]) {
   ReadStructure(vsf_file, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // <type names> - names of bead types to save //{{{
-  { int i = 0;
-    while (++count < argc && argv[count][0] != '-') {
-      saved_types[i++] = FindType(argv[count], Counts, BeadType);
-    }
+  while (++count < argc && argv[count][0] != '-') {
+    BeadType[FindType(argv[count], Counts, BeadType)].Use = true;
+  }
 
-    // Error - incorrect number of bead type names provided
-    if (i != number_of_saved) {
-      fprintf(stderr, "Incorrect number of bead type names (should be %d)!\n", number_of_saved);
-      ErrorHelp(argv[0]);
-      exit(1);
-    }
-
-    // Error - does not make sense to use all bead types
-    if (number_of_saved == Counts.TypesOfBeads) {
-      fprintf(stderr, "All beadtypes are selected which would only copy All.vcf,\n");
-      fprintf(stderr, "therefore this is not allowed!\n\n");
-      ErrorHelp(argv[0]);
-      exit(1);
-    }
+  // Error - does not make sense to use all bead types
+  if ((count-5) == Counts.TypesOfBeads) {
+    fprintf(stderr, "All beadtypes are selected which would only copy All.vcf,\n");
+    fprintf(stderr, "therefore this is not allowed!\n\n");
+    ErrorHelp(argv[0]);
+    exit(1);
   } //}}}
+
+  // print selected bead type names to output .vcf file //{{{
+  FILE *out;
+  if ((out = fopen(output_vcf, "w")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+    exit(1);
+  }
+
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    if (BeadType[i].Use) {
+      fprintf(out, "# %s\n", BeadType[i].Name);
+    }
+  }
+
+  fclose(out); //}}}
 
   // print information option '-v' is used //{{{
   if (verbose) {
-    printf("\n   Read from FIELD\n\n");
+    printf("\n   Read from FIELD\n");
     printf("Counts.{");
     printf("TypesOfBeads =%3d, ", Counts.TypesOfBeads);
     printf("Bonded =%7d, ", Counts.Bonded);
@@ -233,7 +234,8 @@ int main(int argc, char *argv[]) {
       printf("Name =%10s, ", BeadType[i].Name);
       printf("Number =%7d, ", BeadType[i].Number);
       printf("Charge =%6.2f, ", BeadType[i].Charge);
-      printf("Mass =%5.2f}\n", BeadType[i].Mass);
+      printf("Mass =%5.2f, ", BeadType[i].Mass);
+      printf("Use = %s}\n", BeadType[i].Use? "Yes":"No");
     }
     putchar('\n');
 
@@ -250,18 +252,8 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    printf("\n   Selected bead types\n");
-    printf("number of selected bead types: %d\n", number_of_saved);
-    for (int i = 0; i < number_of_saved; i++) {
-      printf("BeadType[%2d].{", saved_types[i]);
-      printf("Name =%10s, ", BeadType[saved_types[i]].Name);
-      printf("Number =%7d, ", BeadType[saved_types[i]].Number);
-      printf("Charge =%6.2f, ", BeadType[saved_types[i]].Charge);
-      printf("Mass =%5.2f}\n", BeadType[saved_types[i]].Mass);
-    }
-
-    printf("\n   starting from %d. timestep\n", start);
-    printf("   every %d. timestep used\n", skip+1);
+    printf("\n   Starting from %d. timestep\n", start);
+    printf("   Every %d. timestep used\n", skip+1);
   } //}}}
 
   // open All.vcf coordinate file //{{{
@@ -290,22 +282,47 @@ int main(int argc, char *argv[]) {
     printf("   box size: %lf x %lf x %lf\n\n", box_length.x, box_length.y, box_length.z);
   } //}}}
 
+  // print pbc to output .vcf file //{{{
+  if ((out = fopen(output_vcf, "a")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+    exit(1);
+  }
+
+  fprintf(out, "\npbc %lf %lf %lf", box_length.x, box_length.y, box_length.z);
+
+  fclose(out); //}}}
+
+  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
+  char *stuff;
+  stuff = malloc(128*sizeof(int)); //}}}
+
   int test;
   count = 0;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     fflush(stdout);
-    printf("\rStep: %6d", ++count); //}}}
-
-    char *stuff; // for the first two lines of a timestep ('# <number>\n t(imestep')
-    stuff = malloc(128*sizeof(int));
+    printf("\rStep: %6d", ++count);
 
     // read ordered timestep from All.vcf
     if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
       fprintf(stderr, "Cannot read coordinates from All.vcf! (%d. step; %d. bead)\n", count, test);
       exit(1);
     }
+
+    // open output .vcf file for appending //{{{
+    if ((out = fopen(output_vcf, "a")) == NULL) {
+      fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+      exit(1);
+    } //}}}
+
+    WriteCoorIndexed(out, Counts, BeadType, Bead, stuff);
+
+    fclose(out);
+
+    // if -V option used, print comment at the beginning of a timestep
+    if (verbose2)
+      printf("\n%s", stuff);
   }
 
   fflush(stdout);
@@ -327,7 +344,7 @@ int main(int argc, char *argv[]) {
     free(Molecule[i].Bead);
   }
   free(Molecule);
-  free(saved_types);
+  free(stuff);
   //}}}
 
   return 0;

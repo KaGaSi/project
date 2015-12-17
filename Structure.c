@@ -8,14 +8,15 @@
 
 // ReadFIELD() //{{{
 /*
- * Function reading information about all bead types (name, mass, charge)
- * from 'species' lines in FIELD. Information about molecule types from
- * 'molecule' lines are read: number of molecule types, their names, number
- * of molecules of every type, number and type of beads in every molecule type
- * and information about bonds in every molecule type. Total number of beads as
+ * Function reading information about all bead types (name, mass, charge) from
+ * 'species' lines in FIELD. Information about molecule types from 'molecule'
+ * lines are read: number of molecule types, their names, number of molecules
+ * of every type, number and type of beads in every molecule type and
+ * information about bonds in every molecule type. Total number of beads as
  * well as that of molecules is determined.
  */
-void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType, MoleculeType **MoleculeType) {
+void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType,
+    MoleculeType **MoleculeType) {
 
   // zeroize all Counts structure //{{{
   (*Counts).TypesOfBeads = 0;
@@ -295,8 +296,8 @@ void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType, MoleculeTy
 
 // ReadVsf() //{{{
 /*
- * Function reading bead id numbers from provided vsf file.
- * It pairs the bead ids with their bead types.
+ * Function reading bead id numbers from provided vsf file.  It pairs the bead
+ * ids with their bead types.
  */
 void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 
@@ -397,7 +398,8 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 } //}}}
 
 // ReadStrucute() //{{{
-/** Function reading information about beads and molecules from DL_MESO `FIELD`
+/**
+ * Function reading information about beads and molecules from DL_MESO `FIELD`
  * file and a .vsf structure file.  Name, mass and charge of every bead type is
  * read from `species` lines in `FIELD`. The number of molecule types are read
  * from `molecule` section.  For each molecule type its name, the number of
@@ -412,6 +414,11 @@ void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts, BeadType
 
   // Counts is actually *Counts - so no &Counts
   ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
+
+  // no bead types are used initially - to be adjusted in individual utilities
+  for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+    (*BeadType)[i].Use = false;
+  }
 
   // allocate memory for Molecule struct
   *Molecule = malloc((*Counts).Molecules*sizeof(**Molecule));
@@ -522,13 +529,20 @@ void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
 } //}}}
 
 // ReadCoorOrdered() //{{{
-int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
+/**
+ * Function reading coordinates from .vcf coordinate file. Ordered
+ * timestep contains coordinates of every bead in the system (recorded in
+ * the appropriate .vsf structure file) without its index number.
+ */
+int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char
+    **stuff) {
 
-  // save first two lines containing '# <number>' and 't(imestep)' //{{{
+  // save the first line containing '# <number>' //{{{
   int i = 0;
   while (((*stuff)[i++] = getc(vcf_file)) != '\n')
     ;
-  while (((*stuff)[i++] = getc(vcf_file)) != '\n')
+  // skip the second line containing 't(imestep)'
+  while (getc(vcf_file) != '\n')
     ; //}}}
 
   for (i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
@@ -540,4 +554,25 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
   }
 
   return 0;
+} //}}}
+
+// WriteCoorIndexed() //{{{
+/**
+ * Function writing coordinates to a .vcf file. According to the Use flag
+ * in BeadType structure only certain bead types will be saved into the
+ * indexed timestep in .vcf coordinate file. This indexed timestep also
+ * contains index number of every saved bead.
+ */
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff) {
+
+  // print comment at the beginning of a timestep and 'indexed' on second line
+  fprintf(vcf_file, "\n\n%sindexed", stuff);
+
+  for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
+    if (BeadType[Bead[i].Type].Use) {
+      fprintf(vcf_file, "\n%6d %7.3f %7.3f %7.3f", i, Bead[i].Position.x,
+                                                      Bead[i].Position.y,
+                                                      Bead[i].Position.z);
+    }
+  }
 } //}}}
