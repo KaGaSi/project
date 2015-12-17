@@ -566,11 +566,11 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char
 void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff) {
 
   // print comment at the beginning of a timestep and 'indexed' on second line
-  fprintf(vcf_file, "\n\n%sindexed", stuff);
+  fprintf(vcf_file, "\n%sindexed\n", stuff);
 
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
     if (BeadType[Bead[i].Type].Use) {
-      fprintf(vcf_file, "\n%6d %7.3f %7.3f %7.3f", i, Bead[i].Position.x,
+      fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", i, Bead[i].Position.x,
                                                       Bead[i].Position.y,
                                                       Bead[i].Position.z);
     }

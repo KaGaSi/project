@@ -288,7 +288,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  fprintf(out, "\npbc %lf %lf %lf", box_length.x, box_length.y, box_length.z);
+  fprintf(out, "\npbc %lf %lf %lf\n", box_length.x, box_length.y, box_length.z);
 
   fclose(out); //}}}
 
