@@ -12,7 +12,10 @@ OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 BIN = SelectedVcf TransformVsf
 
-all: $(BIN) $(OBJ)
+all: dir $(BIN) $(OBJ)
+
+dir:
+	mkdir -p $(ODIR)
 
 $(ODIR)/%.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
@@ -27,4 +30,4 @@ SelectedVcf: $(OBJ) $(ODIR)/SelectedVcf.o
 #	cp $(BIN) bin
 
 clean:
-	rm -f $(ODIR)/*.o *.o *~ core
+	rm -rf $(ODIR) *.o *~ core
