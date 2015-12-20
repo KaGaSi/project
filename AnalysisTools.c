@@ -2,11 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "CStructs.h"
-#include "Structure.h"
-#include "Aux.h"
+#include "AnalysisTools.h"
 
-// ReadFIELD() //{{{
+// ReadFIELD() - auxiliary //{{{
 /*
  * Function reading information about all bead types (name, mass, charge) from
  * 'species' lines in FIELD. Information about molecule types from 'molecule'
@@ -15,12 +13,8 @@
  * information about bonds in every molecule type. Total number of beads as
  * well as that of molecules is determined.
  */
-<<<<<<< HEAD
-void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType, MoleculeType **MoleculeType) {
-=======
 void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType,
     MoleculeType **MoleculeType) {
->>>>>>> SelectedVcf
 
   // zeroize all Counts structure //{{{
   (*Counts).TypesOfBeads = 0;
@@ -298,10 +292,10 @@ void ReadFIELD(char *bonds_file, Counts *Counts, BeadType **BeadType,
   fclose(fr);
 } //}}}
 
-// ReadVsf() //{{{
+// ReadVsf() - auxiliary //{{{
 /*
- * Function reading bead id numbers from provided vsf file.  It pairs the bead
- * ids with their bead types.
+ * Function reading bead id numbers from provided vsf file. It pairs the
+ * bead ids with their bead types.
  */
 void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 
@@ -401,13 +395,9 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   fclose(vsf);
 } //}}}
 
-// ReadStrucute() //{{{
-<<<<<<< HEAD
-/** Function reading information about beads and molecules from DL_MESO `FIELD`
-=======
+// ReadStructure() //{{{
 /**
  * Function reading information about beads and molecules from DL_MESO `FIELD`
->>>>>>> SelectedVcf
  * file and a .vsf structure file.  Name, mass and charge of every bead type is
  * read from `species` lines in `FIELD`. The number of molecule types are read
  * from `molecule` section.  For each molecule type its name, the number of
@@ -416,20 +406,17 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
  * bead is of which type. Optional file with bond declarations provides
  * alternative for bonds of any molecule type in `FIELD`.
  */
-void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts, BeadType
-    **BeadType, Bead **Bead, MoleculeType **MoleculeType, Molecule **Molecule)
-{
+void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
+                   BeadType **BeadType, Bead **Bead,
+                   MoleculeType **MoleculeType, Molecule **Molecule) {
 
   // Counts is actually *Counts - so no &Counts
   ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
-<<<<<<< HEAD
-=======
 
-  // no bead types are used initially - to be adjusted in individual utilities
+  // no bead types are used initially - to be adjusted in individual utilities //{{{
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
     (*BeadType)[i].Use = false;
-  }
->>>>>>> SelectedVcf
+  } //}}}
 
   // allocate memory for Molecule struct
   *Molecule = malloc((*Counts).Molecules*sizeof(**Molecule));
@@ -577,13 +564,30 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char
 void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff) {
 
   // print comment at the beginning of a timestep and 'indexed' on second line
-  fprintf(vcf_file, "\n\n%sindexed", stuff);
+  fprintf(vcf_file, "\n%sindexed\n", stuff);
 
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
     if (BeadType[Bead[i].Type].Use) {
-      fprintf(vcf_file, "\n%6d %7.3f %7.3f %7.3f", i, Bead[i].Position.x,
+      fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", i, Bead[i].Position.x,
                                                       Bead[i].Position.y,
                                                       Bead[i].Position.z);
     }
   }
+} //}}}
+
+// FindType() //{{{
+int FindType(char *name, Counts Counts, BeadType *BeadType) {
+  int type;
+
+  // compare give 'name' with all known bead types & return bead type id
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    if (strcmp(name, BeadType[i].Name) == 0) {
+      type = i;
+      return (type);
+    }
+  }
+
+  // name isn't in BeadType struct
+  fprintf(stderr, "Bead type %s doesn't exist!\n", name);
+  exit(1);
 } //}}}

@@ -2,13 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "CStructs.h"
-#include "Structure.h"
-#include "Aux.h"
+#include "AnalysisTools.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   SelectedVcf <input.vcf> <start> <skip> ");
+  fprintf(stderr, "   %s <input.vcf> <start> <skip> ", cmd);
   fprintf(stderr, "<output.vcf> <type names> <options>\n\n");
 
   fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
@@ -37,7 +35,7 @@ int main(int argc, char *argv[]) {
       printf("all information about the system.\n\n");
 
       printf("Usage:\n");
-      printf("   SelectedVcf <input.vcf> <start> <skip> ");
+      printf("   %s <input.vcf> <start> <skip> ", argv[0]);
       printf("<output.vcf> <type names> <options>\n\n");
 
       printf("   <input.vcf>       input filename (vcf format)\n");
@@ -197,7 +195,7 @@ int main(int argc, char *argv[]) {
 
   // Error - does not make sense to use all bead types
   if ((count-5) == Counts.TypesOfBeads) {
-    fprintf(stderr, "All beadtypes are selected which would only copy All.vcf,\n");
+    fprintf(stderr, "All beadtypes are selected which would only copy %s,\n", input_vcf);
     fprintf(stderr, "therefore this is not allowed!\n\n");
     ErrorHelp(argv[0]);
     exit(1);
@@ -245,10 +243,38 @@ int main(int argc, char *argv[]) {
       printf(", Number =%4d", MoleculeType[i].Number);
       printf(", nBeads =%3d", MoleculeType[i].nBeads);
       printf(", nBonds =%3d", MoleculeType[i].nBonds);
-      if (bonds_file[0] == '\0') {
-        printf(", Bonds in '%s'}\n", vsf_file);
+      if (bonds_file[0] == '\0') { // all bonds taken from FIELD
+        printf(", Bonds from 'FIELD'}\n");
       } else {
-        printf(", Bonds in '%s'}\n", bonds_file);
+        // go through bond file to find out if molecule type 'i' is there
+        if ((out = fopen(bonds_file, "r")) == NULL) {
+          fprintf(stderr, "Cannot open file %s with '-v' option!\n", bonds_file);
+          exit(1);
+        }
+
+        int test;
+        char str[32];
+        while ((test = getc(out)) != EOF) {
+          ungetc(test, out);
+
+          if ((fscanf(out, "%s %d", str, &test)) != 2) {
+            fprintf(stderr, "Cannot read string or number of bonds from %s with '-v' option!\n", bonds_file);
+            exit(1);
+          }
+
+          if (strcmp(str, MoleculeType[i].Name) == 0) {
+            printf(", Bonds from '%s'}\n", bonds_file);
+            break;
+          }
+
+          while (getc(out) != '\n')
+            ;
+        }
+
+        // if not in bonds_file, then bonds taken from FIELD
+        if (test == EOF) {
+          printf(", Bonds from 'FIELD'}\n");
+        }
       }
     }
 
@@ -256,11 +282,10 @@ int main(int argc, char *argv[]) {
     printf("   Every %d. timestep used\n", skip+1);
   } //}}}
 
-  // open All.vcf coordinate file //{{{
+  // open input coordinate file //{{{
   FILE *vcf;
-  if ((vcf = fopen("All.vcf", "r")) == NULL) {
-//  fprintf(stderr, "Cannot open file %s!\n", vsf_file);
-    fprintf(stderr, "Cannot open file All.vcf!\n");
+  if ((vcf = fopen(input_vcf, "r")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -269,7 +294,7 @@ int main(int argc, char *argv[]) {
   Vector box_length;
   if (fscanf(vcf, "%s %lf %lf %lf", str, &box_length.x, &box_length.y, &box_length.z) != 4 ||
       strcmp(str, "pbc") != 0) {
-    fprintf(stderr, "Cannot read pbc from All.vcf (should be first line)!\n");
+    fprintf(stderr, "Cannot read pbc from %s (should be first line)!\n", input_vcf);
   }
 
   while (getc(vcf) != '\n')
@@ -301,7 +326,7 @@ int main(int argc, char *argv[]) {
     stuff[i] = '\0';
   } //}}}
 
-  int test;
+  int test; //{{{
   count = 0;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
@@ -309,11 +334,11 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
     printf("\rStep: %6d", ++count);
 
-    // read ordered timestep from All.vcf
+    // read ordered timestep from input .vcf file //{{{
     if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-      fprintf(stderr, "Cannot read coordinates from All.vcf! (%d. step; %d. bead)\n", count, test);
+      fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
       exit(1);
-    }
+    } //}}}
 
     // open output .vcf file for appending //{{{
     if ((out = fopen(output_vcf, "a")) == NULL) {
@@ -333,7 +358,7 @@ int main(int argc, char *argv[]) {
   fflush(stdout);
   printf("\rLast Step: %6d\n", count);
 
-  fclose(vcf);
+  fclose(vcf); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);

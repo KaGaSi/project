@@ -1,6 +1,8 @@
 /**
  * \file
  * \brief Auxiliary functions that are often used.
+ * \todo check for correct names in bond file
+ * \todo check if system electrically neutral
  */
 
 #ifndef _AUX_H_

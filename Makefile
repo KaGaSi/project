@@ -2,15 +2,15 @@ CC = gcc
 CFLAGS = -std=c11 -Wall -Werror -O3
 LIBS = -lm
 
-SOURCES = Aux.c Structure.c
+SOURCES = AnalysisTools.c
 
-DEPS = Aux.h Structure.h CStructs.h
+DEPS = Aggregates.h
 
 ODIR = obj
 _OBJ = $(SOURCES:.c=.o)
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-BIN = SelectedVcf TransformVsf
+BIN = Aggregates SelectedVcf TransformVsf
 
 all: dir $(BIN) $(OBJ)
 
@@ -24,6 +24,9 @@ TransformVsf: $(OBJ) $(ODIR)/TransformVsf.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 SelectedVcf: $(OBJ) $(ODIR)/SelectedVcf.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+Aggregates: $(OBJ) $(ODIR)/Aggregates.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 #copy:
