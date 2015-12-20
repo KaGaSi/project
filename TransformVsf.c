@@ -121,17 +121,17 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // variables - structures
+  // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
   Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc.
+  Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   ReadStructure(vsf_file, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
-  // print information read from FIELD if option '-v' is used //{{{
+  // print information - verbose option //{{{
   if (verbose) {
     printf("\n   Read from FIELD\n\n");
     printf("Counts.{");
@@ -157,10 +157,41 @@ int main(int argc, char *argv[]) {
       printf(", Number =%4d", MoleculeType[i].Number);
       printf(", nBeads =%3d", MoleculeType[i].nBeads);
       printf(", nBonds =%3d", MoleculeType[i].nBonds);
-      if (bonds_file[0] == '\0') {
-        printf(", Bonds from '%s'}\n", vsf_file);
+      if (bonds_file[0] == '\0') { // all bonds taken from FIELD
+        printf(", Bonds from 'FIELD'}\n");
       } else {
-        printf(", Bonds from '%s'}\n", bonds_file);
+        // go through bond file to find out if molecule type 'i' is there
+        FILE *out;
+        if ((out = fopen(bonds_file, "r")) == NULL) {
+          fprintf(stderr, "Cannot open file %s with '-v' option!\n", bonds_file);
+          exit(1);
+        }
+
+        int test;
+        char str[32];
+        while ((test = getc(out)) != EOF) {
+          ungetc(test, out);
+
+          if ((fscanf(out, "%s %d", str, &test)) != 2) {
+            fprintf(stderr, "Cannot read string or number of bonds from %s with '-v' option!\n", bonds_file);
+            exit(1);
+          }
+
+          if (strcmp(str, MoleculeType[i].Name) == 0) {
+            printf(", Bonds from '%s'}\n", bonds_file);
+            break;
+          }
+
+          while (getc(out) != '\n')
+            ;
+        }
+
+        // if not in bonds_file, then bonds taken from FIELD
+        if (test == EOF) {
+          printf(", Bonds from 'FIELD'}\n");
+        }
+
+        fclose(out);
       }
     }
   } //}}}
