@@ -5,7 +5,7 @@
 
 /**
  * \file
- * \brief Structures used by all analysis programs
+ * \brief Structures and functions common to all analysis utilities.
  */
 
 // struct Vector //{{{

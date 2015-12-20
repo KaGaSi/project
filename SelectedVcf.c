@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // print information option '-v' is used //{{{
+  // print information - verbose output //{{{
   if (verbose) {
     printf("\n   Read from FIELD\n");
     printf("Counts.{");
@@ -275,6 +275,8 @@ int main(int argc, char *argv[]) {
         if (test == EOF) {
           printf(", Bonds from 'FIELD'}\n");
         }
+
+        fclose(out);
       }
     }
 
