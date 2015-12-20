@@ -2,12 +2,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "CStructs.h"
-#include "Structure.h"
+#include "AnalysisTools.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   TransformVsf <output.vsf> <options>\n\n");
+  fprintf(stderr, "   %s <output.vsf> <options>\n\n", cmd);
   fprintf(stderr, "   <output.vsf>    output structure file (*.vsf)\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -i <name>  use input .vsf file different from dl_meso.vsf\n");
@@ -27,7 +26,7 @@ int main(int argc, char *argv[]) {
       printf("via VMD visualisation tool.\n\n");
 
       printf("Usage:\n");
-      printf("   TransformVsf <output.vsf>\n\n");
+      printf("   %s <output.vsf>\n\n", argv[0]);
       printf("   <output.vsf>    output structure file (*.vsf)\n");
       printf("   <options>\n");
       printf("      -i   use input .vsf file different from dl_meso.vsf\n");

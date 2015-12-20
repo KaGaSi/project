@@ -42,6 +42,7 @@ void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
  * \param [in]  Counts     numbers of beads, molecules, etc.
  * \param [out] Bead       coordinates of individual beads
  * \param [out] stuff      first two line of a timestep
+ * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
  */
 int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff);
 
