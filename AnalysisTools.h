@@ -1,12 +1,12 @@
-#ifndef _ANALYSISTOOLS_H_
-#define _ANALYSISTOOLS_H_
-
-#include <stdbool.h>
-
 /**
  * \file
  * \brief Structures and functions common to all analysis utilities.
  */
+
+#ifndef _ANALYSISTOOLS_H_
+#define _ANALYSISTOOLS_H_
+
+#include <stdbool.h>
 
 // struct Vector //{{{
 /**
@@ -91,20 +91,6 @@ typedef struct Molecule {
 void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
                    BeadType **BeadType, Bead **Bead,
                    MoleculeType **MoleculeType, Molecule **Molecule); //}}}
-
-// WriteVsf() //{{{
-/**
- * \brief Function to create structure file input.vsf.
- *
- * \param [in] vsf_file      name of file to be created
- * \param [in] Counts        numbers of beads, molecules, etc.
- * \param [in] BeadType      informationn about bead types
- * \param [in] Bead          informationn about individual beads
- * \param [in] MoleculeType  information about molecule types
- * \param [in] Molecule      information about individual molecules
- */
-void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
-              MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 
 // ReadCoorOrdered() //{{{
 /**
