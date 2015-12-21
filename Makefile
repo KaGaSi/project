@@ -4,8 +4,6 @@ LIBS = -lm
 
 SOURCES = AnalysisTools.c
 
-DEPS = Aggregates.h
-
 ODIR = obj
 _OBJ = $(SOURCES:.c=.o)
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
@@ -17,7 +15,7 @@ all: dir $(BIN) $(OBJ)
 dir:
 	mkdir -p $(ODIR)
 
-$(ODIR)/%.o: %.c $(DEPS)
+$(ODIR)/%.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 TransformVsf: $(OBJ) $(ODIR)/TransformVsf.o

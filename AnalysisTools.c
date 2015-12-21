@@ -398,13 +398,14 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 // ReadStructure() //{{{
 /**
  * Function reading information about beads and molecules from DL_MESO `FIELD`
- * file and a .vsf structure file.  Name, mass and charge of every bead type is
+ * file and a `.vsf` structure file.  Name, mass and charge of every bead type is
  * read from `species` lines in `FIELD`. The number of molecule types are read
  * from `molecule` section.  For each molecule type its name, the number of
  * molecules, the number of beads and bonds in each molecule and the bonds
- * themselves are read.  Input structure file provides information about what
+ * themselves are read. Input structure file provides information about what
  * bead is of which type. Optional file with bond declarations provides
- * alternative for bonds of any molecule type in `FIELD`.
+ * an alternative for bonds of any molecule type in `FIELD`. If optional
+ * bond file is not used, an empty string is passed to this function.
  */
 void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
                    BeadType **BeadType, Bead **Bead,
@@ -448,89 +449,9 @@ void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
   ReadVsf(vsf_file, *Counts, *BeadType, Bead);
 } //}}}
 
-// WriteVsf() //{{{
-/**
- * Function creating `.vsf` structure file for use in conjunction with
- * `.vcf` coordinate file for better visualisation via VMD program.
- */
-void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
-              MoleculeType *MoleculeType, Molecule *Molecule) {
-
-  // opten structure file //{{{
-  FILE *fw;
-  if ((fw = fopen(vsf_file, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file input.vsf for writing!\n");
-    exit(1);
-  } //}}}
-
-  // find most common type of bead and make it default //{{{
-  int type_def = 0, count = 0;
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    if (BeadType[i].Number >= count) {
-      count = BeadType[i].Number;
-      type_def = i;
-    }
-  } //}}}
-
-  // print default bead type //{{{
-  fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
-  fprintf(fw, "mass %4.2f ", BeadType[type_def].Mass);
-  fprintf(fw, "charge %5.2f\n", BeadType[type_def].Charge); //}}}
-
-  // print unbonded beads //{{{
-  for (int i = 0; i < Counts.Unbonded; i++) {
-
-    // don't print beads with type 'type_def'
-    if (Bead[i].Type != type_def) {
-      fprintf(fw, "atom %7d ", i);
-      fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
-      fprintf(fw, "mass %4.2f ", BeadType[Bead[i].Type].Mass);
-      fprintf(fw, "charge %5.2f\n", BeadType[Bead[i].Type].Charge);
-    }
-  } //}}}
-
-  // print bonded beads //{{{
-  for (int i = 0; i < Counts.Molecules; i++) {
-    int type = Molecule[i].Type;
-
-    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      int bead = Molecule[i].Bead[j];
-      fprintf(fw, "atom %7d ", bead);
-      fprintf(fw, "name %8s ", BeadType[Bead[bead].Type].Name);
-      fprintf(fw, "mass %4.2f ", BeadType[Bead[bead].Type].Mass);
-      fprintf(fw, "charge %5.2f ", BeadType[Bead[bead].Type].Charge);
-      fprintf(fw, "segid %10s ", MoleculeType[type].Name);
-      fprintf(fw, "resid %5d\n", i+1);
-    }
-  } //}}}
-
-  // print bonds //{{{
-  putc('\n', fw);
-  count = 0;
-  // go through all molecule types
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    // go through all molecules of type 'i'
-    for (int j = 0; j < MoleculeType[i].Number; j++) {
-      // go through all bonds of 'j'-th molecule of type 'i'
-      fprintf(fw, "# resid %d\n", count+1); // in VMD resid start with 1
-      for (int k = 0; k < MoleculeType[i].nBonds; k++) {
-        fprintf(fw, "bond %6d: %6d\n", Molecule[count].Bead[MoleculeType[i].Bond[k][0]],
-                                       Molecule[count].Bead[MoleculeType[i].Bond[k][1]]);
-      }
-
-      count++;
-    }
-  } //}}}
-
-  // close structure file
-  fclose(fw);
-} //}}}
-
 // ReadCoorOrdered() //{{{
 /**
- * Function reading coordinates from .vcf coordinate file. Ordered
- * timestep contains coordinates of every bead in the system (recorded in
- * the appropriate .vsf structure file) without its index number.
+ * Function reading coordinates from .vcf file with ordered timesteps (\ref OrderedCoorFile).
  */
 int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char
     **stuff) {
@@ -556,10 +477,9 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char
 
 // WriteCoorIndexed() //{{{
 /**
- * Function writing coordinates to a .vcf file. According to the Use flag
+ * Function writing coordinates to a `.vcf` file. According to the Use flag
  * in BeadType structure only certain bead types will be saved into the
- * indexed timestep in .vcf coordinate file. This indexed timestep also
- * contains index number of every saved bead.
+ * indexed timestep in .vcf file (\ref IndexedCoorFile).
  */
 void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff) {
 
