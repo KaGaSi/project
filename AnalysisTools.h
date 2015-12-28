@@ -6,11 +6,11 @@
 #ifndef _ANALYSISTOOLS_H_
 #define _ANALYSISTOOLS_H_
 
-#include <stdbool.h>
+#define SQR(x) ((x)*(x)) ///< macro for algebraic square
 
 // struct Vector //{{{
 /**
- * \brief 3D vector
+ * \brief 3D vector.
  */
 typedef struct Vector {
   double x, y, z;
@@ -18,33 +18,35 @@ typedef struct Vector {
 
 // struct Counts //{{{
 /**
- * \brief Total numbers of various things */
+ * \brief Total numbers of various things.
+ */
 typedef struct Counts {
   int TypesOfBeads, ///< number of bead types
       TypesOfMolecules, ///< number of molecule types
       Bonded, ///< total number of beads in all molecules
       Unbonded, ///< total number of monomeric beads
-      Molecules; ///< total number of molecules
+      Molecules, ///< total number of molecules
+      Aggregates; ///< total number of aggregates
 } Counts; //}}}
 
 // struct BeadType //{{{
 /**
- * \brief Information about bead types
+ * \brief Information about bead types.
  */
 typedef struct BeadType {
   char Name[16]; ///< name of given bead type
 
-  int Number; ///< number of beads of given type
+  int Number, ///< number of beads of given type
+      Use; ///< are beads of given type are in .vcf file and should they be used for calculation?
+           // 0 for not in vcf file, 1 for in vcf, 2 for in vcf & use for calculation of whatever
 
   double Charge, ///< charge of every bead of given type
          Mass; ///< mass of every bead of given type
-
-  bool Use; ///< indication if beads of given type are in coordinate .vcf file
 } BeadType; //}}}
 
 // struct MoleculeType //{{{
 /**
- * \brief Information about molecule types
+ * \brief Information about molecule types.
  */
 typedef struct MoleculeType {
   char Name[16]; ///< name of given molecule type
@@ -58,7 +60,7 @@ typedef struct MoleculeType {
 
 // struct Bead //{{{
 /**
- * \brief Information about every bead
+ * \brief Information about every bead.
  */
 typedef struct Bead {
   int Type; ///< type of bead corresponding to index in BeadType struct
@@ -68,12 +70,23 @@ typedef struct Bead {
 
 // struct Molecule //{{{
 /**
- * \brief Information about every molecule
+ * \brief Information about every molecule.
  */
 typedef struct Molecule {
   int Type, ///< type of molecule corresponding to index in MoleculeType struct
       *Bead; ///< ids of beads in the molecule
 } Molecule; //}}}
+
+// structe Aggregate //{{{
+/**
+ * \brief Information about every aggregate.
+ */
+typedef struct Aggregate {
+  int nMolecules, ///< number of molecules in aggregate
+      *Monomer, ///< ids of monomeric beads in aggregate
+      nMonomers, ///< number of monomeric beads in aggregate
+      *Molecule; ///< ids of molecules in aggregate
+} Aggregate; //}}}
 
 // ReadStructure() //{{{
 /**
@@ -99,10 +112,22 @@ void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
  * \param [in]  vcf_file   name of input .vcf coordinate file
  * \param [in]  Counts     numbers of beads, molecules, etc.
  * \param [out] Bead       coordinates of individual beads
- * \param [out] stuff      first two line of a timestep
+ * \param [out] stuff      first line of a timestep
  * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
  */
 int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
+
+// ReadCoorIndexed() //{{{
+/**
+ * \brief Function reading ordered coordinates from .vcf coordinate file.
+ *
+ * \param [in]  vcf_file   name of input .vcf coordinate file
+ * \param [in]  beadcount  number of beads in indexed timestep
+ * \param [out] Bead       coordinates of individual beads
+ * \param [out] stuff      first line of a timestep
+ * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
+ */
+int ReadCoorIndexed(FILE *vcf_file, int beadcount, Bead **Bead, char **stuff); //}}}
 
 // WriteCoorIndexed //{{{
 /**
@@ -125,4 +150,16 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *B
  * \return bead type id corresponding to index in BeadType struct
  */
 int FindType(char *name, Counts Counts, BeadType *BeadType); //}}}
+
+// DistanceBetweenBeads //{{{
+/**
+ * \brief Function to calculate distance vector between two beads.
+ *
+ * \param [in] id1         index of first bead for distance calculation
+ * \param [in] id2         index of second bead for distance calculation
+ * \param [in] Bead        information about individual beads (i.e. coordinates)
+ * \param [in] BoxLength   dimensions of simulation box
+ * \return distance vector between the two provided beads (without pbc)
+ */
+Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength); //}}}
 #endif

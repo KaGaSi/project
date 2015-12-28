@@ -3,7 +3,7 @@
 
 // WriteVsf() //{{{
 /*
- * \brief Function to create structure file input.vsf.
+ * Function to create structure file input.vsf.
  *
  * \param [in] vsf_file      name of file to be created
  * \param [in] Counts        numbers of beads, molecules, etc.
