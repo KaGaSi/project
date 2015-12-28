@@ -27,8 +27,5 @@ SelectedVcf: $(OBJ) $(ODIR)/SelectedVcf.o
 Aggregates: $(OBJ) $(ODIR)/Aggregates.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-#copy:
-#	cp $(BIN) bin
-
 clean:
 	rm -rf $(ODIR) *.o *~ core

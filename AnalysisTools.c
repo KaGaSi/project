@@ -309,7 +309,7 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
     exit(1);
   } //}}}
 
-  // read first line -- 'a(tom) default' or 'a(tom) 0' //{{{
+  // read first line -- 'a(tom) default' //{{{
   if (fscanf(vsf, "%s %s", str, str) != 2) {
     fprintf(stderr, "Cannot read strings from %s file!\n", vsf_file);
     exit(1);
@@ -323,7 +323,7 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
     }
   } //}}}
 
-  // read name of the first bead //{{{
+  // read name of the first (default) bead //{{{
   if (fscanf(vsf, "%s", str) != 1) {
     fprintf(stderr, "Cannot read bead name from %s file!\n", vsf_file);
     exit(1);
@@ -346,9 +346,9 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   // every atom line begins with 'a' or 'atom'
   int id_old = 0;
   while (strncmp(str, "atom", 1) == 0) {
-    int id_new;
 
     // read bead id //{{{
+    int id_new;
     if (fscanf(vsf, "%d", &id_new) != 1) {
       fprintf(stderr, "Cannot read bead <id> from %s file!\n", vsf_file);
       exit(1);
@@ -371,8 +371,7 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
     // determine type of bead 'id_new'
     int type = FindType(str, Counts, BeadType);
 
-    /* assign default type & "in no molecule" status to
-     * beads between 'id_old' and 'id_new'*/ //{{{
+    /* assign default type & "in no molecule" status to beads between 'id_old' and 'id_new'*/ //{{{
     for (int i = (id_old+1); i < id_new; i++) {
       (*Bead)[i].Type = type_def;
     } //}}}
@@ -380,7 +379,7 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
     // assign type 'type' to bead 'id_new'
     (*Bead)[id_new].Type = type;
 
-    // save id_new for next line
+    // save id_new for next atom line
     id_old = id_new;
 
     // read the first string of the next line //{{{
@@ -416,7 +415,7 @@ void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
 
   // no bead types are used initially - to be adjusted in individual utilities //{{{
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-    (*BeadType)[i].Use = false;
+    (*BeadType)[i].Use = 0;
   } //}}}
 
   // allocate memory for Molecule struct
@@ -475,6 +474,39 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char
   return 0;
 } //}}}
 
+// ReadCoorIndexed() //{{{
+/**
+ * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
+ */
+int ReadCoorIndexed(FILE *vcf_file, int beadcount, Bead **Bead, char **stuff) {
+
+  // save the first line containing '# <number>' //{{{
+  int i = 0;
+  while (((*stuff)[i++] = getc(vcf_file)) != '\n')
+    ;
+  // skip the second line containing 't(imestep)'
+  while (getc(vcf_file) != '\n')
+    ; //}}}
+
+  for (i = 0; i < beadcount; i++) {
+
+    // read bead index
+    int index;
+    if (fscanf(vcf_file, "%d", &index) != 1) {
+      return (i+1); // don't want to return 0, since that generally means no error
+    }
+
+    // read bead coordinates
+    if (fscanf(vcf_file, "%lf %lf %lf\n", &(*Bead)[index].Position.x,
+                                          &(*Bead)[index].Position.y,
+                                          &(*Bead)[index].Position.z) != 3) {
+      return (i+1); // don't want to return 0, since that generally means no error
+    }
+  }
+
+  return 0;
+} //}}}
+
 // WriteCoorIndexed() //{{{
 /**
  * Function writing coordinates to a `.vcf` file. According to the Use flag
@@ -487,7 +519,7 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *B
   fprintf(vcf_file, "\n%sindexed\n", stuff);
 
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
-    if (BeadType[Bead[i].Type].Use) {
+    if (BeadType[Bead[i].Type].Use > 0) {
       fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", i, Bead[i].Position.x,
                                                       Bead[i].Position.y,
                                                       Bead[i].Position.z);
@@ -510,4 +542,39 @@ int FindType(char *name, Counts Counts, BeadType *BeadType) {
   // name isn't in BeadType struct
   fprintf(stderr, "Bead type %s doesn't exist!\n", name);
   exit(1);
+} //}}}
+
+// DistanceBetweenBeads() //{{{
+/**
+ * Function calculating distance vector between two beads. It removes
+ * periodic boundary conditions and returns x, y, and z distances in the
+ * range <0, BoxLength/2).
+ */
+Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength)
+{
+
+  Vector rij;
+
+  // distance vector
+  rij.x = Bead[id1].Position.x - Bead[id2].Position.x;
+  rij.y = Bead[id1].Position.y - Bead[id2].Position.y;
+  rij.z = Bead[id1].Position.z - Bead[id2].Position.z;
+
+  // remove periodic boundary conditions in x-direction
+  if (rij.x > (BoxLength.x/2))
+    rij.x = rij.x - BoxLength.x;
+  else if (rij.x <= -(BoxLength.x/2))
+    rij.x = rij.x + BoxLength.x;
+  // in y-direction
+  if (rij.y > BoxLength.y/2)
+    rij.y = rij.y - BoxLength.y;
+  else if (rij.y <= -(BoxLength.y/2))
+    rij.y = rij.y + BoxLength.y;
+  // in z-direction
+  if (rij.z > BoxLength.z/2)
+    rij.z = rij.z - BoxLength.z;
+  else if (rij.z <= -(BoxLength.z/2))
+    rij.z = rij.z + BoxLength.z;
+
+  return (rij);
 } //}}}

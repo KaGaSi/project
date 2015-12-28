@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
 
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
-    BeadType[FindType(argv[count], Counts, BeadType)].Use = true;
+    BeadType[FindType(argv[count], Counts, BeadType)].Use = 1;
   }
 
   // Error - does not make sense to use all bead types
@@ -293,10 +293,11 @@ int main(int argc, char *argv[]) {
 
   // read pbc from coordinate file //{{{
   char str[32];
-  Vector box_length;
-  if (fscanf(vcf, "%s %lf %lf %lf", str, &box_length.x, &box_length.y, &box_length.z) != 4 ||
+  Vector BoxLength;
+  if (fscanf(vcf, "%s %lf %lf %lf", str, &BoxLength.x, &BoxLength.y, &BoxLength.z) != 4 ||
       strcmp(str, "pbc") != 0) {
     fprintf(stderr, "Cannot read pbc from %s (should be first line)!\n", input_vcf);
+    exit(1);
   }
 
   while (getc(vcf) != '\n')
@@ -306,7 +307,7 @@ int main(int argc, char *argv[]) {
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", box_length.x, box_length.y, box_length.z);
+    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // print pbc to output .vcf file //{{{
@@ -315,7 +316,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  fprintf(out, "\npbc %lf %lf %lf\n", box_length.x, box_length.y, box_length.z);
+  fprintf(out, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
 
   fclose(out); //}}}
 
@@ -328,7 +329,8 @@ int main(int argc, char *argv[]) {
     stuff[i] = '\0';
   } //}}}
 
-  int test; //{{{
+  // main loop //{{{
+  int test;
   count = 0;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
