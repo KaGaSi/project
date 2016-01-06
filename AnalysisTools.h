@@ -29,20 +29,20 @@ typedef struct Counts {
       Aggregates; ///< total number of aggregates
 } Counts; //}}}
 
-// struct BeadType //{{{
+// struct BeadType
 /**
  * \brief Information about bead types.
  */
 typedef struct BeadType {
   char Name[16]; ///< name of given bead type
 
-  int Number, ///< number of beads of given type
-      Use; ///< are beads of given type are in .vcf file and should they be used for calculation?
-           // 0 for not in vcf file, 1 for in vcf, 2 for in vcf & use for calculation of whatever
+  int Number; ///< number of beads of given type
+
+  bool Use; ///< should bead type in .vcf file be used for calculation?
 
   double Charge, ///< charge of every bead of given type
          Mass; ///< mass of every bead of given type
-} BeadType; //}}}
+} BeadType;
 
 // struct MoleculeType //{{{
 /**
@@ -101,7 +101,7 @@ typedef struct Aggregate {
  * \param [out] MoleculeType  information about molecule types
  * \param [out] Molecule      information about individual molecules
  * */
-void ReadStructure(char *vsf_file, char *bonds_file, Counts *Counts,
+bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Counts,
                    BeadType **BeadType, Bead **Bead,
                    MoleculeType **MoleculeType, Molecule **Molecule); //}}}
 
@@ -122,24 +122,26 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
  * \brief Function reading ordered coordinates from .vcf coordinate file.
  *
  * \param [in]  vcf_file   name of input .vcf coordinate file
- * \param [in]  beadcount  number of beads in indexed timestep
+ * \param [in]  Counts     numbers of beads, molecules, etc.
+ * \param [in]  index      array holding ids of beads from .vcf file
  * \param [out] Bead       coordinates of individual beads
  * \param [out] stuff      first line of a timestep
  * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
  */
-int ReadCoorIndexed(FILE *vcf_file, int beadcount, Bead **Bead, char **stuff); //}}}
+int ReadCoorIndexed(FILE *vcf_file, int **index, Counts Counts, Bead **Bead, char **stuff); //}}}
 
 // WriteCoorIndexed //{{{
 /**
  * \brief Function writing indexed coordinates to a .vcf file.
  *
  * \param [in] vcf_file   name of output .vcf coordinate file
+ * \param [in] index      ids of beads corresponding to input .vcf file
  * \param [in] Counts     numbers of beads, molecules, etc.
  * \param [in] BeadType   information about bead types
  * \param [in] Bead       coordinates of individual beads
  * \param [in] stuff      array of chars containing comment line to place at the beginning
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff); //}}}
+void WriteCoorIndexed(FILE *vcf_file, int *index, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff); //}}}
 
 // FindType() //{{{
 /** \brief Function to identify type of bead from its name

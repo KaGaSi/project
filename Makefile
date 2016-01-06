@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c11 -Wall -Werror -O3
+CFLAGS = -std=c11 -Wall -Werror -O3 -ggdb
 LIBS = -lm
 
 SOURCES = AnalysisTools.c

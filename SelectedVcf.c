@@ -186,7 +186,7 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  ReadStructure(vsf_file, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
   }
 
   // Error - does not make sense to use all bead types
-  if ((count-5) == Counts.TypesOfBeads) {
+  if ((count-50) == Counts.TypesOfBeads) {
     fprintf(stderr, "All beadtypes are selected which would only copy %s,\n", input_vcf);
     fprintf(stderr, "therefore this is not allowed!\n\n");
     ErrorHelp(argv[0]);
@@ -218,11 +218,11 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    printf("\n   Read from FIELD\n");
+    printf("\n   Read from %s file\n", input_vcf);
     printf("Counts.{");
     printf("TypesOfBeads =%3d, ", Counts.TypesOfBeads);
     printf("Bonded =%7d, ", Counts.Bonded);
-    printf("Unboded =%7d, ", Counts.Unbonded);
+    printf("Unbonded =%7d, ", Counts.Unbonded);
     printf("TypesOfMolecules =%3d, ", Counts.TypesOfMolecules);
     printf("Molecules =%4d}\n", Counts.Molecules);
     printf("\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
@@ -293,10 +293,15 @@ int main(int argc, char *argv[]) {
 
   // read pbc from coordinate file //{{{
   char str[32];
+  do {
+    if (fscanf(vcf, "%s", str) != 1) {
+      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+    }
+  } while (strcmp(str, "pbc") != 0);
+
   Vector BoxLength;
-  if (fscanf(vcf, "%s %lf %lf %lf", str, &BoxLength.x, &BoxLength.y, &BoxLength.z) != 4 ||
-      strcmp(str, "pbc") != 0) {
-    fprintf(stderr, "Cannot read pbc from %s (should be first line)!\n", input_vcf);
+  if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
+    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
     exit(1);
   }
 
@@ -322,11 +327,14 @@ int main(int argc, char *argv[]) {
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
-  stuff = malloc(128*sizeof(int));
+  stuff = calloc(128,sizeof(int)); //}}}
 
-  // initialize the array
-  for (int i = 0; i < 128; i++) {
-    stuff[i] = '\0';
+  // create array holding bead ids - read from vcf (indexed timesteps) or ascending numbers (ordered timesteps) //{{{
+  int *index = malloc((Counts.Unbonded+Counts.Bonded)*sizeof(int));
+
+  // initiliaze index array for case of vcf with ordered timesteps
+  for (int i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
+    index[i] = i;
   } //}}}
 
   // main loop //{{{
@@ -338,10 +346,18 @@ int main(int argc, char *argv[]) {
     fflush(stdout);
     printf("\rStep: %6d", ++count);
 
-    // read ordered timestep from input .vcf file //{{{
-    if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-      fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
-      exit(1);
+    // read indexed timestep from input .vcf file //{{{
+    if (indexed) {
+      if ((test = ReadCoorIndexed(vcf, &index, Counts, &Bead, &stuff)) != 0) {
+        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        exit(1);
+      } //}}}
+    // or read ordered timestep from input .vcf file //{{{
+    } else {
+      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
+        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        exit(1);
+      }
     } //}}}
 
     // open output .vcf file for appending //{{{
@@ -350,7 +366,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    WriteCoorIndexed(out, Counts, BeadType, Bead, stuff);
+    WriteCoorIndexed(out, index, Counts, BeadType, Bead, stuff);
 
     fclose(out);
 
@@ -378,6 +394,7 @@ int main(int argc, char *argv[]) {
     free(Molecule[i].Bead);
   }
   free(Molecule);
+  free(index);
   free(stuff);
   //}}}
 
