@@ -190,11 +190,18 @@ int main(int argc, char *argv[]) {
 
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
-    BeadType[FindType(argv[count], Counts, BeadType)].Use = 1;
+    int type = FindType(argv[count], Counts, BeadType);
+
+    if (type == -1) {
+      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", argv[count], input_vcf);
+      exit(1);
+    }
+
+    BeadType[type].Use = 1;
   }
 
   // Error - does not make sense to use all bead types
-  if ((count-50) == Counts.TypesOfBeads) {
+  if ((count-5) == Counts.TypesOfBeads) {
     fprintf(stderr, "All beadtypes are selected which would only copy %s,\n", input_vcf);
     fprintf(stderr, "therefore this is not allowed!\n\n");
     ErrorHelp(argv[0]);
@@ -291,22 +298,26 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // read pbc from coordinate file //{{{
+  // get pbc from coordinate file //{{{
   char str[32];
+  // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
       fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
     }
   } while (strcmp(str, "pbc") != 0);
 
+  // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
     fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
     exit(1);
   }
 
+  // skip remainder of pbc line
   while (getc(vcf) != '\n')
     ;
+  // skip blank line
   while (getc(vcf) != '\n')
     ;
 
@@ -329,14 +340,6 @@ int main(int argc, char *argv[]) {
   char *stuff;
   stuff = calloc(128,sizeof(int)); //}}}
 
-  // create array holding bead ids - read from vcf (indexed timesteps) or ascending numbers (ordered timesteps) //{{{
-  int *index = malloc((Counts.Unbonded+Counts.Bonded)*sizeof(int));
-
-  // initiliaze index array for case of vcf with ordered timesteps
-  for (int i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
-    index[i] = i;
-  } //}}}
-
   // main loop //{{{
   int test;
   count = 0;
@@ -348,7 +351,7 @@ int main(int argc, char *argv[]) {
 
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
-      if ((test = ReadCoorIndexed(vcf, &index, Counts, &Bead, &stuff)) != 0) {
+      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
         fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
         exit(1);
       } //}}}
@@ -366,7 +369,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    WriteCoorIndexed(out, index, Counts, BeadType, Bead, stuff);
+    WriteCoorIndexed(out, Counts, BeadType, Bead, stuff);
 
     fclose(out);
 
@@ -394,7 +397,6 @@ int main(int argc, char *argv[]) {
     free(Molecule[i].Bead);
   }
   free(Molecule);
-  free(index);
   free(stuff);
   //}}}
 

@@ -5,11 +5,12 @@ All the utilities read information about studied system from [vsf/vcf
 files](https://github.com/olenz/vtfplugin/wiki/VTF-format) (formatted as
 described below) and `FIELD` file (input file for [DL_MESO simulation
 package](http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx)).
-Structure of the system (names and numbers of beads and molecules, etc.) is
-read from `FIELD` file and `.vsf` file. Coordinates are read from a
-separate `.vcf` file (containing either ordered timestep(s) with
-coordinates of all beads or indexed timestep(s) with coordinates of only
-selected beads).
+Coordinates are read from a `.vcf` file (with either
+[ordered timesteps](\ref OrderedCoorFile) or
+[indexed timesteps](\ref IndexedCoorFile)). Structure of the system (names
+and numbers of beads and molecules, etc.) is read from `FIELD` file and
+`.vsf` files, but only bead types that are in the above mentioned `.vcf`
+file are considered.
 
 Structure file {#StructureFile}
 =====
@@ -47,7 +48,7 @@ Optional bond file {#BondFile}
 =====
 
 Bonds for each molecule type are specified in `FIELD`, but they can be read
-from a different type if required.
+from a different file if required.
 
 The file with molecule bonds must contain name of the molecule type (same
 as in `FIELD`) followed by number of bonds on the next line and on every
@@ -62,11 +63,45 @@ Example of bond file:
 >
 > `3`
 >
-> `1 2`
+> `1 2 possible`
 >
 > `3 1`
 >
-> `2 3`
+> `2 3 comment`
+
+This file must be used for molecule types that have only some of its beads
+in `.vcf` file with indexed timesteps. In such a case, the bead indices
+correspond to `FIELD` as if the bead types not present in `.vcf` are not
+present `FIELD`. Example `FIELD`:
+
+> `...`
+>
+> `beads 3`
+>
+> `A <float> <float> <float>`
+>
+> `B <float> <float> <float>`
+>
+> `A <float> <float> <float>`
+>
+> `bonds 3`
+>
+> `harm 1 2 <float> <float>`
+>
+> `harm 1 3 <float> <float>`
+>
+> `harm 2 3 <float> <float>`
+>
+> `finish`
+
+Assuming only bead types `A` are present in `.vcf` file, the now necessary
+bond file would like like this:
+
+> `name`
+>
+> `1`
+>
+> `1 2 possible comment`
 
 Bond information about molecule types not present in the bond file will be read
 from `FIELD`.
