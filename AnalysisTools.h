@@ -64,6 +64,7 @@ typedef struct MoleculeType {
  */
 typedef struct Bead {
   int Type, ///< type of bead corresponding to index in BeadType struct
+      Molecule, ///< index number of molecule corresponding to Molecule struct (-1 for monomeric bead)
       Index; ///< index of the bead according to .vsf file (needed for indexed timesteps)
 
   Vector Position; ///< cartesian coordinates of the bead
@@ -84,9 +85,9 @@ typedef struct Molecule {
  */
 typedef struct Aggregate {
   int nMolecules, ///< number of molecules in aggregate
-      *Monomer, ///< ids of monomeric beads in aggregate
+      *Molecule, ///< ids of molecules in aggregate
       nMonomers, ///< number of monomeric beads in aggregate
-      *Molecule; ///< ids of molecules in aggregate
+      *Monomer; ///< ids of monomeric beads in aggregate
 } Aggregate; //}}}
 
 // ReadStructure() //{{{

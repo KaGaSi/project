@@ -27,7 +27,12 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, Vector BoxLength
                          BeadType *BeadType, Bead *Bead,
                          MoleculeType *MoleculeType, Molecule *Molecule) {
 
+  // zeroize //{{{
   (*Counts).Aggregates = 0;
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    (*Aggregate)[i].nMolecules = 0;
+    (*Aggregate)[i].nMonomers = 0;
+  } //}}}
 
   // allocate & zeroize contact[][] (triangular matrix) and moved array //{{{
   int **contact = malloc((*Counts).Molecules*sizeof(int *));
@@ -43,41 +48,37 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, Vector BoxLength
       contact[i][j] = 0;
   } //}}}
 
-//// count contacts between all molecules pairs //{{{
-//// go over all pairs of molecules
-//for (int i = 0; i < (*Counts).Molecules; i++) { // first molecule
-//  for (int j = 0; j < i; j++) { // second molecule
+  // count contacts between all molecules pairs //{{{
+  // go over all pairs of molecules
+  for (int i = 1; i < (*Counts).Molecules; i++) { // first molecule
+    for (int j = 0; j < i; j++) { // second molecule
 
-//    // go over all beads in first molecule
-//    for (int k = 0; k < MoleculeType[Molecule[i].Type].nBeads; k++) {
-//      int id1 = Molecule[i].Bead[k];
+      // go over all beads in first molecule
+      for (int k = 0; k < MoleculeType[Molecule[i].Type].nBeads; k++) {
+        int id1 = Molecule[i].Bead[k];
 
-//      // go over all beads in second molecule if the bead type of id1 is in use
-//      for (int l = 0; BeadType[Bead[id1].Type].Use && l < MoleculeType[Molecule[j].Type].nBeads; l++) {
-//        int id2 = Molecule[j].Bead[l];
+        // go over all beads in second molecule if the bead type of id1 is in use
+        for (int l = 0; BeadType[Bead[id1].Type].Use && l < MoleculeType[Molecule[j].Type].nBeads; l++) {
+          int id2 = Molecule[j].Bead[l];
 
-//        // should bead of this type be used to calculate aggregates?
-//        if (BeadType[Bead[id2].Type].Use) {
+          // should bead of this type be used to calculate aggregates?
+          if (BeadType[Bead[id2].Type].Use) {
 
-//          // calculate distance between k-th bead in molecule i and l-th bead in molecule j
-//          Vector rij = DistanceBetweenBeads(id1, id2, Bead, BoxLength);
+            // calculate distance between k-th bead in molecule i and l-th bead in molecule j
+            Vector rij = DistanceBetweenBeads(id1, id2, Bead, BoxLength);
 
-//          // distance squared
-//          rij.x = SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
-
-//          if (rij.x <= sqdist)
-//            contact[i][j]++;
-//        }
-//      }
-//    }
-//  }
-//} //}}}
+            // are 'id1' and 'id2' close enough?
+            if ((SQR(rij.x) + SQR(rij.y) + SQR(rij.z)) <= sqdist)
+              contact[i][j]++;
+          }
+        }
+      }
+    }
+  } //}}}
 
   // evaluate the contacts //{{{
-  (*Counts).Aggregates = 0;
   // first molecule
   for (int i = 1; i < (*Counts).Molecules; i++) {
-//  res = i; // what's this for?
 
     // second molecule
     for (int j = 0; j < i; j++) {
@@ -119,31 +120,23 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, Vector BoxLength
       if (contact[i][j] >= contacts) {
         // create new aggregate if 'j' isn'it in any //{{{
         if (testj == -1) {
-          (*Aggregate)[(*Counts).Aggregates].nMolecules = 1;
-          (*Aggregate)[(*Counts).Aggregates].Molecule[0] = j;
+          testj = (*Counts).Aggregates;
+
+          (*Aggregate)[testj].nMolecules = 1;
+          (*Aggregate)[testj].Molecule[0] = j;
 
           (*Counts).Aggregates++;
-          testj = (*Counts).Aggregates;
         } //}}}
 
         // add 'i' to aggregate if 'i' isn't in any //{{{
         if (testi == -1) {
-          (*Aggregate)[testj].nMolecules++;
           (*Aggregate)[testj].Molecule[(*Aggregate)[testj].nMolecules] = i;
+
+          (*Aggregate)[testj].nMolecules++;
         } //}}}
 
         // each residue in different aggregate => unite aggregates
         if (testi != -1 && testj != -1 && testi != testj) {
-//        // make sure testj<testi and i & j correspond to testi & testj //{{{
-//        if (testj > testi) {
-//          int swap = testj;
-//          testj = testi;
-//          testi = swap;
-
-//          swap = i;
-//          i = j;
-//          j = swap;
-//        } //}}}
 
           // add molecules from aggregate 'testi' to 'testj' //{{{
           int mols = (*Aggregate)[testj].nMolecules;
@@ -180,181 +173,109 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, Vector BoxLength
     }
   } //}}}
 
-///* if residue with highest id is in no aggregate,
-// * a separate aggregate must to be created */ //{{{
+  // if residue with highest id is in no aggregate, create it //{{{
+  // check if highest id residue is in aggregate //{{{
+  bool test = false;
+  for (int i = 0; i < (*Counts).Aggregates; i++) {
+    for (int j = 1; j < (*Aggregate)[i].nMolecules; j++) {
+      if ((*Aggregate)[i].Molecule[j] == ((*Counts).Molecules-1)) {
+        test = 1;
+      }
+    }
+  } //}}}
 
-///* check if highest id residue is in aggregate */ //{{{
-//testi = -1;
-//l = 0; /* total number in all aggregates for later check */
-//for (i = 0; i < NumberOfAggregates; i++) {
-//  l += Aggregate[i].Residues[0];
-//  for (j = 1; j <= Aggregate[i].Residues[0]; j++) {
-//    if (Aggregate[i].Residues[j] == res) {
-//      testi = 1;
-//    }
-//  }
-//} //}}}
+  /* highest id residue not in any aggregate => create separate one */ //{{{
+  if (!test) {
+    (*Aggregate)[(*Counts).Aggregates].nMolecules = 1;
+    (*Aggregate)[(*Counts).Aggregates].Molecule[0] = (*Counts).Molecules - 1;
 
-///* highest id residue not in any aggregate => create separate one */ //{{{
-//if (testi == -1) {
-//  l++;
-//  NumberOfAggregates++;
-//  Aggregate[NumberOfAggregates-1].Residues[0] = 1;
-//  Aggregate[NumberOfAggregates-1].Residues[1] = res;
+    (*Counts).Aggregates++;
+  } //}}}
+  //}}}
 
-//  Molecule[(*Counts).Molecules-1].Aggregate = NumberOfAggregates - 1;
+  // bubble sort molecules in aggregates according to ascending ids //{{{
+  for (int i = 0; i < (*Counts).Aggregates; i++) {
 
-//  Aggregate[NumberOfAggregates-1].Beads[0] = Molecule[res].Beads[0];
-//  for (k = 1; k <= Molecule[res].Beads[0]; k++) {
-//    Aggregate[NumberOfAggregates-1].Beads[k] = Molecule[res].Beads[k];
-//  }
-//} //}}}
-////}}}
+    for (int j = 0 ; j < ((*Aggregate)[i].nMolecules-1); j++) {
+      bool done = true;
 
-///* test if correct number of residues in all aggregates */ //{{{
-//if (l != residues) {
-//  printf("ERROR:     (*Counts).Molecules = %d\n", (*Counts).Molecules);
-//  printf("  # of residues in vcf file = %d\n", residues);
-//  printf("# of residues in aggregates = %d\n\n", l);
-//  exit(1);
-//} //}}}
+      for (int k = 0 ; k < ((*Aggregate)[i].nMolecules-j-1); k++) {
 
-///* bubble sort for ascending residue ids */ //{{{
-//for (i = 0; i < NumberOfAggregates; i++) {
-//  for (j = 1 ; j <= (Aggregate[i].Residues[0]-1); j++) {
-//    id1 = 0; /* swapped? */
-//    for (k = 1 ; k <= (Aggregate[i].Residues[0]-j); k++) {
-//      if (Aggregate[i].Residues[k] > Aggregate[i].Residues[k+1]) {
-//        id1 = Aggregate[i].Residues[k];
-//        Aggregate[i].Residues[k] = Aggregate[i].Residues[k+1];
-//        Aggregate[i].Residues[k+1] = id1;
-//        id1 = 1;
-//      }
-//    }
-//    if (id1 == 0)
-//      break;
-//  }
-//} //}}}
+        if ((*Aggregate)[i].Molecule[k] > (*Aggregate)[i].Molecule[k+1]) {
 
-///* bubble sort for ascending bead ids */ //{{{
-//for (i = 0; i < NumberOfAggregates; i++) {
-//  for (j = 1 ; j <= (Aggregate[i].Beads[0]-1); j++) {
-//    id1 = 0; /* swapped? */
-//    for (k = 1 ; k <= (Aggregate[i].Beads[0]-j); k++) {
-//      if (Aggregate[i].Beads[k] > Aggregate[i].Beads[k+1]) {
-//        id1 = Aggregate[i].Beads[k];
-//        Aggregate[i].Beads[k] = Aggregate[i].Beads[k+1];
-//        Aggregate[i].Beads[k+1] = id1;
-//        id1 = 1;
-//      }
-//    }
-//    if (id1 == 0)
-//      break;
-//  }
-//} //}}}
+          int swap = (*Aggregate)[i].Molecule[k];
+          (*Aggregate)[i].Molecule[k] = (*Aggregate)[i].Molecule[k+1];
+          (*Aggregate)[i].Molecule[k+1] = swap;
 
-//// join all residues; aka remove pbc //{{{
-//for (i = 0; i < (*Counts).Molecules; i++)
-//  RemovePBCResidue(i); //}}}
+          done = false;
+        }
+      }
+      if (done)
+        break;
+    }
+  } //}}}
 
-///* put together all aggregates */ //{{{
-//for (i = 0; i < NumberOfAggregates; i++) {
-//  testj = 0; /* just to make sure do{}while isn't infinite */
+  // bubble sort aggregates according to ascending ids of first molecules //{{{
+  for (int i = 0; i < ((*Counts).Aggregates-1); i++) {
+    bool done = true;
 
-//  moved[Aggregate[i].Residues[1]] = 1; /* first residue of aggregate isn't to move */
+    for (int j = 0; j < ((*Counts).Aggregates-i-1); j++) {
 
-//  /* do stuff until all residues have moved[]=1 */
-//  do {
-//    for (j = 1; j <= Aggregate[i].Residues[0]; j++) {
-//      id1 = Aggregate[i].Residues[j];
-//      // if id1 was moved, look at other residues to move
-//      if (moved[id1] == 1) { // always true for first residue of aggregate
-//        for (k = 1; k <= Aggregate[i].Residues[0]; k++) {
-//          if (k != j) { /* look only at different residues */
-//            id2 = Aggregate[i].Residues[k];
+      if ((*Aggregate)[j].Molecule[0] > (*Aggregate)[j+1].Molecule[0]) {
+        // swtich numbers of molecules
+        int swap = (*Aggregate)[j].nMolecules;
+        (*Aggregate)[j].nMolecules = (*Aggregate)[j+1].nMolecules;
+        (*Aggregate)[j+1].nMolecules = swap;
 
-//            // number of contact between id1 and id2 //{{{
-//            if (id1 > id2) // contact[][] is triangular matrix
-//              l = contact[id1][id2];
-//            else
-//              l = contact[id2][id1]; //}}}
+        // switch the whole Aggregate[].Molecule array (no idea which aggregate contains more molecules)
+        for (int k = 0; k < (*Counts).Molecules; k++) {
+          swap = (*Aggregate)[j].Molecule[k];
+          (*Aggregate)[j].Molecule[k] = (*Aggregate)[j+1].Molecule[k];
+          (*Aggregate)[j+1].Molecule[k] = swap;
+        }
 
-//            /* if id1 and id2 are supposed to be close and id2 wasn't moved,
-//             * check if they're close or separated by boxlength */ //{{{
-//            if (l >= contacts && moved[id2] == 0) {
-//              moveid2 = Molecule[id2].Beads[1];
+        done = false;
+      }
+    }
+    if (done)
+      break;
+  } //}}}
 
-//              // find bead in id1 closest to the first bead in id2 //{{{
-//              min_dist = 1e5; // just take any high number
-//              for (l = 1; l <= Molecule[id1].Beads[0]; l++) {
-//                rij.x = Bead[moveid2].Position.x - Bead[Molecule[id1].Beads[l]].Position.x; //{{{
-//                rij.y = Bead[moveid2].Position.y - Bead[Molecule[id1].Beads[l]].Position.y;
-//                rij.z = Bead[moveid2].Position.z - Bead[Molecule[id1].Beads[l]].Position.z; //}}}
-//                rij = RijPeriodicBoundary(rij);
-//                rij.x = sqrt(SQR(rij.x) + SQR(rij.y) + SQR(rij.z));
-//                if (rij.x < min_dist) {
-//                  min_dist = rij.x;
-//                  moveid1 = Molecule[id1].Beads[l];
-//                }
-//              } //}}}
+  // calculate the number of monomeric beads in aggregate //{{{
+  // go through all unbonded beads
+  for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
+    if (Bead[i].Molecule == -1) { // -1 means 'in no molecule'
 
-//              rij.x = Bead[moveid2].Position.x - Bead[moveid1].Position.x; //{{{
-//              rij.y = Bead[moveid2].Position.y - Bead[moveid1].Position.y;
-//              rij.z = Bead[moveid2].Position.z - Bead[moveid1].Position.z; //}}}
+      // go through all aggregates
+      for (int j = 0; j < (*Counts).Aggregates; j++) {
+        bool in_agg = false;
 
-//              rij = RijPeriodicBoundary(rij);
-//              Bead[moveid2].Position.x = Bead[moveid1].Position.x + rij.x; //{{{
-//              Bead[moveid2].Position.y = Bead[moveid1].Position.y + rij.y;
-//              Bead[moveid2].Position.z = Bead[moveid1].Position.z + rij.z; //}}}
+        // go through all molecules in aggregate 'j'
+        for (int k = 0; k < (*Aggregate)[j].nMolecules; k++) {
+          int id = (*Aggregate)[j].Molecule[k];
 
-//              // move the rest of the beads of Molecule[id2]
-//              RemovePBCResidue(id2);
+          // go through all beads in molecule 'id'
+          for (int l = 0; l < MoleculeType[Molecule[id].Type].nBeads; l++) {
 
-//              // residue id2 is not to move again
-//              moved[id2] = 1;
-//            } //}}}
-//          }
-//        }
-//      }
-//    }
-//    // test if all aggregates are moved //{{{
-//    testi = -1;
-//    whatever = 0;
-//    for (j = 1; j <= Aggregate[i].Residues[0]; j++) {
-//      if (moved[Aggregate[i].Residues[j]] == 0) {
-//        testi = 0;
-//        whatever++;
-//      }
-//    }
-//    if (testi == 0)
-//      testj++; //}}}
-//  } while (whatever != 0);
+            // calculate distance between monomeric bead 'i' and bead 'Molecule[id].Bead[l]'
+            Vector dist = DistanceBetweenBeads(i, Molecule[id].Bead[l], Bead, BoxLength);
 
-//  /* move center of aggregate's mass to the box */ //{{{
-//  rij = AggCenterOfMass(i, selected);
-//  if (rij.x > BoxLength.x) {
-//    for (j = 1; j <= Aggregate[i].Beads[0]; j++)
-//      Bead[Aggregate[i].Beads[j]].Position.x -= BoxLength.x;
-//  } else if (rij.x < 0) {
-//    for (j = 1; j <= Aggregate[i].Beads[0]; j++)
-//      Bead[Aggregate[i].Beads[j]].Position.x += BoxLength.x;
-//  }
-//  if (rij.y > BoxLength.y) { //{{{
-//    for (j = 1; j <= Aggregate[i].Beads[0]; j++)
-//      Bead[Aggregate[i].Beads[j]].Position.y -= BoxLength.y;
-//  } else if (rij.y < 0) {
-//    for (j = 1; j <= Aggregate[i].Beads[0]; j++)
-//      Bead[Aggregate[i].Beads[j]].Position.y += BoxLength.y;
-//  } //}}}
-//  if (rij.z > BoxLength.z) { //{{{
-//    for (j = 1; j <= Aggregate[i].Beads[0]; j++)
-//      Bead[Aggregate[i].Beads[j]].Position.z -= BoxLength.z;
-//  } else if (rij.z < 0) {
-//    for (j = 1; j <= Aggregate[i].Beads[0]; j++)
-//      Bead[Aggregate[i].Beads[j]].Position.z += BoxLength.z;
-//  } //}}}
-//  //}}}
-//} //}}}
+            if ((SQR(dist.x)+SQR(dist.y)+SQR(dist.z)) < sqdist) {
+              (*Aggregate)[j].Monomer[(*Aggregate)[j].nMonomers] = Bead[i].Index;
+              (*Aggregate)[j].nMonomers++;
+
+              in_agg = true;
+
+              break;
+            }
+          }
+
+          if (in_agg)
+            break;
+        }
+      }
+    }
+  } //}}}
 
   // free memory //{{{
   for (int i = 0; i < (*Counts).Molecules; i++)
@@ -562,7 +483,7 @@ int main(int argc, char *argv[]) {
       printf("Number =%7d, ", BeadType[i].Number);
       printf("Charge =%6.2f, ", BeadType[i].Charge);
       printf("Mass =%5.2f, ", BeadType[i].Mass);
-      printf("Use = %d}\n", BeadType[i].Use);
+      printf("Use = %s}\n", BeadType[i].Use ? "True" : "False");
     }
     putchar('\n');
 
@@ -712,7 +633,35 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    // do stuff
+    // write data to output .agg file //{{{
+    fprintf(out, "Step: %d\n%d\n\n", count, Counts.Aggregates);
+    int test_count = 0; // to test that all molecules are in aggregate
+
+    // go through all aggregates
+    for (int i = 0; i < Counts.Aggregates; i++) {
+
+      test_count += Aggregate[i].nMolecules;
+
+      // go through all molecules in aggregate 'i'
+      fprintf(out, "%d :", Aggregate[i].nMolecules);
+      for (int j = 0; j < Aggregate[i].nMolecules; j++ ) {
+        fprintf(out, " %d", Aggregate[i].Molecule[j]+1);
+      }
+      putc('\n', out);
+
+      // go through all monomeric beads in aggregate 'i'
+      fprintf(out, "   %d :", Aggregate[i].nMonomers);
+      for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+        fprintf(out, " %d", Aggregate[i].Monomer[j]);
+      }
+      putc('\n', out);
+    }
+
+    if (test_count != Counts.Molecules) {
+      fprintf(stderr, "Not all molecules were assigned to aggregates!\n");
+      fprintf(stderr, "Counts.Molecules = %5d; Molecules in aggregates: %d\n", Counts.Molecules, test_count);
+      exit(1);
+    } //}}}
 
     fclose(out);
 
@@ -722,10 +671,10 @@ int main(int argc, char *argv[]) {
     } //}}}
   }
 
-  fflush(stdout);
-  printf("\rLast Step: %6d\n", count);
+  fclose(vcf);
 
-  fclose(vcf); //}}}
+  fflush(stdout);
+  printf("\rLast Step: %6d\n", count); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
