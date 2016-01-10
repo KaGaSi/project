@@ -459,11 +459,6 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   // define default bead type
   int type_def = FindType(str, Counts, BeadType);
 
-  // assign default type to first bead (if its type is in vcf file) //{{{
-  if (type_def != -1) {
-    (*Bead)[0].Type = type_def;
-  } //}}}
-
   // read the first string of the next line //{{{
   while (getc(vsf) != '\n')
     ;
@@ -473,7 +468,7 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   } //}}}
 
   // every atom line begins with 'a' or 'atom'
-  int id_old = 0, id = 0;
+  int id_old = -1, id = 0;
   while (strncmp(str, "atom", 1) == 0) {
 
     // read bead id //{{{
@@ -505,10 +500,10 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
     // determine type of bead 'id_new'
     int type = FindType(str, Counts, BeadType);
 
-    // if type in vcf file, assign 'type' to bead 'id'
+    // if type in vcf file, assign 'type' to bead 'id' //{{{
     if (type != -1) {
       (*Bead)[id++].Type = type;
-    }
+    } //}}}
 
     // save id_new for next atom line
     id_old = id_new;
@@ -707,36 +702,25 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
     }
   } //}}}
 
-    printf("\n   Read from FIELD\n");
-    printf("Counts.{");
-    printf("TypesOfBeads =%3d, ", (*Counts).TypesOfBeads);
-    printf("Bonded =%7d, ", (*Counts).Bonded);
-    printf("Unboded =%7d, ", (*Counts).Unbonded);
-    printf("TypesOfMolecules =%3d, ", (*Counts).TypesOfMolecules);
-    printf("Molecules =%4d}\n", (*Counts).Molecules);
-    printf("\ntotal number of beads: %d\n\n", (*Counts).Bonded+(*Counts).Unbonded);
-
-    for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-      printf("BeadType[%2d].{", i);
-      printf("Name =%10s, ", (*BeadType)[i].Name);
-      printf("Number =%7d, ", (*BeadType)[i].Number);
-      printf("Charge =%6.2f, ", (*BeadType)[i].Charge);
-      printf("Mass =%5.2f, ", (*BeadType)[i].Mass);
-      printf("Use = %d}\n", (*BeadType)[i].Use);
-    }
-    putchar('\n');
-
-    for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-      printf("MoleculeType[%d].{", i);
-      printf("Name =%10s", (*MoleculeType)[i].Name);
-      printf(", Number =%4d", (*MoleculeType)[i].Number);
-      printf(", nBeads =%3d", (*MoleculeType)[i].nBeads);
-      printf(", nBonds =%3d\n", (*MoleculeType)[i].nBonds);
-    }
-
   // Counts is pointer, so *Counts to pass by value
   // Bead is in reality **Bead, so no &Bead
   ReadVsf(vsf_file, *Counts, *BeadType, Bead);
+
+  // assign 'in no molecule' status to all beads //{{{
+  for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
+    (*Bead)[i].Molecule = -1;
+  } //}}}
+
+  // assign correct molecule id for beads in molecules //{{{
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    for (int j = 0; j < (*MoleculeType)[(*Molecule)[i].Type].nBeads; j++) {
+      (*Bead)[(*Molecule)[i].Bead[j]].Molecule = i;
+    }
+  } //}}}
+
+//for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
+//  printf("%5d %5d %s %4d\n", i, (*Bead)[i].Index, (*BeadType)[(*Bead)[i].Type].Name, (*Bead)[i].Molecule);
+//}
 
   return (indexed);
 } //}}}
