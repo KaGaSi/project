@@ -86,6 +86,8 @@ typedef struct Molecule {
 typedef struct Aggregate {
   int nMolecules, ///< number of molecules in aggregate
       *Molecule, ///< ids of molecules in aggregate
+      nBeads, ///< number of bonded beads in aggregate
+      *Bead, ///< ids of bonded beads in aggregate
       nMonomers, ///< number of monomeric beads in aggregate
       *Monomer; ///< ids of monomeric beads in aggregate
 } Aggregate; //}}}
@@ -164,4 +166,16 @@ int FindType(char *name, Counts Counts, BeadType *BeadType); //}}}
  * \return distance vector between the two provided beads (without pbc)
  */
 Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength); //}}}
+
+// FillAggregateBeads() //{{{
+/**
+ * \brief Function to assign bead ids to Aggregate struct.
+ *
+ * \param [out] Aggregate      information about all aggregates (i.e. bead ids in aggregates)
+ * \param [in]  Counts         numbers of beads, molecules, etc.
+ * \param [in]  MoleculeType   information about molecule types
+ * \param [in]  Molecule       information about individual molecules
+ */
+void FillAggregateBeads(Aggregate **Aggregate, Counts Counts,
+                        MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 #endif

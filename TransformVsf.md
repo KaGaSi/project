@@ -59,3 +59,7 @@ For VMD atom selection:
 > > negative charge)
 > `mass <m>`
 > > selects all beads with given mass(es)
+
+\todo Somehow avoid the need to use the special optional bond file, where
+the ids of beads must strictly adhere to FIELD. Possibly require use of a
+vcf file in conjunction with bond file
