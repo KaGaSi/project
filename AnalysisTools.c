@@ -821,8 +821,7 @@ int FindType(char *name, Counts Counts, BeadType *BeadType) {
  * periodic boundary conditions and returns x, y, and z distances in the
  * range <0, BoxLength/2).
  */
-Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength)
-{
+Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength) {
 
   Vector rij;
 
@@ -837,15 +836,40 @@ Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength)
   else if (rij.x <= -(BoxLength.x/2))
     rij.x = rij.x + BoxLength.x;
   // in y-direction
-  if (rij.y > BoxLength.y/2)
+  if (rij.y > (BoxLength.y/2))
     rij.y = rij.y - BoxLength.y;
   else if (rij.y <= -(BoxLength.y/2))
     rij.y = rij.y + BoxLength.y;
   // in z-direction
-  if (rij.z > BoxLength.z/2)
+  if (rij.z > (BoxLength.z/2))
     rij.z = rij.z - BoxLength.z;
   else if (rij.z <= -(BoxLength.z/2))
     rij.z = rij.z + BoxLength.z;
 
   return (rij);
+} //}}}
+
+// FillAggregateBeadsa //{{{
+/**
+ * Function to assign bead ids to aggregates accoding to molecules in the
+ * aggregates. It essentially duplicates the information for the
+ * convenience of easy access to all beads in the aggregates.
+ */
+void FillAggregateBeads(Aggregate **Aggregate, Counts Counts,
+                        MoleculeType *MoleculeType, Molecule *Molecule) {
+
+  // go through all aggregates
+  for (int i = 0; i < Counts.Aggregates; i++) {
+
+    // go through all molecules in aggregate 'i'
+    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+      int mol = (*Aggregate)[i].Molecule[j];
+
+      // copy all bead in molecule 'mol' to Aggregate struct
+      for (int k = 0; k < MoleculeType[Molecule[mol].Type].nBeads; k++) {
+        (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads] = Molecule[mol].Bead[k];
+        (*Aggregate)[i].nBeads++;
+      }
+    }
+  }
 } //}}}
