@@ -10,18 +10,18 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   %s <input.vcf> <distance> <contacts> ", cmd);
   fprintf(stderr, "<output.agg> <type names> <options>\n\n");
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <distance>        minimum distance for contact for aggregate check\n");
-  fprintf(stderr, "   <contacts>        minimum number of contacts for aggregate check\n");
-  fprintf(stderr, "   <output.agg>      output filename (agg format)\n");
-  fprintf(stderr, "   <type names>      names of bead types to use for closeness calculation\n");
+  fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
+  fprintf(stderr, "   <distance>          minimum distance for contact for aggregate check\n");
+  fprintf(stderr, "   <contacts>          minimum number of contacts for aggregate check\n");
+  fprintf(stderr, "   <output.agg>        output filename (agg format)\n");
+  fprintf(stderr, "   <type names>        names of bead types to use for closeness calculation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
-  fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
-  fprintf(stderr, "      -j <name.vcf>  output vcf file with joined coordinates\n");
-  fprintf(stderr, "      -v             verbose output\n");
-  fprintf(stderr, "      -V             verbose output with comments from input .vcf file\n");
-  fprintf(stderr, "      -h             print this help and exit\n");
+  fprintf(stderr, "      -i <name>        use input .vsf file different from dl_meso.vsf\n");
+  fprintf(stderr, "      -b <name>        file containing bond alternatives to FIELD\n");
+  fprintf(stderr, "      -j <joined.vcf>  output vcf file with joined coordinates\n");
+  fprintf(stderr, "      -v               verbose output\n");
+  fprintf(stderr, "      -V               verbose output with comments from input .vcf file\n");
+  fprintf(stderr, "      -h               print this help and exit\n");
 } //}}}
 
 void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int contacts, //{{{
@@ -339,12 +339,11 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   free(moved); //}}}
 } //}}}
 
-void RemovePBCAggregates(Aggregate *Aggregate, Counts Counts, //{{{
+void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts, //{{{
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
                          MoleculeType *MoleculeType, Molecule *Molecule) {
 
   bool *moved = malloc(Counts.Molecules*sizeof(bool));
-  double distance = 1;
 
   // go through all aggregates larger than unimers
   for (int i = 0; i < Counts.Aggregates; i++) {
@@ -379,13 +378,12 @@ void RemovePBCAggregates(Aggregate *Aggregate, Counts Counts, //{{{
 
                   // calculate distance between 'bead1' and 'bead2'
                   Vector dist = DistanceBetweenBeads(bead1, bead2, *Bead, BoxLength);
-                  double sqdist = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
+                  dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
                   // move 'mol2' if 'bead1' and 'bead2' are in contact
-                  if (sqdist < distance) {
+                  if (dist.x < distance) {
 
                     // distance vector between 'bead1' and 'bead2'
-                    Vector dist;
                     dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
                     dist.y = (*Bead)[bead1].Position.y - (*Bead)[bead2].Position.y;
                     dist.z = (*Bead)[bead1].Position.z - (*Bead)[bead2].Position.z;
@@ -472,18 +470,18 @@ int main(int argc, char *argv[]) {
       printf("   %s <input.vcf> <distance> <contacts> ", argv[0]);
       printf("<output.agg> <type names> <options>\n\n");
 
-      printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <output.agg>      output filename (agg format)\n");
-      printf("   <distance>        minimum distance for contact for aggregate check\n");
-      printf("   <contacts>        minimum number of contacts for aggregate check\n");
-      printf("   <type names>      names of bead types for closeness calculation\n");
+      printf("   <input.vcf>         input filename (vcf format)\n");
+      printf("   <output.agg>        output filename (agg format)\n");
+      printf("   <distance>          minimum distance for contact for aggregate check\n");
+      printf("   <contacts>          minimum number of contacts for aggregate check\n");
+      printf("   <type names>        names of bead types for closeness calculation\n");
       printf("   <options>\n");
-      printf("      -i <name>      use input .vsf file different from dl_meso.vsf\n");
-      printf("      -b <name>      file containing bond alternatives to FIELD\n");
-      printf("      -j <name.vcf>  output vcf file with joined coordinates\n");
-      printf("      -v             verbose output\n");
-      printf("      -V             verbose output with comments from input .vcf file\n");
-      printf("      -h             print this help and exit\n");
+      printf("      -i <name>        use input .vsf file different from dl_meso.vsf\n");
+      printf("      -b <name>        file containing bond alternatives to FIELD\n");
+      printf("      -j <joined.vcf>  output vcf file with joined coordinates\n");
+      printf("      -v               verbose output\n");
+      printf("      -V               verbose output with comments from input .vcf file\n");
+      printf("      -h               print this help and exit\n");
       exit(0);
     }
   } //}}}
@@ -548,6 +546,31 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  // -j <joined.vcf> - filename of output vcf file (must end with .vcf) //{{{
+  char joined_vcf[32];
+  joined_vcf[0] = '\0'; // no -j option
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-j") == 0) {
+
+      // wrong argument to -i option
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\nMissing argument to '-j' option ");
+        fprintf(stderr, "(or filename beginning with a dash)!\n");
+        exit(1);
+      }
+
+      strcpy(joined_vcf, argv[i+1]);
+
+      // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
+      char *dot = strrchr(joined_vcf, '.');
+      if (!dot || strcmp(dot, ".vcf")) {
+        fprintf(stderr, "<joined.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
+    }
+  } //}}}
+
   // -v option - verbose output //{{{
   bool verbose = false;
   for (int i = 1; i < argc; i++) {
@@ -586,7 +609,7 @@ int main(int argc, char *argv[]) {
   // <distance> - number of starting timestep //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <start>!\n");
+    fprintf(stderr, "Non-numeric argement for <distance>!\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -595,7 +618,7 @@ int main(int argc, char *argv[]) {
   // <contacts> - number of steps to skip per one used //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <skip>!\n");
+    fprintf(stderr, "Non-numeric argement for <contacts>!\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -754,6 +777,34 @@ int main(int argc, char *argv[]) {
     printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
+  // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
+  if (joined_vcf[0] != '\0') {
+
+    // for now all bead types are to be written in joined.vcf
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      BeadType[i].Write = true;
+    }
+
+    // open <joined.vcf>
+    FILE *joined;
+    if ((joined = fopen(joined_vcf, "w")) == NULL) {
+      fprintf(stderr, "Cannot open output %s vcf file!\n", joined_vcf);
+      exit(1);
+    }
+
+    // write bead type names
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      // only those bead types that are to be used
+      if (BeadType[i].Write) {
+        fprintf(joined, "# %s\n", BeadType[i].Name);
+      }
+    }
+
+    fprintf(joined, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
+
+    fclose(joined);
+  } //}}}
+
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
   stuff = malloc(128*sizeof(int));
@@ -773,13 +824,6 @@ int main(int argc, char *argv[]) {
     // maximum of all molecules can be in one aggregate
     Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
   } //}}}
-
-  FILE *test_vcf;
-  test_vcf = fopen("test2.vcf", "w");
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    fprintf(test_vcf, "# %s\n", BeadType[i].Name);
-  }
-  fprintf(test_vcf, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -806,34 +850,24 @@ int main(int argc, char *argv[]) {
 
     CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
-    for (int i = 0; i < Counts.Molecules; i++) {
-      int type = Molecule[i].Type;
-      for (int j = 0; j < MoleculeType[type].nBonds; j++) {
-        int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
-        int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
+    // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
+    if (joined_vcf[0] != '\0') {
 
-        Vector dist = DistanceBetweenBeads(id1, id2, Bead, BoxLength);
+      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
-        Bead[id2].Position.x = Bead[id1].Position.x - dist.x;
-        Bead[id2].Position.y = Bead[id1].Position.y - dist.y;
-        Bead[id2].Position.z = Bead[id1].Position.z - dist.z;
-      }
-    }
+      RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
-    RemovePBCAggregates(Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+      // open <joined.vcf> file //{{{
+      FILE *joined;
+      if ((joined = fopen(joined_vcf, "a")) == NULL) {
+        fprintf(stderr, "Cannot open output %s vcf file!\n", joined_vcf);
+        exit(1);
+      } //}}}
 
-    bool *backup = malloc(Counts.TypesOfBeads*sizeof(bool));
-    for (int i = 0 ; i < Counts.TypesOfBeads; i++) {
-      backup[i] = BeadType[i].Use;
-      BeadType[i].Use = true;
-    }
-    char *stuff = calloc(1,sizeof(char));
-    WriteCoorIndexed(test_vcf, Counts, BeadType, Bead, stuff);
-    for (int i = 0 ; i < Counts.TypesOfBeads; i++) {
-      BeadType[i].Use = backup[i];
-    }
-    free(stuff);
-    free(backup);
+      WriteCoorIndexed(joined, Counts, BeadType, Bead, stuff);
+
+      fclose(joined);
+    } //}}}
 
     // open output .agg file for appending //{{{
     if ((out = fopen(output_agg, "a")) == NULL) {
@@ -842,7 +876,7 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // write data to output .agg file //{{{
-    fprintf(out, "\nStep:%d\n%d\n\n", count, Counts.Aggregates);
+    fprintf(out, "\nStep: %d\n%d\n\n", count, Counts.Aggregates);
     int test_count = 0; // to test that all molecules are in aggregate
 
     // go through all aggregates
@@ -865,13 +899,14 @@ int main(int argc, char *argv[]) {
       putc('\n', out);
     }
 
+    fclose(out); //}}}
+
+    // making sure all molecules are in aggregates //{{{
     if (test_count != Counts.Molecules) {
       fprintf(stderr, "Not all molecules were assigned to aggregates!\n");
       fprintf(stderr, "Counts.Molecules = %5d; Molecules in aggregates: %d\n", Counts.Molecules, test_count);
       exit(1);
     } //}}}
-
-    fclose(out);
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
@@ -880,10 +915,20 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(vcf);
-  fclose(test_vcf);
 
   fflush(stdout);
   printf("\rLast Step: %6d\n", count); //}}}
+
+  // print last step number to <output.agg> //{{{
+  // open output .agg file for appending
+  if ((out = fopen(output_agg, "a")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output_agg);
+    exit(1);
+  }
+
+  fprintf(out, "\nLast Step: %d\n", count);
+
+  fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);

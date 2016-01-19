@@ -197,7 +197,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
 
-    BeadType[type].Use = 1;
+    BeadType[type].Write = true;
   }
 
   // Error - does not make sense to use all bead types
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
   }
 
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    if (BeadType[i].Use) {
+    if (BeadType[i].Write) {
       fprintf(out, "# %s\n", BeadType[i].Name);
     }
   }
@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
       printf("Number =%7d, ", BeadType[i].Number);
       printf("Charge =%6.2f, ", BeadType[i].Charge);
       printf("Mass =%5.2f, ", BeadType[i].Mass);
-      printf("Use = %s}\n", BeadType[i].Use? "Yes":"No");
+      printf("Write = %s}\n", BeadType[i].Write? "Yes":"No");
     }
     putchar('\n');
 

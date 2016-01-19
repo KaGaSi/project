@@ -12,6 +12,10 @@ and numbers of beads and molecules, etc.) is read from `FIELD` file and
 `.vsf` files, but only bead types that are in the above mentioned `.vcf`
 file are considered.
 
+[Aggregate file](\ref AggregateFile) is of my own format and is used by
+every utility doing calculation on whole aggregates (as opposed to
+calculations on individual molecules).
+
 Structure file {#StructureFile}
 =====
 
@@ -72,7 +76,9 @@ Example of bond file:
 This file must be used for molecule types that have only some of its beads
 in `.vcf` file with indexed timesteps. In such a case, the bead indices
 correspond to `FIELD` as if the bead types not present in `.vcf` are not
-present `FIELD`. Example `FIELD`:
+present `FIELD`.
+
+Example of the relevant part of `FIELD`:
 
 > `...`
 >
@@ -163,3 +169,54 @@ Example of indexed coordinate file:
 > `<id> <float> <float> <float>`
 >
 > `...`
+
+Aggregate file {#AggregateFile}
+=====
+
+The aggregate file with `.agg` ending is generated using
+[Aggregates utility](\ref Aggregates). It contains information about the
+number of aggregates in the system in every simulation timestep and
+therefore is linked to the `.vcf` file used to calculate the aggregates.
+For every aggregate in each timestep there is a number and ids of molecules
+in that aggregate as well as a number and ids of monomeric beads near the
+aggregate.
+
+The first line of an aggregate file contains the command used to generate
+it. The subsequent lines contain information on individual timesteps
+starting with `Step` keyword, followed by the number of aggregates in the
+timestep and followed by individual aggregates. Every aggregate is spread
+over two lines - the first one contains the number of molecules in the
+aggregate followed by their ids (according to a corresponding `.vsf`
+structure file) and the second line contains the number of monomeric beads
+in the aggregate followed by its ids (again, the ids correspond to the
+`.vsf` file). The line with monomeric beads is indented for easier reading.
+
+Example of an aggregate file:
+
+> `<command used to generate it>`
+>
+> `<blank line>`
+>
+> `Step: 1`
+>
+> `<number of aggregates in step 1>`
+>
+> `<blank line>`
+>
+> `2 : 1 34`
+>
+> `   3 : 230 40000 41003`
+>
+> `<number of molecules in the second aggregate> : <molecule ids>`
+>
+> `   <number of monomeric beads in the aggregate : <bead ids>`
+>
+> `<blank line>`
+>
+> `Step: 2`
+>
+> `...`
+>
+> `<blank line>`
+>
+> `Last Step: <number>`

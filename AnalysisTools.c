@@ -543,7 +543,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
 
   // no bead types are used initially - to be adjusted in individual utilities //{{{
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-    (*BeadType)[i].Use = 0;
+    (*BeadType)[i].Use = false;
+    (*BeadType)[i].Write = false;
   } //}}}
 
   // allocate memory for Molecule struct
@@ -790,7 +791,7 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *B
   fprintf(vcf_file, "\n%sindexed\n", stuff);
 
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
-    if (BeadType[Bead[i].Type].Use) {
+    if (BeadType[Bead[i].Type].Write) {
       fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                    Bead[i].Position.x,
                                                    Bead[i].Position.y,
@@ -849,7 +850,7 @@ Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength) {
   return (rij);
 } //}}}
 
-// FillAggregateBeadsa //{{{
+// FillAggregateBeads() //{{{
 /**
  * Function to assign bead ids to aggregates accoding to molecules in the
  * aggregates. It essentially duplicates the information for the
@@ -870,6 +871,30 @@ void FillAggregateBeads(Aggregate **Aggregate, Counts Counts,
         (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads] = Molecule[mol].Bead[k];
         (*Aggregate)[i].nBeads++;
       }
+    }
+  }
+} //}}}
+
+// RemovePBCMolecules() //{{{
+/**
+ * Function to remove periodic boundary conditions from all individual
+ * molecules, thus joining them
+ */
+void RemovePBCMolecules(Counts Counts, Vector BoxLength,
+                        BeadType *BeadType, Bead **Bead,
+                        MoleculeType *MoleculeType, Molecule *Molecule) {
+
+  for (int i = 0; i < Counts.Molecules; i++) {
+    int type = Molecule[i].Type;
+    for (int j = 0; j < MoleculeType[type].nBonds; j++) {
+      int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
+      int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
+
+      Vector dist = DistanceBetweenBeads(id1, id2, *Bead, BoxLength);
+
+      (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
+      (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
+      (*Bead)[id2].Position.z = (*Bead)[id1].Position.z - dist.z;
     }
   }
 } //}}}

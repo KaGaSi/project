@@ -13,8 +13,8 @@ Usage:
 `SelectedVcf <input.vcf> <start> <skip> <output.vcf> <type names> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf` and contain ordered
-> > timesteps)
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
 > `<start>`
 > > number of timestep to start from
 > `<skip>`
