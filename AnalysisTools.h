@@ -38,7 +38,8 @@ typedef struct BeadType {
 
   int Number; ///< number of beads of given type
 
-  bool Use; ///< should bead type in .vcf file be used for calculation?
+  bool Use, ///< should bead type in .vcf file be used for calculation?
+       Write; ///< should bead type in .vcf file be written to output .vcf?
 
   double Charge, ///< charge of every bead of given type
          Mass; ///< mass of every bead of given type
@@ -177,5 +178,20 @@ Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength); //}
  * \param [in]  Molecule       information about individual molecules
  */
 void FillAggregateBeads(Aggregate **Aggregate, Counts Counts,
+                        MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
+// RemovePBCMolecules() //{{{
+/**
+ * \brief Function to join all molecules.
+ *
+ * \param [in]  Counts         numbers of beads, molecules, etc.
+ * \param [in]  BoxLength      dimension of the simulation box
+ * \param [in]  BeadType       information about bead types
+ * \param [out] Bead           information about individual beads (coordinates)
+ * \param [in]  MoleculeType   information about molecule types
+ * \param [in]  Molecule       information about individual molecules
+ */
+void RemovePBCMolecules(Counts Counts, Vector BoxLength,
+                        BeadType *BeadType, Bead **Bead,
                         MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 #endif
