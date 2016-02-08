@@ -1,0 +1,338 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include "../AnalysisTools.h"
+
+void ErrorHelp(char cmd[50]) { //{{{
+  fprintf(stderr, "Usage:\n");
+  fprintf(stderr, "   %s <input.vcf> <options>\n\n", cmd);
+
+  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <options>\n");
+  fprintf(stderr, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
+  fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
+  fprintf(stderr, "      -v             verbose output\n");
+  fprintf(stderr, "      -V             verbose output with comments from input .vcf file\n");
+  fprintf(stderr, "      -h             print this help and exit\n");
+} //}}}
+
+int main(int argc, char *argv[]) {
+
+  // -h option - print help and exit //{{{
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-h") == 0) {
+      printf("Config utility generates CONFIG file from last step of given vcf file.     \n");
+      printf("considered. Information about aggregates in each timestep is written to     \n");
+      printf(".agg file. Also joined coordinates can be written to an output .vcf file.   \n");
+      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
+      printf("(along with optional bond file) files to determine all information about    \n");
+      printf("the system.                                                                 \n\n");
+
+      printf("Usage:\n");
+      printf("   %s <input.vcf> <options>\n\n", argv[0]);
+
+      printf("   <input.vcf>       input filename (vcf format)\n");
+      printf("   <options>\n");
+      printf("      -i <name>      use input .vsf file different from dl_meso.vsf\n");
+      printf("      -b <name>      file containing bond alternatives to FIELD\n");
+      printf("      -v             verbose output\n");
+      printf("      -V             verbose output with comments from input .vcf file\n");
+      printf("      -h             print this help and exit\n");
+      exit(0);
+    }
+  } //}}}
+
+  // print command to stdout //{{{
+  for (int i = 0; i < argc; i++)
+    printf(" %s", argv[i]);
+  printf("\n\n"); //}}}
+
+  // check if correct number of arguments //{{{
+  if (argc < 2) {
+    fprintf(stderr, "Too little arguments!\n\n");
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
+
+  // -i <name> option - filename of input structure file //{{{
+  char vsf_file[32];
+  vsf_file[0] = '\0'; // check if -i option is used
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-i") == 0) {
+
+      // wrong argument to -i option
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\nMissing argument to '-i' option ");
+        fprintf(stderr, "(or filename beginning with a dash)!\n");
+        exit(1);
+      }
+
+      // check if .vsf ending is present
+      char *vsf = strrchr(argv[i+1], '.');
+      if (!vsf || strcmp(vsf, ".vsf")) {
+        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
+
+      strcpy(vsf_file, argv[i+1]);
+    }
+  }
+
+  // -i option is not used
+  if (vsf_file[0] == '\0') {
+    strcpy(vsf_file, "dl_meso.vsf");
+  } //}}}
+
+  // -b <name> option - filename of input bond file //{{{
+  char bonds_file[32];
+  bonds_file[0] = '\0'; // check if -b option is used
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-b") == 0) {
+
+      // wrong argument to -i option
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\nMissing argument to '-b' option ");
+        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
+
+      strcpy(bonds_file, argv[i+1]);
+    }
+  } //}}}
+
+  // -v option - verbose output //{{{
+  bool verbose = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-v") == 0) {
+      verbose = true;
+
+      break;
+    }
+  } //}}}
+
+  // -V option - verbose output with comments from input .vcf file //{{{
+  bool verbose2 = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-V") == 0) {
+      verbose = true;
+      verbose2 = true;
+
+      break;
+    }
+  } //}}}
+
+  int count = 0; // count mandatory arguments
+
+  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
+  char input_vcf[32];
+  strcpy(input_vcf, argv[++count]);
+
+  // test if <input.vcf> filename ends with '.vsf' (required by VMD)
+  char *dot = strrchr(input_vcf, '.');
+  if (!dot || strcmp(dot, ".vcf")) {
+    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
+
+  // variables - structures //{{{
+  BeadType *BeadType; // structure with info about all bead types
+  MoleculeType *MoleculeType; // structure with info about all molecule types
+  Bead *Bead; // structure with info about every bead
+  Molecule *Molecule; // structure with info about every molecule
+  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+
+  // read system information
+  bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+
+  // print information - verbose output //{{{
+  if (verbose) {
+    printf("\n   Read from %s file\n", input_vcf);
+    printf("Counts.{");
+    printf("TypesOfBeads =%3d, ", Counts.TypesOfBeads);
+    printf("Bonded =%7d, ", Counts.Bonded);
+    printf("Unbonded =%7d, ", Counts.Unbonded);
+    printf("TypesOfMolecules =%3d, ", Counts.TypesOfMolecules);
+    printf("Molecules =%4d}\n", Counts.Molecules);
+    printf("\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
+
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      printf("BeadType[%2d].{", i);
+      printf("Name =%10s, ", BeadType[i].Name);
+      printf("Number =%7d, ", BeadType[i].Number);
+      printf("Charge =%6.2f, ", BeadType[i].Charge);
+      printf("Mass =%5.2f, ", BeadType[i].Mass);
+      printf("Write = %s}\n", BeadType[i].Write? "Yes":"No");
+    }
+    putchar('\n');
+
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      printf("MoleculeType[%d].{", i);
+      printf("Name =%10s", MoleculeType[i].Name);
+      printf(", Number =%4d", MoleculeType[i].Number);
+      printf(", nBeads =%3d", MoleculeType[i].nBeads);
+      printf(", nBonds =%3d", MoleculeType[i].nBonds);
+      if (bonds_file[0] == '\0') { // all bonds taken from FIELD
+        printf(", Bonds from 'FIELD'}\n");
+      } else {
+        // go through bond file to find out if molecule type 'i' is there
+        FILE *out;
+        if ((out = fopen(bonds_file, "r")) == NULL) {
+          fprintf(stderr, "Cannot open file %s with '-v' option!\n", bonds_file);
+          exit(1);
+        }
+
+        int test;
+        char str[32];
+        while ((test = getc(out)) != EOF) {
+          ungetc(test, out);
+
+          if ((fscanf(out, "%s %d", str, &test)) != 2) {
+            fprintf(stderr, "Cannot read string or number of bonds from %s with '-v' option!\n", bonds_file);
+            exit(1);
+          }
+
+          if (strcmp(str, MoleculeType[i].Name) == 0) {
+            printf(", Bonds from '%s'}\n", bonds_file);
+            break;
+          }
+
+          while (getc(out) != '\n')
+            ;
+        }
+
+        // if not in bonds_file, then bonds taken from FIELD
+        if (test == EOF) {
+          printf(", Bonds from 'FIELD'}\n");
+        }
+
+        fclose(out);
+      }
+    }
+  } //}}}
+
+  // open input coordinate file //{{{
+  FILE *vcf;
+  if ((vcf = fopen(input_vcf, "r")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    exit(1);
+  } //}}}
+
+  // get pbc from coordinate file //{{{
+  char str[32];
+  // skip till 'pbc' keyword
+  do {
+    if (fscanf(vcf, "%s", str) != 1) {
+      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+    }
+  } while (strcmp(str, "pbc") != 0);
+
+  // read pbc
+  Vector BoxLength;
+  if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
+    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
+    exit(1);
+  }
+
+  // skip remainder of pbc line
+  while (getc(vcf) != '\n')
+    ;
+  // skip blank line
+  while (getc(vcf) != '\n')
+    ;
+
+  // print pbc if verbose output
+  if (verbose) {
+    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+  } //}}}
+
+  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
+  char *stuff;
+  stuff = calloc(128,sizeof(int)); //}}}
+
+  // main loop //{{{
+  int test;
+  count = 0;
+  while ((test = getc(vcf)) != EOF) {
+    ungetc(test, vcf);
+
+    fflush(stdout);
+    printf("\rStep: %6d", ++count);
+
+    // read indexed timestep from input .vcf file //{{{
+    if (indexed) {
+      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
+        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        exit(1);
+      } //}}}
+    // or read ordered timestep from input .vcf file //{{{
+    } else {
+      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
+        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        exit(1);
+      }
+    } //}}}
+
+    // open output CONFIG file for appending //{{{
+    FILE *out;
+    if ((out = fopen("CONFIG", "w")) == NULL) {
+      fprintf(stderr, "Cannot open file CONFIG!\n");
+      exit(1);
+    } //}}}
+
+    // print CONFIG file initial stuff
+    fprintf(out, "NAME\n       0       1\n");
+    fprintf(out, "%lf 0.000000 0.000000\n", BoxLength.x);
+    fprintf(out, "0.000000 %lf 0.000000\n", BoxLength.y);
+    fprintf(out, "0.000000 0.000000 %lf\n", BoxLength.z);
+
+    // coordinates of unbonded beads
+    for (int i = 0; i < Counts.Unbonded; i++) {
+      fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
+      fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
+                                    Bead[i].Position.y,
+                                    Bead[i].Position.z);
+    }
+
+    // coordinates of bonded beads
+    for (int i = Counts.Unbonded; i < (Counts.Unbonded+Counts.Bonded); i++) {
+      fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
+      fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
+                                    Bead[i].Position.y,
+                                    Bead[i].Position.z);
+    }
+
+    fclose(out);
+
+    // if -V option used, print comment at the beginning of a timestep
+    if (verbose2)
+      printf("\n%s", stuff);
+  }
+
+  fflush(stdout);
+  printf("\rLast Step: %6d\n", count);
+
+  fclose(vcf); //}}}
+
+  // free memory - to make valgrind happy //{{{
+  free(BeadType);
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+      free(MoleculeType[i].Bond[j]);
+    }
+    free(MoleculeType[i].Bond);
+  }
+  free(MoleculeType);
+  free(Bead);
+  for (int i = 0; i < Counts.Molecules; i++) {
+    free(Molecule[i].Bead);
+  }
+  free(Molecule);
+  free(stuff);
+  //}}}
+
+  return 0;
+}
