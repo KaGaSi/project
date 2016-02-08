@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
-#include "AnalysisTools.h"
+#include "../AnalysisTools.h"
 #include "TransformVsf.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
