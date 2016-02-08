@@ -109,8 +109,8 @@ bond file would like like this:
 >
 > `1 2 possible comment`
 
-Should the bond file not be provided, the utilities show no error, but will (most
-likely) crash with segmentation fault.
+Should the bond file not be provided such case, the utilities detect no error,
+but will not work correctly (and may crash with segmentation fault).
 
 Bond information about molecule types not present in the bond file will be read
 from `FIELD`.
