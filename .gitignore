@@ -3,7 +3,4 @@ html
 latex
 test
 obj
-TransformVsf
-SelectedVcf
-Aggregates
-Aggregates.pdf
+*/bin/*

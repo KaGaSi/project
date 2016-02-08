@@ -7,6 +7,7 @@
 #define _ANALYSISTOOLS_H_
 
 #define SQR(x) ((x)*(x)) ///< macro for algebraic square
+#define CUBE(x) ((x)*(x)*(x)) ///< macro for algebraic cube
 
 // struct Vector //{{{
 /**
