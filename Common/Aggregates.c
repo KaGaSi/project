@@ -648,7 +648,7 @@ int main(int argc, char *argv[]) {
 
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
-    int type = FindType(argv[count], Counts, BeadType);
+    int type = FindBeadType(argv[count], Counts, BeadType);
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
@@ -661,68 +661,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    printf("\n   Read from FIELD\n");
-    printf("Counts.{");
-    printf("TypesOfBeads =%3d, ", Counts.TypesOfBeads);
-    printf("Bonded =%7d, ", Counts.Bonded);
-    printf("Unboded =%7d, ", Counts.Unbonded);
-    printf("TypesOfMolecules =%3d, ", Counts.TypesOfMolecules);
-    printf("Molecules =%4d}\n", Counts.Molecules);
-    printf("\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
-
-    for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      printf("BeadType[%2d].{", i);
-      printf("Name =%10s, ", BeadType[i].Name);
-      printf("Number =%7d, ", BeadType[i].Number);
-      printf("Charge =%6.2f, ", BeadType[i].Charge);
-      printf("Mass =%5.2f, ", BeadType[i].Mass);
-      printf("Use = %s}\n", BeadType[i].Use ? "True" : "False");
-    }
-    putchar('\n');
-
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      printf("MoleculeType[%d].{", i);
-      printf("Name =%10s", MoleculeType[i].Name);
-      printf(", Number =%4d", MoleculeType[i].Number);
-      printf(", nBeads =%3d", MoleculeType[i].nBeads);
-      printf(", nBonds =%3d", MoleculeType[i].nBonds);
-      if (bonds_file[0] == '\0') { // all bonds taken from FIELD
-        printf(", Bonds from 'FIELD'}\n");
-      } else {
-        // go through bond file to find out if molecule type 'i' is there
-        FILE *bond;
-        if ((bond = fopen(bonds_file, "r")) == NULL) {
-          fprintf(stderr, "Cannot open file %s with '-v' option!\n", bonds_file);
-          exit(1);
-        }
-
-        int test;
-        char str[32];
-        while ((test = getc(bond)) != EOF) {
-          ungetc(test, bond);
-
-          if ((fscanf(bond, "%s %d", str, &test)) != 2) {
-            fprintf(stderr, "Cannot read string or number of bonds from %s with '-v' option!\n", bonds_file);
-            exit(1);
-          }
-
-          if (strcmp(str, MoleculeType[i].Name) == 0) {
-            printf(", Bonds from '%s'}\n", bonds_file);
-            break;
-          }
-
-          while (getc(bond) != '\n')
-            ;
-        }
-
-        // if not in bonds_file, then bonds taken from FIELD
-        if (test == EOF) {
-          printf(", Bonds from 'FIELD'}\n");
-        }
-
-        fclose(bond);
-      }
-    }
+    VerboseOutput(input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     printf("\n   Distance for closeness check: %lf\n", distance);
     printf("   Number of needed contacts for aggregate check: %d\n", contacts);

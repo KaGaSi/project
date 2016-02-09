@@ -58,6 +58,8 @@ typedef struct MoleculeType {
       nBonds, ///< number of bonds in every molecule of given type
       **Bond; ///< pair of ids for every bond (with relative bead numbers from 0 to nBeads)
                // has to be sorted; size: [MoleculeType[i].Bonds][2]
+
+  bool Use; ///< should molecule type be used for calculation?
 } MoleculeType; //}}}
 
 // struct Bead //{{{
@@ -100,12 +102,15 @@ typedef struct Aggregate {
  * structure files.
  *
  * \param [in]  vsf_file      .vsf structure file
+ * \param [in]  vcf_file      .vcf coordinate file
  * \param [in]  bonds_file    filename with bonds
  * \param [out] Counts        numbers of beads, molecules, etc.
  * \param [out] BeadType      information about bead types
  * \param [out] Bead          informationn about individual beads
  * \param [out] MoleculeType  information about molecule types
  * \param [out] Molecule      information about individual molecules
+ * \return 'true' or 'false' for .vcf file with indexed or ordered
+ * timesteps, respectively
  * */
 bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Counts,
                    BeadType **BeadType, Bead **Bead,
@@ -135,6 +140,23 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
  */
 int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
 
+// VerboseOutput() //{{{
+/**
+ * \brief Function printing basic information about system if `-v` or `-V`
+ * option is provided
+ *
+ * \param [in] input_vcf     .vcf structure file
+ * \param [in] bonds_file    filename with bonds
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BeadType      information about bead types
+ * \param [in] Bead          informationn about individual beads
+ * \param [in] MoleculeType  information about molecule types
+ * \param [in] Molecule      information about individual molecules
+ */
+void VerboseOutput(char *input_vcf, char *bonds_file, Counts Counts,
+                   BeadType *BeadType, Bead *Bead,
+                   MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
 // WriteCoorIndexed //{{{
 /**
  * \brief Function writing indexed coordinates to a .vcf file.
@@ -147,7 +169,7 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
  */
 void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff); //}}}
 
-// FindType() //{{{
+// FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name
  *
  * \param [in]  name      bead name
@@ -155,7 +177,17 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *B
  * \param [in]  BeadType  informationn about bead types
  * \return bead type id corresponding to index in BeadType struct
  */
-int FindType(char *name, Counts Counts, BeadType *BeadType); //}}}
+int FindBeadType(char *name, Counts Counts, BeadType *BeadType); //}}}
+
+// FindMoleculeType() //{{{
+/** \brief Function to identify type of bead from its name
+ *
+ * \param [in]  name          bead name
+ * \param [in]  Counts        numbers of beads, residues, etc.
+ * \param [in]  MoleculeType  informationn about bead types
+ * \return molecule type      id corresponding to index in BeadType struct
+ */
+int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}}}
 
 // DistanceBetweenBeads //{{{
 /**
