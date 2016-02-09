@@ -24,3 +24,5 @@ Usage:
 
 > `<radius>`
 > > required radius of nanoparticle (in reduced units)
+
+The standard options cannot be used with this utility.

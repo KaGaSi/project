@@ -30,20 +30,8 @@ Usage:
 > `<type names>`
 > > names of bead types to save
 > `<options>`
-> > `-i <name>`
-> > > use custom `.vsf` structure file instead of the default `dl_meso.vsf`
-> > > (must end with `.vsf`)
-> > `-b <name>`
-> > > file containing bond alternatives to `FIELD`
 > > `-j`
 > > > join individual molecules by removing periodic boundary conditions
-> > `-v`
-> > > verbose output providing information about the system
-> > `-V`
-> > > more detailed verbose output (also prints comments from `.vcf` file
-> > > at the start of every timestep)
-> > `-h`
-> > > print help and exit
 
 \todo Implement `<skip>` and `<start>`
 
@@ -64,19 +52,6 @@ Usage:
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
 > > ordered or indexed timesteps
-> `<options>`
-> > `-i <name>`
-> > > use custom `.vsf` structure file instead of the default `dl_meso.vsf`
-> > > (must end with `.vsf`)
-> > `-b <name>`
-> > > file containing bond alternatives to `FIELD`
-> > `-v`
-> > > verbose output providing information about the system
-> > `-V`
-> > > more detailed verbose output (also prints comments from `.vcf` file
-> > > at the start of every timestep)
-> > `-h`
-> > > print help and exit
 
 \todo Implement possibility to choose timestep number for creating `CONFIG`
 file.
@@ -93,16 +68,6 @@ Usage:
 
 > `<output.vsf>`
 > > output structure file that must end with `.vsf`
-> `<options>`
-> > `-i <name>`
-> > > use custom `.vsf` structure file instead of the default `dl_meso.vsf`
-> > > (must end with `.vsf`)
-> > `-b <name>`
-> > > file containing bond alternatives to `FIELD`
-> > `-v`
-> > > verbose output providing information about the system
-> > `-h`
-> > > print help and exit
 
 ## Format of output structure file {#TransformVsf-output}
 
@@ -173,20 +138,8 @@ Usage:
 > `<type names>`
 > > names of bead types to use for calculating contact pairs
 > `<options>`
-> > `-i <name>`
-> > > use custom `.vsf` structure file instead of the default `dl_meso.vsf`
-> > > (must end with `.vsf`)
-> > `-b <name>`
-> > > file containing bond alternatives to `FIELD`
 > > `-j <joined.vcf>`
 > > > filename for coordinates of joined aggregates (must end with `.vcf`)
-> > `-v`
-> > > verbose output providing information about the system
-> > `-V`
-> > > more detailed verbose output (also prints comments from `.vcf` file
-> > > at the start of every timestep)
-> > `-h`
-> > > print help and exit
 
 \todo Add the possibility to save only certain bead types to output vcf
 file with joined coordinates.
