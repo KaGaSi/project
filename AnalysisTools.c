@@ -520,6 +520,69 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   fclose(vsf);
 } //}}}
 
+// MoveCOMMolecules() - auxiliary //{{{
+/*
+ * Function to move molecules so that their center of mass is inside the
+ * simulation box. Assumes the moleces are joined.
+ */
+void MoveCOMMolecules(Counts Counts, Vector BoxLength,
+                      BeadType *BeadType, Bead **Bead,
+                      MoleculeType *MoleculeType, Molecule *Molecule) {
+
+  for (int i = 0; i < Counts.Molecules; i++) {
+    int type = Molecule[i].Type;
+    Vector com; // coordinate vector for center of mass //{{{
+    com.x = 0;
+    com.y = 0;
+    com.z = 0; //}}}
+
+    // calculate center of mass
+    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+      int id = Molecule[i].Bead[j];
+
+      com.x += (*Bead)[id].Position.x * BeadType[(*Bead)[id].Type].Mass;
+      com.y += (*Bead)[id].Position.y * BeadType[(*Bead)[id].Type].Mass;
+      com.z += (*Bead)[id].Position.z * BeadType[(*Bead)[id].Type].Mass;
+    }
+
+    com.x /= MoleculeType[i].Mass;
+    com.y /= MoleculeType[i].Mass;
+    com.z /= MoleculeType[i].Mass;
+
+    // move molecule 'j' if its com is outside box
+    // x-direction //{{{
+    if (com.x >= BoxLength.x) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.x -= BoxLength.x;
+      }
+    } else if (com.x < 0) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.x += BoxLength.x;
+      }
+    } //}}}
+    // y-direction //{{{
+    if (com.y >= BoxLength.y) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.y -= BoxLength.y;
+      }
+    } else if (com.y < 0) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.y += BoxLength.y;
+      }
+    } //}}}
+    // z-direction //{{{
+    if (com.z >= BoxLength.z) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.z -= BoxLength.z;
+      }
+    } else if (com.z < 0) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.z += BoxLength.z;
+      }
+    } //}}}
+  }
+} //}}}
+
 // ReadStructure() //{{{
 /**
  * Function reading information about beads and molecules from DL_MESO `FIELD`
@@ -556,6 +619,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
 
   // go through all types of molecules
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+
     // go through all molecules of type 'i'
     for (int j = 0; j < (*MoleculeType)[i].Number; j++) {
       (*Molecule)[count].Type = i;
@@ -719,6 +783,18 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
     }
   } //}}}
 
+  // calculate mass of molecules
+  count = 0;
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].Mass = 0;
+
+    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+      (*MoleculeType)[i].Mass += (*BeadType)[(*Bead)[(*Molecule)[count].Bead[j]].Type].Mass;
+    }
+
+    count += (*MoleculeType)[i].Number;
+  }
+
 //for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
 //  printf("%5d %5d %s %4d\n", i, (*Bead)[i].Index, (*BeadType)[(*Bead)[i].Type].Name, (*Bead)[i].Molecule);
 //}
@@ -802,8 +878,8 @@ void VerboseOutput(char *input_vcf, char *bonds_file, Counts Counts,
     printf("Number =%7d, ", BeadType[i].Number);
     printf("Charge =%6.2f, ", BeadType[i].Charge);
     printf("Mass =%5.2f, ", BeadType[i].Mass);
-    printf("Use = %3s,", BeadType[i].Use? "Yes":"No");
-    printf("Write = %s}\n", BeadType[i].Write? "Yes":"No");
+    printf("Use = %3s, ", BeadType[i].Use? "Yes":"No");
+    printf("Write = %3s}\n", BeadType[i].Write? "Yes":"No");
   }
   putchar('\n');
 
@@ -813,6 +889,7 @@ void VerboseOutput(char *input_vcf, char *bonds_file, Counts Counts,
     printf(", Number =%4d", MoleculeType[i].Number);
     printf(", nBeads =%3d", MoleculeType[i].nBeads);
     printf(", nBonds =%3d", MoleculeType[i].nBonds);
+    printf(", Mass =%7.2f", MoleculeType[i].Mass);
     if (bonds_file[0] == '\0') { // all bonds taken from FIELD
       printf(", Bonds from 'FIELD',");
     } else {

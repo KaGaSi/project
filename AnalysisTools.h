@@ -59,6 +59,8 @@ typedef struct MoleculeType {
       **Bond; ///< pair of ids for every bond (with relative bead numbers from 0 to nBeads)
                // has to be sorted; size: [MoleculeType[i].Bonds][2]
 
+  double Mass; ///< total mass of every molecule of given type
+
   bool Use; ///< should molecule type be used for calculation?
 } MoleculeType; //}}}
 

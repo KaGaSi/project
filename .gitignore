@@ -4,3 +4,4 @@ latex
 test
 obj
 */bin/*
+*/*.o

@@ -3,18 +3,22 @@ CFLAGS = -std=c11 -Wall -Werror -O3
 #CFLAGS = -std=c11 -Wall -Werror -O3 -ggdb
 LIBS = -lm
 
-SOURCES = ../AnalysisTools.c
+SOURCE = ../AnalysisTools.c
+OBJ = ../obj/AnalysisTools.o
 
 ODIR = obj
-_OBJ = $(SOURCES:.c=.o)
-OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+#_OBJ = $(SOURCES:.c=.o)
+#OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 BIN = bin/EndToEnd
 
 all: dir $(BIN) $(OBJ)
 
 dir:
-	mkdir -p $(ODIR) bin
+	mkdir -p $(ODIR) ../obj bin
+
+$(OBJ): $(OBJ) $(SOURCE)
+	$(CC) -c -o $@ $< $(CFLAGS) $(LIBS)
 
 $(ODIR)/%.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)

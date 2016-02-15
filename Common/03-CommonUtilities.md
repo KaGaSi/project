@@ -3,6 +3,24 @@
 Utilies that are not specific to any given system and are used for all
 simulations.
 
+# traject utility {#traject}
+
+This utility is from the
+[DL_MESO simulation package](http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx).
+While originally it creates a `.vtf` file containing both structure and
+coordinates, I have changed it to create a separate `dl_meso.vsf` structure
+file and `All.vcf` coordinate file containing ordered timesteps.
+
+Usage:
+
+`traject <cores>`
+
+> `<cores>`
+> > number of computer cores used for the simulation run (or the number of
+> > `HISTORY` file)
+
+The standard options cannot be used with this utility.
+
 # SelectedVcf utility {#SelectedVcf}
 
 This utility takes `.vcf` file containing either
@@ -143,3 +161,23 @@ Usage:
 
 \todo Add the possibility to save only certain bead types to output vcf
 file with joined coordinates.
+
+# Average
+
+Utility calculating average values with standard deviation and
+autocorrelation time from values contained in a text file. The first line
+of the file has to contain the number of data lines and no comments are
+allowed.
+
+Usage:
+
+`Average <filename> <column> <discard> <n_blocks>`
+
+> `<filename>`
+> > name of data filel
+> `<column>`
+> > column number in the file containing the data to analyze
+> `<discard>`
+> > number of data values considered as equilibrium
+> `<n_blocks>`
+> > number of blocks for binning analysis
