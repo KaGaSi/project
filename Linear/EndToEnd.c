@@ -230,13 +230,6 @@ int main(int argc, char *argv[]) {
   char *stuff;
   stuff = calloc(128,sizeof(int)); //}}}
 
-  // array for averages //{{{
-  double Re[Counts.TypesOfMolecules][2]; // [0] for avg, [1] for avg^2
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    Re[i][0] = 0;
-    Re[i][1] = 1;
-  } //}}}
-
   // main loop //{{{
   int test;
   count = 0;
@@ -260,6 +253,9 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
+    // join all molecules
+    RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+
     // open output file for appending //{{{
     if ((out = fopen(output, "a")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", output);
@@ -267,12 +263,10 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // calculate & write end-to-end distance //{{{
-    // temporary array //{{{
-    double temp[Counts.TypesOfMolecules][2];
+    double Re[Counts.TypesOfMolecules];
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      temp[i][0] = 0;
-      temp[i][1] = 0;
-    } //}}}
+      Re[i] = 0;
+    }
 
     // go through all molecules
     for (int i = 0; i < Counts.Molecules; i++) {
@@ -281,11 +275,14 @@ int main(int argc, char *argv[]) {
         int id2 = Molecule[i].Bead[MoleculeType[Molecule[i].Type].nBeads-1];
 
         // calculate distance between first and last bead in molecule 'i'
-        Vector dist = DistanceBetweenBeads(id1, id2, Bead, BoxLength);
-        dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
+        Vector dist;
+        dist.x = Bead[id1].Position.x - Bead[id2].Position.x;
+        dist.y = Bead[id1].Position.y - Bead[id2].Position.y;
+        dist.z = Bead[id1].Position.z - Bead[id2].Position.z;
 
-        temp[Molecule[i].Type][0] += sqrt(dist.x);
-        temp[Molecule[i].Type][1] += dist.x;
+        dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+
+        Re[Molecule[i].Type] += dist.x;
       }
     }
 
@@ -293,14 +290,13 @@ int main(int argc, char *argv[]) {
     fprintf(out, "%6d", count);
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {
-        fprintf(out, "%10f", temp[i][0]);
-        Re[i][0] += temp[i][0] / MoleculeType[i].Number;
-        Re[i][1] += temp[i][1] / MoleculeType[i].Number;
+        fprintf(out, "%10f", Re[i]/MoleculeType[i].Number);
       }
     }
     putc('\n', out); //}}}
 
     fclose(out);
+
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
       printf("\n%s", stuff);
@@ -310,15 +306,6 @@ int main(int argc, char *argv[]) {
   printf("\rLast Step: %6d\n", count);
 
   fclose(vcf); //}}}
-
-  // print averages
-  for (int i = 0; i < Counts.Molecules; i++) {
-    if (MoleculeType[Molecule[i].Type].Use) {
-      printf("molecule %10s: %lf +/- %lf\n", MoleculeType[i].Name,
-                                             Re[i][0]/count,
-                                             sqrt(Re[i][1]/count-SQR(Re[i][0]/count)));
-    }
-  }
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
