@@ -10,7 +10,7 @@ ODIR = obj
 #_OBJ = $(SOURCES:.c=.o)
 #OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-BIN = bin/EndToEnd
+BIN = bin/EndToEnd bin/PersistenceLength
 
 all: dir $(BIN) $(OBJ)
 
@@ -24,6 +24,9 @@ $(ODIR)/%.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 bin/EndToEnd: $(OBJ) $(ODIR)/EndToEnd.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+bin/PersistenceLength: $(OBJ) $(ODIR)/PersistenceLength.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 clean:
