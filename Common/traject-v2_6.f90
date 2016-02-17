@@ -28,7 +28,7 @@ PROGRAM traject
       REAL(KIND=dp) :: volm, dimx, dimy, dimz, halfx, halfy, halfz, shrdx, shrdy, shrdz, amass
       REAL(KIND=dp) :: ndx, ndy, ndz, time, mbeads, mglobal, x, y, z, vx, vy, vz, fx, fy, fz
 
-      LOGICAL :: volchange, eof
+      LOGICAL :: volchange, eof, separate
 
 !     get number of nodes
 
@@ -42,7 +42,10 @@ PROGRAM traject
 
       ALLOCATE (beads (numnodes), bonds (numnodes))
 
-!     CALL get_command_argument (2, text)
+!     determine if separate files for unbonded and bonded beads are requested
+
+      CALL get_command_argument (2, text)
+      separate = (parseint (text)>0)
 
 !     determine if HISTORY files exist
 
@@ -119,6 +122,8 @@ PROGRAM traject
 
       ALLOCATE (bndtbl (numbonds, 2))
 
+      IF (numbonds==0) separate = .false.
+
       DO j = 1, numnodes
 
         DO i = 1, numspe
@@ -166,10 +171,15 @@ PROGRAM traject
 
       DEALLOCATE (beads, bonds)
 
-!     write output file (.VTF for VMD)
+!     write output file(s) (.VTF for VMD)
 
-!     OPEN (nrtout, file = 'traject.vtf')
-      OPEN (nrtout, file = 'dl_meso.vsf')
+      IF (separate) THEN
+        OPEN (nrtout, file = 'traject_bead.vtf')
+        OPEN (nrtout+1, file = 'traject_mole.vtf')
+      ELSE
+        ! Äs - structure file
+        OPEN (nrtout, file = 'dl_meso.vsf')
+      END IF
 
       maxnum = 0
       DO i = 1, numspe
@@ -185,29 +195,49 @@ PROGRAM traject
         WRITE (nrtout, '("atom 0:",I8.8,"    radius ",F10.6," name ",A8)') numbeads-1, bbb (imxspe), namspe (imxspe)
       ELSE
         WRITE (nrtout, '("atom default    radius ",F10.6," name ",A8)') bbb (imxspe), namspe (imxspe)
-        DO i = 1, numbeads
-          IF ((ltp (i)/=imxspe .OR. i==numbeads) .AND. ltm(i)==0) THEN
-            WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8)') i-1, bbb (ltp (i)), namspe (ltp (i))
-          ELSE IF (ltm (i)/=0) THEN
-            WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8," resid ",I8)') i-1, bbb (ltp (i)), &
-                  &namspe (ltp (i)), mole (i)
-          END IF
-        END DO
+        IF (separate) THEN
+          WRITE (nrtout+1, '("atom default    radius ",F10.6," name ",A8)') bbb (imxspe), namspe (imxspe)
+          DO i = 1, numbeads
+            IF ((ltp (i)/=imxspe .OR. i==nubeads) .AND. ltm(i)==0) THEN
+              WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8)') i-1, bbb (ltp (i)), namspe (ltp (i))
+            ELSE IF (ltm (i)/=0) THEN
+              WRITE (nrtout+1, '("atom ",I8,"    radius ",F10.6," name ",A8," resid ",I8)') i-nubeads-1, bbb (ltp (i)), &
+                    &namspe (ltp (i)), mole (i)
+            END IF
+
+          END DO
+        ELSE
+          DO i = 1, numbeads
+            IF ((ltp (i)/=imxspe .OR. i==numbeads) .AND. ltm(i)==0) THEN
+              WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8)') i-1, bbb (ltp (i)), namspe (ltp (i))
+            ELSE IF (ltm (i)/=0) THEN
+              WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8," resid ",I8)') i-1, bbb (ltp (i)), &
+                    &namspe (ltp (i)), mole (i)
+            END IF
+          END DO
+        END IF
       END IF
 
 !     define bonds
 
-      IF (numbonds>0 .AND. numbeads>nubeads) THEN
+      IF (separate) THEN
+        WRITE (nrtout+1, '()')
+        DO i = 1, numbonds
+          WRITE (nrtout+1, '("bond ",I8,":",I8)') (bndtbl (i, 1)-nubeads-1), (bndtbl (i, 2)-nubeads-1)
+        END DO
+      ELSE IF (numbonds>0 .AND. numbeads>nubeads) THEN
         WRITE (nrtout, '()')
         DO i = 1, numbonds
           IF ((bndtbl (i, 1)-1)>=0) WRITE (nrtout, '("bond ",I8,":",I8)') (bndtbl (i, 1)-1), (bndtbl (i, 2)-1)
         END DO
       END IF
 
+      ! Äs - close structure fule
       CLOSE (nrtout)
 
       DEALLOCATE (ltp, ltm, mole, bndtbl, nspe, namspe, bbb)
 
+      ! Äs - open coordinate fileh
       OPEN (nrtout, file = 'All.vcf')
 
 !     obtain positions and velocities for all beads at each time step
@@ -241,14 +271,19 @@ PROGRAM traject
         halfy = 0.0_dp
         halfz = 0.0_dp
 
+        ! Äs - add pbc line at the beginning
         IF (k==1) THEN
-          WRITE (nrtout, '("pbc ", 3F10.6,//,"#"(I10),/,"timestep")') dimx, dimy, dimz, k
+          WRITE (nrtout, '("pbc ", 3F7.3,//,"timestep indexed",/)') dimx, dimy, dimz
+        ELSE IF (volchange) THEN
+          WRITE (nrtout, '(/,"timestep indexed",/,"pbc ", 3F7.3, " 90 90 90")') dimx, dimy, dimz
+          IF (separate) WRITE (nrtout+1, '(/,"timestep indexed",/,"pbc ", 3F7.3, " 90 90 90")') dimx, dimy, dimz
         ELSE
-          WRITE (nrtout, '(/,"#",(I6),/,"timestep")') k
+          WRITE (nrtout, '(/, "timestep indexed")')
+          IF (separate) WRITE (nrtout+1, '(/, "timestep indexed")')
         END IF
 
         DO j = 1, numnodes
-
+        
           IF (j>1) THEN
             READ (ntraj+j-1, IOSTAT=ioerror) time, mbeads, ndx, ndy, ndz, shrdx, shrdy, shrdz
             IF (ioerror/=0) THEN
@@ -262,26 +297,65 @@ PROGRAM traject
 
           nbeads = NINT (mbeads)
 
-          SELECT CASE (keytrj)
-          CASE (0)
-            DO i = 1, nbeads
-              READ (ntraj+j-1) mglobal, x, y, z
-              global = NINT (mglobal)
-              WRITE (nrtout, '(3F7.3)')  x-halfx, y-halfy, z-halfz
-            END DO
-          CASE (1)
-            DO i = 1, nbeads
-              READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz
-              global = NINT (mglobal)
-              WRITE (nrtout, '(3F7.3)')  x-halfx, y-halfy, z-halfz
-            END DO
-          CASE (2)
-            DO i = 1, nbeads
-              READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz, fx, fy, fz
-              global = NINT (mglobal)
-              WRITE (nrtout, '(3F7.3)')  x-halfx, y-halfy, z-halfz
-            END DO
-          END SELECT
+          IF (separate) THEN
+
+            SELECT CASE (keytrj)
+            CASE (0)
+              DO i = 1, nbeads
+                READ (ntraj+j-1) mglobal, x, y, z
+                global = NINT (mglobal)
+                IF (global>nubeads) THEN
+                  WRITE (nrtout+1, '(I10,3F7.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                ELSE
+                  WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                END IF
+              END DO
+            CASE (1)
+              DO i = 1, nbeads
+                READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz
+                global = NINT (mglobal)
+                IF (global>nubeads) THEN
+                  WRITE (nrtout+1, '(I10,3F7.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                ELSE
+                  WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                END IF
+              END DO
+            CASE (2)
+              DO i = 1, nbeads
+                READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz, fx, fy, fz
+                global = NINT (mglobal)
+                IF (global>nubeads) THEN
+                  WRITE (nrtout+1, '(I10,3F7.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                ELSE
+                  WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                END IF
+              END DO
+            END SELECT
+
+          ELSE
+
+            SELECT CASE (keytrj)
+            CASE (0)
+              DO i = 1, nbeads
+                READ (ntraj+j-1) mglobal, x, y, z
+                global = NINT (mglobal)
+                WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+              END DO
+            CASE (1)
+              DO i = 1, nbeads
+                READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz
+                global = NINT (mglobal)
+                WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+              END DO
+            CASE (2)
+              DO i = 1, nbeads
+                READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz, fx, fy, fz
+                global = NINT (mglobal)
+                WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+              END DO
+            END SELECT
+
+          END IF
 
         END DO
 
@@ -292,6 +366,7 @@ PROGRAM traject
       END DO
 
       CLOSE (nrtout)
+      IF (separate) CLOSE (nrtout+1)
 
       DO j = 1, numnodes
         CLOSE (ntraj+j-1)
