@@ -10,7 +10,7 @@ ODIR = obj
 #_OBJ = $(SOURCES:.c=.o)
 #OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-BIN = bin/Aggregates bin/SelectedVcf bin/TransformVsf bin/Config bin/traject
+BIN = bin/Aggregates bin/SelectedVcf bin/TransformVsf bin/Config bin/traject-v2_5 bin/traject-v2_6
 
 all: dir $(BIN) $(OBJ)
 
@@ -22,6 +22,12 @@ $(OBJ): $(OBJ) $(SOURCE)
 
 $(ODIR)/%.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS) $(LIBS)
+
+$(ODIR)/traject-v2_5.o:
+	f95 -c -o $(ODIR)/traject.o traject-v2_5.f90 -O3
+
+$(ODIR)/traject-v2_6.o:
+	f95 -c -o $(ODIR)/traject.o traject-v2_6.f90 -O3
 
 bin/TransformVsf: $(OBJ) $(ODIR)/TransformVsf.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
@@ -35,11 +41,11 @@ bin/Aggregates: $(OBJ) $(ODIR)/Aggregates.o
 bin/Config: $(OBJ) $(ODIR)/Config.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-$(ODIR)/traject.o:
-	f95 -c -o $(ODIR)/traject.o traject.f90 -O3
+bin/traject-v2_5: $(ODIR)/traject-v2_5.o
+	f95 -o $@ traject-v2_6.f90 -O3
 
-bin/traject: $(ODIR)/traject.o
-	f95 -o $@ traject.f90 -O3
+bin/traject-v2_6: $(ODIR)/traject-v2_6.o
+	f95 -o $@ traject-v2_5.f90 -O3
 
 clean:
 	rm -rf $(ODIR) *.o *~ core
