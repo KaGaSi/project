@@ -42,10 +42,10 @@ bin/Config: $(OBJ) $(ODIR)/Config.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 bin/traject-v2_5: $(ODIR)/traject-v2_5.o
-	f95 -o $@ traject-v2_6.f90 -O3
+	f95 -o $@ traject-v2_5.f90 -O3
 
 bin/traject-v2_6: $(ODIR)/traject-v2_6.o
-	f95 -o $@ traject-v2_5.f90 -O3
+	f95 -o $@ traject-v2_6.f90 -O3
 
 clean:
 	rm -rf $(ODIR) *.o *~ core
