@@ -96,6 +96,8 @@ typedef struct Aggregate {
       *Bead, ///< ids of bonded beads in aggregate
       nMonomers, ///< number of monomeric beads in aggregate
       *Monomer; ///< ids of monomeric beads in aggregate
+
+  double Mass; ///< total mass of the aggregate
 } Aggregate; //}}}
 
 // ReadStructure() //{{{
@@ -142,6 +144,19 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
  */
 int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
 
+// ReadAggregates() //{{{
+/**
+ * \brief Function reading information about aggregates from `.agg` file
+ *
+ * \param [in]  vcf_file      name of input .vcf coordinate file
+ * \param [in]  Counts        numbers of beads, molecules, etc.
+ * \param [out] Aggregate     information about aggregates
+ * \param [in]  MoleculeType  information about molecule types
+ * \param [in]  Molecule      information about individual molecules
+ */
+void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
+                    MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
 // VerboseOutput() //{{{
 /**
  * \brief Function printing basic information about system if `-v` or `-V`
@@ -155,7 +170,7 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
  * \param [in] MoleculeType  information about molecule types
  * \param [in] Molecule      information about individual molecules
  */
-void VerboseOutput(char *input_vcf, char *bonds_file, Counts Counts,
+void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 

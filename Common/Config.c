@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // open input coordinate file //{{{

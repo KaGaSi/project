@@ -20,7 +20,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -b <name>        file containing bond alternatives to FIELD\n");
   fprintf(stderr, "      -j <joined.vcf>  output vcf file with joined coordinates\n");
   fprintf(stderr, "      -v               verbose output\n");
-  fprintf(stderr, "      -V               verbose output with comments from input .vcf file\n");
+  fprintf(stderr, "      -V               verbose output with more information\n");
   fprintf(stderr, "      -h               print this help and exit\n");
 } //}}}
 
@@ -471,16 +471,16 @@ int main(int argc, char *argv[]) {
       printf("<output.agg> <type names> <options>\n\n");
 
       printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <output.agg>        output filename (agg format)\n");
       printf("   <distance>          minimum distance for contact for aggregate check\n");
       printf("   <contacts>          minimum number of contacts for aggregate check\n");
+      printf("   <output.agg>        output filename (agg format)\n");
       printf("   <type names>        names of bead types for closeness calculation\n");
       printf("   <options>\n");
       printf("      -i <name>        use input .vsf file different from dl_meso.vsf\n");
       printf("      -b <name>        file containing bond alternatives to FIELD\n");
       printf("      -j <joined.vcf>  output vcf file with joined coordinates\n");
       printf("      -v               verbose output\n");
-      printf("      -V               verbose output with comments from input .vcf file\n");
+      printf("      -V               verbose output with more information\n");
       printf("      -h               print this help and exit\n");
       exit(0);
     }
@@ -661,7 +661,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     printf("\n   Distance for closeness check: %lf\n", distance);
     printf("   Number of needed contacts for aggregate check: %d\n", contacts);
