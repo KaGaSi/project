@@ -212,7 +212,8 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose option //{{{
   if (verbose) {
-    VerboseOutput('\0', bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    char null[1] = {'\0'};
+    VerboseOutput(false, null, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // create & fill output vsf file
