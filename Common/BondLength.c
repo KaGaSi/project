@@ -26,11 +26,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("EndToEnd utility calculates end to end distance for linear chains (no check   \n");
-      printf("whether the molecules are linear is performed). It calculates distance        \n");
-      printf("between first and last bead in a molecule The utility uses dl_meso.vsf (or    \n");
-      printf("other input structure file) and FIELD (along with optional bond file) files   \n");
-      printf("to determine all information about the system.                              \n\n");
+      printf("BondLength utility calculates distribution of bond lengths for spciefied      \n");
+      printf("molecule(s). The utility uses dl_meso.vsf (or other input structure file)     \n");
+      printf("and FIELD (along with optional bond file) files to determine all              \n");
+      printf("information about the system.                                               \n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <output file> <width> <molecule names> <options>\n\n", argv[0]);
@@ -153,7 +152,7 @@ int main(int argc, char *argv[]) {
   }
   double width = atof(argv[count]); //}}}
 
-  // <output> - file name with end-to-end distances //{{{
+  // <output> - file name with bond length distribution //{{{
   char output[32];
   strcpy(output, argv[++count]); //}}}
 
@@ -178,29 +177,6 @@ int main(int argc, char *argv[]) {
 
     MoleculeType[type].Use = true;
   } //}}}
-
-  // open output file and print molecule names //{{{
-  FILE *out;
-  if ((out = fopen(output, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output);
-    exit(1);
-  }
-
-  fprintf(out, "#timestep ");
-
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    if (MoleculeType[i].Use) {
-      fprintf(out, "%10s:", MoleculeType[i].Name);
-      for (int j = 0; j < Counts.TypesOfBeads; j++) {
-        for (int k = j; k < Counts.TypesOfBeads; k++) {
-          fprintf(out, "%10s-%10s", BeadType[j].Name, BeadType[k].Name);
-        }
-      }
-    }
-  }
-  putc('\n', out);
-
-  fclose(out); //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -350,10 +326,28 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // open output file for appending //{{{
-  if ((out = fopen(output, "a")) == NULL) {
+  FILE *out;
+  if ((out = fopen(output, "w")) == NULL) {
     fprintf(stderr, "Cannot open file %s!\n", output);
     exit(1);
   } //}}}
+
+  // print first line of output file - molecule names and beadtype pairs //{{{
+  fprintf(out, "#distance ");
+
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (MoleculeType[i].Use) {
+      fprintf(out, "%s: ", MoleculeType[i].Name);
+
+      for (int j = 0; j < MoleculeType[i].nBTypes; j++) {
+        for (int k = j; k < MoleculeType[i].nBTypes; k++) {
+          fprintf(out, " %s-%s", BeadType[MoleculeType[i].BType[j]].Name, BeadType[MoleculeType[i].BType[k]].Name);
+        }
+      }
+      putc(';', out);
+    }
+  }
+  putc('\n', out); //}}}
 
   // write to output file //{{{
   for (int i = 0; i < bins; i++) {
@@ -362,9 +356,21 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use) {
 
-        for (int k = 0; k < Counts.TypesOfBeads; k++) {
-          for (int l = k; l < Counts.TypesOfBeads; l++) {
-            fprintf(out, "%10f", (double)(length[j][k][l][i]+length[j][l][k][i])/bonds[j][k][l]);
+        // go over all beadtype pairs in molecule type 'j'
+        for (int k = 0; k < MoleculeType[j].nBTypes; k++) {
+          for (int l = k; l < MoleculeType[j].nBTypes; l++) {
+
+            int btype1 = MoleculeType[j].BType[k];
+            int btype2 = MoleculeType[j].BType[l];
+
+            // btype1 must be lower then btype2 - TODO: check why
+            if (btype1 > btype2) {
+              int swap = btype1;
+              btype1 = btype2;
+              btype2 = swap;
+            }
+
+            fprintf(out, "%10f", (double)(length[j][btype1][btype2][i]+length[j][btype2][btype1][i])/bonds[j][btype1][btype2]);
           }
         }
       }

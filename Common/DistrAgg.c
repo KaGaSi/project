@@ -7,7 +7,7 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <output distr file> <output avg file> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input> <output distr file> <output avg file> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input>              input filename (agg format)\n");
   fprintf(stderr, "   <output distr file>  filename with weight and number distributions\n");
@@ -25,14 +25,13 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("PersistenceLength utility calculates persistence length of linear chains (no    \n");
-      printf("check whether the molecules are linear is performed). It calculates distance    \n");
-      printf("between first and last bead in a molecule The utility uses dl_meso.vsf (or      \n");
-      printf("other input structure file) and FIELD (along with optional bond file) files     \n");
-      printf("to determine all information about the system.                                \n\n");
+      printf("DistrAgg calculates weight and number average aggregation numbers during the    \n");
+      printf("simulation run as well as overall weight and number distributions. The          \n");
+      printf("utility uses dl_meso.vsf (or other input structure file) and FIELD (along with  \n");
+      printf("optional bond file) files to determine all information about the system.        \n\n");
 
       printf("Usage:\n");
-      printf("   %s <input.vcf> <output distr file> <output avg file> <options>\n\n", argv[0]);
+      printf("   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
 
       printf("   <input>              input filename (agg format)\n");
       printf("   <output distr file>  filename with weight and number distributions\n");
@@ -207,15 +206,6 @@ int main(int argc, char *argv[]) {
     ndistr[i] = 0;
   } //}}}
 
-  // total mass of all chains //{{{
-  double mass = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
-    mass += MoleculeType[Molecule[i].Type].Mass;
-  }
-  if (verbose) {
-    printf("\nTotal mass of all chains: %lf\n", mass);
-  } //}}}
-
   // main loop //{{{
   int test;
   count = 0;
@@ -248,16 +238,16 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // go through all aggregates
-    double avg_w = 0,
-           avg_n = 0;
+    double avg_n = 0,
+           avg_w = 0;
     for (int i = 0; i < Counts.Aggregates; i++) {
       // distribution
-      wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].Mass;
       ndistr[Aggregate[i].nMolecules-1]++;
+      wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
 
       // average aggregation number
-      avg_w += SQR(Aggregate[i].Mass);
-      avg_n += Aggregate[i].Mass;
+      avg_n += Aggregate[i].nMolecules;
+      avg_w += SQR(Aggregate[i].nMolecules);
     }
 
     // print averages to output file //{{{
@@ -266,7 +256,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
 
-    fprintf(out, "%5d %lf %lf\n", count, avg_w/mass, mass/Counts.Aggregates);
+    fprintf(out, "%5d %lf %lf\n", count, avg_w/Counts.Molecules, avg_n/Counts.Aggregates);
     fclose(out); //}}}
   }
   fclose(agg);
@@ -287,7 +277,7 @@ int main(int argc, char *argv[]) {
   }
 
   for (int i = 0; i < Counts.Molecules; i++) {
-    fprintf(out, "%4d %lf %lf\n", i+1, wdistr[i]/(mass*count), (double)(ndistr[i])/sum_agg);
+    fprintf(out, "%4d %lf %lf\n", i+1, wdistr[i]/(Counts.Molecules*count), (double)(ndistr[i])/sum_agg);
   }
   fclose(out); //}}}
 
