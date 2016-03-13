@@ -1,7 +1,8 @@
 # Utilities for linear chains {#LinearChains}
 
 This section provides information about utilities with calculations that
-are sensible to do only on linear polymer chains
+are sensible to do only on linear polymer chains. No check whether the
+molecules are linear is done.
 
 # EndToEnd utility {#EndToEnd}
 
@@ -28,8 +29,6 @@ Usage:
 > > output filename with indexed coordinates (must end with `.vcf`)
 > `<molecule names>`
 > > names of molecule types (linear chains) to use
-
-\todo Possibly remove the necessity for joined coordinates.
 
 # PersistenceLength utility {#PersistenceLength}
 
@@ -71,5 +70,3 @@ Usage:
 > > output filename with indexed coordinates (must end with `.vcf`)
 > `<molecule names>`
 > > names of molecule types (linear chains) to use
-
-\todo Possibly remove the necessity for joined coordinates.

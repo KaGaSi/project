@@ -795,6 +795,46 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
     count += (*MoleculeType)[i].Number;
   } //}}}
 
+  // allocate MoleculeType[].BType arrays //{{{
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].BType = malloc((*Counts).TypesOfBeads*sizeof(int));
+
+    // initialize array
+    for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
+      (*MoleculeType)[i].BType[j] = -1;
+    }
+  } //}}}
+
+  // determine beadtypes in molecules //{{{
+  int mols = 0;
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].nBTypes = 0;
+
+    // go through all beads of the first molecule of the given molecule type
+    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+      int id = (*Molecule)[mols].Bead[j];
+
+      // test if bead id's type is present in BType array //{{{
+      bool in_mol = false;
+      for (int k = 0; k < (*MoleculeType)[i].nBTypes; k++) {
+        if ((*MoleculeType)[i].BType[k] == (*Bead)[id].Type) {
+          in_mol = true;
+          break;
+        }
+      } //}}}
+
+      // if bead id is of a type not yet present in BType array, add it there
+      if (!in_mol) {
+        (*MoleculeType)[i].BType[(*MoleculeType)[i].nBTypes] = (*Bead)[id].Type;
+
+        (*MoleculeType)[i].nBTypes++;
+      }
+    }
+
+    // count total number of molecules
+    mols += (*MoleculeType)[i].Number;
+  } //}}}
+
 //for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
 //  printf("%5d %5d %s %4d\n", i, (*Bead)[i].Index, (*BeadType)[(*Bead)[i].Type].Name, (*Bead)[i].Molecule);
 //}
@@ -962,7 +1002,15 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
     printf(", Number =%4d", MoleculeType[i].Number);
     printf(", nBeads =%3d", MoleculeType[i].nBeads);
     printf(", nBonds =%3d", MoleculeType[i].nBonds);
-    printf(", Mass =%7.2f", MoleculeType[i].Mass);
+
+    printf(", nBTypes =%2d, BType{", MoleculeType[i].nBTypes);
+    printf("%8s", BeadType[MoleculeType[i].BType[0]].Name);
+    for (int j = 1; j < MoleculeType[i].nBTypes; j++) {
+      printf(",%8s", BeadType[MoleculeType[i].BType[j]].Name);
+    }
+
+    printf("}, Mass =%7.2f", MoleculeType[i].Mass);
+
     if (bonds_file[0] == '\0') { // all bonds taken from FIELD
       printf(", Bonds from 'FIELD',");
     } else {

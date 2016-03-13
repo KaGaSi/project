@@ -128,6 +128,25 @@ For VMD atom selection:
 the ids of beads must strictly adhere to FIELD. Possibly require use of a
 vcf file in conjunction with bond file
 
+# BondLength utility {#BondLength}
+
+BondLength utility calculates normalized distribution of bond length for
+specified molecule types.
+
+Usage:
+
+`BondLength <input.vcf> <output file> <width> <molecule names> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
+> `<output file>`
+> > output filename containing distribution of bond lengths
+> `<width>`
+> > width of each bin for the distribution
+> `<molecule names>`
+> > names of molecule types to calculate the distribution for
+
 # Aggregates utility {#Aggregates}
 
 This utility determines which molecules belong to which aggregates
@@ -162,7 +181,63 @@ Usage:
 \todo Add the possibility to save only certain bead types to output vcf
 file with joined coordinates.
 
-# Average
+# DistrAgg utility {#DistrAgg}
+
+DistrAgg calculates number and weight average aggregation numbers
+for each timestep.
+\latexonly
+The number average aggregation number, $\langle A_{\mathrm{s}} \rangle_n$
+is defined as:
+
+\begin{equation}
+\langle A_{\mathrm{s}} \rangle_n = \frac{\sum_i m_i}{N} \mbox{,}
+\end{equation}
+
+where $m_i$ is weight (aggregation number) of aggregate $i$ and $N$ is
+total number of aggregates. The weight average aggregation number, $\langle
+A_{\mathrm{s}} \rangle_w$ is then defined as:
+
+\begin{equation}
+\langle A_{\mathrm{s}} \rangle_w = \frac{\sum_i m_i^2}{\sum_i m_i} \mbox{.}
+\end{equation}
+\endlatexonly
+
+It also calculates overall number and weight distribution function.
+\latexonly
+The number distribution function, $F_n (A_{\mathrm{s}})$ is defined as:
+
+\begin{equation}
+F_n (A_{\mathrm{s}}) = \frac{N_{A_{\mathrm{s}}}}{\sum_i N_i} \mbox{,}
+\end{equation}
+
+where $N_i$ is the number of aggregates with aggregation number
+$A_{\mathrm{s}} = i$.  The weight distribution function, $F_w
+(A_{\mathrm{s}})$ is then defined as:
+
+\begin{equation}
+F_w(A_{\mathrm{s}}) = \frac{m_{A_{\mathrm{s}}} N_{A_{\mathrm{s}}}}{\sum_i m_i N_i} \mbox{,}
+\end{equation}
+\endlatexonly
+
+The utility reads information about aggregate from input file with
+[Aggregate format](\ref AggregateFile)
+This file can be generated using [Aggregates utility](\ref Aggregates).
+
+Usage:
+
+`DistrAgg <input> <output distr file> <output avg file> <options>`
+
+> `<input>`
+> > input filename with information about aggregates
+> `<output distr file>`
+> > output filename with weight and number distribution functions
+> `<output avg file>`
+> > output filename with weight and number average aggregation number in
+> > each timestep
+
+\todo Look into the number averages.
+
+# Average utility {#Average}
 
 Utility calculating average values with standard deviation and
 autocorrelation time from values contained in a text file. The first line
@@ -181,3 +256,6 @@ Usage:
 > > number of data values considered as equilibrium
 > `<n_blocks>`
 > > number of blocks for binning analysis
+
+\todo Completely rewrite - especially remove requirement for number of
+lines on the first line of input file
