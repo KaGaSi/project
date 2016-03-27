@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include "../AnalysisTools.h"
+#include "Aggregates.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -24,7 +25,11 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -h               print this help and exit\n");
 } //}}}
 
-void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int contacts, //{{{
+// CalculateAggregates() //{{{
+/**
+ * Function to determine distribution of molecules in aggregates.
+ */
+void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int contacts,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
                          MoleculeType *MoleculeType, Molecule *Molecule) {
 
@@ -281,173 +286,11 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     }
   } //}}}
 
-//// remove aggregate PBC
-//bool *moved = malloc(Counts.Molecules*sizeof(bool));
-
-//// go through all aggregates larger than unimers
-//for (int i = 0; i < Counts.Aggregates; i++) {
-
-//  // skip removing pbc for unimers
-//  if (Aggregate[i].nMolecules == 1)
-//    continue;
-
-//  // negate moved array, while first bead is not to move //{{{
-//  for (int j = 1; j < Counts.Molecules; j++) {
-//    moved[j] = false;
-//  }
-//  moved[0] = true; //}}}
-
-//  bool done = false;
-//  while (!done) {
-
-//    // go through all molecule pairs
-//    for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-//      for (int k = 0; moved[j] && k < Aggregate[i].nMolecules; k++) {
-
-//        // use only moved molecule 'mol_j' and unmoved molecule 'mol_k'
-//        if (moved[j] && !moved[k]) { // automatically follows that j!=k
-//          int mol1 = Aggregate[i].Molecule[j];
-//          int mol2 = Aggregate[i].Molecule[k];
-
-//          // go through all bead pairs in the two molecules
-//          for (int l = 0; l < MoleculeType[Molecule[mol1].Type].nBeads; l++) {
-//            for (int m = 0; m < MoleculeType[Molecule[mol2].Type].nBeads; m++) {
-//            }
-//            // if molekule 'k' (or 'mol2') has been moved, skip also remainder of 'mol1'
-//            if (moved[k]) {
-//              break;
-//            }
-//          }
-//        }
-//      }
-//    }
-
-//    done = true;
-//    for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-//      if (!moved[j]) {
-//        done = false;
-//        break;
-//      }
-//    }
-//  }
-//}
-
   // free memory //{{{
   for (int i = 0; i < (*Counts).Molecules; i++)
     free(contact[i]);
   free(contact);
   free(moved); //}}}
-} //}}}
-
-void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts, //{{{
-                         Vector BoxLength, BeadType *BeadType, Bead **Bead,
-                         MoleculeType *MoleculeType, Molecule *Molecule) {
-
-  bool *moved = malloc(Counts.Molecules*sizeof(bool));
-
-  // go through all aggregates larger than unimers
-  for (int i = 0; i < Counts.Aggregates; i++) {
-
-    // negate moved array, while first bead is not to move //{{{
-    for (int j = 1; j < Counts.Molecules; j++) {
-      moved[j] = false;
-    }
-    moved[0] = true; //}}}
-
-    bool done = false;
-    while (!done) {
-
-      // go through all molecule pairs
-      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-        for (int k = 0; k < Aggregate[i].nMolecules; k++) {
-
-          // use only moved molecule 'mol1' and unmoved molecule 'mol2'
-          if (moved[j] && !moved[k]) { // automatically follows that j != k
-            int mol1 = Aggregate[i].Molecule[j];
-            int mol2 = Aggregate[i].Molecule[k];
-
-            // go through all bead pairs in the two molecules
-            for (int l = 0; l < MoleculeType[Molecule[mol1].Type].nBeads; l++) {
-              for (int m = 0; m < MoleculeType[Molecule[mol2].Type].nBeads; m++) {
-                int bead1 = Molecule[mol1].Bead[l];
-                int bead2 = Molecule[mol2].Bead[m];
-
-                // use only bead types that were used to assign molecules to aggregates
-                if (BeadType[(*Bead)[bead1].Type].Use &&
-                    BeadType[(*Bead)[bead2].Type].Use) {
-
-                  // calculate distance between 'bead1' and 'bead2'
-                  Vector dist = DistanceBetweenBeads(bead1, bead2, *Bead, BoxLength);
-                  dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
-
-                  // move 'mol2' if 'bead1' and 'bead2' are in contact
-                  if (dist.x < distance) {
-
-                    // distance vector between 'bead1' and 'bead2'
-                    dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
-                    dist.y = (*Bead)[bead1].Position.y - (*Bead)[bead2].Position.y;
-                    dist.z = (*Bead)[bead1].Position.z - (*Bead)[bead2].Position.z;
-
-                    // if 'bead1' and 'bead2' are too far in x-direction, move 'mol2' in x-direction //{{{
-                    if (dist.x > (BoxLength.x/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
-                        (*Bead)[Molecule[mol2].Bead[n]].Position.x += BoxLength.x;
-                      }
-                    } else if (dist.x <= -(BoxLength.x/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
-                        (*Bead)[Molecule[mol2].Bead[n]].Position.x -= BoxLength.x;
-                      }
-                    } //}}}
-
-                    // if 'bead1' and 'bead2' are too far in y-direction, move 'mol2' in y-direction //{{{
-                    if (dist.y > (BoxLength.y/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
-                        (*Bead)[Molecule[mol2].Bead[n]].Position.y += BoxLength.y;
-                      }
-                    } else if (dist.y <= -(BoxLength.y/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
-                        (*Bead)[Molecule[mol2].Bead[n]].Position.y -= BoxLength.y;
-                      }
-                    } //}}}
-
-                    // if 'bead1' and 'bead2' are too far in z-direction, move 'mol2' in x-direction //{{{
-                    if (dist.z > (BoxLength.z/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
-                        (*Bead)[Molecule[mol2].Bead[n]].Position.z += BoxLength.z;
-                      }
-                    } else if (dist.z <= -(BoxLength.z/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
-                        (*Bead)[Molecule[mol2].Bead[n]].Position.z -= BoxLength.z;
-                      }
-                    } //}}}
-
-                    moved[k] = true;
-
-                    // skip remainder of 'mol2' (or 'k')
-                    break;
-                  }
-                }
-              }
-              // if molekule 'k' (or 'mol2') has been moved, skip also remainder of 'mol1'
-              if (moved[k]) {
-                break;
-              }
-            }
-          }
-        }
-      }
-
-      done = true;
-      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-        if (!moved[j]) {
-          done = false;
-          break;
-        }
-      }
-    }
-  }
-
-  free(moved);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -659,14 +502,6 @@ int main(int argc, char *argv[]) {
     BeadType[type].Use = true;
   } //}}}
 
-  // print information - verbose output //{{{
-  if (verbose) {
-    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-
-    printf("\n   Distance for closeness check: %lf\n", distance);
-    printf("   Number of needed contacts for aggregate check: %d\n", contacts);
-  } //}}}
-
   // print command to output .agg file //{{{
   FILE *out;
   if ((out = fopen(output_agg, "w")) == NULL) {
@@ -762,6 +597,14 @@ int main(int argc, char *argv[]) {
     Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
     // maximum of all molecules can be in one aggregate
     Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
+  } //}}}
+
+  // print information - verbose output //{{{
+  if (verbose) {
+    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+
+    printf("\n   Distance for closeness check: %lf\n", distance);
+    printf("   Number of needed contacts for aggregate check: %d\n", contacts);
   } //}}}
 
   // main loop //{{{

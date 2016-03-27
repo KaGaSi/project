@@ -163,15 +163,15 @@ Usage:
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
 > > ordered or indexed timesteps
-> `<output.agg>`
-> > output filename (must end with `.agg`) containing information about
-> > aggregates
 > `<distance>`
 > > minimum distance for two beads to be in contact (constituting one
 > > contact pair)
 > `<contacts>`
 > > minimum number of contact pairs to consider two molecules to be in one
 > > aggregate
+> `<output.agg>`
+> > output filename (must end with `.agg`) containing information about
+> > aggregates
 > `<type names>`
 > > names of bead types to use for calculating contact pairs
 > `<options>`
@@ -180,6 +180,28 @@ Usage:
 
 \todo Add the possibility to save only certain bead types to output vcf
 file with joined coordinates.
+
+# JoinAggregates utility {#JoinAggregates}
+
+This utility reads input `.vcf` and `.agg` files and removes periodic
+boundary conditions from aggregates - e.i. it joins the aggregates. The
+distance and the bead types for closeness check are read from the first
+line of `.agg` file with contains full Aggregates command used to generate
+the file. JoinAggregates is meant for cases, where `-j` flag was omitted
+in Aggregates utility.
+
+Usage:
+
+`Aggregates <input.vcf> <input.agg> <output.vcf> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
+> `<input.agg>`
+> > input filename (must end with `.agg`) containing information about
+> > aggregates
+> `<output.vcf>`
+> > output filename (must end with `.vcf`) with joined coordinates
 
 # DistrAgg utility {#DistrAgg}
 

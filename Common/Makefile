@@ -16,6 +16,7 @@ BIN = bin/Aggregates \
 			bin/Config \
 			bin/BondLength \
 			bin/DistrAgg \
+			bin/JoinAggregates \
 			bin/Average \
 			bin/traject-v2_5 \
 			bin/traject-v2_6
@@ -50,6 +51,9 @@ bin/Config: $(OBJ) $(ODIR)/Config.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 bin/BondLength: $(OBJ) $(ODIR)/BondLength.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+bin/JoinAggregates: $(OBJ) $(ODIR)/JoinAggregates.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 bin/DistrAgg: $(OBJ) $(ODIR)/DistrAgg.o
