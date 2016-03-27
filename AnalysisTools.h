@@ -246,4 +246,21 @@ void FillAggregateBeads(Aggregate **Aggregate, Counts Counts,
 void RemovePBCMolecules(Counts Counts, Vector BoxLength,
                         BeadType *BeadType, Bead **Bead,
                         MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
+// RemovePBCAggregates() //{{{
+/**
+ * \brief Funcion to join all aggregates.
+ *
+ * \param [in]  distance       distance for closeness check (taken from agg file)
+ * \param [in]  Aggregate      information about aggregates
+ * \param [in]  Counts         number of beads, molecu.es, etc.
+ * \param [in]  BoxLength      dimensions of the simulation box
+ * \param [in]  BeadType       information about bead types
+ * \param [out] Bead           information about individual beads (coordinates)
+ * \param [in]  MoleculeType   information about molecule types
+ * \param [in]  Molecule       information about individual molecules
+ */
+void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
+                         Vector BoxLength, BeadType *BeadType, Bead **Bead,
+                         MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 #endif
