@@ -51,8 +51,6 @@ Usage:
 > > `-j`
 > > > join individual molecules by removing periodic boundary conditions
 
-\todo Implement `<skip>` and `<start>`
-
 # Config utility {#Config}
 
 This utility takes `.vcf` file containing either
