@@ -292,14 +292,13 @@ int main(int argc, char *argv[]) {
   char *stuff;
   stuff = calloc(128,sizeof(int)); //}}}
 
-  // main loop //{{{
+  // start with start-th step //{{{
   int test;
   count = 0;
-  while ((test = getc(vcf)) != EOF) {
-    ungetc(test, vcf);
-
+  printf("\rDiscarded: %6d", count);
+  for (int i = 1; i < start; i++) {
     fflush(stdout);
-    printf("\rStep: %6d", ++count);
+    printf("\rDiscarded: %6d", ++count);
 
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
@@ -314,6 +313,38 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
     } //}}}
+  }
+  putchar('\n'); //}}}
+
+  // main loop //{{{
+  while ((test = getc(vcf)) != EOF) {
+    ungetc(test, vcf);
+
+    // skip every 'skip' steps
+    for (int i = 0; i <= skip; i++) {
+      // test whether at vcf's eof //{{{
+      if ((test = getc(vcf)) == EOF) {
+        break;
+      }
+      ungetc(test, vcf); //}}}
+
+      fflush(stdout);
+      printf("\rStep: %6d", ++count);
+
+      // read indexed timestep from input .vcf file //{{{
+      if (indexed) {
+        if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
+          fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+          exit(1);
+        } //}}}
+      // or read ordered timestep from input .vcf file //{{{
+      } else {
+        if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
+          fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+          exit(1);
+        }
+      } //}}}
+    }
 
     // join molecules? //{{{
     if (join) {

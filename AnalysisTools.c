@@ -319,10 +319,22 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
               (*MoleculeType)[mols].Bond[j][1] = swap;
             } //}}}
 
+          } //}}}
+
+          // skip bonds part in FIELD //{{{
+          // read 'bonds' keyword and number of bonds in molecule type 'i'
+          int bin;
+          if (fscanf(field, "%s %d", str, &bin) != 2) {
+            fprintf(stderr, "Cannot read number of bonds from FIELD!\n");
+            exit(1);
+          }
+
+          // skip 'bin' lines
+          for (int j = 0; j < bin; j++) {
             while (getc(field) != '\n')
              ;
-          } //}}}
-        }
+          }
+        } //}}}
 
         fclose(bond);
       } //}}}
