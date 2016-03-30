@@ -1142,19 +1142,19 @@ Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength) {
   rij.z = Bead[id1].Position.z - Bead[id2].Position.z;
 
   // remove periodic boundary conditions in x-direction
-  if (rij.x > (BoxLength.x/2))
+  while (rij.x > (BoxLength.x/2))
     rij.x = rij.x - BoxLength.x;
-  else if (rij.x <= -(BoxLength.x/2))
+  while (rij.x <= -(BoxLength.x/2))
     rij.x = rij.x + BoxLength.x;
   // in y-direction
-  if (rij.y > (BoxLength.y/2))
+  while (rij.y > (BoxLength.y/2))
     rij.y = rij.y - BoxLength.y;
-  else if (rij.y <= -(BoxLength.y/2))
+  while (rij.y <= -(BoxLength.y/2))
     rij.y = rij.y + BoxLength.y;
   // in z-direction
-  if (rij.z > (BoxLength.z/2))
+  while (rij.z > (BoxLength.z/2))
     rij.z = rij.z - BoxLength.z;
-  else if (rij.z <= -(BoxLength.z/2))
+  while (rij.z <= -(BoxLength.z/2))
     rij.z = rij.z + BoxLength.z;
 
   return (rij);
@@ -1222,8 +1222,13 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
   // go through all aggregates larger than unimers
   for (int i = 0; i < Counts.Aggregates; i++) {
+//  printf("i = %d\n", i);
+//  for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+//    printf("%4d", Aggregate[i].Molecule[j]);
+//  }
+//  putchar('\n');
 
-    // negate moved array, while first bead is not to move //{{{
+    // negate moved array, while first molecule is not to move //{{{
     for (int j = 1; j < Counts.Molecules; j++) {
       moved[j] = false;
     }
@@ -1255,8 +1260,15 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                   Vector dist = DistanceBetweenBeads(bead1, bead2, *Bead, BoxLength);
                   dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
-                  // move 'mol2' if 'bead1' and 'bead2' are in contact
+                  // move 'mol2' (or 'k') if 'bead1' and 'bead2' are in contact
                   if (dist.x < distance) {
+
+                    if (i == 1 && mol2 == 2) {
+                      printf("%d %d\n", mol1, mol2);
+                      printf("%d: %lf %lf %lf\n", (*Bead)[bead1].Index, (*Bead)[bead1].Position.x, (*Bead)[bead1].Position.y, (*Bead)[bead1].Position.z);
+                      printf("%d: %lf %lf %lf\n", (*Bead)[bead2].Index, (*Bead)[bead2].Position.x, (*Bead)[bead2].Position.y, (*Bead)[bead2].Position.z);
+                      printf("dist: %lf\n", dist.x);
+                    }
 
                     // distance vector between 'bead1' and 'bead2' //{{{
                     dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
@@ -1316,6 +1328,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
       done = true;
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         if (!moved[j]) {
+//        printf("not moved: %d %d\n", j+1, Aggregate[i].Molecule[j]+1);
           done = false;
           break;
         }
