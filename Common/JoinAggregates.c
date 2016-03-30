@@ -290,6 +290,8 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+
+    printf("\nDistance for closeness check:  %lf\n\n", distance);
   } //}}}
 
   // main loop //{{{
@@ -298,7 +300,8 @@ int main(int argc, char *argv[]) {
     ungetc(test, vcf);
 
     fflush(stdout);
-    printf("\rStep: %6d", ++count);
+//  printf("\rStep: %6d", ++count);
+    printf("Step: %6d\n", ++count);
 
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
@@ -334,6 +337,7 @@ int main(int argc, char *argv[]) {
     if (verbose2) {
       printf("\n%s", stuff);
     } //}}}
+    printf("count = %d\n", count);
   }
 
   fclose(vcf);
