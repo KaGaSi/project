@@ -783,10 +783,20 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
   // Bead is in reality **Bead, so no &Bead
   ReadVsf(vsf_file, *Counts, *BeadType, Bead);
 
-  // assign 'in no molecule' status to all beads //{{{
+  // assign 'in no molecule' and 'in no aggregate' status to all beads //{{{
   for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
     (*Bead)[i].Molecule = -1;
+    (*Bead)[i].nAggregates = 0;
   } //}}}
+
+  // allocate memory for indices of aggregates individual beads are in //{{{
+  for (int i = 0; i < (*Counts).Unbonded; i++) {
+    (*Bead)[i].Aggregate = calloc((*Counts).Molecules,sizeof(int)); // so much memory to be on the save side
+  }
+  for (int i = (*Counts).Unbonded; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
+    (*Bead)[i].Aggregate = calloc(1,sizeof(int)); // so much memory to be on the save side
+  }
+  //}}}
 
   // assign correct molecule id for beads in molecules //{{{
   for (int i = 0; i < (*Counts).Molecules; i++) {
@@ -1158,31 +1168,6 @@ Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength) {
     rij.z = rij.z + BoxLength.z;
 
   return (rij);
-} //}}}
-
-// FillAggregateBeads() //{{{
-/**
- * Function to assign bead ids to aggregates accoding to molecules in the
- * aggregates. It essentially duplicates the information for the
- * convenience of easy access to all beads in the aggregates.
- */
-void FillAggregateBeads(Aggregate **Aggregate, Counts Counts,
-                        MoleculeType *MoleculeType, Molecule *Molecule) {
-
-  // go through all aggregates
-  for (int i = 0; i < Counts.Aggregates; i++) {
-
-    // go through all molecules in aggregate 'i'
-    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
-      int mol = (*Aggregate)[i].Molecule[j];
-
-      // copy all bead in molecule 'mol' to Aggregate struct
-      for (int k = 0; k < MoleculeType[Molecule[mol].Type].nBeads; k++) {
-        (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads] = Molecule[mol].Bead[k];
-        (*Aggregate)[i].nBeads++;
-      }
-    }
-  }
 } //}}}
 
 // RemovePBCMolecules() //{{{

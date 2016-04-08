@@ -39,6 +39,10 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     (*Aggregate)[i].nMolecules = 0;
     (*Aggregate)[i].nBeads = 0;
     (*Aggregate)[i].nMonomers = 0;
+  }
+
+  for (int i = 0; i < ((*Counts).Bonded+(*Counts).Unbonded); i++) {
+    (*Bead)[i].nAggregates = 0;
   } //}}}
 
   // allocate & zeroize contact[][] (triangular matrix) and moved array //{{{
@@ -55,29 +59,113 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
       contact[i][j] = 0;
   } //}}}
 
-  // count contacts between all molecules pairs //{{{
-  // go over all pairs of molecules
-  for (int i = 1; i < (*Counts).Molecules; i++) { // first molecule
-    for (int j = 0; j < i; j++) { // second molecule
+  // cell size for cell linked list
+  double cell_size = sqrt(sqdist);
 
-      // go over all beads in first molecule
-      for (int k = 0; k < MoleculeType[Molecule[i].Type].nBeads; k++) {
-        int id1 = Molecule[i].Bead[k];
+  // number of cells in all three dimensions //{{{
+  IntVector n_cells;
+  n_cells.x = ceil(BoxLength.x/cell_size),
+  n_cells.y = ceil(BoxLength.y/cell_size),
+  n_cells.z = ceil(BoxLength.z/cell_size); //}}}
 
-        // go over all beads in second molecule if the bead type of id1 is in use
-        for (int l = 0; BeadType[(*Bead)[id1].Type].Use && l < MoleculeType[Molecule[j].Type].nBeads; l++) {
-          int id2 = Molecule[j].Bead[l];
+  // allocate memory for arrays for cell linked list
+  int *Head = malloc((n_cells.x*n_cells.y*n_cells.z)*sizeof(int));
+  int *Link = malloc(((*Counts).Unbonded+(*Counts).Bonded)*sizeof(int));
 
-          // should bead of this type be used to calculate aggregates?
-          if (BeadType[(*Bead)[id2].Type].Use) {
+  // initialize Head array //{{{
+  for (int i = 0; i < (n_cells.x*n_cells.y*n_cells.z); i++) {
+    Head[i] = -1;
+  } //}}}
 
-            // calculate distance between k-th bead in molecule i and l-th bead in molecule j
-            Vector rij = DistanceBetweenBeads(id1, id2, *Bead, BoxLength);
+  // sort beads into cells //{{{
+  for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
+    // coordinate cannot by equal to box size, because the cell id would be out of range //{{{
+    if ((*Bead)[i].Position.x >= BoxLength.x) {
+      (*Bead)[i].Position.x -= BoxLength.x;
+    }
+    if ((*Bead)[i].Position.y >= BoxLength.y) {
+      (*Bead)[i].Position.y -= BoxLength.y;
+    }
+    if ((*Bead)[i].Position.z >= BoxLength.z) {
+      (*Bead)[i].Position.z -= BoxLength.z;
+    } //}}}
 
-            // are 'id1' and 'id2' close enough?
-            if ((SQR(rij.x) + SQR(rij.y) + SQR(rij.z)) <= sqdist)
-              contact[i][j]++;
+    int cell = (int)((*Bead)[i].Position.x / cell_size)
+             + (int)((*Bead)[i].Position.y / cell_size) * n_cells.x
+             + (int)((*Bead)[i].Position.z / cell_size) * n_cells.x * n_cells.y;
+    Link[i] = Head[cell];
+    Head[cell] = i;
+  } //}}}
+
+  // coordinates of adjoining cells //{{{
+  int Dcx[14] = {0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1};
+  int Dcy[14] = {0, 0, 1, 1, 1,-1,-1,-1, 0, 0, 0, 1, 1, 1};
+  int Dcz[14] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1}; //}}}
+
+  // count contacts between all molecules pairs (using cell linked list) //{{{
+  for (int c1z = 0; c1z < n_cells.z; c1z++) {
+    for (int c1y = 0; c1y < n_cells.y; c1y++) {
+      for (int c1x = 0; c1x < n_cells.x; c1x++) {
+
+        // select first cell
+        int cell1 = c1x + c1y * n_cells.x + c1z * n_cells.x * n_cells.y;
+
+        // select first bead in the cell 'cell1'
+        int i = Head[cell1];
+
+        while (i != -1) {
+          for (int k = 0; k < 14; k++) {
+            int c2x = c1x + Dcx[k]; //{{{
+            int c2y = c1y + Dcy[k];
+            int c2z = c1z + Dcz[k]; //}}}
+
+            // periodic boundary conditions for cells //{{{
+            if (c2x >= n_cells.x)
+              c2x -= n_cells.x;
+            else if (c2x < 0)
+              c2x += n_cells.x;
+
+            if (c2y >= n_cells.y)
+              c2y -= n_cells.y;
+            else if (c2y < 0)
+              c2y += n_cells.y;
+
+            if (c2z >= n_cells.z)
+              c2z -= n_cells.z; //}}}
+
+            // select second cell
+            int cell2 = c2x + c2y * n_cells.x + c2z * n_cells.x * n_cells.y;
+
+            // select bead in the cell 'cell2' //{{{
+            int j;
+            if (cell1 == cell2) { // next bead in 'cell1'
+              j = Link[i];
+            } else { // first bead in 'cell2'
+              j = Head[cell2];
+            } //}}}
+
+            while (j != -1) {
+              if (BeadType[(*Bead)[i].Type].Use &&
+                  BeadType[(*Bead)[j].Type].Use) {
+
+                // calculate distance between i and j beads
+                Vector rij = DistanceBetweenBeads(i, j, *Bead, BoxLength);
+
+                // are 'i' and 'j' close enough?
+                if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
+                    (SQR(rij.x) + SQR(rij.y) + SQR(rij.z)) <= sqdist) {
+                  if (i > j) {
+                    contact[(*Bead)[i].Molecule][(*Bead)[j].Molecule]++;
+                  } else {
+                    contact[(*Bead)[j].Molecule][(*Bead)[i].Molecule]++;
+                  }
+                }
+              }
+
+              j = Link[j];
+            }
           }
+          i = Link[i];
         }
       }
     }
@@ -119,9 +207,6 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
         if (testj != -1)
           break;
       } //}}}
-
- //   printf("%d\n", (*Counts).Aggregates);
- //         printf("testi=%d testj=%d\n", testi, testj);
 
       // molecules 'i' and 'j' are in contact //{{{
       if (contact[i][j] >= contacts) {
@@ -248,41 +333,151 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
       break;
   } //}}}
 
-  FillAggregateBeads(Aggregate, *Counts, MoleculeType, Molecule);
+  // assign bonded beads to Aggregate struct //{{{
+  for (int i = 0; i < (*Counts).Aggregates; i++) {
 
-  // calculate the number of monomeric beads in aggregate //{{{
-  // go through all unbonded beads
-  for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
-    if ((*Bead)[i].Molecule == -1) { // -1 means 'in no molecule'
+    // go through all molecules in aggregate 'i'
+    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+      int mol = (*Aggregate)[i].Molecule[j];
 
-      // go through all aggregates
-      for (int j = 0; j < (*Counts).Aggregates; j++) {
-        bool in_agg = false;
+      // copy all bead in molecule 'mol' to Aggregate struct
+      for (int k = 0; k < MoleculeType[Molecule[mol].Type].nBeads; k++) {
+        (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads] = Molecule[mol].Bead[k];
+        (*Aggregate)[i].nBeads++;
 
-        // go through all molecules in aggregate 'j'
-        for (int k = 0; k < (*Aggregate)[j].nMolecules; k++) {
-          int id = (*Aggregate)[j].Molecule[k];
+        // every bead from molecule is only in one aggregate
+        (*Bead)[Molecule[mol].Bead[k]].nAggregates = 1;
+        (*Bead)[Molecule[mol].Bead[k]].Aggregate[0] = i;
+      }
+    }
+  } //}}}
 
-          // go through all beads in molecule 'id'
-          for (int l = 0; l < MoleculeType[Molecule[id].Type].nBeads; l++) {
+  // find monomeric beads close to aggregates (using cell linked list) //{{{
+  for (int c1z = 0; c1z < n_cells.z; c1z++) {
+    for (int c1y = 0; c1y < n_cells.y; c1y++) {
+      for (int c1x = 0; c1x < n_cells.x; c1x++) {
 
-            // calculate distance between monomeric bead 'i' and bead 'Molecule[id].Bead[l]'
-            Vector dist = DistanceBetweenBeads(i, Molecule[id].Bead[l], *Bead, BoxLength);
+        // select first cell
+        int cell1 = c1x + c1y * n_cells.x + c1z * n_cells.x * n_cells.y;
 
-            if ((SQR(dist.x)+SQR(dist.y)+SQR(dist.z)) < sqdist) {
-              (*Aggregate)[j].Monomer[(*Aggregate)[j].nMonomers] = (*Bead)[i].Index;
-              (*Aggregate)[j].nMonomers++;
+        int i = Head[cell1];
 
-              in_agg = true;
+        while (i != -1) {
+          for (int k = 0; k < 14; k++) {
+            int c2x = c1x + Dcx[k];
+            int c2y = c1y + Dcy[k];
+            int c2z = c1z + Dcz[k];
 
-              break;
+            // cell periodic boundary condition //{{{
+            if (c2x >= n_cells.x)
+              c2x -= n_cells.x;
+            else if (c2x < 0)
+              c2x += n_cells.x;
+
+            if (c2y >= n_cells.y)
+              c2y -= n_cells.y;
+            else if (c2y < 0)
+              c2y += n_cells.y;
+
+            if (c2z >= n_cells.z)
+              c2z -= n_cells.z; //}}}
+
+            // select second cell
+            int cell2 = c2x + c2y * n_cells.x + c2z * n_cells.x * n_cells.y;
+
+            int j;
+            if (cell1 == cell2) {
+              j = Link[i];
+            } else {
+              j = Head[cell2];
+            }
+
+            while (j != -1) {
+              // test if the monmeric bead is near aggregate
+              if ((*Bead)[i].Molecule == -1 && // monomeric 'i'
+                  (*Bead)[j].Molecule != -1) { // 'j' in molecule //{{{
+
+                int agg_j = (*Bead)[j].Aggregate[0];
+
+                // test if 'i' is already in 'j''s aggregate //{{{
+                bool in_agg = false;
+                for (int k = 0; k < (*Bead)[i].nAggregates; k++) {
+                  if ((*Bead)[i].Aggregate[k] == agg_j) {
+                    in_agg = true;
+                    break;
+                  }
+                } //}}}
+
+                if (!in_agg) {
+                  // calculate distance between i and j beads
+                  Vector rij = DistanceBetweenBeads(i, j, *Bead, BoxLength);
+
+                  // test if 'i' is near 'j''s aggregate
+                  if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) < sqdist) {
+                    (*Aggregate)[agg_j].Monomer[(*Aggregate)[agg_j].nMonomers] = (*Bead)[i].Index;
+                    (*Aggregate)[agg_j].nMonomers++;
+
+                    (*Bead)[i].Aggregate[(*Bead)[i].nAggregates] = agg_j;
+                    (*Bead)[i].nAggregates++;
+                  }
+                } //}}}
+              } else if ((*Bead)[j].Molecule == -1 && // monomeric 'j'
+                         (*Bead)[i].Molecule != -1) { // 'i' in molecule //{{{
+
+                int agg_i = (*Bead)[i].Aggregate[0];
+
+                // test if 'j' is already in 'i''s aggregate //{{{
+                bool in_agg = false;
+                for (int k = 0; k < (*Bead)[j].nAggregates; k++) {
+                  if ((*Bead)[j].Aggregate[k] == agg_i) {
+                    in_agg = true;
+                    break;
+                  }
+                } //}}}
+
+                if (!in_agg) {
+                  // calculate distance between i and j beads
+                  Vector rij = DistanceBetweenBeads(i, j, *Bead, BoxLength);
+
+                  // test if 'j' is near 'i''s aggregate
+                  if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) < sqdist) {
+                    (*Aggregate)[agg_i].Monomer[(*Aggregate)[agg_i].nMonomers] = (*Bead)[j].Index;
+                    (*Aggregate)[agg_i].nMonomers++;
+
+                    (*Bead)[j].Aggregate[(*Bead)[j].nAggregates] = agg_i;
+                    (*Bead)[j].nAggregates++;
+                  }
+                }
+              } //}}}
+
+              j = Link[j];
             }
           }
-
-          if (in_agg)
-            break;
+          i = Link[i];
         }
       }
+    }
+  } //}}}
+
+  // bubble sort monomers in aggregates according to ascending ids //{{{
+  for (int i = 0; i < (*Counts).Aggregates; i++) {
+
+    for (int j = 0 ; j < ((*Aggregate)[i].nMonomers-1); j++) {
+      bool done = true;
+
+      for (int k = 0 ; k < ((*Aggregate)[i].nMonomers-j-1); k++) {
+
+        if ((*Aggregate)[i].Monomer[k] > (*Aggregate)[i].Monomer[k+1]) {
+
+          int swap = (*Aggregate)[i].Monomer[k];
+          (*Aggregate)[i].Monomer[k] = (*Aggregate)[i].Monomer[k+1];
+          (*Aggregate)[i].Monomer[k+1] = swap;
+
+          done = false;
+        }
+      }
+      if (done)
+        break;
     }
   } //}}}
 

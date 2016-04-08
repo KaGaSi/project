@@ -11,11 +11,19 @@
 
 // struct Vector //{{{
 /**
- * \brief 3D vector.
+ * \brief 3D vector of floats.
  */
 typedef struct Vector {
   double x, y, z;
 } Vector; //}}}
+
+// struct IntVector //{{{
+/**
+ * \brief 3D vector of integers.
+ */
+typedef struct IntVector {
+  int x, y, z;
+} IntVector; //}}}
 
 // struct Counts //{{{
 /**
@@ -73,6 +81,8 @@ typedef struct MoleculeType {
 typedef struct Bead {
   int Type, ///< type of bead corresponding to index in BeadType struct
       Molecule, ///< index number of molecule corresponding to Molecule struct (-1 for monomeric bead)
+      nAggregates, ///< number of aggregates the bead is in (only monomeric beads can be in more aggregates)
+      *Aggregate, ///< index numbers of aggregates corresponding to Aggregate struct (-1 for bead in no aggregate)
       Index; ///< index of the bead according to .vsf file (needed for indexed timesteps)
 
   Vector Position; ///< cartesian coordinates of the bead
@@ -219,18 +229,6 @@ int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}
  * \return distance vector between the two provided beads (without pbc)
  */
 Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength); //}}}
-
-// FillAggregateBeads() //{{{
-/**
- * \brief Function to assign bead ids to Aggregate struct.
- *
- * \param [out] Aggregate      information about all aggregates (i.e. bead ids in aggregates)
- * \param [in]  Counts         numbers of beads, molecules, etc.
- * \param [in]  MoleculeType   information about molecule types
- * \param [in]  Molecule       information about individual molecules
- */
-void FillAggregateBeads(Aggregate **Aggregate, Counts Counts,
-                        MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 
 // RemovePBCMolecules() //{{{
 /**
