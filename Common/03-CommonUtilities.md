@@ -176,6 +176,13 @@ Usage:
 > > `-j <joined.vcf>`
 > > > filename for coordinates of joined aggregates (must end with `.vcf`)
 
+The NotSameBeads variant of the Aggregate utility works in exactly the same,
+but does not calculates contacts between beads of the same type, i.e. if bead
+types `A` and `B` are provided, Aggregates will calculate contact pairs `A-B`,
+`A-A` and `B-B` (provided the beads are in different molecules), while
+Aggregates-NotSameBeads will calculate only `A-B` contact pair. Therefore at
+least two bead types must be provided for `<type names>` argument.
+
 \todo Add the possibility to save only certain bead types to output vcf
 file with joined coordinates.
 

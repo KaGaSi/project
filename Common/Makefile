@@ -10,8 +10,9 @@ ODIR = obj
 #_OBJ = $(SOURCES:.c=.o)
 #OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-BIN = bin/Aggregates \
-			bin/SelectedVcf \
+BIN = bin/SelectedVcf \
+			bin/Aggregates \
+			bin/Aggregates-NotSameBeads \
 			bin/TransformVsf \
 			bin/Config \
 			bin/BondLength \
@@ -45,6 +46,9 @@ bin/SelectedVcf: $(OBJ) $(ODIR)/SelectedVcf.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 bin/Aggregates: $(OBJ) $(ODIR)/Aggregates.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+bin/Aggregates-NotSameBeads: $(OBJ) $(ODIR)/Aggregates-NotSameBeads.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 bin/Config: $(OBJ) $(ODIR)/Config.o
