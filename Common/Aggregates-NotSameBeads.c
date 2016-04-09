@@ -483,6 +483,8 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   } //}}}
 
   // free memory //{{{
+  free(Head);
+  free(Link);
   for (int i = 0; i < (*Counts).Molecules; i++)
     free(contact[i]);
   free(contact);
