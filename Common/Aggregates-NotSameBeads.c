@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
-#include <time.h>
 #include "../AnalysisTools.h"
 #include "Aggregates.h"
 
@@ -174,9 +173,6 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     }
   } //}}}
 
-clock_t begin, end;
-double time_spent;
-begin = clock();
   // evaluate the contacts //{{{
   // first molecule
   for (int i = 1; i < (*Counts).Molecules; i++) {
@@ -254,9 +250,6 @@ begin = clock();
       } //}}}
     }
   } //}}}
-end = clock();
-time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-printf("\n%lf s\n", time_spent);
 
   // if residue with highest id is in no aggregate, create it //{{{
   // check if highest id residue is in aggregate //{{{
