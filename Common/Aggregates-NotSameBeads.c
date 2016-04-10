@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
+#include <time.h>
 #include "../AnalysisTools.h"
 #include "Aggregates.h"
 
@@ -31,7 +32,7 @@ void ErrorHelp(char cmd[50]) { //{{{
  */
 void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int contacts,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
-                         MoleculeType *MoleculeType, Molecule *Molecule) {
+                         MoleculeType *MoleculeType, Molecule **Molecule) {
 
   // zeroize //{{{
   (*Counts).Aggregates = 0;
@@ -54,6 +55,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
   // zeroize arrays
   for (int i = 0; i < (*Counts).Molecules; i++) {
+    (*Molecule)[i].Aggregate = -1;
     moved[i] = 0;
     for (int j = 0; j < i; j++) /* j == i is really not needed */
       contact[i][j] = 0;
@@ -172,6 +174,9 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     }
   } //}}}
 
+clock_t begin, end;
+double time_spent;
+begin = clock();
   // evaluate the contacts //{{{
   // first molecule
   for (int i = 1; i < (*Counts).Molecules; i++) {
@@ -179,77 +184,59 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     // second molecule
     for (int j = 0; j < i; j++) {
 
-      // find out if Molecule[i] is in any aggregate //{{{
-      int testi = -1;
-      for (int k = 0; k < (*Counts).Aggregates; k++) {
-        for (int l = 0; l < (*Aggregate)[k].nMolecules; l++) {
-          if (i == (*Aggregate)[k].Molecule[l]) {
-            testi = k;
-            break;
-          }
-        }
-
-        // if 'i' is in aggregate, no need to go through the rest of aggregates
-        if (testi != -1)
-          break;
-      } //}}}
-
-      // find out if Molecule[j] is in any aggregate //{{{
-      int testj = -1;
-      for (int k = 0; k < (*Counts).Aggregates; k++) {
-        for (int l = 0; l < (*Aggregate)[k].nMolecules; l++) {
-          if (j == (*Aggregate)[k].Molecule[l]) {
-            testj = k;
-            break;
-          }
-        }
-
-        // if 'j' is in aggregate, no need to go through the rest of aggregates
-        if (testj != -1)
-          break;
-      } //}}}
+      int agg_i = (*Molecule)[i].Aggregate;
+      int agg_j = (*Molecule)[j].Aggregate;
 
       // molecules 'i' and 'j' are in contact //{{{
       if (contact[i][j] >= contacts) {
         // create new aggregate if 'j' isn'it in any //{{{
-        if (testj == -1) {
-          testj = (*Counts).Aggregates;
+        if (agg_j == -1) {
+          agg_j = (*Counts).Aggregates;
 
-          (*Aggregate)[testj].nMolecules = 1;
-          (*Aggregate)[testj].Molecule[0] = j;
+          (*Aggregate)[agg_j].nMolecules = 1;
+          (*Aggregate)[agg_j].Molecule[0] = j;
+
+          (*Molecule)[j].Aggregate = agg_j;
 
           (*Counts).Aggregates++;
         } //}}}
 
         // add 'i' to aggregate if 'i' isn't in any //{{{
-        if (testi == -1) {
-          (*Aggregate)[testj].Molecule[(*Aggregate)[testj].nMolecules] = i;
+        if (agg_i == -1) {
+          (*Aggregate)[agg_j].Molecule[(*Aggregate)[agg_j].nMolecules] = i;
 
-          (*Aggregate)[testj].nMolecules++;
+          (*Molecule)[i].Aggregate = agg_j;
+
+          (*Aggregate)[agg_j].nMolecules++;
         } //}}}
 
         // each residue in different aggregate => unite aggregates
-        if (testi != -1 && testj != -1 && testi != testj) {
+        if (agg_i != -1 && agg_j != -1 && agg_i != agg_j) {
 
-          // add molecules from aggregate 'testi' to 'testj' //{{{
-          int mols = (*Aggregate)[testj].nMolecules;
+          // add molecules from aggregate 'agg_i' to 'agg_j' //{{{
+          int mols = (*Aggregate)[agg_j].nMolecules;
 
-          (*Aggregate)[testj].nMolecules += (*Aggregate)[testi].nMolecules;
+          (*Aggregate)[agg_j].nMolecules += (*Aggregate)[agg_i].nMolecules;
           int id1 = 0;
-          // copy molecule ids from Aggregate[testi-1] to Aggregate[testj-1] */
-          for (int k = mols; k < (*Aggregate)[testj].nMolecules; k++) {
-            (*Aggregate)[testj].Molecule[k] = (*Aggregate)[testi].Molecule[id1];
+          // copy molecule ids from Aggregate[agg_i-1] to Aggregate[agg_j-1] */
+          for (int k = mols; k < (*Aggregate)[agg_j].nMolecules; k++) {
+            (*Aggregate)[agg_j].Molecule[k] = (*Aggregate)[agg_i].Molecule[id1];
+
+            (*Molecule)[(*Aggregate)[agg_j].Molecule[k]].Aggregate = agg_j;
+
             id1++;
           } //}}}
 
-          // move aggregates with id greater then testi to id-1 //{{{
-          for (int k = (testi+1); k < (*Counts).Aggregates; k++) {
+          // move aggregates with id greater then agg_i to id-1 //{{{
+          for (int k = (agg_i+1); k < (*Counts).Aggregates; k++) {
 
             (*Aggregate)[k-1].nMolecules = (*Aggregate)[k].nMolecules;
 
             // move every molecule from aggregate 'k' to aggregate 'k-1'
             for (int l = 0; l < (*Aggregate)[k].nMolecules; l++) {
               (*Aggregate)[k-1].Molecule[l] = (*Aggregate)[k].Molecule[l];
+
+              (*Molecule)[(*Aggregate)[k-1].Molecule[l]].Aggregate = k - 1;
             }
           } //}}}
 
@@ -257,14 +244,19 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
           (*Counts).Aggregates--;
         } //}}}
       // or 'i' and 'j' aren't in contact and 'j' isn't in any aggregate =>  new aggregate for 'j' */ //{{{
-      } else if (testj == -1) {
+      } else if (agg_j == -1) {
         (*Aggregate)[(*Counts).Aggregates].nMolecules = 1;
         (*Aggregate)[(*Counts).Aggregates].Molecule[0] = j;
+
+        (*Molecule)[j].Aggregate = (*Counts).Aggregates;
 
         (*Counts).Aggregates++;
       } //}}}
     }
   } //}}}
+end = clock();
+time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+printf("\n%lf s\n", time_spent);
 
   // if residue with highest id is in no aggregate, create it //{{{
   // check if highest id residue is in aggregate //{{{
@@ -342,13 +334,13 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
       int mol = (*Aggregate)[i].Molecule[j];
 
       // copy all bead in molecule 'mol' to Aggregate struct
-      for (int k = 0; k < MoleculeType[Molecule[mol].Type].nBeads; k++) {
-        (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads] = Molecule[mol].Bead[k];
+      for (int k = 0; k < MoleculeType[(*Molecule)[mol].Type].nBeads; k++) {
+        (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads] = (*Molecule)[mol].Bead[k];
         (*Aggregate)[i].nBeads++;
 
         // every bead from molecule is only in one aggregate
-        (*Bead)[Molecule[mol].Bead[k]].nAggregates = 1;
-        (*Bead)[Molecule[mol].Bead[k]].Aggregate[0] = i;
+        (*Bead)[(*Molecule)[mol].Bead[k]].nAggregates = 1;
+        (*Bead)[(*Molecule)[mol].Bead[k]].Aggregate[0] = i;
       }
     }
   } //}}}
@@ -820,7 +812,7 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+    CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, BoxLength, BeadType, &Bead, MoleculeType, &Molecule);
 
     // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
     if (joined_vcf[0] != '\0') {

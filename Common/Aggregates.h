@@ -17,5 +17,5 @@
  */
 void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int contacts,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
-                         MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+                         MoleculeType *MoleculeType, Molecule **Molecule); //}}}
 #endif
