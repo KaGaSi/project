@@ -141,6 +141,10 @@ Example of ordered coordinate file:
 >
 > `...`
 
+An ordered coordinate file is generated using `traject-v2_5`, but
+`traject-v2_6` produces indexed coordinate file (due to the way the
+original `traject` utility prints coordinates).
+
 Indexed coordinate file {#IndexedCoorFile}
 =====
 
