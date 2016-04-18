@@ -233,16 +233,21 @@ PROGRAM traject
         END DO
       END IF
 
-      DEALLOCATE (ltp, ltm, mole, bndtbl, nspe, namspe, bbb)
-
 !     ks - close structure file
       CLOSE (nrtout)
 
 !     ks - open coor file
       OPEN (nrtout, file = 'All.vcf')
 
+!     ks - write names
+      DO i = 1, numspe
+        WRITE (nrtout, '("# ",A8)') namspe (i)
+      END DO
+
+      DEALLOCATE (ltp, ltm, mole, bndtbl, nspe, namspe, bbb)
+
 !     ks - write pbc
-      WRITE (nrtout, '("pbc ", 3F10.6)') dimx, dimy, dimz
+      WRITE (nrtout, '(/,"pbc ", 3F10.6)') dimx, dimy, dimz
 
 !     obtain positions and velocities for all beads at each time step
 

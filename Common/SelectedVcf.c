@@ -320,8 +320,37 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
-    // skip every 'skip' steps
-    for (int i = 0; i <= skip; i++) {
+    // read indexed timestep from input .vcf file //{{{
+    if (indexed) {
+      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
+        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        exit(1);
+      } //}}}
+    // or read ordered timestep from input .vcf file //{{{
+    } else {
+      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
+        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        exit(1);
+      }
+    } //}}}
+
+    // join molecules? //{{{
+    if (join) {
+      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+    } //}}}
+
+    // open output .vcf file for appending //{{{
+    if ((out = fopen(output_vcf, "a")) == NULL) {
+      fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+      exit(1);
+    } //}}}
+
+    WriteCoorIndexed(out, Counts, BeadType, Bead, stuff);
+
+    fclose(out);
+
+    // skip every 'skip' steps //{{{
+    for (int i = 0; i < skip; i++) {
       // test whether at vcf's eof //{{{
       if ((test = getc(vcf)) == EOF) {
         break;
@@ -344,22 +373,7 @@ int main(int argc, char *argv[]) {
           exit(1);
         }
       } //}}}
-    }
-
-    // join molecules? //{{{
-    if (join) {
-      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
-
-    // open output .vcf file for appending //{{{
-    if ((out = fopen(output_vcf, "a")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", output_vcf);
-      exit(1);
-    } //}}}
-
-    WriteCoorIndexed(out, Counts, BeadType, Bead, stuff);
-
-    fclose(out);
 
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
