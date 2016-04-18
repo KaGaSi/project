@@ -212,13 +212,13 @@ int main(int argc, char *argv[]) {
     BeadType[type].Write = true;
   }
 
-  // Error - does not make sense to use all bead types
-  if ((count-5) == Counts.TypesOfBeads) {
-    fprintf(stderr, "All beadtypes are selected which would only copy %s,\n", input_vcf);
-    fprintf(stderr, "therefore this is not allowed!\n\n");
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
+//// Error - does not make sense to use all bead types
+//if ((count-5) == Counts.TypesOfBeads) {
+//  fprintf(stderr, "All beadtypes are selected which would only copy %s,\n", input_vcf);
+//  fprintf(stderr, "therefore this is not allowed!\n\n");
+//  ErrorHelp(argv[0]);
+//  exit(1);
+//} //}}}
 
   // print selected bead type names to output .vcf file //{{{
   FILE *out;
