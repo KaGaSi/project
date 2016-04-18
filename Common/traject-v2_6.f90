@@ -177,7 +177,8 @@ PROGRAM traject
         OPEN (nrtout, file = 'traject_bead.vtf')
         OPEN (nrtout+1, file = 'traject_mole.vtf')
       ELSE
-        ! Äs - structure file
+!       OPEN (nrtout, file = 'traject.vtf')
+!       ks - open structure file
         OPEN (nrtout, file = 'dl_meso.vsf')
       END IF
 
@@ -232,19 +233,22 @@ PROGRAM traject
         END DO
       END IF
 
-      ! Äs - close structure fule
-      CLOSE (nrtout)
-
       DEALLOCATE (ltp, ltm, mole, bndtbl, nspe, namspe, bbb)
 
-      ! Äs - open coordinate fileh
-      OPEN (nrtout, file = 'All.vcf')
+!     ks - close structure file
+      CLOSE (nrtout)
 
 !     obtain positions and velocities for all beads at each time step
 
       volchange = .true.
       eof = .false.
       k = 0
+
+!     ks - open coor file
+      OPEN (nrtout, file = 'All.vcf')
+
+!     ks - write pbc
+      WRITE (nrtout, '("pbc ", 3F10.6)') dimx, dimy, dimz
 
       DO WHILE (.true.)
 
@@ -271,19 +275,16 @@ PROGRAM traject
         halfy = 0.0_dp
         halfz = 0.0_dp
 
-        ! Äs - add pbc line at the beginning
-        IF (k==1) THEN
-          WRITE (nrtout, '("pbc ", 3F7.3,//,"timestep indexed",/)') dimx, dimy, dimz
-        ELSE IF (volchange) THEN
-          WRITE (nrtout, '(/,"timestep indexed",/,"pbc ", 3F7.3, " 90 90 90")') dimx, dimy, dimz
-          IF (separate) WRITE (nrtout+1, '(/,"timestep indexed",/,"pbc ", 3F7.3, " 90 90 90")') dimx, dimy, dimz
+        IF (volchange .OR. k==1) THEN
+          WRITE (nrtout, '(/,"#",(I6),/,"timestep")') k
+          IF (separate) WRITE (nrtout+1, '(/,"timestep indexed",/,"pbc ", 3F10.6, " 90 90 90")') dimx, dimy, dimz
         ELSE
-          WRITE (nrtout, '(/, "timestep indexed")')
+          WRITE (nrtout, '(/,"#",(I6),/,"timestep")') k
           IF (separate) WRITE (nrtout+1, '(/, "timestep indexed")')
         END IF
 
         DO j = 1, numnodes
-        
+
           IF (j>1) THEN
             READ (ntraj+j-1, IOSTAT=ioerror) time, mbeads, ndx, ndy, ndz, shrdx, shrdy, shrdz
             IF (ioerror/=0) THEN
@@ -305,9 +306,9 @@ PROGRAM traject
                 READ (ntraj+j-1) mglobal, x, y, z
                 global = NINT (mglobal)
                 IF (global>nubeads) THEN
-                  WRITE (nrtout+1, '(I10,3F7.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout+1, '(3F10.6)') x-halfx, y-halfy, z-halfz
                 ELSE
-                  WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout, '(3F10.6)') x-halfx, y-halfy, z-halfz
                 END IF
               END DO
             CASE (1)
@@ -315,9 +316,9 @@ PROGRAM traject
                 READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz
                 global = NINT (mglobal)
                 IF (global>nubeads) THEN
-                  WRITE (nrtout+1, '(I10,3F7.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout+1, '(3F10.6)') x-halfx, y-halfy, z-halfz
                 ELSE
-                  WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout, '(3F10.6)') x-halfx, y-halfy, z-halfz
                 END IF
               END DO
             CASE (2)
@@ -325,9 +326,9 @@ PROGRAM traject
                 READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz, fx, fy, fz
                 global = NINT (mglobal)
                 IF (global>nubeads) THEN
-                  WRITE (nrtout+1, '(I10,3F7.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout+1, '(3F10.6)') x-halfx, y-halfy, z-halfz
                 ELSE
-                  WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout, '(3F10.6)') x-halfx, y-halfy, z-halfz
                 END IF
               END DO
             END SELECT
@@ -339,19 +340,19 @@ PROGRAM traject
               DO i = 1, nbeads
                 READ (ntraj+j-1) mglobal, x, y, z
                 global = NINT (mglobal)
-                WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                WRITE (nrtout, '(I10,3F10.6)') x-halfx, y-halfy, z-halfz
               END DO
             CASE (1)
               DO i = 1, nbeads
                 READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz
                 global = NINT (mglobal)
-                WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                WRITE (nrtout, '(3F10.6)') x-halfx, y-halfy, z-halfz
               END DO
             CASE (2)
               DO i = 1, nbeads
                 READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz, fx, fy, fz
                 global = NINT (mglobal)
-                WRITE (nrtout, '(I10,3F7.3)') global-1, x-halfx, y-halfy, z-halfz
+                WRITE (nrtout, '(3F10.6)') x-halfx, y-halfy, z-halfz
               END DO
             END SELECT
 
