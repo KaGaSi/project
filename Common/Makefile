@@ -10,22 +10,22 @@ ODIR = obj
 #_OBJ = $(SOURCES:.c=.o)
 #OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-BIN = bin/SelectedVcf \
-			bin/Aggregates \
-			bin/Aggregates-NotSameBeads \
-			bin/TransformVsf \
-			bin/Config \
-			bin/BondLength \
-			bin/DistrAgg \
-			bin/JoinAggregates \
-			bin/Average \
-			bin/traject-v2_5 \
-			bin/traject-v2_6
+BIN = ../bin/SelectedVcf \
+			../bin/Aggregates \
+			../bin/Aggregates-NotSameBeads \
+			../bin/TransformVsf \
+			../bin/Config \
+			../bin/BondLength \
+			../bin/DistrAgg \
+			../bin/JoinAggregates \
+			../bin/Average \
+			../bin/traject-v2_5 \
+			../bin/traject-v2_6
 
 all: dir $(BIN) $(OBJ)
 
 dir:
-	mkdir -p $(ODIR) ../obj bin
+	mkdir -p $(ODIR) ../obj ../bin
 
 $(OBJ): $(OBJ) $(SOURCE)
 	$(CC) -c -o $@ $< $(CFLAGS) $(LIBS)
@@ -39,37 +39,37 @@ $(ODIR)/traject-v2_5.o:
 $(ODIR)/traject-v2_6.o:
 	f95 -c -o $(ODIR)/traject-v2_6.o traject-v2_6.f90 -O3
 
-bin/TransformVsf: $(OBJ) $(ODIR)/TransformVsf.o
+../bin/TransformVsf: $(OBJ) $(ODIR)/TransformVsf.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/SelectedVcf: $(OBJ) $(ODIR)/SelectedVcf.o
+../bin/SelectedVcf: $(OBJ) $(ODIR)/SelectedVcf.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/Aggregates: $(OBJ) $(ODIR)/Aggregates.o
+../bin/Aggregates: $(OBJ) $(ODIR)/Aggregates.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/Aggregates-NotSameBeads: $(OBJ) $(ODIR)/Aggregates-NotSameBeads.o
+../bin/Aggregates-NotSameBeads: $(OBJ) $(ODIR)/Aggregates-NotSameBeads.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/Config: $(OBJ) $(ODIR)/Config.o
+../bin/Config: $(OBJ) $(ODIR)/Config.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/BondLength: $(OBJ) $(ODIR)/BondLength.o
+../bin/BondLength: $(OBJ) $(ODIR)/BondLength.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/JoinAggregates: $(OBJ) $(ODIR)/JoinAggregates.o
+../bin/JoinAggregates: $(OBJ) $(ODIR)/JoinAggregates.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/DistrAgg: $(OBJ) $(ODIR)/DistrAgg.o
+../bin/DistrAgg: $(OBJ) $(ODIR)/DistrAgg.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/Average: $(OBJ) $(ODIR)/Average.o
+../bin/Average: $(OBJ) $(ODIR)/Average.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-bin/traject-v2_5: $(ODIR)/traject-v2_5.o
+../bin/traject-v2_5: $(ODIR)/traject-v2_5.o
 	f95 -o $@ traject-v2_5.f90 -O3
 
-bin/traject-v2_6: $(ODIR)/traject-v2_6.o
+../bin/traject-v2_6: $(ODIR)/traject-v2_6.o
 	f95 -o $@ traject-v2_6.f90 -O3
 
 clean:

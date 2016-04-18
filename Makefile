@@ -3,6 +3,6 @@ all:
 	cd Linear; make
 
 clean:
-	rm -rf obj *.o *~ core
+	rm -rf bin/* obj *.o *~ core
 	cd Common; make clean
 	cd Linear; make clean
