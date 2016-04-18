@@ -907,9 +907,13 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
 
     // read bead coordinates (and unused index)
     int index;
-    if (fscanf(vcf_file, "%d %lf %lf %lf\n", &index, &(*Bead)[i].Position.x,
-                                                     &(*Bead)[i].Position.y,
-                                                     &(*Bead)[i].Position.z) != 4) {
+    if (fscanf(vcf_file, "%d", &index) != 1) {
+      return (i+1); // don't want to return 0, since that generally means no error
+    }
+    (*Bead)[i].Index = index;
+    if (fscanf(vcf_file, "%lf %lf %lf\n", &(*Bead)[i].Position.x,
+                                          &(*Bead)[i].Position.y,
+                                          &(*Bead)[i].Position.z) != 3) {
       return (i+1); // don't want to return 0, since that generally means no error
     }
   }
