@@ -161,7 +161,7 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
 /**
  * \brief Function reading information about aggregates from `.agg` file
  *
- * \param [in]  vcf_file      name of input .vcf coordinate file
+ * \param [in]  agg_file      name of input aggregate file
  * \param [in]  Counts        numbers of beads, molecules, etc.
  * \param [out] Aggregate     information about aggregates
  * \param [in]  MoleculeType  information about molecule types
@@ -175,6 +175,7 @@ void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
  * \brief Function printing basic information about system if `-v` or `-V`
  * option is provided
  *
+ * \param [in] Verbose2      print extra information if 'true'
  * \param [in] input_vcf     .vcf structure file
  * \param [in] bonds_file    filename with bonds
  * \param [in] Counts        numbers of beads, molecules, etc.
@@ -229,7 +230,7 @@ int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}
  * \param [in] BoxLength   dimensions of simulation box
  * \return distance vector between the two provided beads (without pbc)
  */
-Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength); //}}}
+Vector DistanceBetweenBeads(Vector id1, Vector id2, Vector BoxLength); //}}}
 
 // RemovePBCMolecules() //{{{
 /**
@@ -262,4 +263,15 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
 void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
                          MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
+// AggCenterOfMass() //{{{
+/**
+ * \brief Function to calculate aggregate's center of mass.
+ *
+ * \param [in] id             id of aggregate corresponding to Aggregate struct
+ * \param [in] Aggregate      information about aggregates
+ * \param [in] Bead           information about individual beads (coordinates)
+ * \return coordinates of center of mass of a given aggregate
+ */
+Vector AggCenterOfMass(int id, Aggregate *Aggregate, Bead *Bead); //}}}
 #endif

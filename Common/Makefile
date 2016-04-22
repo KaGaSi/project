@@ -13,6 +13,7 @@ ODIR = obj
 BIN = ../bin/SelectedVcf \
 			../bin/Aggregates \
 			../bin/Aggregates-NotSameBeads \
+			../bin/AggDensity \
 			../bin/TransformVsf \
 			../bin/Config \
 			../bin/BondLength \
@@ -49,6 +50,9 @@ $(ODIR)/traject-v2_6.o:
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/Aggregates-NotSameBeads: $(OBJ) $(ODIR)/Aggregates-NotSameBeads.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/AggDensity: $(OBJ) $(ODIR)/AggDensity.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/Config: $(OBJ) $(ODIR)/Config.o
