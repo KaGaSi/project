@@ -151,7 +151,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                   (*Bead)[i].Type != (*Bead)[j].Type) { // do not use pairs of bead with the same type
 
                 // calculate distance between i and j beads
-                Vector rij = DistanceBetweenBeads(i, j, *Bead, BoxLength);
+                Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                 // are 'i' and 'j' close enough?
                 if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
@@ -396,7 +396,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                 if (!in_agg) {
                   // calculate distance between i and j beads
-                  Vector rij = DistanceBetweenBeads(i, j, *Bead, BoxLength);
+                  Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                   // test if 'i' is near 'j''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) < sqdist) {
@@ -423,7 +423,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                 if (!in_agg) {
                   // calculate distance between i and j beads
-                  Vector rij = DistanceBetweenBeads(i, j, *Bead, BoxLength);
+                  Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                   // test if 'j' is near 'i''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) < sqdist) {

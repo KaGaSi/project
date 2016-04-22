@@ -857,10 +857,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
     mols += (*MoleculeType)[i].Number;
   } //}}}
 
-//for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
-//  printf("%5d %5d %s %4d\n", i, (*Bead)[i].Index, (*BeadType)[(*Bead)[i].Type].Name, (*Bead)[i].Molecule);
-//}
-
   return (indexed);
 } //}}}
 
@@ -1146,14 +1142,14 @@ int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType) {
  * periodic boundary conditions and returns x, y, and z distances in the
  * range <0, BoxLength/2).
  */
-Vector DistanceBetweenBeads(int id1, int id2, Bead *Bead, Vector BoxLength) {
+Vector DistanceBetweenBeads(Vector id1, Vector id2, Vector BoxLength) {
 
   Vector rij;
 
   // distance vector
-  rij.x = Bead[id1].Position.x - Bead[id2].Position.x;
-  rij.y = Bead[id1].Position.y - Bead[id2].Position.y;
-  rij.z = Bead[id1].Position.z - Bead[id2].Position.z;
+  rij.x = id1.x - id2.x;
+  rij.y = id1.y - id2.y;
+  rij.z = id1.z - id2.z;
 
   // remove periodic boundary conditions in x-direction
   while (rij.x > (BoxLength.x/2))
@@ -1189,7 +1185,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
       int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
       int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
 
-      Vector dist = DistanceBetweenBeads(id1, id2, *Bead, BoxLength);
+      Vector dist = DistanceBetweenBeads((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
 
       (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
       (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
@@ -1201,7 +1197,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
 // RemovePBCAggregates() //{{{
 /**
  * Function to remove periodic boundary conditions from all aggregates,
- * thus joining them
+ * thus joining them.
  */
 void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
@@ -1211,11 +1207,6 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
   // go through all aggregates larger than unimers
   for (int i = 0; i < Counts.Aggregates; i++) {
-//  printf("i = %d\n", i);
-//  for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-//    printf("%4d", Aggregate[i].Molecule[j]);
-//  }
-//  putchar('\n');
 
     // negate moved array, while first molecule is not to move //{{{
     for (int j = 1; j < Counts.Molecules; j++) {
@@ -1246,18 +1237,11 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                     BeadType[(*Bead)[bead2].Type].Use) {
 
                   // calculate distance between 'bead1' and 'bead2'
-                  Vector dist = DistanceBetweenBeads(bead1, bead2, *Bead, BoxLength);
+                  Vector dist = DistanceBetweenBeads((*Bead)[bead1].Position, (*Bead)[bead2].Position, BoxLength);
                   dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
                   // move 'mol2' (or 'k') if 'bead1' and 'bead2' are in contact
                   if (dist.x < distance) {
-
-                    if (i == 1 && mol2 == 2) {
-                      printf("%d %d\n", mol1, mol2);
-                      printf("%d: %lf %lf %lf\n", (*Bead)[bead1].Index, (*Bead)[bead1].Position.x, (*Bead)[bead1].Position.y, (*Bead)[bead1].Position.z);
-                      printf("%d: %lf %lf %lf\n", (*Bead)[bead2].Index, (*Bead)[bead2].Position.x, (*Bead)[bead2].Position.y, (*Bead)[bead2].Position.z);
-                      printf("dist: %lf\n", dist.x);
-                    }
 
                     // distance vector between 'bead1' and 'bead2' //{{{
                     dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
@@ -1317,7 +1301,6 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
       done = true;
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         if (!moved[j]) {
-//        printf("not moved: %d %d\n", j+1, Aggregate[i].Molecule[j]+1);
           done = false;
           break;
         }
@@ -1326,4 +1309,28 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
   }
 
   free(moved);
+} //}}}
+
+// AggCenterOfMass() //{{{
+/**
+ * Function to calculate center of mass of given aggregate. It is assumed
+ * that the aggregate is joined.
+ */
+Vector AggCenterOfMass(int id, Aggregate *Aggregate, Bead *Bead) {
+
+  Vector com;
+  com.x = 0;
+  com.y = 0;
+  com.z = 0;
+
+  for (int i = 0; i < Aggregate[id].nBeads; i++) {
+    com.x += Bead[Aggregate[id].Bead[i]].Position.x;
+    com.y += Bead[Aggregate[id].Bead[i]].Position.y;
+    com.z += Bead[Aggregate[id].Bead[i]].Position.z;
+  }
+  com.x /= Aggregate[id].nBeads;
+  com.y /= Aggregate[id].nBeads;
+  com.z /= Aggregate[id].nBeads;
+
+  return (com);
 } //}}}
