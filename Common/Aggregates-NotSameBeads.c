@@ -151,7 +151,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                   (*Bead)[i].Type != (*Bead)[j].Type) { // do not use pairs of bead with the same type
 
                 // calculate distance between i and j beads
-                Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                 // are 'i' and 'j' close enough?
                 if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
@@ -396,7 +396,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                 if (!in_agg) {
                   // calculate distance between i and j beads
-                  Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                   // test if 'i' is near 'j''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) < sqdist) {
@@ -423,7 +423,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                 if (!in_agg) {
                   // calculate distance between i and j beads
-                  Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                   // test if 'j' is near 'i''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) < sqdist) {
@@ -481,8 +481,12 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("Aggregates-NotSameBeads utility works exactly the same as Aggregates        \n");
-      printf("utility, but does not calculate contacts between beads of the same type.    \n\n");
+      printf("Aggregates-NotSameBeads utility works in the same way as Aggregates utility,\n");
+      printf("but does not calculate contacts between beads of the same type.             \n\n");
+
+      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
+      printf("(along with optional bond file) files to determine all information about    \n");
+      printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <distance> <contacts> ", argv[0]);
@@ -889,23 +893,10 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      free(MoleculeType[i].Bond[j]);
-    }
-    free(MoleculeType[i].Bond);
-  }
-  free(MoleculeType);
-  free(Bead);
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Molecule[i].Bead);
-
-    free(Aggregate[i].Molecule);
-    free(Aggregate[i].Bead);
-    free(Aggregate[i].Monomer);
-  }
-  free(Molecule);
-  free(Aggregate);
+  FreeAggregate(Counts, &Aggregate);
+  FreeMoleculeType(Counts, &MoleculeType);
+  FreeMolecule(Counts, &Molecule);
+  FreeBead(Counts, &Bead);
   free(stuff);
   //}}}
 

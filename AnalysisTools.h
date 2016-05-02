@@ -6,6 +6,8 @@
 #ifndef _ANALYSISTOOLS_H_
 #define _ANALYSISTOOLS_H_
 
+#define PI 3.141593 ///< value of pi
+
 #define SQR(x) ((x)*(x)) ///< macro for algebraic square
 #define CUBE(x) ((x)*(x)*(x)) ///< macro for algebraic cube
 
@@ -34,6 +36,7 @@ typedef struct Counts {
       TypesOfMolecules, ///< number of molecule types
       Bonded, ///< total number of beads in all molecules
       Unbonded, ///< total number of monomeric beads
+      BeadsInVsf, ///< total number of all beads in .vsf file (not necessarily in .vcf)
       Molecules, ///< total number of molecules
       Aggregates; ///< total number of aggregates
 } Counts; //}}}
@@ -81,7 +84,7 @@ typedef struct MoleculeType {
 typedef struct Bead {
   int Type, ///< type of bead corresponding to index in BeadType struct
       Molecule, ///< index number of molecule corresponding to Molecule struct (-1 for monomeric bead)
-      nAggregates, ///< number of aggregates the bead is in (only monomeric beads can be in more aggregates)
+      nAggregates, ///< number of aggregates the bead is in (only monomeric beads can be in more aggregates - allocated memory for 10)
       *Aggregate, ///< index numbers of aggregates corresponding to Aggregate struct (-1 for bead in no aggregate)
       Index; ///< index of the bead according to .vsf file (needed for indexed timesteps)
 
@@ -220,17 +223,16 @@ int FindBeadType(char *name, Counts Counts, BeadType *BeadType); //}}}
  */
 int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}}}
 
-// DistanceBetweenBeads //{{{
+// Distance //{{{
 /**
  * \brief Function to calculate distance vector between two beads.
  *
- * \param [in] id1         index of first bead for distance calculation
- * \param [in] id2         index of second bead for distance calculation
- * \param [in] Bead        information about individual beads (i.e. coordinates)
+ * \param [in] id1         first coordinate vector
+ * \param [in] id2         second coordinate vector
  * \param [in] BoxLength   dimensions of simulation box
  * \return distance vector between the two provided beads (without pbc)
  */
-Vector DistanceBetweenBeads(Vector id1, Vector id2, Vector BoxLength); //}}}
+Vector Distance(Vector id1, Vector id2, Vector BoxLength); //}}}
 
 // RemovePBCMolecules() //{{{
 /**
@@ -264,14 +266,61 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
                          MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 
-// AggCenterOfMass() //{{{
+// CenterOfMass() //{{{
 /**
- * \brief Function to calculate aggregate's center of mass.
+ * \brief Function to calculate center of mass for a collection of beads.
  *
- * \param [in] id             id of aggregate corresponding to Aggregate struct
- * \param [in] Aggregate      information about aggregates
+ * \param [in] n              number of beads
+ * \param [in] list           list of bead ids (corresponding to indices in Bead struct)
  * \param [in] Bead           information about individual beads (coordinates)
  * \return coordinates of center of mass of a given aggregate
  */
-Vector AggCenterOfMass(int id, Aggregate *Aggregate, Bead *Bead); //}}}
+Vector CenterOfMass(int n, int *list, Bead *Bead); //}}}
+
+// Min3() //{{{
+/**
+ * \brief Function returning the lowest number from three floats.
+ *
+ * \param [in] x   first double precision number
+ * \param [in] y   second double precision number
+ * \param [in] z   third double precision number
+ * \return lowest of the supplied numbers
+ */
+double Min3(double x, double y, double z); //}}}
+
+//FreeBead() //{{{
+/**
+ * \brief Free memory allocated for Bead struct array.
+ *
+ * \param [in]  Counts      number of beads, molecu.es, etc.
+ * \param [out] Bead        information about individual beads
+ */
+void FreeBead(Counts Counts, Bead **Bead); //}}}
+
+//FreeMolecule() //{{{
+/**
+ * \brief Free memory allocated for Molecule struct array.
+ *
+ * \param [in]  Counts      number of beads, molecu.es, etc.
+ * \param [out] Molecule    information about individual molecules
+ */
+void FreeMolecule(Counts Counts, Molecule **Molecule); //}}}
+
+//FreeMoleculeType() //{{{
+/**
+ * \brief Free memory allocated for MoleculeType struct array.
+ *
+ * \param [in]  Counts         number of beads, molecu.es, etc.
+ * \param [out] MoleculeType   information about individual molecules
+ */
+void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType); //}}}
+
+//FreeAggregate() //{{{
+/**
+ * \brief Free memory allocated for MoleculeType struct array.
+ *
+ * \param [in]  Counts      number of beads, molecu.es, etc.
+ * \param [out] Aggregate   information about individual molecules
+ */
+void FreeAggregate(Counts Counts, Aggregate **Aggregate); //}}}
 #endif

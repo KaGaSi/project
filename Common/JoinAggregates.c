@@ -336,7 +336,6 @@ int main(int argc, char *argv[]) {
     if (verbose2) {
       printf("\n%s", stuff);
     } //}}}
-    printf("count = %d\n", count);
   }
 
   fclose(vcf);
@@ -347,23 +346,10 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      free(MoleculeType[i].Bond[j]);
-    }
-    free(MoleculeType[i].Bond);
-  }
-  free(MoleculeType);
-  free(Bead);
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Molecule[i].Bead);
-
-    free(Aggregate[i].Molecule);
-    free(Aggregate[i].Bead);
-    free(Aggregate[i].Monomer);
-  }
-  free(Molecule);
-  free(Aggregate);
+  FreeAggregate(Counts, &Aggregate);
+  FreeMoleculeType(Counts, &MoleculeType);
+  FreeMolecule(Counts, &Molecule);
+  FreeBead(Counts, &Bead);
   free(stuff);
   //}}}
 

@@ -28,12 +28,13 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("SelectedVcf creates new <output.vcf> file from <input.vcf>\n");
-      printf("containing only selected bead types. Also <start> timesteps\n");
-      printf("can be omitted and every <skip> timesteps can be left out.\n");
-      printf("The program uses dl_meso.vsf (or other input structure file)\n");
-      printf("and FIELD (along with optional bond file) files to determine\n");
-      printf("all information about the system.\n\n");
+      printf("SelectedVcf creates new <output.vcf> file from <input.vcf> containing only  \n");
+      printf("selected bead types. Also <start> timesteps can be omitted and every <skip> \n");
+      printf("timestep can be left out.                                                   \n\n");
+
+      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
+      printf("(along with optional bond file) files to determine all information about    \n");
+      printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <start> <skip> ", argv[0]);
@@ -320,6 +321,8 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    fflush(stdout);
+
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
       if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
@@ -333,6 +336,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
     } //}}}
+    printf("\rStep: %6d", ++count);
 
     // join molecules? //{{{
     if (join) {
@@ -387,18 +391,9 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      free(MoleculeType[i].Bond[j]);
-    }
-    free(MoleculeType[i].Bond);
-  }
-  free(MoleculeType);
-  free(Bead);
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Molecule[i].Bead);
-  }
-  free(Molecule);
+  FreeMoleculeType(Counts, &MoleculeType);
+  FreeMolecule(Counts, &Molecule);
+  FreeBead(Counts, &Bead);
   free(stuff);
   //}}}
 

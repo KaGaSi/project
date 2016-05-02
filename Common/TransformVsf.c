@@ -99,10 +99,13 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("TransformVsf reads information from FIELD and\n");
-      printf("dl_meso.vsf files and creates .vsf structure file\n");
-      printf("used for visualisation of trajectory (.vcf files)\n");
-      printf("via VMD visualisation tool.\n\n");
+      printf("TransformVsf reads information from FIELD and dl_meso.vsf files and creates \n");
+      printf(".vsf structure file used for visualisation of trajectory (.vcf files)       \n");
+      printf(" via VMD visualisation tool.                                              \n\n");
+
+      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
+      printf("(along with optional bond file) files to determine all information about    \n");
+      printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
       printf("   %s <output.vsf>\n\n", argv[0]);
@@ -221,18 +224,9 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      free(MoleculeType[i].Bond[j]);
-    }
-    free(MoleculeType[i].Bond);
-  }
-  free(MoleculeType);
-  free(Bead);
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Molecule[i].Bead);
-  }
-  free(Molecule); //}}}
+  FreeMoleculeType(Counts, &MoleculeType);
+  FreeMolecule(Counts, &Molecule);
+  FreeBead(Counts, &Bead); //}}}
 
   return 0;
 }

@@ -22,9 +22,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("Config utility generates CONFIG file from last step of given vcf file.     \n");
+      printf("Config utility generates CONFIG file from last step of given vcf file.      \n");
       printf("considered. Information about aggregates in each timestep is written to     \n");
-      printf(".agg file. Also joined coordinates can be written to an output .vcf file.   \n");
+      printf(".agg file. Also joined coordinates can be written to an output .vcf file.   \n\n");
+
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
       printf("(along with optional bond file) files to determine all information about    \n");
       printf("the system.                                                                 \n\n");
@@ -215,37 +216,6 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    // open output CONFIG file for appending //{{{
-    FILE *out;
-    if ((out = fopen("CONFIG", "w")) == NULL) {
-      fprintf(stderr, "Cannot open file CONFIG!\n");
-      exit(1);
-    } //}}}
-
-    // print CONFIG file initial stuff
-    fprintf(out, "NAME\n       0       1\n");
-    fprintf(out, "%lf 0.000000 0.000000\n", BoxLength.x);
-    fprintf(out, "0.000000 %lf 0.000000\n", BoxLength.y);
-    fprintf(out, "0.000000 0.000000 %lf\n", BoxLength.z);
-
-    // coordinates of unbonded beads
-    for (int i = 0; i < Counts.Unbonded; i++) {
-      fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
-      fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
-                                    Bead[i].Position.y,
-                                    Bead[i].Position.z);
-    }
-
-    // coordinates of bonded beads
-    for (int i = Counts.Unbonded; i < (Counts.Unbonded+Counts.Bonded); i++) {
-      fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
-      fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
-                                    Bead[i].Position.y,
-                                    Bead[i].Position.z);
-    }
-
-    fclose(out);
-
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
       printf("\n%s", stuff);
@@ -256,20 +226,43 @@ int main(int argc, char *argv[]) {
 
   fclose(vcf); //}}}
 
+  // create CONFIG //{{{
+  // open output CONFIG file for writing //{{{
+  FILE *out;
+  if ((out = fopen("CONFIG", "w")) == NULL) {
+    fprintf(stderr, "Cannot open file CONFIG!\n");
+    exit(1);
+  } //}}}
+
+  // print CONFIG file initial stuff //{{{
+  fprintf(out, "NAME\n       0       1\n");
+  fprintf(out, "%lf 0.000000 0.000000\n", BoxLength.x);
+  fprintf(out, "0.000000 %lf 0.000000\n", BoxLength.y);
+  fprintf(out, "0.000000 0.000000 %lf\n", BoxLength.z); //}}}
+
+  // coordinates of unbonded beads //{{{
+  for (int i = 0; i < Counts.Unbonded; i++) {
+    fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
+    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
+                                  Bead[i].Position.y,
+                                  Bead[i].Position.z);
+  } //}}}
+
+  // coordinates of bonded beads //{{{
+  for (int i = Counts.Unbonded; i < (Counts.Unbonded+Counts.Bonded); i++) {
+    fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
+    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
+                                  Bead[i].Position.y,
+                                  Bead[i].Position.z);
+  } //}}}
+
+  fclose(out); //}}}
+
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      free(MoleculeType[i].Bond[j]);
-    }
-    free(MoleculeType[i].Bond);
-  }
-  free(MoleculeType);
-  free(Bead);
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Molecule[i].Bead);
-  }
-  free(Molecule);
+  FreeMoleculeType(Counts, &MoleculeType);
+  FreeMolecule(Counts, &Molecule);
+  FreeBead(Counts, &Bead);
   free(stuff);
   //}}}
 

@@ -26,13 +26,15 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("BondLength utility calculates distribution of bond lengths for spciefied      \n");
-      printf("molecule(s). The utility uses dl_meso.vsf (or other input structure file)     \n");
-      printf("and FIELD (along with optional bond file) files to determine all              \n");
-      printf("information about the system.                                               \n\n");
+      printf("BondLength utility calculates distribution of bond lengths for all bead type\n");
+      printf("pairs in specified molecule(s).                                             \n\n");
+
+      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
+      printf("(along with optional bond file) files to determine all information about    \n");
+      printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
-      printf("   %s <input.vcf> <output file> <width> <molecule names> <options>\n\n", argv[0]);
+      printf("   %s <input.vcf> <width> <output file> <molecule names> <options>\n\n", argv[0]);
 
       printf("   <input.vcf>       input filename (vcf format)\n");
       printf("   <width>           width of a single bin\n");
@@ -146,7 +148,7 @@ int main(int argc, char *argv[]) {
   // <width> - width of a single bin //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <start>!\n");
+    fprintf(stderr, "Non-numeric argement for <width>!\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -226,10 +228,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     for (int j = 0; j < Counts.TypesOfBeads; j++) {
       for (int k = 0; k < Counts.TypesOfBeads; k++) {
-        length[i][j][k] = malloc(bins*sizeof(double));
-        for (int l = 0; l < bins; l++) {
-          length[i][j][k][l] = 0;
-        }
+        length[i][j][k] = calloc(bins,sizeof(double));
       }
     }
   } //}}}
@@ -376,25 +375,22 @@ int main(int argc, char *argv[]) {
       }
     }
     putc('\n', out);
-  } //}}}
-
-  fclose(out);
+  }
+  fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      free(MoleculeType[i].Bond[j]);
-    }
-    free(MoleculeType[i].Bond);
-  }
-  free(MoleculeType);
-  free(Bead);
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Molecule[i].Bead);
-  }
-  free(Molecule);
+  FreeMoleculeType(Counts, &MoleculeType);
+  FreeMolecule(Counts, &Molecule);
+  FreeBead(Counts, &Bead);
   free(stuff);
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    for (int j = 0; j < Counts.TypesOfBeads; j++) {
+      for (int k = 0; k < Counts.TypesOfBeads; k++) {
+        free(length[i][j][k]);
+      }
+    }
+  }
   //}}}
 
   return 0;

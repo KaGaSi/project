@@ -150,7 +150,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                   BeadType[(*Bead)[j].Type].Use) {
 
                 // calculate distance between i and j beads
-                Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                 // are 'i' and 'j' close enough?
                 if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
@@ -395,7 +395,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                 if (!in_agg) {
                   // calculate distance between i and j beads
-                  Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                   // test if 'i' is near 'j''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) < sqdist) {
@@ -422,7 +422,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                 if (!in_agg) {
                   // calculate distance between i and j beads
-                  Vector rij = DistanceBetweenBeads((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                   // test if 'j' is near 'i''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) < sqdist) {
@@ -486,7 +486,8 @@ int main(int argc, char *argv[]) {
       printf("number of such contacts between two molecules to consider them as belonging \n");
       printf("to the same aggregate. Only distances between specified bead types are      \n");
       printf("considered. Information about aggregates in each timestep is written to     \n");
-      printf(".agg file. Also joined coordinates can be written to an output .vcf file.   \n");
+      printf(".agg file. Also joined coordinates can be written to an output .vcf file.   \n\n");
+
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
       printf("(along with optional bond file) files to determine all information about    \n");
       printf("the system.                                                                 \n\n");
@@ -896,23 +897,10 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      free(MoleculeType[i].Bond[j]);
-    }
-    free(MoleculeType[i].Bond);
-  }
-  free(MoleculeType);
-  free(Bead);
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Molecule[i].Bead);
-
-    free(Aggregate[i].Molecule);
-    free(Aggregate[i].Bead);
-    free(Aggregate[i].Monomer);
-  }
-  free(Molecule);
-  free(Aggregate);
+  FreeAggregate(Counts, &Aggregate);
+  FreeMoleculeType(Counts, &MoleculeType);
+  FreeMolecule(Counts, &Molecule);
+  FreeBead(Counts, &Bead);
   free(stuff);
   //}}}
 

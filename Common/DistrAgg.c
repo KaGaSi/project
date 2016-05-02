@@ -25,10 +25,12 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("DistrAgg calculates weight and number average aggregation numbers during the    \n");
-      printf("simulation run as well as overall weight and number distributions. The          \n");
-      printf("utility uses dl_meso.vsf (or other input structure file) and FIELD (along with  \n");
-      printf("optional bond file) files to determine all information about the system.        \n\n");
+      printf("DistrAgg calculates weight and number average aggregation numbers during    \n");
+      printf("the simulation run as well as overall weight and number distributions.      \n\n");
+
+      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
+      printf("(along with optional bond file) files to determine all information about    \n");
+      printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
       printf("   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
@@ -283,28 +285,10 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-
-  free(Bead);
-
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      free(MoleculeType[i].Bond[j]);
-    }
-    free(MoleculeType[i].Bond);
-  }
-  free(MoleculeType);
-
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Molecule[i].Bead);
-  }
-  free(Molecule);
-
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(Aggregate[i].Molecule);
-    free(Aggregate[i].Bead);
-    free(Aggregate[i].Monomer);
-  }
-  free(Aggregate); //}}}
+  FreeAggregate(Counts, &Aggregate);
+  FreeMoleculeType(Counts, &MoleculeType);
+  FreeMolecule(Counts, &Molecule);
+  FreeBead(Counts, &Bead); //}}}
 
   return 0;
 }
