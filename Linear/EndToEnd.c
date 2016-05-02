@@ -25,11 +25,13 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("EndToEnd utility calculates end to end distance for linear chains (no check   \n");
-      printf("whether the molecules are linear is performed). It calculates distance        \n");
-      printf("between first and last bead in a molecule The utility uses dl_meso.vsf (or    \n");
-      printf("other input structure file) and FIELD (along with optional bond file) files   \n");
-      printf("to determine all information about the system.                              \n\n");
+      printf("EndToEnd utility calculates end to end distance for linear chains (no check \n");
+      printf("whether the molecules are linear is performed). It calculates distance      \n");
+      printf("between first and last bead in a molecule.                                  \n\n");
+
+      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
+      printf("(along with optional bond file) files to determine all information about    \n");
+      printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <output file> <molecule names> <options>\n\n", argv[0]);

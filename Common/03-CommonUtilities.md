@@ -264,6 +264,62 @@ Usage:
 
 \todo Look into the number averages.
 
+# AggDensity {#AggDensity}
+
+This utility calculates number bead density for aggregates of specified
+size from their center of mass. During the calculation, only the current
+aggregate is taken into account, so there is no possibility of getting
+'false' densities from adjacent aggregates. Therefore if some bead type is
+never present in an aggregate of specified size, its density will always be
+0.
+
+Usage:
+
+`AggDensity <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
+> `<input.agg>`
+> > input filename (must end with `.agg`) containing information about
+> > aggregates
+> `<width>`
+> > width of each bin for the distribution
+> `<output.rho>`
+> > output density file (automatic ending `agg#.rho` added)
+> `<agg sizes>`
+> > aggregate sizes for density calculation
+> `<options>`
+> > `-j`
+> > > specify that the `<input.vcf>` contains aggregates with joined
+> > > coordinates
+
+# MolDensity {#MolDensity}
+
+MolDensity works in similar way as the AggDensity, only instead of
+aggregates, the densities are calculated for specified molecule types.
+
+Usage:
+
+`AggDensity <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
+> `<input.agg>`
+> > input filename (must end with `.agg`) containing information about
+> > aggregates
+> `<width>`
+> > width of each bin for the distribution
+> `<output.rho>`
+> > output density file (automatic ending `agg#.rho` added)
+> `<agg sizes>`
+> > aggregate sizes for density calculation
+> `<options>`
+> > `-j`
+> > > specify that the `<input.vcf>` contains aggregates with joined
+> > > coordinates
+
 # Average utility {#Average}
 
 Utility calculating average values with standard deviation and

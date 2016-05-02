@@ -70,7 +70,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
    no_vcf = true;
   } //}}}
 
-  // first character in vcf file is '#' => read info for indexed timesteps //{{{
+  // if first character in vcf file is '#' => read info for indexed timesteps //{{{
   bool indexed = false;
   int test;
   while (!no_vcf && (test = getc(vcf)) == '#') {
@@ -436,7 +436,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
  * Function reading bead id numbers from provided vsf file. It pairs the
  * bead ids with their bead types.
  */
-void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
+void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
 
   char str[20];
 
@@ -469,7 +469,7 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   } //}}}
 
   // define default bead type
-  int type_def = FindBeadType(str, Counts, BeadType);
+  int type_def = FindBeadType(str, *Counts, BeadType);
 
   // read the first string of the next line //{{{
   while (getc(vsf) != '\n')
@@ -506,19 +506,29 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
 
     // if default bead type in vcf, assign it to beads between 'id_old' and 'id_new' //{{{
     for (int i = (id_old+1); type_def != -1 && i < id_new; i++) {
-      (*Bead)[id++].Type = type_def;
+      (*Bead)[id].Type = type_def;
+
+      (*Bead)[id].Index = i;
+
+      id++;
     } //}}}
 
     // determine type of bead 'id_new'
-    int type = FindBeadType(str, Counts, BeadType);
+    int type = FindBeadType(str, *Counts, BeadType);
 
     // if type in vcf file, assign 'type' to bead 'id' //{{{
     if (type != -1) {
-      (*Bead)[id++].Type = type;
+      (*Bead)[id].Type = type;
+
+      (*Bead)[id].Index = id_new;
+
+      id++;
     } //}}}
 
     // save id_new for next atom line
     id_old = id_new;
+
+    (*Counts).BeadsInVsf = id_new + 1;
 
     // read the first string of the next line //{{{
     while (getc(vsf) != '\n')
@@ -532,69 +542,6 @@ void ReadVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead **Bead) {
   fclose(vsf);
 } //}}}
 
-// MoveCOMMolecules() - auxiliary //{{{
-/*
- * Function to move molecules so that their center of mass is inside the
- * simulation box. Assumes the moleces are joined.
- */
-void MoveCOMMolecules(Counts Counts, Vector BoxLength,
-                      BeadType *BeadType, Bead **Bead,
-                      MoleculeType *MoleculeType, Molecule *Molecule) {
-
-  for (int i = 0; i < Counts.Molecules; i++) {
-    int type = Molecule[i].Type;
-    Vector com; // coordinate vector for center of mass //{{{
-    com.x = 0;
-    com.y = 0;
-    com.z = 0; //}}}
-
-    // calculate center of mass
-    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      int id = Molecule[i].Bead[j];
-
-      com.x += (*Bead)[id].Position.x * BeadType[(*Bead)[id].Type].Mass;
-      com.y += (*Bead)[id].Position.y * BeadType[(*Bead)[id].Type].Mass;
-      com.z += (*Bead)[id].Position.z * BeadType[(*Bead)[id].Type].Mass;
-    }
-
-    com.x /= MoleculeType[i].Mass;
-    com.y /= MoleculeType[i].Mass;
-    com.z /= MoleculeType[i].Mass;
-
-    // move molecule 'j' if its com is outside box
-    // x-direction //{{{
-    if (com.x >= BoxLength.x) {
-      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-        (*Bead)[Molecule[i].Bead[j]].Position.x -= BoxLength.x;
-      }
-    } else if (com.x < 0) {
-      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-        (*Bead)[Molecule[i].Bead[j]].Position.x += BoxLength.x;
-      }
-    } //}}}
-    // y-direction //{{{
-    if (com.y >= BoxLength.y) {
-      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-        (*Bead)[Molecule[i].Bead[j]].Position.y -= BoxLength.y;
-      }
-    } else if (com.y < 0) {
-      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-        (*Bead)[Molecule[i].Bead[j]].Position.y += BoxLength.y;
-      }
-    } //}}}
-    // z-direction //{{{
-    if (com.z >= BoxLength.z) {
-      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-        (*Bead)[Molecule[i].Bead[j]].Position.z -= BoxLength.z;
-      }
-    } else if (com.z < 0) {
-      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-        (*Bead)[Molecule[i].Bead[j]].Position.z += BoxLength.z;
-      }
-    } //}}}
-  }
-} //}}}
-
 // ReadStructure() //{{{
 /**
  * Function reading information about beads and molecules from DL_MESO `FIELD`
@@ -606,8 +553,6 @@ void MoveCOMMolecules(Counts Counts, Vector BoxLength,
  * bead is of which type. Optional file with bond declarations provides
  * an alternative for bonds of any molecule type in `FIELD`. If optional
  * bond file is not used, an empty string is passed to this function.
- *
- * \todo Assigning Bead[].Index should be in auxiliary ReadVsf().
  */
 bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Counts,
                    BeadType **BeadType, Bead **Bead,
@@ -650,138 +595,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
   // allocate memory for Bead struct
   *Bead = calloc(((*Counts).Bonded+(*Counts).Unbonded),sizeof(**Bead));
 
-  // for indexed timestep find out bead types //{{{
-  if (indexed) {
-    // open vcf file (if exists) //{{{
-    FILE *vcf;
-    if ((vcf = fopen(vcf_file, "r")) == NULL) {
-      fprintf(stderr, "Cannot open %s for reading!\n", vcf_file);
-      exit(1);
-    } //}}}
-
-    // skip in vcf till first coordinate line //{{{
-    char str[16];
-    // skipt till 'pbc'
-    do {
-      // read first string from the line
-      if (fscanf(vcf, "%s", str) != 1) {
-        fprintf(stderr, "Cannot read a string from %s file while getting bead indices!\n", vcf_file);
-        exit(1);
-      }
-
-      // skip the rest of the line
-      while(getc(vcf) != '\n')
-        ;
-
-    } while (strcmp(str, "pbc") != 0);
-
-    // skip remaining three lines
-    for (int i = 0; i < 3; i++) {
-      while(getc(vcf) != '\n')
-        ;
-    } //}}}
-
-    // open vsf structure file //{{{
-    FILE *vsf;
-    if ((vsf = fopen(vsf_file, "r")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", vsf_file);
-      exit(1);
-    } //}}}
-
-    // default type from vsf //{{{
-    // skip in first line till 'n(ame)'
-    do {
-      if (fscanf(vsf, "%s", str) != 1) {
-        fprintf(stderr, "Cannot read a string from first line of %s!\n", vsf_file);
-        exit(1);
-      }
-    } while (strncmp(str, "name", 1) != 0);
-
-    // read bead type name
-    if (fscanf(vsf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read a string from first line of %s!\n", vsf_file);
-      exit(1);
-    }
-
-    int def_type = FindBeadType(str, *Counts, *BeadType);
-
-    // skip the remainder of first line
-    while (getc(vsf) != '\n')
-      ;
-    //}}}
-
-    // assign types for all beads in indexed vcf file //{{{
-    int id_vsf = -1; // index number from vsf file
-    for (int i = 0; i < ((*Counts).Bonded+(*Counts).Unbonded); i++) {
-
-      // read bead index number from vcf file //{{{
-      int id_vcf;
-      if (fscanf(vcf, "%d", &id_vcf) != 1) {
-        fprintf(stderr, "Cannot read bead id from %s!\n", vcf_file);
-        exit(1);
-      }
-      (*Bead)[i].Index = id_vcf;
-
-      // skp remainder of line
-      while(getc(vcf) != '\n')
-        ;
-      //}}}
-
-      // read index from vsf file till it's lower then that from vcf file //{{{
-      while (id_vsf < id_vcf) {
-
-        // skip 'a(tom)' //{{{
-        if (fscanf(vsf, "%s", str) != 1) {
-          fprintf(stderr, "Cannot read 'a(tom)' string from %s!\n", vsf_file);
-          exit(1);
-        } //}}}
-
-        // read bead index number //{{{
-        if (fscanf(vsf, "%d", &id_vsf) != 1) {
-          fprintf(stderr, "Cannot read bead id from %s!\n", vsf_file);
-          exit(1);
-        } //}}}
-
-        // skip in line till 'n(ame)' //{{{
-        do {
-          if (fscanf(vsf, "%s", str) != 1) {
-            fprintf(stderr, "Cannot read a string from %s!\n", vsf_file);
-            exit(1);
-          }
-        } while (strncmp(str, "name", 1) != 0); //}}}
-
-        // read bead type name //{{{
-        if (fscanf(vsf, "%s", str) != 1) {
-          fprintf(stderr, "Cannot read a string from first line of %s!\n", vsf_file);
-          exit(1);
-        } //}}}
-
-        // skip rest of line //{{{
-        while (getc(vsf) != '\n')
-          ; //}}}
-      } //}}}
-
-      // assign default type to bead 'i' //{{{
-      if (id_vcf > id_vsf) {
-        (*Bead)[i].Type = def_type; //}}}
-      // or assign another type //{{{
-      } else {
-        (*Bead)[i].Type = FindBeadType(str, *Counts, *BeadType);
-      } //}}}
-    } //}}}
-
-    fclose(vcf);
-    fclose(vsf); //}}}
-  // or for ordered timestep assign numbers to Bead[].Index //{{{
-  } else {
-    for (int i = 0; i < ((*Counts).Bonded+(*Counts).Unbonded); i++) {
-      (*Bead)[i].Index = i;
-    }
-  } //}}}
-
   // Counts is pointer, so *Counts to pass by value
   // Bead is in reality **Bead, so no &Bead
-  ReadVsf(vsf_file, *Counts, *BeadType, Bead);
+  ReadVsf(vsf_file, Counts, *BeadType, Bead);
 
   // assign 'in no molecule' and 'in no aggregate' status to all beads //{{{
   for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
@@ -791,7 +607,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
 
   // allocate memory for indices of aggregates individual beads are in //{{{
   for (int i = 0; i < (*Counts).Unbonded; i++) {
-    (*Bead)[i].Aggregate = calloc((*Counts).Molecules,sizeof(int)); // so much memory to be on the save side
+    (*Bead)[i].Aggregate = calloc(20,sizeof(int)); // so much memory to be on the save side
   }
   for (int i = (*Counts).Unbonded; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
     (*Bead)[i].Aggregate = calloc(1,sizeof(int)); // so much memory to be on the save side
@@ -860,6 +676,69 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
   return (indexed);
 } //}}}
 
+// MoveCOMMolecules() - auxiliary //{{{
+/*
+ * Function to move molecules so that their center of mass is inside the
+ * simulation box. Assumes the moleces are joined.
+ */
+void MoveCOMMolecules(Counts Counts, Vector BoxLength,
+                      BeadType *BeadType, Bead **Bead,
+                      MoleculeType *MoleculeType, Molecule *Molecule) {
+
+  for (int i = 0; i < Counts.Molecules; i++) {
+    int type = Molecule[i].Type;
+    Vector com; // coordinate vector for center of mass //{{{
+    com.x = 0;
+    com.y = 0;
+    com.z = 0; //}}}
+
+    // calculate center of mass
+    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+      int id = Molecule[i].Bead[j];
+
+      com.x += (*Bead)[id].Position.x * BeadType[(*Bead)[id].Type].Mass;
+      com.y += (*Bead)[id].Position.y * BeadType[(*Bead)[id].Type].Mass;
+      com.z += (*Bead)[id].Position.z * BeadType[(*Bead)[id].Type].Mass;
+    }
+
+    com.x /= MoleculeType[i].Mass;
+    com.y /= MoleculeType[i].Mass;
+    com.z /= MoleculeType[i].Mass;
+
+    // move molecule 'j' if its com is outside box
+    // x-direction //{{{
+    if (com.x >= BoxLength.x) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.x -= BoxLength.x;
+      }
+    } else if (com.x < 0) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.x += BoxLength.x;
+      }
+    } //}}}
+    // y-direction //{{{
+    if (com.y >= BoxLength.y) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.y -= BoxLength.y;
+      }
+    } else if (com.y < 0) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.y += BoxLength.y;
+      }
+    } //}}}
+    // z-direction //{{{
+    if (com.z >= BoxLength.z) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.z -= BoxLength.z;
+      }
+    } else if (com.z < 0) {
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        (*Bead)[Molecule[i].Bead[j]].Position.z += BoxLength.z;
+      }
+    } //}}}
+  }
+} //}}}
+
 // ReadCoorOrdered() //{{{
 /**
  * Function reading coordinates from .vcf file with ordered timesteps (\ref OrderedCoorFile).
@@ -899,20 +778,46 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
   while (getc(vcf_file) != '\n')
     ; //}}}
 
-  for (i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
+  int total = Counts.Unbonded + Counts.Bonded;
 
-    // read bead coordinates (and unused index)
+  // allocate helper array of coordinates //{{{
+  Vector *pos = malloc(Counts.BeadsInVsf*sizeof(Vector));
+  for (int i = 0; i < Counts.BeadsInVsf; i++) {
+    pos[i].x = 1000; // a value impossible for bead's coordinate
+  } //}}}
+
+  // read data //{{{
+  for (i = 0; i < total; i++) {
+    // bead index
     int index;
     if (fscanf(vcf_file, "%d", &index) != 1) {
       return (i+1); // don't want to return 0, since that generally means no error
     }
-    (*Bead)[i].Index = index;
-    if (fscanf(vcf_file, "%lf %lf %lf\n", &(*Bead)[i].Position.x,
-                                          &(*Bead)[i].Position.y,
-                                          &(*Bead)[i].Position.z) != 3) {
+
+    // bead coordinates
+    if (fscanf(vcf_file, "%lf %lf %lf\n", &pos[index].x,
+                                          &pos[index].y,
+                                          &pos[index].z) != 3) {
       return (i+1); // don't want to return 0, since that generally means no error
     }
-  }
+  } //}}}
+
+  // copy coordinates to Bead struct //{{{
+  int count = 0;
+  for (i = 0; i < Counts.BeadsInVsf; i++) {
+    if (pos[i].x != 1000) { // a value impossible for bead coordinates
+      (*Bead)[count].Position.x = pos[i].x;
+      (*Bead)[count].Position.y = pos[i].y;
+      (*Bead)[count].Position.z = pos[i].z;
+
+      count++;
+
+      if (count == total)
+        break;
+    }
+  } //}}}
+
+  free(pos);
 
   return 0;
 } //}}}
@@ -1136,13 +1041,13 @@ int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType) {
   return (-1);
 } //}}}
 
-// DistanceBetweenBeads() //{{{
+// Distance() //{{{
 /**
  * Function calculating distance vector between two beads. It removes
  * periodic boundary conditions and returns x, y, and z distances in the
  * range <0, BoxLength/2).
  */
-Vector DistanceBetweenBeads(Vector id1, Vector id2, Vector BoxLength) {
+Vector Distance(Vector id1, Vector id2, Vector BoxLength) {
 
   Vector rij;
 
@@ -1185,7 +1090,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
       int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
       int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
 
-      Vector dist = DistanceBetweenBeads((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
+      Vector dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
 
       (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
       (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
@@ -1237,7 +1142,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                     BeadType[(*Bead)[bead2].Type].Use) {
 
                   // calculate distance between 'bead1' and 'bead2'
-                  Vector dist = DistanceBetweenBeads((*Bead)[bead1].Position, (*Bead)[bead2].Position, BoxLength);
+                  Vector dist = Distance((*Bead)[bead1].Position, (*Bead)[bead2].Position, BoxLength);
                   dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
                   // move 'mol2' (or 'k') if 'bead1' and 'bead2' are in contact
@@ -1313,24 +1218,96 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
 // AggCenterOfMass() //{{{
 /**
- * Function to calculate center of mass of given aggregate. It is assumed
- * that the aggregate is joined.
+ * Function to calculate center of mass for a given list of beads.
  */
-Vector AggCenterOfMass(int id, Aggregate *Aggregate, Bead *Bead) {
+Vector CenterOfMass(int n, int *list, Bead *Bead) {
 
   Vector com;
   com.x = 0;
   com.y = 0;
   com.z = 0;
 
-  for (int i = 0; i < Aggregate[id].nBeads; i++) {
-    com.x += Bead[Aggregate[id].Bead[i]].Position.x;
-    com.y += Bead[Aggregate[id].Bead[i]].Position.y;
-    com.z += Bead[Aggregate[id].Bead[i]].Position.z;
+  for (int i = 0; i < n; i++) {
+    com.x += Bead[list[i]].Position.x;
+    com.y += Bead[list[i]].Position.y;
+    com.z += Bead[list[i]].Position.z;
   }
-  com.x /= Aggregate[id].nBeads;
-  com.y /= Aggregate[id].nBeads;
-  com.z /= Aggregate[id].nBeads;
+  com.x /= n;
+  com.y /= n;
+  com.z /= n;
 
   return (com);
+} //}}}
+
+// Min3() //{{{
+/**
+ * Function returning the lowest number from three floats.
+ */
+double Min3(double x, double y, double z) {
+
+  if (x > y) {
+    if (y > z) {
+      return (z);
+    } else {
+      return (y);
+    }
+  } else if (x > z) {
+    return (z);
+  } else {
+    return (x);
+  }
+} //}}}
+
+//FreeBead() //{{{
+/**
+ * Free memory allocated for Bead struct array. This function makes it
+ * easier to add other arrays to the Bead struct in the future
+ */
+void FreeBead(Counts Counts, Bead **Bead) {
+  for (int i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
+    free((*Bead)[i].Aggregate);
+  }
+  free(*Bead);
+} //}}}
+
+//FreeMolecule() //{{{
+/**
+ * Free memory allocated for Molecule struct array. This function makes it
+ * easier other arrays to the Molecule struct in the future
+ */
+void FreeMolecule(Counts Counts, Molecule **Molecule) {
+  for (int i = 0; i < Counts.Molecules; i++) {
+    free((*Molecule)[i].Bead);
+  }
+  free(*Molecule);
+} //}}}
+
+//FreeMoleculeType() //{{{
+/**
+ * Free memory allocated for MoleculeType struct array. This function makes
+ * it easier other arrays to the MoleculeType struct in the future
+ */
+void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType) {
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
+      free((*MoleculeType)[i].Bond[j]);
+    }
+    free((*MoleculeType)[i].Bond);
+    free((*MoleculeType)[i].BType);
+  }
+  free(*MoleculeType);
+} //}}}
+
+//FreeAggregate() //{{{
+/**
+ * Free memory allocated for Aggregate struct array. This function makes it
+ * easier other arrays to the Aggregate struct in the future
+ */
+void FreeAggregate(Counts Counts, Aggregate **Aggregate) {
+  for (int i = 0; i < Counts.Molecules; i++) {
+    free((*Aggregate)[i].Molecule);
+    free((*Aggregate)[i].Bead);
+    free((*Aggregate)[i].Monomer);
+  }
+  free(*Aggregate);
 } //}}}

@@ -14,6 +14,7 @@ BIN = ../bin/SelectedVcf \
 			../bin/Aggregates \
 			../bin/Aggregates-NotSameBeads \
 			../bin/AggDensity \
+			../bin/MolDensity \
 			../bin/TransformVsf \
 			../bin/Config \
 			../bin/BondLength \
@@ -53,6 +54,9 @@ $(ODIR)/traject-v2_6.o:
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/AggDensity: $(OBJ) $(ODIR)/AggDensity.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/MolDensity: $(OBJ) $(ODIR)/MolDensity.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/Config: $(OBJ) $(ODIR)/Config.o

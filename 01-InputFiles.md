@@ -154,7 +154,9 @@ selected bead types are present and their names are written as comments at
 the beginning of the file (and followed by a blank line). Every bead is
 prepended by its index number according to the `.vsf` structure file.
 Keyword `timestep` (or `t`) at the beginning of every timestep is replaced
-by `indexed` (or its short version, `i`). Otherwise the file has the same
+by `indexed` (or its short version, `i`). The beads does not have to be
+ordered in any way, but the same number of beads must be in every timestep
+and every of given types must be present. Otherwise the file has the same
 format as the `.vcf` file with ordered timesteps.
 
 Example of indexed coordinate file:
