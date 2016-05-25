@@ -244,10 +244,28 @@ $A_{\mathrm{s}} = i$.  The weight distribution function, $F_w
 \begin{equation}
 F_w(A_{\mathrm{s}}) = \frac{m_{A_{\mathrm{s}}} N_{A_{\mathrm{s}}}}{\sum_i m_i N_i} \mbox{,}
 \end{equation}
+
+where $m_{A_{\mathrm{s}} }$ is the weight, that is the number of aggregates
+with the given aggregation number.
+\endlatexonly
+
+Lastly, the utility calculates volume fractions of all aggregates, where it
+(for now) assumes that all beads have reduced mass of 1.
+\latexonly
+Volume fraction of an aggregate with aggregation number $A_{\mathrm{s}}$ is
+defined as:
+
+\begin{equation}
+\phi(A_{\mathrm{s}}) = \frac{m_{A_{\mathrm{s}}} N_{A_{\mathrm{s}}}}{\sum_i m_i N_i} \mbox{,}
+\end{equation}
+
+where $m_i$ is the actual mass of an aggregate -- it equals to aggregate's
+volume assuming all beads have a unit mass.
 \endlatexonly
 
 The utility reads information about aggregate from input file with
 [Aggregate format](\ref AggregateFile)
+
 This file can be generated using [Aggregates utility](\ref Aggregates).
 
 Usage:
@@ -262,7 +280,8 @@ Usage:
 > > output filename with weight and number average aggregation number in
 > > each timestep
 
-\todo Look into the number averages.
+\todo Look into volume fractions with beads of arbitrary (and different)
+masses.
 
 # AggDensity {#AggDensity}
 
@@ -292,12 +311,17 @@ Usage:
 > `<options>`
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
-> > > coordinates
+> > > coordinates - DOES NOT SEEM TO BE WORKING CORRECTLY
+
+\todo check implementation of `-j` option
 
 # MolDensity {#MolDensity}
 
-MolDensity works in similar way as the AggDensity, only instead of
-aggregates, the densities are calculated for specified molecule types.
+MolDensity works in similar way as the AggDensity, only instead of aggregates,
+the densities are calculated for specified molecule types.  Care must be taken
+with beadtype names in various molecules types, because if one beadtype appears
+in more molecule types, the resulting density for that beadtype will be
+averaged without regard for the various types of molecule it appears in.
 
 Usage:
 
@@ -318,7 +342,9 @@ Usage:
 > `<options>`
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
-> > > coordinates
+> > > coordinates - DOES NOT SEEM TO BE WORKING CORRECTLY
+
+\todo check implementation of `-j` option
 
 # Average utility {#Average}
 

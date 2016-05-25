@@ -29,10 +29,10 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       printf("MolDensity utility calculates number beads density for all bead types from  \n");
-      printf("the center of mass of specified molecules. Beads from other molecules are   \n");
-      printf("ignored (that is, only monomeric beads and beads from the current molecule  \n");
-      printf("are used for calculation). This also means that beads from other molecule   \n");
-      printf("types are not included in the densities for a specific molecule.            \n\n");
+      printf("the center of mass of specified molecules. Care must be taken with beadtype \n");
+      printf("names in various molecules types, because if one beadtype appears in more   \n");
+      printf("molecule types, the resulting density for that beadtype will be averaged    \n");
+      printf("without regard for the various types of molecule it appears in.             \n\n");
 
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
       printf("(along with optional bond file) files to determine all information about    \n");
@@ -357,7 +357,7 @@ int main(int argc, char *argv[]) {
     // calculate densities //{{{
     for (int i = 0; i < Counts.Molecules; i++) {
       if (MoleculeType[Molecule[i].Type].Use) {
-        Vector com = CenterOfMass(MoleculeType[Molecule[i].Type].nBeads, Molecule[i].Bead, Bead);
+        Vector com = CenterOfMass(MoleculeType[Molecule[i].Type].nBeads, Molecule[i].Bead, Bead, BeadType);
 
         // molecule beads
         for (int j = 0; j < MoleculeType[Molecule[i].Type].nBeads; j++) {
@@ -368,6 +368,22 @@ int main(int argc, char *argv[]) {
             int k = dist.x / width;
 
             rho[Bead[Molecule[i].Bead[j]].Type][Molecule[i].Type][k]++;
+          }
+        }
+
+        // beads from other molecules
+        for (int j = 0; j < Counts.Molecules; j++) {
+          if (strcmp(MoleculeType[Molecule[i].Type].Name, MoleculeType[Molecule[j].Type].Name) != 0) {
+            for (int k = 0; k < MoleculeType[Molecule[j].Type].nBeads; k++) {
+              Vector dist = Distance(Bead[Molecule[j].Bead[k]].Position, com, BoxLength);
+              dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+
+              if (dist.x < max_dist) {
+                int l = dist.x / width;
+
+                rho[Bead[Molecule[j].Bead[k]].Type][Molecule[i].Type][l]++;
+              }
+            }
           }
         }
 

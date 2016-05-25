@@ -199,9 +199,10 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * \param [in] Counts     numbers of beads, molecules, etc.
  * \param [in] BeadType   information about bead types
  * \param [in] Bead       coordinates of individual beads
+ * \param [in] BoxLength   dimensions of simulation box
  * \param [in] stuff      array of chars containing comment line to place at the beginning
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff); //}}}
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, Vector BoxLength, char *stuff); //}}}
 
 // FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name
@@ -266,6 +267,16 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
                          MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 
+// RestorePBC() //{{{
+/**
+ * \brief Function to restore pbc.
+ *
+ * \param [in]  Counts         numbers of beads, molecules, etc.
+ * \param [in]  BoxLength      dimension of the simulation box
+ * \param [out] Bead           information about individual beads (coordinates)
+ */
+void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead); //}}}
+
 // CenterOfMass() //{{{
 /**
  * \brief Function to calculate center of mass for a collection of beads.
@@ -273,9 +284,10 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
  * \param [in] n              number of beads
  * \param [in] list           list of bead ids (corresponding to indices in Bead struct)
  * \param [in] Bead           information about individual beads (coordinates)
+ * \param [in] BeadType       information about beadtypes (masses)
  * \return coordinates of center of mass of a given aggregate
  */
-Vector CenterOfMass(int n, int *list, Bead *Bead); //}}}
+Vector CenterOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
 
 // Min3() //{{{
 /**

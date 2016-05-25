@@ -1,6 +1,6 @@
 CC = gcc
-CFLAGS = -std=c11 -Wall -Werror -O3
-#CFLAGS = -std=c11 -Wall -Werror -O3 -ggdb
+#CFLAGS = -std=c11 -Wall -Werror -O3
+CFLAGS = -std=c11 -Wall -Werror -ggdb
 LIBS = -lm
 
 SOURCE = ../AnalysisTools.c

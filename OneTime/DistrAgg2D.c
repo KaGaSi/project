@@ -7,11 +7,10 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <output distr file> <output avg file> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input> <output distr file> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input>              input filename (agg format)\n");
   fprintf(stderr, "   <output distr file>  filename with weight and number distributions\n");
-  fprintf(stderr, "   <output avg file>    filename with weight and number averages throughout simulation\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -i <name>         use input .vsf file different from dl_meso.vsf\n");
   fprintf(stderr, "      -b <name>         file containing bond alternatives to FIELD\n");
@@ -25,20 +24,18 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("DistrAgg calculates weight and number average aggregation numbers during    \n");
-      printf("the simulation run as well as overall weight and number distributions and   \n");
-      printf("volume fractions of aggregates.                                           \n\n");
+      printf("                                                                            \n");
+      printf("                                                                            \n\n");
 
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
       printf("(along with optional bond file) files to determine all information about    \n");
       printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
-      printf("   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
+      printf("   %s <input> <output distr file> <options>\n\n", argv[0]);
 
       printf("   <input>              input filename (agg format)\n");
       printf("   <output distr file>  filename with weight and number distributions\n");
-      printf("   <output avg file>    filename with weight and number averages throughout simulation\n");
       printf("   <options>\n");
       printf("      -i <name>         use input .vsf file different from dl_meso.vsf\n");
       printf("      -b <name>         file containing bond alternatives to FIELD\n");
@@ -152,10 +149,6 @@ int main(int argc, char *argv[]) {
   char output_distr[32];
   strcpy(output_distr, argv[++count]); //}}}
 
-  // <output avg file> - filename with weight and number average aggregation numbers //{{{
-  char output_avg[32];
-  strcpy(output_avg, argv[++count]); //}}}
-
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
@@ -182,15 +175,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  fprintf(out, "# A_s  wdistr  ndistr voldistr\n");
-  fclose(out);
-
-  if ((out = fopen(output_avg, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_avg);
-    exit(1);
-  }
-
-  fprintf(out, "# step  w-avg  n-avg\n");
+  fprintf(out, "# N_Homo N_Diblock wdistr\n");
   fclose(out); //}}}
 
   // print information - verbose output //{{{
@@ -200,15 +185,18 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // arrays for distribution //{{{
-  double wdistr[Counts.Molecules];
-  int ndistr[Counts.Molecules];
-  int voldistr[Counts.Molecules];
+  double wdistr[Counts.Molecules][Counts.Molecules];
+  int HomosForDiblocks[Counts.Molecules][4];
 
   // zeroize arrays
   for (int i = 0; i < Counts.Molecules; i++) {
-    wdistr[i] = 0;
-    ndistr[i] = 0;
-    voldistr[i] = 0;
+    HomosForDiblocks[i][0] = 0; // number of aggregates
+    HomosForDiblocks[i][1] = 0; // number of homopolymers
+    HomosForDiblocks[i][2] = 0; // CI+
+    HomosForDiblocks[i][3] = 0; // CI-
+    for (int j = 0; j < Counts.Molecules; j++) {
+      wdistr[i][j] = 0;
+    }
   } //}}}
 
   // main loop //{{{
@@ -243,38 +231,67 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // go through all aggregates
-    double avg_n = 0,
-           avg_w = 0;
     for (int i = 0; i < Counts.Aggregates; i++) {
+      int Diblock = 0, Homo = 0;
+
+      // go through all molecules in an aggregate
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name,"Diblock") == 0) {
+          Diblock++;
+        } else if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name,"Homo") == 0) {
+          Homo++;
+        }
+      }
+
+      if ((Diblock+Homo) != Aggregate[i].nMolecules) { //{{{
+        fprintf(stderr, "Error: Aggregate[%d].nMolecules = %d\n", i, Aggregate[i].nMolecules);
+        fprintf(stderr, "Error: Diblock + Homo = %d + %d = %d\n", Diblock, Homo, Diblock+Homo);
+
+        exit(1);
+      } //}}}
+
       // distribution
-      ndistr[Aggregate[i].nMolecules-1]++;
-      wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
-      voldistr[Aggregate[i].nMolecules-1] += Aggregate[i].Mass;
+      wdistr[Diblock][Homo] += Aggregate[i].nMolecules;
 
-      // average aggregation number
-      avg_n += Aggregate[i].nMolecules;
-      avg_w += SQR(Aggregate[i].nMolecules);
+      HomosForDiblocks[Diblock][0]++;
+      HomosForDiblocks[Diblock][1] += Homo;
+
+      // find number of CI's near aggregate core
+      for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+        if (BeadType[Bead[Aggregate[i].Monomer[j]].Type].Charge != 0) { // use only charged monomers
+          bool near = false;
+
+          for (int k = 0; k < Aggregate[i].nBeads && !near; k++) {
+            if (BeadType[Bead[Aggregate[i].Bead[k]].Type].Charge != 0) { // use only charged aggregate beads
+
+              Vector box;
+              box.x = 30;
+              box.y = 30;
+              box.z = 30;
+
+              // distance between two beads
+              Vector rij = Distance(Bead[Aggregate[i].Monomer[j]].Position, Bead[Aggregate[i].Bead[k]].Position, box);
+
+              rij.x = sqrt(SQR(rij.x) + SQR(rij.y) + SQR(rij.z));
+
+              if (rij.x < 1) {
+                near = true;
+                if (BeadType[Bead[Aggregate[i].Monomer[j]].Type].Charge > 0) {
+                  HomosForDiblocks[Diblock][2]++;
+                } else {
+                  HomosForDiblocks[Diblock][3]++;
+                }
+              }
+            }
+          }
+        }
+      }
     }
-
-    // print averages to output file //{{{
-    if ((out = fopen(output_avg, "a")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", output_avg);
-      exit(1);
-    }
-
-    fprintf(out, "%5d %lf %lf\n", count, avg_w/Counts.Molecules, avg_n/Counts.Aggregates);
-    fclose(out); //}}}
   }
   fclose(agg);
 
   fflush(stdout);
   printf("\rLast Step: %6d\n", count); //}}}
-
-  // total number of Aggregates in the simulation //{{{
-  int sum_agg = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
-    sum_agg += ndistr[i];
-  } //}}}
 
   // print distributions to output file //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
@@ -282,15 +299,39 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  double molecules_mass = 0;
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    molecules_mass += MoleculeType[i].Mass * MoleculeType[i].Number;
+  int data = 80;
+  for (int i = 0; i < data; i++) {
+    for (int j = 0; j <= i; j++) {
+      fprintf(out, "%4d %4d %lf\n", j, j+data-i, (double)(wdistr[j][j+data-i])/(Counts.Molecules*count));
+    }
+    putc('\n', out);
   }
-
-  for (int i = 0; i < Counts.Molecules; i++) {
-    fprintf(out, "%4d %lf %lf %lf\n", i+1, (double)(wdistr[i])/(Counts.Molecules*count), (double)(ndistr[i])/sum_agg, voldistr[i]/(count*molecules_mass));
+  for (int i = 0; i <= data; i++) {
+    fprintf(out, "%4d %4d %lf\n", i, i, (double)(wdistr[i][i])/(Counts.Molecules*count));
+  }
+  putc('\n', out);
+  for (int i = 0; i < data; i++) {
+    for (int j = 0; j <= i; j++) {
+      fprintf(out, "%4d %4d %lf\n", j+data-i, j, (double)(wdistr[j+data-i][j])/(Counts.Molecules*count));
+    }
+    putc('\n', out);
   }
   fclose(out); //}}}
+
+  if ((out = fopen("another_distr.txt", "w")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output_distr);
+    exit(1);
+  }
+
+  fprintf(out, "# N_Diblock <N_Homo> <N_CI+> <N_CI->\n");
+
+  for (int i = 1; i <= data; i++) {
+    if (HomosForDiblocks[i][0] != 0) {
+      fprintf(out, "%3d %lf %lf %lf\n", i, (double)(HomosForDiblocks[i][1])/HomosForDiblocks[i][0], (double)(HomosForDiblocks[i][2])/HomosForDiblocks[i][0], (double)(HomosForDiblocks[i][3])/HomosForDiblocks[i][0]);
+    }
+  }
+
+  fclose(out);
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
