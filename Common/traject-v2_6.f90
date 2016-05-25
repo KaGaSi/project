@@ -311,9 +311,9 @@ PROGRAM traject
                 READ (ntraj+j-1) mglobal, x, y, z
                 global = NINT (mglobal)
                 IF (global>nubeads) THEN
-                  WRITE (nrtout+1, '(I10,3F10.6)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout+1, '(I10,3F10.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
                 ELSE
-                  WRITE (nrtout, '(I10,3F10.6)') global-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout, '(I10,3F10.3)') global-1, x-halfx, y-halfy, z-halfz
                 END IF
               END DO
             CASE (1)
@@ -321,9 +321,9 @@ PROGRAM traject
                 READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz
                 global = NINT (mglobal)
                 IF (global>nubeads) THEN
-                  WRITE (nrtout+1, '(I10,3F10.6)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout+1, '(I10,3F10.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
                 ELSE
-                  WRITE (nrtout, '(I10,3F10.6)') global-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout, '(I10,3F10.3)') global-1, x-halfx, y-halfy, z-halfz
                 END IF
               END DO
             CASE (2)
@@ -331,9 +331,9 @@ PROGRAM traject
                 READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz, fx, fy, fz
                 global = NINT (mglobal)
                 IF (global>nubeads) THEN
-                  WRITE (nrtout+1, '(I10,3F10.6)') global-nubeads-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout+1, '(I10,3F10.3)') global-nubeads-1, x-halfx, y-halfy, z-halfz
                 ELSE
-                  WRITE (nrtout, '(I10,3F10.6)') global-1, x-halfx, y-halfy, z-halfz
+                  WRITE (nrtout, '(I10,3F10.3)') global-1, x-halfx, y-halfy, z-halfz
                 END IF
               END DO
             END SELECT
@@ -345,19 +345,19 @@ PROGRAM traject
               DO i = 1, nbeads
                 READ (ntraj+j-1) mglobal, x, y, z
                 global = NINT (mglobal)
-                WRITE (nrtout, '(I10,3F10.6)') global-1, x-halfx, y-halfy, z-halfz
+                WRITE (nrtout, '(I10,3F10.3)') global-1, x-halfx, y-halfy, z-halfz
               END DO
             CASE (1)
               DO i = 1, nbeads
                 READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz
                 global = NINT (mglobal)
-                WRITE (nrtout, '(I10,3F10.6)') global-1, x-halfx, y-halfy, z-halfz
+                WRITE (nrtout, '(I10,3F10.3)') global-1, x-halfx, y-halfy, z-halfz
               END DO
             CASE (2)
               DO i = 1, nbeads
                 READ (ntraj+j-1) mglobal, x, y, z, vx, vy, vz, fx, fy, fz
                 global = NINT (mglobal)
-                WRITE (nrtout, '(I10,3F10.6)') global-1, x-halfx, y-halfy, z-halfz
+                WRITE (nrtout, '(I10,3F10.3)') global-1, x-halfx, y-halfy, z-halfz
               END DO
             END SELECT
 

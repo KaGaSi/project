@@ -7,11 +7,10 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <output distr file> <output avg file> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input> <output file> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input>              input filename (agg format)\n");
-  fprintf(stderr, "   <output distr file>  filename with weight and number distributions\n");
-  fprintf(stderr, "   <output avg file>    filename with weight and number averages throughout simulation\n");
+  fprintf(stderr, "   <output file>        filename with weight and number distributions\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -i <name>         use input .vsf file different from dl_meso.vsf\n");
   fprintf(stderr, "      -b <name>         file containing bond alternatives to FIELD\n");
@@ -25,20 +24,18 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("DistrAgg calculates weight and number average aggregation numbers during    \n");
-      printf("the simulation run as well as overall weight and number distributions and   \n");
-      printf("volume fractions of aggregates.                                           \n\n");
+      printf("                                                                            \n");
+      printf("                                                                            \n\n");
 
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
       printf("(along with optional bond file) files to determine all information about    \n");
       printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
-      printf("   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
+      printf("   %s <input> <output file> <options>\n\n", argv[0]);
 
       printf("   <input>              input filename (agg format)\n");
-      printf("   <output distr file>  filename with weight and number distributions\n");
-      printf("   <output avg file>    filename with weight and number averages throughout simulation\n");
+      printf("   <output file>        filename with weight and number distributions\n");
       printf("   <options>\n");
       printf("      -i <name>         use input .vsf file different from dl_meso.vsf\n");
       printf("      -b <name>         file containing bond alternatives to FIELD\n");
@@ -55,7 +52,7 @@ int main(int argc, char *argv[]) {
   printf("\n\n"); //}}}
 
   // check if correct number of arguments //{{{
-  if (argc < 4) {
+  if (argc < 3) {
     fprintf(stderr, "Too little arguments!\n\n");
     ErrorHelp(argv[0]);
     exit(1);
@@ -148,13 +145,9 @@ int main(int argc, char *argv[]) {
   while (getc(agg) != '\n')
     ; //}}}
 
-  // <output distr file> - filename with weight and number distributions //{{{
-  char output_distr[32];
-  strcpy(output_distr, argv[++count]); //}}}
-
-  // <output avg file> - filename with weight and number average aggregation numbers //{{{
-  char output_avg[32];
-  strcpy(output_avg, argv[++count]); //}}}
+  // <output file> //{{{
+  char output[32];
+  strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -177,20 +170,13 @@ int main(int argc, char *argv[]) {
 
   // open output files and print first line //{{{
   FILE *out;
-  if ((out = fopen(output_distr, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_distr);
+  if ((out = fopen(output, "w")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output);
     exit(1);
   }
 
-  fprintf(out, "# A_s  wdistr  ndistr voldistr\n");
-  fclose(out);
+  fprintf(out, "# A_s    Homo    Diblock\n");
 
-  if ((out = fopen(output_avg, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_avg);
-    exit(1);
-  }
-
-  fprintf(out, "# step  w-avg  n-avg\n");
   fclose(out); //}}}
 
   // print information - verbose output //{{{
@@ -200,15 +186,13 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // arrays for distribution //{{{
-  double wdistr[Counts.Molecules];
-  int ndistr[Counts.Molecules];
-  int voldistr[Counts.Molecules];
+  int numbers[Counts.Molecules][3];
 
   // zeroize arrays
   for (int i = 0; i < Counts.Molecules; i++) {
-    wdistr[i] = 0;
-    ndistr[i] = 0;
-    voldistr[i] = 0;
+    numbers[i][0] = 0;
+    numbers[i][1] = 0;
+    numbers[i][2] = 0;
   } //}}}
 
   // main loop //{{{
@@ -243,52 +227,32 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // go through all aggregates
-    double avg_n = 0,
-           avg_w = 0;
     for (int i = 0; i < Counts.Aggregates; i++) {
-      // distribution
-      ndistr[Aggregate[i].nMolecules-1]++;
-      wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
-      voldistr[Aggregate[i].nMolecules-1] += Aggregate[i].Mass;
+      numbers[Aggregate[i].nMolecules-1][0]++;
 
-      // average aggregation number
-      avg_n += Aggregate[i].nMolecules;
-      avg_w += SQR(Aggregate[i].nMolecules);
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Homo") == 0) {
+          numbers[Aggregate[i].nMolecules-1][1]++;
+        }
+        if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Diblock") == 0) {
+          numbers[Aggregate[i].nMolecules-1][2]++;
+        }
+      }
     }
-
-    // print averages to output file //{{{
-    if ((out = fopen(output_avg, "a")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", output_avg);
-      exit(1);
-    }
-
-    fprintf(out, "%5d %lf %lf\n", count, avg_w/Counts.Molecules, avg_n/Counts.Aggregates);
-    fclose(out); //}}}
   }
   fclose(agg);
 
   fflush(stdout);
   printf("\rLast Step: %6d\n", count); //}}}
 
-  // total number of Aggregates in the simulation //{{{
-  int sum_agg = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
-    sum_agg += ndistr[i];
-  } //}}}
-
-  // print distributions to output file //{{{
-  if ((out = fopen(output_distr, "a")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_distr);
+  // print data to output file //{{{
+  if ((out = fopen(output, "a")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output);
     exit(1);
   }
 
-  double molecules_mass = 0;
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    molecules_mass += MoleculeType[i].Mass * MoleculeType[i].Number;
-  }
-
   for (int i = 0; i < Counts.Molecules; i++) {
-    fprintf(out, "%4d %lf %lf %lf\n", i+1, (double)(wdistr[i])/(Counts.Molecules*count), (double)(ndistr[i])/sum_agg, voldistr[i]/(count*molecules_mass));
+    fprintf(out, "%4d %lf %lf\n", i+1, (double)(numbers[i][1])/numbers[i][0], (double)(numbers[i][2])/numbers[i][0]);
   }
   fclose(out); //}}}
 

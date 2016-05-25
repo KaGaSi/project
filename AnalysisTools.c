@@ -994,13 +994,36 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * in BeadType structure only certain bead types will be saved into the
  * indexed timestep in .vcf file (\ref IndexedCoorFile).
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff) {
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, Vector BoxLength, char *stuff) {
 
   // print comment at the beginning of a timestep and 'indexed' on second line
   fprintf(vcf_file, "\n%sindexed\n", stuff);
 
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
     if (BeadType[Bead[i].Type].Write) {
+
+      // if rounding leads to BoxLength, move it bead to other side of box //{{{
+      char check[8];
+      char box[8];
+      // x direction
+      sprintf(check, "%.3f", Bead[i].Position.x);
+      sprintf(box, "%.3f", BoxLength.x);
+      if (strcmp(check, box) == 0) {
+        Bead[i].Position.x = 0;
+      }
+      // y direction
+      sprintf(check, "%.3f", Bead[i].Position.y);
+      sprintf(box, "%.3f", BoxLength.y);
+      if (strcmp(check, box) == 0) {
+        Bead[i].Position.y = 0;
+      }
+      // z direction
+      sprintf(check, "%.3f", Bead[i].Position.z);
+      sprintf(box, "%.3f", BoxLength.z);
+      if (strcmp(check, box) == 0) {
+        Bead[i].Position.z = 0;
+      } //}}}
+
       fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                    Bead[i].Position.x,
                                                    Bead[i].Position.y,
@@ -1057,19 +1080,19 @@ Vector Distance(Vector id1, Vector id2, Vector BoxLength) {
   rij.z = id1.z - id2.z;
 
   // remove periodic boundary conditions in x-direction
-  while (rij.x > (BoxLength.x/2))
+  while (rij.x >= (BoxLength.x/2))
     rij.x = rij.x - BoxLength.x;
-  while (rij.x <= -(BoxLength.x/2))
+  while (rij.x < -(BoxLength.x/2))
     rij.x = rij.x + BoxLength.x;
   // in y-direction
-  while (rij.y > (BoxLength.y/2))
+  while (rij.y >= (BoxLength.y/2))
     rij.y = rij.y - BoxLength.y;
-  while (rij.y <= -(BoxLength.y/2))
+  while (rij.y < -(BoxLength.y/2))
     rij.y = rij.y + BoxLength.y;
   // in z-direction
-  while (rij.z > (BoxLength.z/2))
+  while (rij.z >= (BoxLength.z/2))
     rij.z = rij.z - BoxLength.z;
-  while (rij.z <= -(BoxLength.z/2))
+  while (rij.z < -(BoxLength.z/2))
     rij.z = rij.z + BoxLength.z;
 
   return (rij);
@@ -1216,11 +1239,43 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
   free(moved);
 } //}}}
 
-// AggCenterOfMass() //{{{
+// RestorePBC() //{{{
+/**
+ * Function to restore removed periodic boundary conditions. Used in case
+ * of cell linked list, because it needs coordinates <0, BoxLength>.
+ */
+void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead) {
+
+  for (int i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
+    // x direction
+    while ((*Bead)[i].Position.x >= BoxLength.x) {
+      (*Bead)[i].Position.x -= BoxLength.x;
+    }
+    while ((*Bead)[i].Position.x < 0) {
+      (*Bead)[i].Position.x += BoxLength.x;
+    }
+    // y direction
+    while ((*Bead)[i].Position.y >= BoxLength.y) {
+      (*Bead)[i].Position.y -= BoxLength.y;
+    }
+    while ((*Bead)[i].Position.y < 0) {
+      (*Bead)[i].Position.y += BoxLength.y;
+    }
+    // z direction
+    while ((*Bead)[i].Position.z >= BoxLength.z) {
+      (*Bead)[i].Position.z -= BoxLength.z;
+    }
+    while ((*Bead)[i].Position.z < 0) {
+      (*Bead)[i].Position.z += BoxLength.z;
+    }
+  }
+} //}}}
+
+// CenterOfMass() //{{{
 /**
  * Function to calculate center of mass for a given list of beads.
  */
-Vector CenterOfMass(int n, int *list, Bead *Bead) {
+Vector CenterOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
 
   Vector com;
   com.x = 0;
@@ -1228,9 +1283,9 @@ Vector CenterOfMass(int n, int *list, Bead *Bead) {
   com.z = 0;
 
   for (int i = 0; i < n; i++) {
-    com.x += Bead[list[i]].Position.x;
-    com.y += Bead[list[i]].Position.y;
-    com.z += Bead[list[i]].Position.z;
+    com.x += Bead[list[i]].Position.x * BeadType[Bead[list[i]].Type].Mass;
+    com.y += Bead[list[i]].Position.y * BeadType[Bead[list[i]].Type].Mass;
+    com.z += Bead[list[i]].Position.z * BeadType[Bead[list[i]].Type].Mass;
   }
   com.x /= n;
   com.y /= n;
@@ -1258,7 +1313,7 @@ double Min3(double x, double y, double z) {
   }
 } //}}}
 
-//FreeBead() //{{{
+// FreeBead() //{{{
 /**
  * Free memory allocated for Bead struct array. This function makes it
  * easier to add other arrays to the Bead struct in the future
@@ -1270,7 +1325,7 @@ void FreeBead(Counts Counts, Bead **Bead) {
   free(*Bead);
 } //}}}
 
-//FreeMolecule() //{{{
+// FreeMolecule() //{{{
 /**
  * Free memory allocated for Molecule struct array. This function makes it
  * easier other arrays to the Molecule struct in the future
@@ -1282,7 +1337,7 @@ void FreeMolecule(Counts Counts, Molecule **Molecule) {
   free(*Molecule);
 } //}}}
 
-//FreeMoleculeType() //{{{
+// FreeMoleculeType() //{{{
 /**
  * Free memory allocated for MoleculeType struct array. This function makes
  * it easier other arrays to the MoleculeType struct in the future
@@ -1298,7 +1353,7 @@ void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType) {
   free(*MoleculeType);
 } //}}}
 
-//FreeAggregate() //{{{
+// FreeAggregate() //{{{
 /**
  * Free memory allocated for Aggregate struct array. This function makes it
  * easier other arrays to the Aggregate struct in the future

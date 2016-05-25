@@ -80,17 +80,6 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
   // sort beads into cells //{{{
   for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
-    // coordinate cannot by equal to box size, because the cell id would be out of range //{{{
-    if ((*Bead)[i].Position.x >= BoxLength.x) {
-      (*Bead)[i].Position.x -= BoxLength.x;
-    }
-    if ((*Bead)[i].Position.y >= BoxLength.y) {
-      (*Bead)[i].Position.y -= BoxLength.y;
-    }
-    if ((*Bead)[i].Position.z >= BoxLength.z) {
-      (*Bead)[i].Position.z -= BoxLength.z;
-    } //}}}
-
     int cell = (int)((*Bead)[i].Position.x / cell_size)
              + (int)((*Bead)[i].Position.y / cell_size) * n_cells.x
              + (int)((*Bead)[i].Position.z / cell_size) * n_cells.x * n_cells.y;
@@ -813,6 +802,8 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
+    RestorePBC(Counts, BoxLength, &Bead);
+
     CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, BoxLength, BeadType, &Bead, MoleculeType, &Molecule);
 
     // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
@@ -829,7 +820,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       } //}}}
 
-      WriteCoorIndexed(joined, Counts, BeadType, Bead, stuff);
+      WriteCoorIndexed(joined, Counts, BeadType, Bead, BoxLength, stuff);
 
       fclose(joined);
     } //}}}

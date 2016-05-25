@@ -365,8 +365,17 @@ int main(int argc, char *argv[]) {
     putchar('\n');
   } //}}}
 
+  // counterion arrays
+  int *CounterP = calloc(aggs,sizeof(int));
+  int *CounterM = calloc(aggs,sizeof(int));
+  // number of unimers
+  int Uni[2];
+  Uni[0] = 0;
+  Uni[1] = 0;
+
   // main loop //{{{
   count = 0; // count timesteps
+  int other = 0;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
@@ -397,6 +406,17 @@ int main(int argc, char *argv[]) {
     // calculate densities //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
 
+      if (Aggregate[i].nMolecules == 1) {
+        if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[0]].Type].Name, "Diblock") == 0) {
+          Uni[0]++;
+        } else if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[0]].Type].Name, "Homo") == 0) {
+          Uni[1]++;
+        } else {
+          fprintf(stderr, "Error - uni neither 'Diblock' nor 'Homo'!\n");
+          exit(1);
+        }
+      }
+
       // test if aggregate size should be used //{{{
       int correct_size = -1;
       for (int j = 0; j < aggs; j++) {
@@ -405,7 +425,22 @@ int main(int argc, char *argv[]) {
         }
       } //}}}
 
-      if (correct_size != -1) {
+      int Diblock = 0, Homo = 0;
+
+      // go through all molecules in an aggregate to determine number of diblocks
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name,"Diblock") == 0) {
+          Diblock++;
+        } else if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name,"Homo") == 0) {
+          Homo++;
+        }
+      }
+
+      if (Homo == 20) {
+        agg_sizes[0][1]++;
+
+        other += Diblock;
+
         Vector com = CenterOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
         // aggregate beads
@@ -416,7 +451,7 @@ int main(int argc, char *argv[]) {
           if (dist.x < max_dist) {
             int k = dist.x / width;
 
-            rho[Bead[Aggregate[i].Bead[j]].Type][correct_size][k]++;
+            rho[Bead[Aggregate[i].Bead[j]].Type][0][k]++;
           }
         }
 
@@ -428,11 +463,37 @@ int main(int argc, char *argv[]) {
           if (dist.x < max_dist) {
             int k = dist.x / width;
 
-            rho[Bead[j].Type][correct_size][k]++;
+            rho[Bead[j].Type][0][k]++;
+          }
+        }
+      }
+
+      if (correct_size != -1) {
+        // calculate number of near counterions
+        for (int j = 0; j < Counts.Unbonded; j++) {
+          if (BeadType[Bead[j].Type].Charge != 0) {
+            bool near = false;
+
+            for (int k = 0; k < Aggregate[i].nBeads && !near; k++) {
+              if (BeadType[Bead[Aggregate[i].Bead[k]].Type].Charge != 0) {
+                Vector dist = Distance(Bead[j].Position, Bead[Aggregate[i].Bead[k]].Position, BoxLength);
+                dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+
+                if (dist.x < 1) {
+                  near = true;
+
+                  if (BeadType[Bead[j].Type].Charge > 0) {
+                    CounterP[correct_size]++;
+                  } else {
+                    CounterM[correct_size]++;
+                  }
+                }
+              }
+            }
           }
         }
 
-        agg_sizes[correct_size][1]++;
+//      agg_sizes[correct_size][1]++;
       }
     } //}}}
 
@@ -448,7 +509,7 @@ int main(int argc, char *argv[]) {
   printf("\rLast Step: %6d\n", count); //}}}
 
   // write densities to output file(s) //{{{
-  for (int i = 0; i < aggs; i++) {
+  for (int i = 0; i < aggs && i < 1; i++) {
     FILE *out;
     char str[32];
 
@@ -472,7 +533,7 @@ int main(int argc, char *argv[]) {
       for (int k = 0; k < Counts.TypesOfBeads; k++) {
         double temp = 0;
 
-        // sump rdfs from all shells to be averaged
+        // sum rdfs from all shells to be averaged
         for (int l = 0; l < avg; l++) {
           temp += rho[k][i][j+l] / (shell[l] * agg_sizes[i][1]);
         }
@@ -484,7 +545,26 @@ int main(int argc, char *argv[]) {
     }
 
     fclose(out);
+
+    // print average number of counterions
+    int CIp = 0, CIm = 0;
+    for (int j = 0; j < bins && (width*j) < 5; j++) {
+      for (int k = 0; k < Counts.TypesOfBeads; k++) {
+        if (strcmp(BeadType[k].Name, "CounterM") == 0) {
+          CIm += rho[k][i][j];
+        } else if (strcmp(BeadType[k].Name, "CounterP") == 0) {
+          CIp += rho[k][i][j];
+        }
+      }
+    }
+
+    printf("A_S = %d (%d)\n", agg_sizes[i][0], agg_sizes[i][1]);
+    printf("The other: %lf\n", (double)(other)/agg_sizes[i][1]);
+    printf("   CI+ : %lf CI- : %lf\n", (double)(CounterP[i])/agg_sizes[i][1], (double)(CounterM[i])/agg_sizes[i][1]);
   } //}}}
+
+  printf("Diblock unimers: %lf per step\n", (double)(Uni[0])/count);
+  printf("Homopol unimers: %lf per step\n", (double)(Uni[1])/count);
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
@@ -503,7 +583,9 @@ int main(int argc, char *argv[]) {
     }
     free(rho[i]);
   }
-  free(rho); //}}}
+  free(rho);
+  free(CounterP);
+  free(CounterM); //}}}
 
   return 0;
 }
