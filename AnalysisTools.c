@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include "AnalysisTools.h"
 
-// ReadFIELD() - auxiliary //{{{
+// ReadFIELD() - auxiliary for ReadStructure() //{{{
 /*
  * Function reading information about all bead types (name, mass, charge) from
  * 'species' lines in FIELD. Information about molecule types from 'molecule'
@@ -431,7 +431,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
   return (indexed);
 } //}}}
 
-// ReadVsf() - auxiliary //{{{
+// ReadVsf() - auxiliary for ReadStructure() //{{{
 /*
  * Function reading bead id numbers from provided vsf file. It pairs the
  * bead ids with their bead types.
@@ -540,6 +540,219 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
   }
 
   fclose(vsf);
+} //}}}
+
+// CommonHelp() //{{{
+/**
+ * Function to print help for common options, either for `-h` help option
+ * or program error.
+ */
+void CommonHelp(bool error) {
+  if (error) {
+    fprintf(stderr, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
+    fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
+    fprintf(stderr, "      -v             verbose output\n");
+    fprintf(stderr, "      -V             verbose output with comments from input .vcf file\n");
+    fprintf(stderr, "      -s             no output (overrides verbose options)\n");
+    fprintf(stderr, "      -h             print this help and exit\n");
+  } else {
+    fprintf(stdout, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
+    fprintf(stdout, "      -b <name>      file containing bond alternatives to FIELD\n");
+    fprintf(stdout, "      -v             verbose output\n");
+    fprintf(stdout, "      -V             verbose output with comments from input .vcf file\n");
+    fprintf(stdout, "      -s             no output (overrides verbose options)\n");
+    fprintf(stdout, "      -h             print this help and exit\n");
+  }
+} //}}}
+
+// CommonOptions() //{{{
+/**
+ * Function for options common to most of the utilities.
+ */
+bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
+                   bool *verbose, bool *verbose2, bool *silent) {
+
+  bool error = false;
+
+  // -i <name> option - filename of input structure file //{{{
+  (*vsf_file)[0] = '\0'; // check if -i option is used
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-i") == 0) {
+
+      // wrong argument to -i option
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\nMissing argument to '-i' option ");
+        fprintf(stderr, "(or filename beginning with a dash)!\n");
+
+        error = true;
+        break;
+      }
+
+      // check if .vsf ending is present
+      char *vsf = strrchr(argv[i+1], '.');
+      if (!vsf || strcmp(vsf, ".vsf")) {
+        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
+        error = true;
+      }
+
+      strcpy(*vsf_file, argv[i+1]);
+    }
+  }
+
+  // -i option is not used
+  if ((*vsf_file)[0] == '\0') {
+    strcpy(*vsf_file, "dl_meso.vsf");
+  } //}}}
+
+  // -b <name> option - filename of input bond file //{{{
+  (*bonds_file)[0] = '\0'; // check if -b option is used
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-b") == 0) {
+
+      // wrong argument to -b option
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\nMissing argument to '-b' option ");
+        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
+
+        error = true;
+        break;
+      }
+
+      strcpy(*bonds_file, argv[i+1]);
+    }
+  } //}}}
+
+  // -v option - verbose output //{{{
+  *verbose = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-v") == 0) {
+      *verbose = true;
+
+      break;
+    }
+  } //}}}
+
+  // -V option - verbose output with comments from input .vcf file //{{{
+  *verbose2 = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-V") == 0) {
+      *verbose = true;
+      *verbose2 = true;
+
+      break;
+    }
+  } //}}}
+
+  // -s option - silent mode //{{{
+  *silent = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-s") == 0) {
+      *verbose = false;
+      *verbose2 = false;
+      *silent = true;
+
+      break;
+    }
+  } //}}}
+
+  return (error);
+} //}}}
+
+// VerboseOutput() //{{{
+/**
+ * Function providing standard verbose output (for cases when verbose
+ * option is used). It prints most of the information about used system.
+ */
+void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
+                   BeadType *BeadType, Bead *Bead,
+                   MoleculeType *MoleculeType, Molecule *Molecule) {
+
+  if (input_vcf[0] != '\0')
+    printf("\n   Read from %s file\n", input_vcf);
+  else
+    printf("\n   Read from FIELD file\n");
+  printf("Counts.{");
+  printf("TypesOfBeads =%3d, ", Counts.TypesOfBeads);
+  printf("Bonded =%7d, ", Counts.Bonded);
+  printf("Unbonded =%7d, ", Counts.Unbonded);
+  printf("TypesOfMolecules =%3d, ", Counts.TypesOfMolecules);
+  printf("Molecules =%4d}\n", Counts.Molecules);
+  printf("\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
+
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    printf("BeadType[%2d].{", i);
+    printf("Name =%10s, ", BeadType[i].Name);
+    printf("Number =%7d, ", BeadType[i].Number);
+    printf("Charge =%6.2f, ", BeadType[i].Charge);
+    printf("Mass =%5.2f, ", BeadType[i].Mass);
+    printf("Use = %3s, ", BeadType[i].Use? "Yes":"No");
+    printf("Write = %3s}\n", BeadType[i].Write? "Yes":"No");
+  }
+  putchar('\n');
+
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    printf("MoleculeType[%d].{", i);
+    printf("Name =%10s", MoleculeType[i].Name);
+    printf(", Number =%4d", MoleculeType[i].Number);
+    printf(", nBeads =%3d", MoleculeType[i].nBeads);
+    printf(", nBonds =%3d", MoleculeType[i].nBonds);
+
+    printf(", nBTypes =%2d, BType{", MoleculeType[i].nBTypes);
+    printf("%8s", BeadType[MoleculeType[i].BType[0]].Name);
+    for (int j = 1; j < MoleculeType[i].nBTypes; j++) {
+      printf(",%8s", BeadType[MoleculeType[i].BType[j]].Name);
+    }
+
+    printf("}, Mass =%7.2f", MoleculeType[i].Mass);
+
+    if (bonds_file[0] == '\0') { // all bonds taken from FIELD
+      printf(", Bonds from 'FIELD',");
+    } else {
+      // go through bond file to find out if molecule type 'i' is there
+      FILE *bond;
+      if ((bond = fopen(bonds_file, "r")) == NULL) {
+        fprintf(stderr, "Cannot open file %s with '-v' option!\n", bonds_file);
+        exit(1);
+      }
+
+      int test;
+      char str[32];
+      while ((test = getc(bond)) != EOF) {
+        ungetc(test, bond);
+
+        if ((fscanf(bond, "%s %d", str, &test)) != 2) {
+          fprintf(stderr, "Cannot read string or number of bonds from %s with '-v' option!\n", bonds_file);
+          exit(1);
+        }
+
+        if (strcmp(str, MoleculeType[i].Name) == 0) {
+          printf(", Bonds from '%s',", bonds_file);
+          break;
+        }
+
+        while (getc(bond) != '\n')
+          ;
+      }
+
+      // if not in bonds_file, then bonds taken from FIELD
+      if (test == EOF) {
+        printf(", Bonds from 'FIELD',");
+      }
+
+      fclose(bond);
+    }
+    printf(" Use = %3s}\n", MoleculeType[i].Use? "Yes":"No");
+
+  }
+
+  // print bead ids of all molecules if '-V' option is used
+  for (int i = 0; Verbose2 && i < Counts.Molecules; i++) {
+    printf("Molecule %3d:\n", i+1);
+    for (int j = 0; j < MoleculeType[Molecule[i].Type].nBeads; j++) {
+      printf(" %d", Molecule[i].Bead[j]);
+    }
+    printf("\n");
+  }
 } //}}}
 
 // ReadStructure() //{{{
@@ -895,135 +1108,19 @@ void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
   } //}}}
 } //}}}
 
-// VerboseOutput() //{{{
-void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
-                   BeadType *BeadType, Bead *Bead,
-                   MoleculeType *MoleculeType, Molecule *Molecule) {
-
-  if (input_vcf[0] != '\0')
-    printf("\n   Read from %s file\n", input_vcf);
-  else
-    printf("\n   Read from FIELD file\n");
-  printf("Counts.{");
-  printf("TypesOfBeads =%3d, ", Counts.TypesOfBeads);
-  printf("Bonded =%7d, ", Counts.Bonded);
-  printf("Unbonded =%7d, ", Counts.Unbonded);
-  printf("TypesOfMolecules =%3d, ", Counts.TypesOfMolecules);
-  printf("Molecules =%4d}\n", Counts.Molecules);
-  printf("\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
-
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    printf("BeadType[%2d].{", i);
-    printf("Name =%10s, ", BeadType[i].Name);
-    printf("Number =%7d, ", BeadType[i].Number);
-    printf("Charge =%6.2f, ", BeadType[i].Charge);
-    printf("Mass =%5.2f, ", BeadType[i].Mass);
-    printf("Use = %3s, ", BeadType[i].Use? "Yes":"No");
-    printf("Write = %3s}\n", BeadType[i].Write? "Yes":"No");
-  }
-  putchar('\n');
-
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf("MoleculeType[%d].{", i);
-    printf("Name =%10s", MoleculeType[i].Name);
-    printf(", Number =%4d", MoleculeType[i].Number);
-    printf(", nBeads =%3d", MoleculeType[i].nBeads);
-    printf(", nBonds =%3d", MoleculeType[i].nBonds);
-
-    printf(", nBTypes =%2d, BType{", MoleculeType[i].nBTypes);
-    printf("%8s", BeadType[MoleculeType[i].BType[0]].Name);
-    for (int j = 1; j < MoleculeType[i].nBTypes; j++) {
-      printf(",%8s", BeadType[MoleculeType[i].BType[j]].Name);
-    }
-
-    printf("}, Mass =%7.2f", MoleculeType[i].Mass);
-
-    if (bonds_file[0] == '\0') { // all bonds taken from FIELD
-      printf(", Bonds from 'FIELD',");
-    } else {
-      // go through bond file to find out if molecule type 'i' is there
-      FILE *bond;
-      if ((bond = fopen(bonds_file, "r")) == NULL) {
-        fprintf(stderr, "Cannot open file %s with '-v' option!\n", bonds_file);
-        exit(1);
-      }
-
-      int test;
-      char str[32];
-      while ((test = getc(bond)) != EOF) {
-        ungetc(test, bond);
-
-        if ((fscanf(bond, "%s %d", str, &test)) != 2) {
-          fprintf(stderr, "Cannot read string or number of bonds from %s with '-v' option!\n", bonds_file);
-          exit(1);
-        }
-
-        if (strcmp(str, MoleculeType[i].Name) == 0) {
-          printf(", Bonds from '%s',", bonds_file);
-          break;
-        }
-
-        while (getc(bond) != '\n')
-          ;
-      }
-
-      // if not in bonds_file, then bonds taken from FIELD
-      if (test == EOF) {
-        printf(", Bonds from 'FIELD',");
-      }
-
-      fclose(bond);
-    }
-    printf(" Use = %3s}\n", MoleculeType[i].Use? "Yes":"No");
-
-  }
-
-  // print bead ids of all molecules if '-V' option is used
-  for (int i = 0; Verbose2 && i < Counts.Molecules; i++) {
-    printf("Molecule %3d:\n", i+1);
-    for (int j = 0; j < MoleculeType[Molecule[i].Type].nBeads; j++) {
-      printf(" %d", Molecule[i].Bead[j]);
-    }
-    printf("\n");
-  }
-} //}}}
-
 // WriteCoorIndexed() //{{{
 /**
  * Function writing coordinates to a `.vcf` file. According to the Use flag
  * in BeadType structure only certain bead types will be saved into the
  * indexed timestep in .vcf file (\ref IndexedCoorFile).
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, Vector BoxLength, char *stuff) {
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff) {
 
   // print comment at the beginning of a timestep and 'indexed' on second line
   fprintf(vcf_file, "\n%sindexed\n", stuff);
 
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
     if (BeadType[Bead[i].Type].Write) {
-
-      // if rounding leads to BoxLength, move it bead to other side of box //{{{
-      char check[8];
-      char box[8];
-      // x direction
-      sprintf(check, "%.3f", Bead[i].Position.x);
-      sprintf(box, "%.3f", BoxLength.x);
-      if (strcmp(check, box) == 0) {
-        Bead[i].Position.x = 0;
-      }
-      // y direction
-      sprintf(check, "%.3f", Bead[i].Position.y);
-      sprintf(box, "%.3f", BoxLength.y);
-      if (strcmp(check, box) == 0) {
-        Bead[i].Position.y = 0;
-      }
-      // z direction
-      sprintf(check, "%.3f", Bead[i].Position.z);
-      sprintf(box, "%.3f", BoxLength.z);
-      if (strcmp(check, box) == 0) {
-        Bead[i].Position.z = 0;
-      } //}}}
-
       fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                    Bead[i].Position.x,
                                                    Bead[i].Position.y,
@@ -1177,36 +1274,45 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                     dist.z = (*Bead)[bead1].Position.z - (*Bead)[bead2].Position.z; //}}}
 
                     // if 'bead1' and 'bead2' are too far in x-direction, move 'mol2' in x-direction //{{{
-                    if (dist.x > (BoxLength.x/2)) {
+                    while (dist.x > (BoxLength.x/2)) {
                       for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.x += BoxLength.x;
                       }
-                    } else if (dist.x <= -(BoxLength.x/2)) {
+                      dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
+                    }
+                    while (dist.x <= -(BoxLength.x/2)) {
                       for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.x -= BoxLength.x;
                       }
+                      dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
                     } //}}}
 
                     // if 'bead1' and 'bead2' are too far in y-direction, move 'mol2' in y-direction //{{{
-                    if (dist.y > (BoxLength.y/2)) {
+                    while (dist.y > (BoxLength.y/2)) {
                       for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.y += BoxLength.y;
                       }
-                    } else if (dist.y <= -(BoxLength.y/2)) {
+                      dist.y = (*Bead)[bead1].Position.y - (*Bead)[bead2].Position.y;
+                    }
+                    while (dist.y <= -(BoxLength.y/2)) {
                       for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.y -= BoxLength.y;
                       }
+                      dist.y = (*Bead)[bead1].Position.y - (*Bead)[bead2].Position.y;
                     } //}}}
 
                     // if 'bead1' and 'bead2' are too far in z-direction, move 'mol2' in x-direction //{{{
-                    if (dist.z > (BoxLength.z/2)) {
+                    while (dist.z > (BoxLength.z/2)) {
                       for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.z += BoxLength.z;
                       }
-                    } else if (dist.z <= -(BoxLength.z/2)) {
+                      dist.z = (*Bead)[bead1].Position.z - (*Bead)[bead2].Position.z;
+                    }
+                    while (dist.z <= -(BoxLength.z/2)) {
                       for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.z -= BoxLength.z;
                       }
+                      dist.z = (*Bead)[bead1].Position.z - (*Bead)[bead2].Position.z;
                     } //}}}
 
                     moved[k] = true;

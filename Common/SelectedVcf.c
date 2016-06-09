@@ -15,12 +15,8 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.vcf>      output filename (vcf format)\n");
   fprintf(stderr, "   <type names>      names of bead types to save\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
-  fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
   fprintf(stderr, "      -j             join molecules (remove pbc)\n");
-  fprintf(stderr, "      -v             verbose output\n");
-  fprintf(stderr, "      -V             verbose output with comments from input .vcf file\n");
-  fprintf(stderr, "      -h             print this help and exit\n");
+  CommonHelp(1);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -46,74 +42,34 @@ int main(int argc, char *argv[]) {
       printf("   <output.vcf>      output filename (vcf format)\n");
       printf("   <type names>      names of bead types to save\n");
       printf("   <options>\n");
-      printf("      -i <name>      use input .vsf file different from dl_meso.vsf\n");
-      printf("      -b <name>      file containing bond alternatives to FIELD\n");
       printf("      -j             join molecules (remove pbc)\n");
-      printf("      -v             verbose output\n");
-      printf("      -V             verbose output with comments from input .vcf file\n");
-      printf("      -h             print this help and exit\n");
+      CommonHelp(0);
       exit(0);
     }
   } //}}}
 
-  // print command to stdout //{{{
-  for (int i = 0; i < argc; i++)
-    printf(" %s", argv[i]);
-  printf("\n\n"); //}}}
-
   // check if correct number of arguments //{{{
+  int count = 0;
+  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+    count++;
+  }
+
   if (argc < 6) {
-    fprintf(stderr, "Too little arguments!\n\n");
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 6)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
 
-  // -i <name> option - filename of input structure file //{{{
-  char vsf_file[32];
-  vsf_file[0] = '\0'; // check if -i option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-i") == 0) {
+  // standard options //{{{
+  char *vsf_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(32,sizeof(char *));
+  bool verbose, verbose2, silent;
+  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent);
 
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-i' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
-        exit(1);
-      }
-
-      // check if .vsf ending is present
-      char *vsf = strrchr(argv[i+1], '.');
-      if (!vsf || strcmp(vsf, ".vsf")) {
-        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      strcpy(vsf_file, argv[i+1]);
-    }
-  }
-
-  // -i option is not used
-  if (vsf_file[0] == '\0') {
-    strcpy(vsf_file, "dl_meso.vsf");
-  } //}}}
-
-  // -b <name> option - filename of input bond file //{{{
-  char bonds_file[32];
-  bonds_file[0] = '\0'; // check if -b option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-b") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-b' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      strcpy(bonds_file, argv[i+1]);
-    }
+  // was there error during CommonOptions()?
+  if (error) {
+    ErrorHelp(argv[0]);
+    exit(1);
   } //}}}
 
   // -j option - join molecules //{{{
@@ -126,28 +82,14 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // -v option - verbose output //{{{
-  bool verbose = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") == 0) {
-      verbose = true;
-
-      break;
-    }
+  // print command to stdout //{{{
+  if (!silent) {
+    for (int i = 0; i < argc; i++)
+      printf(" %s", argv[i]);
+    printf("\n\n");
   } //}}}
 
-  // -V option - verbose output with comments from input .vcf file //{{{
-  bool verbose2 = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-V") == 0) {
-      verbose = true;
-      verbose2 = true;
-
-      break;
-    }
-  } //}}}
-
-  int count = 0; // count mandatory arguments
+  count = 0; // count mandatory arguments
 
   // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
   char input_vcf[32];
@@ -296,10 +238,15 @@ int main(int argc, char *argv[]) {
   // start with start-th step //{{{
   int test;
   count = 0;
-  printf("\rDiscarded: %6d", count);
+  if (!silent)
+    printf("\rDiscarded: %6d", count);
   for (int i = 1; i < start; i++) {
-    fflush(stdout);
-    printf("\rDiscarded: %6d", ++count);
+    count++;
+
+    if (!silent) {
+      fflush(stdout);
+      printf("\rDiscarded: %6d", count);
+    }
 
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
@@ -321,8 +268,6 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
-    fflush(stdout);
-
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
       if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
@@ -336,11 +281,40 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
     } //}}}
-    printf("\rStep: %6d", ++count);
+
+    count++;
+
+    if (!silent) {
+      fflush(stdout);
+      printf("\rStep: %6d", count);
+    }
 
     // join molecules? //{{{
     if (join) {
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+    } else { // if rounding leads to BoxLength, move it bead to other side of box
+      for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
+        char check[8];
+        char box[8];
+        // x direction
+        sprintf(check, "%.3f", Bead[i].Position.x);
+        sprintf(box, "%.3f", BoxLength.x);
+        if (strcmp(check, box) == 0) {
+          Bead[i].Position.x = 0;
+        }
+        // y direction
+        sprintf(check, "%.3f", Bead[i].Position.y);
+        sprintf(box, "%.3f", BoxLength.y);
+        if (strcmp(check, box) == 0) {
+          Bead[i].Position.y = 0;
+        }
+        // z direction
+        sprintf(check, "%.3f", Bead[i].Position.z);
+        sprintf(box, "%.3f", BoxLength.z);
+        if (strcmp(check, box) == 0) {
+          Bead[i].Position.z = 0;
+        }
+      }
     } //}}}
 
     // open output .vcf file for appending //{{{
@@ -349,7 +323,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    WriteCoorIndexed(out, Counts, BeadType, Bead, BoxLength, stuff);
+    WriteCoorIndexed(out, Counts, BeadType, Bead, stuff);
 
     fclose(out);
 
@@ -384,8 +358,10 @@ int main(int argc, char *argv[]) {
       printf("\n%s", stuff);
   }
 
-  fflush(stdout);
-  printf("\rLast Step: %6d\n", count);
+  if (!silent) {
+    fflush(stdout);
+    printf("\rLast Step: %6d\n", count);
+  }
 
   fclose(vcf); //}}}
 
@@ -395,6 +371,8 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(stuff);
+  free(vsf_file);
+  free(bonds_file);
   //}}}
 
   return 0;

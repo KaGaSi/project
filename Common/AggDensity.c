@@ -12,16 +12,12 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
   fprintf(stderr, "   <input.agg>         input filename with information about aggregates (agg format)\n");
   fprintf(stderr, "   <width>             width of a single bin\n");
-  fprintf(stderr, "   <output.rho>        output density file (automatic ending 'agg#.rho' added)\n");
+  fprintf(stderr, "   <output.rho>        output density file (automatic ending '#.rho' added)\n");
   fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -n <average>     number of bins to average\n");
-  fprintf(stderr, "      -i <name>        use input .vsf file different from dl_meso.vsf\n");
-  fprintf(stderr, "      -b <name>        file containing bond alternatives to FIELD\n");
-  fprintf(stderr, "      -v               verbose output\n");
-  fprintf(stderr, "      -V               verbose output with more information\n");
-  fprintf(stderr, "      -h               print this help and exit\n");
+  CommonHelp(1);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -43,28 +39,36 @@ int main(int argc, char *argv[]) {
       printf("   <input.vcf>         input filename (vcf format)\n");
       printf("   <input.agg>         input filename with information about aggregates (agg format)\n");
       printf("   <width>             width of a single bin\n");
-      printf("   <output.rho>        output density file (automatic ending 'agg#.rho' added)\n");
+      printf("   <output.rho>        output density file (automatic ending '#.rho' added)\n");
       printf("   <agg sizes>         aggregate sizes to calculate density for\n");
       printf("   <options>\n");
       printf("      -j               specify that aggregates with joined coordinates are used\n");
       printf("      -n <average>     number of bins to average\n");
-      printf("      -i <name>        use input .vsf file different from dl_meso.vsf\n");
-      printf("      -b <name>        file containing bond alternatives to FIELD\n");
-      printf("      -v               verbose output\n");
-      printf("      -V               verbose output with more information\n");
-      printf("      -h               print this help and exit\n");
+      CommonHelp(0);
       exit(0);
     }
   } //}}}
 
-  // print command to stdout //{{{
-  for (int i = 0; i < argc; i++)
-    printf(" %s", argv[i]);
-  printf("\n\n"); //}}}
-
   // check if correct number of arguments //{{{
+  int count = 0;
+  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+    count++;
+  }
+
   if (argc < 6) {
-    fprintf(stderr, "Too little arguments!\n\n");
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 6)!\n\n", count);
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
+
+  // standard options //{{{
+  char *vsf_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(32,sizeof(char *));
+  bool verbose, verbose2, silent;
+  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent);
+
+  // was there error during CommonOptions()?
+  if (error) {
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -93,76 +97,14 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // -i <name> option - filename of input structure file //{{{
-  char vsf_file[32];
-  vsf_file[0] = '\0'; // check if -i option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-i") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-i' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
-        exit(1);
-      }
-
-      // check if .vsf ending is present
-      char *vsf = strrchr(argv[i+1], '.');
-      if (!vsf || strcmp(vsf, ".vsf")) {
-        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      strcpy(vsf_file, argv[i+1]);
-    }
-  }
-
-  // -i option is not used
-  if (vsf_file[0] == '\0') {
-    strcpy(vsf_file, "dl_meso.vsf");
+  // print command to stdout //{{{
+  if (!silent) {
+    for (int i = 0; i < argc; i++)
+      printf(" %s", argv[i]);
+    printf("\n\n");
   } //}}}
 
-  // -b <name> option - filename of input bond file //{{{
-  char bonds_file[32];
-  bonds_file[0] = '\0'; // check if -b option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-b") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-b' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      strcpy(bonds_file, argv[i+1]);
-    }
-  } //}}}
-
-  // -v option - verbose output //{{{
-  bool verbose = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") == 0) {
-      verbose = true;
-
-      break;
-    }
-  } //}}}
-
-  // -V option - verbose output with comments from input .vcf file //{{{
-  bool verbose2 = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-V") == 0) {
-      verbose = true;
-      verbose2 = true;
-
-      break;
-    }
-  } //}}}
-
-  int count = 0; // count mandatory arguments
+  count = 0; // count mandatory arguments
 
   // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
   char input_vcf[32];
@@ -370,8 +312,10 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
-    fflush(stdout);
-    printf("\rStep: %6d", ++count);
+    if (!silent) {
+      fflush(stdout);
+      printf("\rStep: %6d", ++count);
+    }
 
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
@@ -444,8 +388,10 @@ int main(int argc, char *argv[]) {
   fclose(vcf);
   fclose(agg);
 
-  fflush(stdout);
-  printf("\rLast Step: %6d\n", count); //}}}
+  if (!silent) {
+    fflush(stdout);
+    printf("\rLast Step: %6d\n", count);
+  } //}}}
 
   // write densities to output file(s) //{{{
   for (int i = 0; i < aggs; i++) {

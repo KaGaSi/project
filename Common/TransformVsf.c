@@ -120,8 +120,13 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // check if correct number of arguments //{{{
+  int count = 0;
+  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+    count++;
+  }
+
   if (argc < 2) {
-    fprintf(stderr, "Too little arguments!\n\n");
+    fprintf(stderr, "Too little mandatory arguments (%d instead of 2)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -189,7 +194,7 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  int count = 0; // count arguments
+  count = 0; // count arguments
 
   // <output.vsf> - file name of output structure file (must end with .vsf) //{{{
   char output[32];
