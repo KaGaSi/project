@@ -17,12 +17,8 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.agg>        output filename (agg format)\n");
   fprintf(stderr, "   <type names>        names of bead types to use for closeness calculation (at least two)\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -i <name>        use input .vsf file different from dl_meso.vsf\n");
-  fprintf(stderr, "      -b <name>        file containing bond alternatives to FIELD\n");
   fprintf(stderr, "      -j <joined.vcf>  output vcf file with joined coordinates\n");
-  fprintf(stderr, "      -v               verbose output\n");
-  fprintf(stderr, "      -V               verbose output with more information\n");
-  fprintf(stderr, "      -h               print this help and exit\n");
+  CommonHelp(1);
 } //}}}
 
 // CalculateAggregates() //{{{
@@ -80,27 +76,11 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
   // sort beads into cells //{{{
   for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
-    // coordinate cannot by equal to box size, because the cell id would be out of range //{{{
-    if ((*Bead)[i].Position.x >= BoxLength.x) {
-      printf("x\n");
-      (*Bead)[i].Position.x -= BoxLength.x;
-    }
-    if ((*Bead)[i].Position.y >= BoxLength.y) {
-      printf("y\n");
-      (*Bead)[i].Position.y -= BoxLength.y;
-    }
-    if ((*Bead)[i].Position.z >= BoxLength.z) {
-      printf("z\n");
-      (*Bead)[i].Position.z -= BoxLength.z;
-    } //}}}
-
     int cell = (int)((*Bead)[i].Position.x / cell_size)
              + (int)((*Bead)[i].Position.y / cell_size) * n_cells.x
              + (int)((*Bead)[i].Position.z / cell_size) * n_cells.x * n_cells.y;
-//  printf("%d %d %d %d %d\n",(*Counts).Unbonded+(*Counts).Bonded, i, cell, n_cells.x*n_cells.y*n_cells.z, Head[cell]);
     Link[i] = Head[cell];
     Head[cell] = i;
-//  printf(" %d %d %d %d %d\n",(*Counts).Unbonded+(*Counts).Bonded, i, cell, n_cells.x*n_cells.y*n_cells.z, Head[cell]);
   } //}}}
 
   // coordinates of adjoining cells //{{{
@@ -503,74 +483,22 @@ int main(int argc, char *argv[]) {
       printf("   <output.agg>        output filename (agg format)\n");
       printf("   <type names>        names of bead types for closeness calculation (at least two)\n");
       printf("   <options>\n");
-      printf("      -i <name>        use input .vsf file different from dl_meso.vsf\n");
-      printf("      -b <name>        file containing bond alternatives to FIELD\n");
       printf("      -j <joined.vcf>  output vcf file with joined coordinates\n");
-      printf("      -v               verbose output\n");
-      printf("      -V               verbose output with more information\n");
-      printf("      -h               print this help and exit\n");
+      CommonHelp(0);
       exit(0);
     }
   } //}}}
 
-  // print command to stdout //{{{
-  for (int i = 0; i < argc; i++)
-    printf(" %s", argv[i]);
-  printf("\n\n"); //}}}
-
   // check if correct number of arguments //{{{
-  if (argc < 7) {
-    fprintf(stderr, "Too little arguments!\n\n");
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
-
-  // -i <name> option - filename of input structure file //{{{
-  char vsf_file[32];
-  vsf_file[0] = '\0'; // check if -i option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-i") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-i' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
-        exit(1);
-      }
-
-      // check if .vsf ending is present
-      char *vsf = strrchr(argv[i+1], '.');
-      if (!vsf || strcmp(vsf, ".vsf")) {
-        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      strcpy(vsf_file, argv[i+1]);
-    }
+  int count = 0;
+  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+    count++;
   }
 
-  // -i option is not used
-  if (vsf_file[0] == '\0') {
-    strcpy(vsf_file, "dl_meso.vsf");
-  } //}}}
-
-  // -b <name> option - filename of input bond file //{{{
-  char bonds_file[32];
-  bonds_file[0] = '\0'; // check if -b option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-b") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-b' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      strcpy(bonds_file, argv[i+1]);
-    }
+  if (count < 7) {
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 7)!\n\n", count);
+    ErrorHelp(argv[0]);
+    exit(1);
   } //}}}
 
   // -j <joined.vcf> - filename of output vcf file (must end with .vcf) //{{{
@@ -598,28 +526,26 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // -v option - verbose output //{{{
-  bool verbose = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") == 0) {
-      verbose = true;
+  // standard options //{{{
+  char *vsf_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(32,sizeof(char *));
+  bool verbose, verbose2, silent;
+  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent);
 
-      break;
-    }
+  // was there error during CommonOptions()?
+  if (error) {
+    ErrorHelp(argv[0]);
+    exit(1);
   } //}}}
 
-  // -V option - verbose output with comments from input .vcf file //{{{
-  bool verbose2 = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-V") == 0) {
-      verbose = true;
-      verbose2 = true;
-
-      break;
-    }
+  // print command to stdout //{{{
+  if (!silent) {
+    for (int i = 0; i < argc; i++)
+      printf(" %s", argv[i]);
+    printf("\n\n");
   } //}}}
 
-  int count = 0; // count mandatory arguments
+  count = 0; // count mandatory arguments
 
   // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
   char input_vcf[32];
@@ -797,8 +723,10 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
-    fflush(stdout);
-    printf("\rStep: %6d", ++count);
+    if (!silent) {
+      fflush(stdout);
+      printf("\rStep: %6d", ++count);
+    }
 
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
@@ -832,7 +760,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       } //}}}
 
-      WriteCoorIndexed(joined, Counts, BeadType, Bead, BoxLength, stuff);
+      WriteCoorIndexed(joined, Counts, BeadType, Bead, stuff);
 
       fclose(joined);
     } //}}}
@@ -884,8 +812,10 @@ int main(int argc, char *argv[]) {
 
   fclose(vcf);
 
-  fflush(stdout);
-  printf("\rLast Step: %6d\n", count); //}}}
+  if (!silent) {
+    fflush(stdout);
+    printf("\rLast Step: %6d\n", count);
+  } //}}}
 
   // print last step number to <output.agg> //{{{
   // open output .agg file for appending

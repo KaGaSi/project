@@ -1,6 +1,6 @@
 CC = gcc
-#CFLAGS = -std=c11 -Wall -Werror -O3
-CFLAGS = -std=c11 -Wall -Werror -ggdb
+CFLAGS = -std=c11 -Wall -Werror -O3
+#CFLAGS = -std=c11 -Wall -Werror -ggdb
 LIBS = -lm
 
 SOURCE = ../AnalysisTools.c
@@ -20,6 +20,7 @@ BIN = ../bin/SelectedVcf \
 			../bin/BondLength \
 			../bin/DistrAgg \
 			../bin/JoinAggregates \
+			../bin/RgAgg \
 			../bin/Average \
 			../bin/traject-v2_5 \
 			../bin/traject-v2_6
@@ -66,6 +67,9 @@ $(ODIR)/traject-v2_6.o:
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/JoinAggregates: $(OBJ) $(ODIR)/JoinAggregates.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/RgAgg: $(OBJ) $(ODIR)/RgAgg.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/DistrAgg: $(OBJ) $(ODIR)/DistrAgg.o

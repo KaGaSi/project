@@ -116,6 +116,48 @@ typedef struct Aggregate {
   double Mass; ///< total mass of the aggregate
 } Aggregate; //}}}
 
+// CommonHelp() //{{{
+/**
+ * \brief Function printing help for common options.
+ *
+ * \param [in] error   `true` or `false` whether to use stderr or stdout
+ */
+void CommonHelp(bool error); //}}}
+
+// CommonOptions() //{{{
+/**
+ * \brief Function to setup common options.
+ *
+ * \param [in]  argc         number of program's arguments
+ * \param [in]  argv         program's arguments
+ * \param [out] vsf_file     filename with structure information
+ * \param [out] bonds_file   filename with bonds
+ * \param [out] verbose      bool for `-v` option (verbose output)
+ * \param [out] verbose2     bool for `-V` option (detailed verbose output)
+ * \param [out] silent       bool for `-s` option (run silently)
+ * \return `true` or `false` for error on common options
+ */
+bool CommonOptions(int argc, char **argv, char **vsf_file, char **bonds_file,
+                   bool *verbose, bool *verbose2, bool *silent); //}}}
+
+// VerboseOutput() //{{{
+/**
+ * \brief Function printing basic information about system if `-v` or `-V`
+ * option is provided
+ *
+ * \param [in] Verbose2      print extra information if 'true'
+ * \param [in] input_vcf     .vcf structure file
+ * \param [in] bonds_file    filename with bonds
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BeadType      information about bead types
+ * \param [in] Bead          informationn about individual beads
+ * \param [in] MoleculeType  information about molecule types
+ * \param [in] Molecule      information about individual molecules
+ */
+void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
+                   BeadType *BeadType, Bead *Bead,
+                   MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
 // ReadStructure() //{{{
 /**
  * \brief Function reading information from dl_meso FIELD and vsf
@@ -173,24 +215,6 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
 void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
                     MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 
-// VerboseOutput() //{{{
-/**
- * \brief Function printing basic information about system if `-v` or `-V`
- * option is provided
- *
- * \param [in] Verbose2      print extra information if 'true'
- * \param [in] input_vcf     .vcf structure file
- * \param [in] bonds_file    filename with bonds
- * \param [in] Counts        numbers of beads, molecules, etc.
- * \param [in] BeadType      information about bead types
- * \param [in] Bead          informationn about individual beads
- * \param [in] MoleculeType  information about molecule types
- * \param [in] Molecule      information about individual molecules
- */
-void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
-                   BeadType *BeadType, Bead *Bead,
-                   MoleculeType *MoleculeType, Molecule *Molecule); //}}}
-
 // WriteCoorIndexed //{{{
 /**
  * \brief Function writing indexed coordinates to a .vcf file.
@@ -202,7 +226,7 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * \param [in] BoxLength   dimensions of simulation box
  * \param [in] stuff      array of chars containing comment line to place at the beginning
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, Vector BoxLength, char *stuff); //}}}
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff); //}}}
 
 // FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name

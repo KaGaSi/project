@@ -157,6 +157,8 @@ int main(int argc, char *argv[]) {
   // main loop //{{{
   int test;
   count = 0;
+  int NoNano = 0, NoNanoAgg = 0;
+  double NoNanoMass = 0;
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
@@ -191,14 +193,29 @@ int main(int argc, char *argv[]) {
     double avg_n = 0,
            avg_w = 0;
     for (int i = 0; i < Counts.Aggregates; i++) {
-      // distribution
-      ndistr[Aggregate[i].nMolecules-1]++;
-      wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
-      voldistr[Aggregate[i].nMolecules-1] += Aggregate[i].Mass;
+      bool Nano = false;
 
-      // average aggregation number
-      avg_n += Aggregate[i].nMolecules;
-      avg_w += SQR(Aggregate[i].nMolecules);
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        if (strcmp("Nano", MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name) == 0) {
+          Nano = true;
+          break;
+        }
+      }
+
+      if (!Nano) {
+        NoNano += Aggregate[i].nMolecules;
+        NoNanoAgg++;
+        NoNanoMass += Aggregate[i].Mass;
+
+        // distribution
+        ndistr[Aggregate[i].nMolecules-1]++;
+        wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
+        voldistr[Aggregate[i].nMolecules-1] += Aggregate[i].Mass;
+
+        // average aggregation number
+        avg_n += Aggregate[i].nMolecules;
+        avg_w += SQR(Aggregate[i].nMolecules);
+      }
     }
 
     // print averages to output file //{{{
@@ -229,6 +246,10 @@ int main(int argc, char *argv[]) {
     printf("%10d molecules\n", mols);
     printf("%10d beads in molecules\n", beads);
     printf("%10d monomeric beads\n", mons);
+    printf("%10d A4B2 molecules without contact with Nano molecules\n", NoNano);
+    printf("           (%.2f per step)\n", (double)(NoNano)/count);
+    printf("%10d number of aggregates with only A4B2 molecules\n", NoNanoAgg);
+    printf("%lf mass of A4B2 molecules without contact with Nano molecules\n", NoNanoMass);
   } //}}}
 
   // total number of Aggregates in the simulation //{{{
@@ -249,7 +270,7 @@ int main(int argc, char *argv[]) {
   }
 
   for (int i = 0; i < mols; i++) {
-    fprintf(out, "%4d %lf %lf %lf\n", i+1, (double)(wdistr[i])/(mols*count), (double)(ndistr[i])/sum_agg, voldistr[i]/(count*molecules_mass));
+    fprintf(out, "%4d %lf %lf %lf\n", i+1, (double)(wdistr[i])/NoNano, (double)(ndistr[i])/NoNanoAgg, voldistr[i]/NoNanoMass);
   }
   fclose(out); //}}}
 

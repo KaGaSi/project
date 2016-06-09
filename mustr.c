@@ -1,4 +1,4 @@
-/* help file - just fill in the 'main' part...
+/* help file - just fill in the 'main' part and options...
  * Both .vcf and .agg files are used */
 
 #include <stdio.h>
@@ -65,9 +65,15 @@ int main(int argc, char *argv[]) {
     printf(" %s", argv[i]);
   printf("\n\n"); //}}}
 
+// check numbers of mandatory arguments
   // check if correct number of arguments //{{{
+  int count = 0;
+  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+    count++;
+  }
+
   if (argc < 6) {
-    fprintf(stderr, "Too little arguments!\n\n");
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 6)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -167,7 +173,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
 // mandatory options
-  int count = 0; // count mandatory arguments
+  count = 0; // count mandatory arguments
 
   // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
   char input_vcf[32];

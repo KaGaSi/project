@@ -15,12 +15,81 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -i <name>        use input .vsf file different from dl_meso.vsf\n");
-  fprintf(stderr, "      -b <name>        file containing bond alternatives to FIELD\n");
-  fprintf(stderr, "      -v               verbose output\n");
-  fprintf(stderr, "      -V               verbose output with more information\n");
-  fprintf(stderr, "      -h               print this help and exit\n");
+  CommonHelp(1);
 } //}}}
+
+
+Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
+                BeadType *BeadType, Bead *Bead) {
+
+  // gyration tensor (3x3 array) //{{{
+  struct Tensor {
+    Vector x, y, z;
+  } GyrationTensor;
+
+  GyrationTensor.x.x = 0;
+  GyrationTensor.x.y = 0;
+  GyrationTensor.x.z = 0;
+  GyrationTensor.y.x = 0;
+  GyrationTensor.y.y = 0;
+  GyrationTensor.y.z = 0;
+  GyrationTensor.z.x = 0;
+  GyrationTensor.z.y = 0;
+  GyrationTensor.z.z = 0; //}}}
+
+  Vector com = CenterOfMass(n, list, Bead, BeadType);
+
+  // move center of mass to [0,0,0] //{{{
+  for (int i = 0; i < n; i++) {
+    Bead[list[i]].Position.x =- com.x;
+    Bead[list[i]].Position.y =- com.y;
+    Bead[list[i]].Position.z =- com.z;
+  } //}}}
+
+  // calculate gyration tensor //{{{
+  for (int i = 1; i < n; i++) {
+    GyrationTensor.x.x += Bead[list[i]].Position.x * Bead[list[i]].Position.x;
+    GyrationTensor.x.y += Bead[list[i]].Position.x * Bead[list[i]].Position.y;
+    GyrationTensor.x.z += Bead[list[i]].Position.x * Bead[list[i]].Position.z;
+    GyrationTensor.y.x += Bead[list[i]].Position.y * Bead[list[i]].Position.x;
+    GyrationTensor.y.y += Bead[list[i]].Position.y * Bead[list[i]].Position.y;
+    GyrationTensor.y.z += Bead[list[i]].Position.y * Bead[list[i]].Position.z;
+    GyrationTensor.z.x += Bead[list[i]].Position.z * Bead[list[i]].Position.x;
+    GyrationTensor.z.y += Bead[list[i]].Position.z * Bead[list[i]].Position.y;
+    GyrationTensor.z.z += Bead[list[i]].Position.z * Bead[list[i]].Position.z;
+  }
+  GyrationTensor.x.x /= n;
+  GyrationTensor.x.y /= n;
+  GyrationTensor.x.z /= n;
+  GyrationTensor.y.x /= n;
+  GyrationTensor.y.y /= n;
+  GyrationTensor.y.z /= n;
+  GyrationTensor.z.x /= n;
+  GyrationTensor.z.y /= n;
+  GyrationTensor.z.z /= n; //}}}
+
+  // calculate tensor's eigenvalues //{{{
+  double a = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z;
+  double b = - GyrationTensor.x.x * GyrationTensor.y.y
+             - GyrationTensor.x.x * GyrationTensor.z.z
+             - GyrationTensor.y.y * GyrationTensor.z.z
+             + GyrationTensor.x.z * GyrationTensor.z.x
+             + GyrationTensor.x.y * GyrationTensor.y.x
+             + GyrationTensor.y.z * GyrationTensor.z.y;
+  double c = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z
+           + GyrationTensor.y.x + GyrationTensor.z.y + GyrationTensor.x.z
+           + GyrationTensor.z.x + GyrationTensor.x.y + GyrationTensor.y.z
+           - GyrationTensor.z.x + GyrationTensor.x.z + GyrationTensor.y.y
+           - GyrationTensor.x.y + GyrationTensor.y.x + GyrationTensor.z.z
+           - GyrationTensor.z.y + GyrationTensor.y.z + GyrationTensor.x.x; //}}}
+
+  Vector eigen;
+  eigen.x = a;
+  eigen.y = b;
+  eigen.z = c;
+
+  return (eigen);
+}
 
 int main(int argc, char *argv[]) {
 
@@ -44,23 +113,19 @@ int main(int argc, char *argv[]) {
       printf("   <agg sizes>         aggregate sizes to calculate radius of gyration for\n");
       printf("   <options>\n");
       printf("      -j               specify that aggregates with joined coordinates are used\n");
-      printf("      -i <name>        use input .vsf file different from dl_meso.vsf\n");
-      printf("      -b <name>        file containing bond alternatives to FIELD\n");
-      printf("      -v               verbose output\n");
-      printf("      -V               verbose output with more information\n");
-      printf("      -h               print this help and exit\n");
+      CommonHelp(0);
       exit(0);
     }
   } //}}}
 
-  // print command to stdout //{{{
-  for (int i = 0; i < argc; i++)
-    printf(" %s", argv[i]);
-  printf("\n\n"); //}}}
-
   // check if correct number of arguments //{{{
+  int count = 0;
+  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+    count++;
+  }
+
   if (argc < 5) {
-    fprintf(stderr, "Too little arguments!\n\n");
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 5)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -73,76 +138,26 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // -i <name> option - filename of input structure file //{{{
-  char vsf_file[32];
-  vsf_file[0] = '\0'; // check if -i option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-i") == 0) {
+  // standard options //{{{
+  char *vsf_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(32,sizeof(char *));
+  bool verbose, verbose2, silent;
+  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent);
 
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-i' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
-        exit(1);
-      }
-
-      // check if .vsf ending is present
-      char *vsf = strrchr(argv[i+1], '.');
-      if (!vsf || strcmp(vsf, ".vsf")) {
-        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      strcpy(vsf_file, argv[i+1]);
-    }
-  }
-
-  // -i option is not used
-  if (vsf_file[0] == '\0') {
-    strcpy(vsf_file, "dl_meso.vsf");
+  // was there error during CommonOptions()?
+  if (error) {
+    ErrorHelp(argv[0]);
+    exit(1);
   } //}}}
 
-  // -b <name> option - filename of input bond file //{{{
-  char bonds_file[32];
-  bonds_file[0] = '\0'; // check if -b option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-b") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-b' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      strcpy(bonds_file, argv[i+1]);
-    }
+  // print command to stdout //{{{
+  if (!silent) {
+    for (int i = 0; i < argc; i++)
+      printf(" %s", argv[i]);
+    printf("\n\n");
   } //}}}
 
-  // -v option - verbose output //{{{
-  bool verbose = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") == 0) {
-      verbose = true;
-
-      break;
-    }
-  } //}}}
-
-  // -V option - verbose output with comments from input .vcf file //{{{
-  bool verbose2 = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-V") == 0) {
-      verbose = true;
-      verbose2 = true;
-
-      break;
-    }
-  } //}}}
-
-  int count = 0; // count mandatory arguments
+  count = 0; // count mandatory arguments
 
   // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
   char input_vcf[32];
@@ -162,7 +177,7 @@ int main(int argc, char *argv[]) {
 
   // <output> - filename with radii of gyration //{{{
   char output_rho[16];
-  strcpy(output, argv[++count]); //}}}
+  strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -175,7 +190,10 @@ int main(int argc, char *argv[]) {
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // <agg sizes> - aggregate sizes for calculation //{{{
-  int *agg_sizes = calloc(Counts.Molecules,sizeof(int));
+  int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
+  for (int i = 0; i < Counts.Molecules; i++) {
+    agg_sizes[i] = calloc(2,sizeof(int));
+  }
 
   int aggs = 0;
 
@@ -187,13 +205,40 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    agg_sizes[aggs++] = atoi(argv[count]);
+    agg_sizes[aggs][0] = atoi(argv[count]);
+
+    // write initial stuff to output density file //{{{
+    FILE *out;
+    char str[32];
+
+    sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
+    if ((out = fopen(str, "w")) == NULL) {
+      fprintf(stderr, "Cannot open file %s!\n", str);
+      exit(1);
+    }
+
+    // print command to output file //{{{
+    putc('#', out);
+    for (int i = 0; i < argc; i++)
+      fprintf(out, " %s", argv[i]);
+    putc('\n', out); //}}}
+
+    // print bead type names to output file //{{{
+    putc('#', out);
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      fprintf(out, " %s", BeadType[i].Name);
+    }
+    putc('\n', out); //}}}
+
+    fclose(out); //}}}
+
+    aggs++; // number of aggregate sizes
   } //}}}
 
   // write initial stuff to output file //{{{
   FILE *out;
-  if ((out = fopen(output, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", out);
+  if ((out = fopen(output_rho, "w")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output_rho);
     exit(1);
   }
 
@@ -206,7 +251,7 @@ int main(int argc, char *argv[]) {
   // print agg sizes to output file //{{{
   putc('#', out);
   for (int i = 0; i < aggs; i++) {
-    fprintf(out, " %10d", agg_sizes[i]);
+    fprintf(out, " %10d", agg_sizes[i][0]);
   }
   putc('\n', out); //}}}
 
@@ -315,13 +360,15 @@ int main(int argc, char *argv[]) {
     putchar('\n');
   } //}}}
 
-  // main loop
+  // main loop //{{{
   count = 0; // count timesteps
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
-    fflush(stdout);
-    printf("\rStep: %6d", ++count);
+    if (!silent) {
+      fflush(stdout);
+      printf("\rStep: %6d", ++count);
+    }
 
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
@@ -348,12 +395,12 @@ int main(int argc, char *argv[]) {
     int *agg_counts = calloc(aggs,sizeof(int));
     double *Rg = calloc(aggs,sizeof(int)); //}}}
 
-    for (int i = 0; i < Count.Aggregates; i++) {
+    for (int i = 0; i < Counts.Aggregates; i++) {
 
       // test if aggregate is of correct size //{{{
       int correct_size = -1;
       for (int j = 0; j < aggs; j++) {
-        if (agg_sizes[j] == Aggregate[i].nMolecules) {
+        if (agg_sizes[j][0] == Aggregate[i].nMolecules) {
           correct_size = j;
         }
       } //}}}
@@ -361,10 +408,11 @@ int main(int argc, char *argv[]) {
       if (correct_size != -1) {
         agg_counts[correct_size]++;
 
-        Vector egien = Gyration(Aggregate[i].nBeads, Aggregate[i].Bead, Counts, BoxLength, BeadType, Bead);
-      RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+        Vector eigen = Gyration(Aggregate[i].nBeads, Aggregate[i].Bead, Counts, BoxLength, BeadType, Bead);
 
         Rg[correct_size] += sqrt(eigen.x + eigen.y + eigen.z);
+
+        agg_sizes[correct_size][1]++;
       }
     }
 
@@ -379,8 +427,10 @@ int main(int argc, char *argv[]) {
   fclose(vcf);
   fclose(agg);
 
-  fflush(stdout);
-  printf("\rLast Step: %6d\n", count); //}}}
+  if (!silent) {
+    fflush(stdout);
+    printf("\rLast Step: %6d\n", count);
+  } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
