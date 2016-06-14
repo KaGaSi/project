@@ -274,9 +274,10 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    count++;
     if (!silent) {
       fflush(stdout);
-      printf("\rStep: %6d", ++count);
+      printf("\rStep: %6d", count);
     }
 
     // read indexed timestep from input .vcf file //{{{

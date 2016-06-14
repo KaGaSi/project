@@ -160,9 +160,10 @@ int main(int argc, char *argv[]) {
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
+    count++;
     if (!silent) {
       fflush(stdout);
-      printf("\rStep: %6d", ++count);
+      printf("\rStep: %6d", count);
     }
 
     ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
