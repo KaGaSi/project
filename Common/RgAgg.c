@@ -7,20 +7,113 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <input.agg> <output.rho> <agg sizes> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.vcf> <input.agg> <output> <agg sizes> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
   fprintf(stderr, "   <input.agg>         input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <output.rho>        output density file (automatic ending 'agg#.rho' added)\n");
+  fprintf(stderr, "   <output>            output file with radii of gyration\n");
   fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
   CommonHelp(1);
 } //}}}
 
+#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
+
+void jacobi(double **a, int n, double d[], double **v, int *nrot) { //{{{
+
+  double b[3], z[3];
+
+  for (int ip = 0; ip < n; ip++) {
+    for (int iq = 0; iq < n; iq++) {
+      v[ip][iq] = 0;
+    }
+    v[ip][ip] = 1;
+  }
+
+  for (int ip = 0; ip < n; ip++) {
+    b[ip] = d[ip] = a[ip][ip];
+    z[ip] = 0;
+  }
+
+  *nrot = 0;
+
+  for (int i = 0; i < 50; i++) {
+    double sm = 0;
+    for (int ip = 0; ip < (n-1); ip++) {
+      for (int iq = 0; iq < (n-1); iq++) {
+        sm += fabs(a[ip][iq]);
+      }
+    }
+
+    if (sm == 0) {
+      return;
+    }
+    double tresh;
+    if (i < 4) {
+      tresh = 0.2 * sm / (SQR(n));
+    } else {
+      tresh = 0;
+    }
+
+    for (int ip = 0; ip < (n-1); ip++) {
+      for (int iq = 0; iq < (n-1); iq++) {
+        double g = 100 * fabs(a[ip][iq]);
+
+        if (i > 4 && (double)(fabs(d[ip])+g) == (double)fabs(d[ip])
+            && (double)(fabs(d[iq])+g) == (double)fabs(d[iq])) {
+          a[ip][iq] = 0;
+        } else if (fabs(a[ip][iq]) > tresh) {
+          double h = d[iq] - d[ip];
+          double t, theta;
+
+          if ((double)(fabs(h)+g) == (double)fabs(h)) {
+            t = a[ip][iq] / h;
+          } else {
+            theta = 0.5 * h / a[ip][iq];
+            t = 1 / (fabs(theta) + sqrt(1 + SQR(theta)));
+            if (theta < 0) {
+              t = -t;
+            }
+          }
+
+          double c = 1 / sqrt(1 + SQR(t));
+          double s = t * c;
+          double tau = s / (1 + c);
+          h = t * a[ip][iq];
+          z[ip] -= h;
+          z[iq] += h;
+          d[ip] -= h;
+          d[iq] += h;
+          a[ip][iq] = 0;
+
+          for (int j = 0; j < (iq-1); j++) {
+            ROTATE(a, j, ip, j, iq);
+          }
+          for (int j = (ip+1); j < (iq-1); j++) {
+            ROTATE(a, ip, j, j, iq);
+          }
+          for (int j = (iq+1); j < n; j++) {
+            ROTATE(a, ip, j, iq, j);
+          }
+          for (int j = 0; j < n; j++) {
+            ROTATE(v, j, ip, j, iq);
+          }
+          ++(*nrot);
+        }
+      }
+    }
+
+    for (int ip = 0; ip < n; ip++) {
+      b[ip] += z[ip];
+      d[ip] = b[ip];
+      z[ip] = 0;
+    }
+  }
+} //}}}
 
 Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
-                BeadType *BeadType, Bead *Bead) {
+                BeadType *BeadType, Bead **Bead) { //{{{
 
   // gyration tensor (3x3 array) //{{{
   struct Tensor {
@@ -37,59 +130,73 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
   GyrationTensor.z.y = 0;
   GyrationTensor.z.z = 0; //}}}
 
-  Vector com = CenterOfMass(n, list, Bead, BeadType);
+  Vector com = CenterOfMass(n, list, *Bead, BeadType);
 
   // move center of mass to [0,0,0] //{{{
   for (int i = 0; i < n; i++) {
-    Bead[list[i]].Position.x =- com.x;
-    Bead[list[i]].Position.y =- com.y;
-    Bead[list[i]].Position.z =- com.z;
+    (*Bead)[list[i]].Position.x -= com.x;
+    (*Bead)[list[i]].Position.y -= com.y;
+    (*Bead)[list[i]].Position.z -= com.z;
   } //}}}
 
   // calculate gyration tensor //{{{
-  for (int i = 1; i < n; i++) {
-    GyrationTensor.x.x += Bead[list[i]].Position.x * Bead[list[i]].Position.x;
-    GyrationTensor.x.y += Bead[list[i]].Position.x * Bead[list[i]].Position.y;
-    GyrationTensor.x.z += Bead[list[i]].Position.x * Bead[list[i]].Position.z;
-    GyrationTensor.y.x += Bead[list[i]].Position.y * Bead[list[i]].Position.x;
-    GyrationTensor.y.y += Bead[list[i]].Position.y * Bead[list[i]].Position.y;
-    GyrationTensor.y.z += Bead[list[i]].Position.y * Bead[list[i]].Position.z;
-    GyrationTensor.z.x += Bead[list[i]].Position.z * Bead[list[i]].Position.x;
-    GyrationTensor.z.y += Bead[list[i]].Position.z * Bead[list[i]].Position.y;
-    GyrationTensor.z.z += Bead[list[i]].Position.z * Bead[list[i]].Position.z;
+  for (int i = 0; i < n; i++) {
+    GyrationTensor.x.x += SQR((*Bead)[list[i]].Position.x);
+    GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
+    GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
+    GyrationTensor.y.y += SQR((*Bead)[list[i]].Position.y);
+    GyrationTensor.y.z += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
+    GyrationTensor.z.z += SQR((*Bead)[list[i]].Position.z);
   }
   GyrationTensor.x.x /= n;
   GyrationTensor.x.y /= n;
   GyrationTensor.x.z /= n;
-  GyrationTensor.y.x /= n;
   GyrationTensor.y.y /= n;
   GyrationTensor.y.z /= n;
-  GyrationTensor.z.x /= n;
-  GyrationTensor.z.y /= n;
-  GyrationTensor.z.z /= n; //}}}
+  GyrationTensor.z.z /= n;
 
-  // calculate tensor's eigenvalues //{{{
-  double a = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z;
-  double b = - GyrationTensor.x.x * GyrationTensor.y.y
-             - GyrationTensor.x.x * GyrationTensor.z.z
-             - GyrationTensor.y.y * GyrationTensor.z.z
-             + GyrationTensor.x.z * GyrationTensor.z.x
-             + GyrationTensor.x.y * GyrationTensor.y.x
-             + GyrationTensor.y.z * GyrationTensor.z.y;
-  double c = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z
-           + GyrationTensor.y.x + GyrationTensor.z.y + GyrationTensor.x.z
-           + GyrationTensor.z.x + GyrationTensor.x.y + GyrationTensor.y.z
-           - GyrationTensor.z.x + GyrationTensor.x.z + GyrationTensor.y.y
-           - GyrationTensor.x.y + GyrationTensor.y.x + GyrationTensor.z.z
-           - GyrationTensor.z.y + GyrationTensor.y.z + GyrationTensor.x.x; //}}}
+  // just pro forma
+  GyrationTensor.y.x = GyrationTensor.x.y;
+  GyrationTensor.z.x = GyrationTensor.x.z;
+  GyrationTensor.z.y = GyrationTensor.y.z;
+  //}}}
+
+  double **a = malloc(3*sizeof(double *)); //{{{
+  a[0] = malloc(3*sizeof(double));
+  a[1] = malloc(3*sizeof(double));
+  a[2] = malloc(3*sizeof(double));
+
+  a[0][0] = GyrationTensor.x.x;
+  a[0][1] = GyrationTensor.y.x;
+  a[0][2] = GyrationTensor.z.x;
+  a[1][0] = GyrationTensor.x.y;
+  a[1][1] = GyrationTensor.y.y;
+  a[1][2] = GyrationTensor.z.y;
+  a[2][0] = GyrationTensor.x.z;
+  a[2][1] = GyrationTensor.y.z;
+  a[2][2] = GyrationTensor.z.z; //}}}
+
+  double *d = malloc(3*sizeof(double));
+  double **v = malloc(3*sizeof(double *));
+  v[0] = malloc(3*sizeof(double));
+  v[1] = malloc(3*sizeof(double));
+  v[2] = malloc(3*sizeof(double));
+  int nrot, size = 3;
+  jacobi(a, size, d, v, &nrot);
 
   Vector eigen;
-  eigen.x = a;
-  eigen.y = b;
-  eigen.z = c;
+  eigen.x = d[0];
+  eigen.y = d[1];
+  eigen.z = d[2];
+
+  free(d);
+  free(v[0]);
+  free(v[1]);
+  free(v[2]);
+  free(v);
 
   return (eigen);
-}
+} //}}}
 
 int main(int argc, char *argv[]) {
 
@@ -176,8 +283,8 @@ int main(int argc, char *argv[]) {
   strcpy(input_agg, argv[++count]); //}}}
 
   // <output> - filename with radii of gyration //{{{
-  char output_rho[16];
-  strcpy(output_rho, argv[++count]); //}}}
+  char output[16];
+  strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -207,38 +314,13 @@ int main(int argc, char *argv[]) {
 
     agg_sizes[aggs][0] = atoi(argv[count]);
 
-    // write initial stuff to output density file //{{{
-    FILE *out;
-    char str[32];
-
-    sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
-    if ((out = fopen(str, "w")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", str);
-      exit(1);
-    }
-
-    // print command to output file //{{{
-    putc('#', out);
-    for (int i = 0; i < argc; i++)
-      fprintf(out, " %s", argv[i]);
-    putc('\n', out); //}}}
-
-    // print bead type names to output file //{{{
-    putc('#', out);
-    for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      fprintf(out, " %s", BeadType[i].Name);
-    }
-    putc('\n', out); //}}}
-
-    fclose(out); //}}}
-
     aggs++; // number of aggregate sizes
   } //}}}
 
   // write initial stuff to output file //{{{
   FILE *out;
-  if ((out = fopen(output_rho, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_rho);
+  if ((out = fopen(output, "w")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output);
     exit(1);
   }
 
@@ -249,7 +331,7 @@ int main(int argc, char *argv[]) {
   putc('\n', out); //}}}
 
   // print agg sizes to output file //{{{
-  putc('#', out);
+  fprintf(out, "# timestep");
   for (int i = 0; i < aggs; i++) {
     fprintf(out, " %10d", agg_sizes[i][0]);
   }
@@ -360,14 +442,18 @@ int main(int argc, char *argv[]) {
     putchar('\n');
   } //}}}
 
+  // allocate memory for sum of radii of gyration
+  double *Rg_sum = calloc(aggs,sizeof(double));
+
   // main loop //{{{
   count = 0; // count timesteps
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    count++;
     if (!silent) {
       fflush(stdout);
-      printf("\rStep: %6d", ++count);
+      printf("\rStep: %6d", count);
     }
 
     // read indexed timestep from input .vcf file //{{{
@@ -393,8 +479,9 @@ int main(int argc, char *argv[]) {
 
     // allocate arrays for the timestep //{{{
     int *agg_counts = calloc(aggs,sizeof(int));
-    double *Rg = calloc(aggs,sizeof(int)); //}}}
+    double *Rg = calloc(aggs,sizeof(double)); //}}}
 
+    // calculate radii of gyration //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
 
       // test if aggregate is of correct size //{{{
@@ -407,14 +494,33 @@ int main(int argc, char *argv[]) {
 
       if (correct_size != -1) {
         agg_counts[correct_size]++;
+        agg_sizes[correct_size][1]++;
 
-        Vector eigen = Gyration(Aggregate[i].nBeads, Aggregate[i].Bead, Counts, BoxLength, BeadType, Bead);
+        Vector eigen = Gyration(Aggregate[i].nBeads, Aggregate[i].Bead, Counts, BoxLength, BeadType, &Bead);
 
         Rg[correct_size] += sqrt(eigen.x + eigen.y + eigen.z);
-
-        agg_sizes[correct_size][1]++;
       }
+    } //}}}
+
+    // add radii to sum //{{{
+    for (int i = 0; i < aggs; i++) {
+      Rg_sum[i] += Rg[i];
+    } //}}}
+
+    // print radii of gyration to output file //{{{
+    FILE *out;
+    if ((out = fopen(output, "a")) == NULL) {
+      fprintf(stderr, "Cannot open file %s!\n", output);
+      exit(1);
     }
+
+    fprintf(out, "%d", count);
+    for (int i = 0; i < aggs; i++) {
+      fprintf(out, " %lf", Rg[i]/agg_counts[i]);
+    }
+    putc('\n', out);
+
+    fclose(out); //}}}
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
@@ -432,6 +538,11 @@ int main(int argc, char *argv[]) {
     printf("\rLast Step: %6d\n", count);
   } //}}}
 
+  // calculate simple averages
+  for (int i = 0; i < aggs; i++) {
+    printf("%lf\n", Rg_sum[i]/agg_sizes[i][1]);
+  }
+
   // free memory - to make valgrind happy //{{{
   free(BeadType);
   FreeAggregate(Counts, &Aggregate);
@@ -439,6 +550,7 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(agg_sizes);
+  free(Rg_sum);
   free(stuff); //}}}
 
   return 0;

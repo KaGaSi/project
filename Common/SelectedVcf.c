@@ -283,7 +283,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     count++;
-
     if (!silent) {
       fflush(stdout);
       printf("\rStep: %6d", count);
