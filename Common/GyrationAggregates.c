@@ -7,17 +7,192 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.vcf> <input.agg> <output> <agg sizes> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
   fprintf(stderr, "   <input.agg>         input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <width>             width of a single bin\n");
-  fprintf(stderr, "   <output.rho>        output density file (automatic ending '#.rho' added)\n");
+  fprintf(stderr, "   <output>            output file with radii of gyration\n");
   fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -n <average>     number of bins to average\n");
   CommonHelp(1);
+} //}}}
+
+#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
+
+void jacobi(double **a, int n, double d[], double **v, int *nrot) { //{{{
+
+  double b[3], z[3];
+
+  for (int ip = 0; ip < n; ip++) {
+    for (int iq = 0; iq < n; iq++) {
+      v[ip][iq] = 0;
+    }
+    v[ip][ip] = 1;
+  }
+
+  for (int ip = 0; ip < n; ip++) {
+    b[ip] = d[ip] = a[ip][ip];
+    z[ip] = 0;
+  }
+
+  *nrot = 0;
+
+  for (int i = 0; i < 50; i++) {
+    double sm = 0;
+    for (int ip = 0; ip < (n-1); ip++) {
+      for (int iq = 0; iq < (n-1); iq++) {
+        sm += fabs(a[ip][iq]);
+      }
+    }
+
+    if (sm == 0) {
+      return;
+    }
+    double tresh;
+    if (i < 4) {
+      tresh = 0.2 * sm / (SQR(n));
+    } else {
+      tresh = 0;
+    }
+
+    for (int ip = 0; ip < (n-1); ip++) {
+      for (int iq = 0; iq < (n-1); iq++) {
+        double g = 100 * fabs(a[ip][iq]);
+
+        if (i > 4 && (double)(fabs(d[ip])+g) == (double)fabs(d[ip])
+            && (double)(fabs(d[iq])+g) == (double)fabs(d[iq])) {
+          a[ip][iq] = 0;
+        } else if (fabs(a[ip][iq]) > tresh) {
+          double h = d[iq] - d[ip];
+          double t, theta;
+
+          if ((double)(fabs(h)+g) == (double)fabs(h)) {
+            t = a[ip][iq] / h;
+          } else {
+            theta = 0.5 * h / a[ip][iq];
+            t = 1 / (fabs(theta) + sqrt(1 + SQR(theta)));
+            if (theta < 0) {
+              t = -t;
+            }
+          }
+
+          double c = 1 / sqrt(1 + SQR(t));
+          double s = t * c;
+          double tau = s / (1 + c);
+          h = t * a[ip][iq];
+          z[ip] -= h;
+          z[iq] += h;
+          d[ip] -= h;
+          d[iq] += h;
+          a[ip][iq] = 0;
+
+          for (int j = 0; j < (iq-1); j++) {
+            ROTATE(a, j, ip, j, iq);
+          }
+          for (int j = (ip+1); j < (iq-1); j++) {
+            ROTATE(a, ip, j, j, iq);
+          }
+          for (int j = (iq+1); j < n; j++) {
+            ROTATE(a, ip, j, iq, j);
+          }
+          for (int j = 0; j < n; j++) {
+            ROTATE(v, j, ip, j, iq);
+          }
+          ++(*nrot);
+        }
+      }
+    }
+
+    for (int ip = 0; ip < n; ip++) {
+      b[ip] += z[ip];
+      d[ip] = b[ip];
+      z[ip] = 0;
+    }
+  }
+} //}}}
+
+Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) { //{{{ // gyration tensor (3x3 array) //{{{
+  struct Tensor {
+    Vector x, y, z;
+  } GyrationTensor;
+
+  GyrationTensor.x.x = 0;
+  GyrationTensor.x.y = 0;
+  GyrationTensor.x.z = 0;
+  GyrationTensor.y.x = 0;
+  GyrationTensor.y.y = 0;
+  GyrationTensor.y.z = 0;
+  GyrationTensor.z.x = 0;
+  GyrationTensor.z.y = 0;
+  GyrationTensor.z.z = 0; //}}}
+
+  Vector com = CenterOfMass(n, list, *Bead, BeadType);
+
+  // move center of mass to [0,0,0] //{{{
+  for (int i = 0; i < n; i++) {
+    (*Bead)[list[i]].Position.x -= com.x;
+    (*Bead)[list[i]].Position.y -= com.y;
+    (*Bead)[list[i]].Position.z -= com.z;
+  } //}}}
+
+  // calculate gyration tensor //{{{
+  for (int i = 0; i < n; i++) {
+    GyrationTensor.x.x += SQR((*Bead)[list[i]].Position.x);
+    GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
+    GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
+    GyrationTensor.y.y += SQR((*Bead)[list[i]].Position.y);
+    GyrationTensor.y.z += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
+    GyrationTensor.z.z += SQR((*Bead)[list[i]].Position.z);
+  }
+  GyrationTensor.x.x /= n;
+  GyrationTensor.x.y /= n;
+  GyrationTensor.x.z /= n;
+  GyrationTensor.y.y /= n;
+  GyrationTensor.y.z /= n;
+  GyrationTensor.z.z /= n;
+
+  // just pro forma
+  GyrationTensor.y.x = GyrationTensor.x.y;
+  GyrationTensor.z.x = GyrationTensor.x.z;
+  GyrationTensor.z.y = GyrationTensor.y.z;
+  //}}}
+
+  double **a = malloc(3*sizeof(double *)); //{{{
+  a[0] = malloc(3*sizeof(double));
+  a[1] = malloc(3*sizeof(double));
+  a[2] = malloc(3*sizeof(double));
+
+  a[0][0] = GyrationTensor.x.x;
+  a[0][1] = GyrationTensor.y.x;
+  a[0][2] = GyrationTensor.z.x;
+  a[1][0] = GyrationTensor.x.y;
+  a[1][1] = GyrationTensor.y.y;
+  a[1][2] = GyrationTensor.z.y;
+  a[2][0] = GyrationTensor.x.z;
+  a[2][1] = GyrationTensor.y.z;
+  a[2][2] = GyrationTensor.z.z; //}}}
+
+  double *d = malloc(3*sizeof(double));
+  double **v = malloc(3*sizeof(double *));
+  v[0] = malloc(3*sizeof(double));
+  v[1] = malloc(3*sizeof(double));
+  v[2] = malloc(3*sizeof(double));
+  int nrot, size = 3;
+  jacobi(a, size, d, v, &nrot);
+
+  Vector eigen;
+  eigen.x = d[0];
+  eigen.y = d[1];
+  eigen.z = d[2];
+
+  free(d);
+  free(v[0]);
+  free(v[1]);
+  free(v[2]);
+  free(v);
+
+  return (eigen);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -25,25 +200,24 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("AggDensity utility calculates bead density for aggregates of given size(s)  \n");
-      printf("from their center of mass. Beside unbonded beads it takes into account only \n");
-      printf("beads from the current aggregate, not from any other aggregate.             \n\n");
+      printf("GyrationAggregates calculates radii of gyration during the simulation for   \n");
+      printf("aggregates of given size(s). The radius of gyration is calculated from      \n");
+      printf("eigenvalues of gyration tensor. It also prints average radii of gyration to \n");
+      printf("the screen. Currently, it uses all beads present in the aggregates.         \n\n");
 
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
       printf("(along with optional bond file) files to determine all information about    \n");
       printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
-      printf("   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
+      printf("   %s <input.vcf> <input.agg> <output> <agg sizes> <options>\n\n", argv[0]);
 
       printf("   <input.vcf>         input filename (vcf format)\n");
       printf("   <input.agg>         input filename with information about aggregates (agg format)\n");
-      printf("   <width>             width of a single bin\n");
-      printf("   <output.rho>        output density file (automatic ending '#.rho' added)\n");
-      printf("   <agg sizes>         aggregate sizes to calculate density for\n");
+      printf("   <output>            output file with radii of gyration\n");
+      printf("   <agg sizes>         aggregate sizes to calculate radius of gyration for\n");
       printf("   <options>\n");
       printf("      -j               specify that aggregates with joined coordinates are used\n");
-      printf("      -n <average>     number of bins to average\n");
       CommonHelp(0);
       exit(0);
     }
@@ -55,20 +229,8 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  if (argc < 6) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 6)!\n\n", count);
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
-
-  // standard options //{{{
-  char *vsf_file = calloc(32,sizeof(char *));
-  char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent;
-  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent);
-
-  // was there error during CommonOptions()?
-  if (error) {
+  if (count < 5) {
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 5)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -81,20 +243,16 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // -n option - number of bins to average //{{{
-  int avg = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n") == 0) {
+  // standard options //{{{
+  char *vsf_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(32,sizeof(char *));
+  bool verbose, verbose2, silent;
+  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent);
 
-      // Error - non-numeric argument
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-
-      avg = atoi(argv[i+1]);
-    }
+  // was there error during CommonOptions()?
+  if (error) {
+    ErrorHelp(argv[0]);
+    exit(1);
   } //}}}
 
   // print command to stdout //{{{
@@ -122,18 +280,9 @@ int main(int argc, char *argv[]) {
   char input_agg[32];
   strcpy(input_agg, argv[++count]); //}}}
 
-  // <width> - number of starting timestep //{{{
-  // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <width>!\n");
-    ErrorHelp(argv[0]);
-    exit(1);
-  }
-  double width = atof(argv[count]); //}}}
-
-  // <output.rho> - filename with bead densities //{{{
-  char output_rho[16];
-  strcpy(output_rho, argv[++count]); //}}}
+  // <output> - filename with radii of gyration //{{{
+  char output[16];
+  strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -163,33 +312,30 @@ int main(int argc, char *argv[]) {
 
     agg_sizes[aggs][0] = atoi(argv[count]);
 
-    // write initial stuff to output density file //{{{
-    FILE *out;
-    char str[32];
-
-    sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
-    if ((out = fopen(str, "w")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", str);
-      exit(1);
-    }
-
-    // print command to output file //{{{
-    putc('#', out);
-    for (int i = 0; i < argc; i++)
-      fprintf(out, " %s", argv[i]);
-    putc('\n', out); //}}}
-
-    // print bead type names to output file //{{{
-    putc('#', out);
-    for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      fprintf(out, " %s", BeadType[i].Name);
-    }
-    putc('\n', out); //}}}
-
-    fclose(out); //}}}
-
     aggs++; // number of aggregate sizes
   } //}}}
+
+  // write initial stuff to output file //{{{
+  FILE *out;
+  if ((out = fopen(output, "w")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output);
+    exit(1);
+  }
+
+  // print command to output file //{{{
+  putc('#', out);
+  for (int i = 0; i < argc; i++)
+    fprintf(out, " %s", argv[i]);
+  putc('\n', out); //}}}
+
+  // print agg sizes to output file //{{{
+  fprintf(out, "# timestep");
+  for (int i = 0; i < aggs; i++) {
+    fprintf(out, " %10d", agg_sizes[i][0]);
+  }
+  putc('\n', out); //}}}
+
+  fclose(out); //}}}
 
   // open input aggregate file and read info from first line (Aggregates command) //{{{
   FILE *agg;
@@ -263,19 +409,6 @@ int main(int argc, char *argv[]) {
     printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
-  // number of bins //{{{
-  double max_dist = 0.5 * Min3(BoxLength.x, BoxLength.y, BoxLength.z);
-  int bins = ceil(max_dist / width); //}}}
-
-  // allocate memory for density arrays //{{{
-  double ***rho = malloc(Counts.TypesOfBeads*sizeof(double **));
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    rho[i] = malloc(aggs*sizeof(double *));
-    for (int j = 0; j < aggs; j++) {
-      rho[i][j] = calloc(bins,sizeof(double));
-    }
-  } //}}}
-
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
   stuff = malloc(128*sizeof(int));
@@ -307,6 +440,9 @@ int main(int argc, char *argv[]) {
     putchar('\n');
   } //}}}
 
+  // allocate memory for sum of radii of gyration
+  double *Rg_sum = calloc(aggs,sizeof(double));
+
   // main loop //{{{
   count = 0; // count timesteps
   while ((test = getc(vcf)) != EOF) {
@@ -336,13 +472,18 @@ int main(int argc, char *argv[]) {
 
     // join agggregates if un-joined coordinates provided //{{{
     if (!joined) {
+      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
 
-    // calculate densities //{{{
+    // allocate arrays for the timestep //{{{
+    int *agg_counts = calloc(aggs,sizeof(int));
+    double *Rg = calloc(aggs,sizeof(double)); //}}}
+
+    // calculate radii of gyration //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
 
-      // test if aggregate size should be used //{{{
+      // test if aggregate is of correct size //{{{
       int correct_size = -1;
       for (int j = 0; j < aggs; j++) {
         if (agg_sizes[j][0] == Aggregate[i].nMolecules) {
@@ -351,40 +492,42 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       if (correct_size != -1) {
-        Vector com = CenterOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
-
-        // aggregate beads
-        for (int j = 0; j < Aggregate[i].nBeads; j++) {
-          Vector dist = Distance(Bead[Aggregate[i].Bead[j]].Position, com, BoxLength);
-          dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
-
-          if (dist.x < max_dist) {
-            int k = dist.x / width;
-
-            rho[Bead[Aggregate[i].Bead[j]].Type][correct_size][k]++;
-          }
-        }
-
-        // monomeric beads
-        for (int j = 0; j < Counts.Unbonded; j++) {
-          Vector dist = Distance(Bead[j].Position, com, BoxLength);
-          dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
-
-          if (dist.x < max_dist) {
-            int k = dist.x / width;
-
-            rho[Bead[j].Type][correct_size][k]++;
-          }
-        }
-
+        agg_counts[correct_size]++;
         agg_sizes[correct_size][1]++;
+
+        Vector eigen = Gyration(Aggregate[i].nBeads, Aggregate[i].Bead, Counts, BoxLength, BeadType, &Bead);
+
+        Rg[correct_size] += sqrt(eigen.x + eigen.y + eigen.z);
       }
     } //}}}
+
+    // add radii to sum //{{{
+    for (int i = 0; i < aggs; i++) {
+      Rg_sum[i] += Rg[i];
+    } //}}}
+
+    // print radii of gyration to output file //{{{
+    FILE *out;
+    if ((out = fopen(output, "a")) == NULL) {
+      fprintf(stderr, "Cannot open file %s!\n", output);
+      exit(1);
+    }
+
+    fprintf(out, "%d", count);
+    for (int i = 0; i < aggs; i++) {
+      fprintf(out, " %lf", Rg[i]/agg_counts[i]);
+    }
+    putc('\n', out);
+
+    fclose(out); //}}}
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
       printf("\n%s", stuff);
     } //}}}
+
+    free(agg_counts);
+    free(Rg);
   }
   fclose(vcf);
   fclose(agg);
@@ -394,43 +537,9 @@ int main(int argc, char *argv[]) {
     printf("\rLast Step: %6d\n", count);
   } //}}}
 
-  // write densities to output file(s) //{{{
+  // calculate simple averages //{{{
   for (int i = 0; i < aggs; i++) {
-    FILE *out;
-    char str[32];
-
-    sprintf(str, "%s%d.rho", output_rho, agg_sizes[i][0]);
-    if ((out = fopen(str, "a")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", str);
-      exit(1);
-    }
-
-    // calculate rdf
-    for (int j = 0; j < bins; j++) {
-
-      // calculate volume of every shell that will be averaged
-      double shell[avg];
-      for (int k = 0; k < avg; k++) {
-        shell[k] = 4 * PI * CUBE(width) *(CUBE(j+k+1) - CUBE(j+k)) / 3;
-      }
-
-      fprintf(out, "%.2f", width*(j+0.5*avg));
-
-      for (int k = 0; k < Counts.TypesOfBeads; k++) {
-        double temp = 0;
-
-        // sump rdfs from all shells to be averaged
-        for (int l = 0; l < avg; l++) {
-          temp += rho[k][i][j+l] / (shell[l] * agg_sizes[i][1]);
-        }
-
-        // print average value to output file
-        fprintf(out, " %10f", temp/avg);
-      }
-      putc('\n',out);
-    }
-
-    fclose(out);
+    printf("%d %lf\n", agg_sizes[i][0], Rg_sum[i]/agg_sizes[i][1]);
   } //}}}
 
   // free memory - to make valgrind happy //{{{
@@ -439,18 +548,9 @@ int main(int argc, char *argv[]) {
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
-  free(stuff);
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free(agg_sizes[i]);
-  }
   free(agg_sizes);
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    for (int j = 0; j < aggs; j++) {
-      free(rho[i][j]);
-    }
-    free(rho[i]);
-  }
-  free(rho); //}}}
+  free(Rg_sum);
+  free(stuff); //}}}
 
   return 0;
 }

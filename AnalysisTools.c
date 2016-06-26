@@ -140,7 +140,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
     fclose(vcf);
   } //}}}
 
-  // read info for case of vcf file with ordered timesteps //{{{
+  // if vcf file contains ordered timesteps, read info about bead types from FIELD //{{{
   if (!indexed) {
     (*Counts).TypesOfBeads = types;
 
@@ -161,7 +161,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
       while (getc(field) != '\n')
         ;
     } //}}}
-  // or skip 'species' section if vcf file with indexed timesteps //{{{
+  // or if vcf file contains indexed timesteps, skip 'species' section in FIELD //{{{
   } else {
     for (int i = 0; i < types; i++) {
       while (getc(field) != '\n')
@@ -1033,6 +1033,30 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
   free(pos);
 
   return 0;
+} //}}}
+
+// SkipCoor() //{{{
+/**
+ * Function to skip one timestep in coordinates file. It works with both
+ * indexed and ordered vcf files.
+ */
+void SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
+
+  // save the first line containing '# <number>' //{{{
+  int i = 0;
+  while (((*stuff)[i++] = getc(vcf_file)) != '\n')
+    ;
+  // skip the second line containing 't(imestep)'
+  while (getc(vcf_file) != '\n')
+    ;
+    //}}}
+
+  for (int i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
+    while (getc(vcf_file) != '\n')
+      ;
+  }
+
+  getc(vcf_file);
 } //}}}
 
 // ReadAggregates() //{{{
