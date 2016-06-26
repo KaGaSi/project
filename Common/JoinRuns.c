@@ -336,7 +336,7 @@ int main(int argc, char *argv[]) {
       printf("\rDiscarded from 1st coordinate file: %6d", count);
     }
 
-    SkipCoor(vcf_1, Counts);
+    SkipCoor(vcf_1, Counts, &stuff);
   }
 
   putchar('\n'); //}}}
@@ -453,7 +453,7 @@ int main(int argc, char *argv[]) {
       printf("\rDiscarded from 2nd coordinate file: %6d", count);
     }
 
-    SkipCoor(vcf_2, Counts);
+    SkipCoor(vcf_2, Counts, &stuff);
   }
 
   putchar('\n'); //}}}
