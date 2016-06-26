@@ -202,6 +202,16 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
  */
 int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
 
+// SkipCoor() //{{{
+/**
+ * \brief Function to skip one timestep in coordinates file.
+ *
+ * \param [in]  vcf_file   file with vcf coordinates
+ * \param [in]  Counts     number of beads in vcf file
+ * \param [out] stuff      first line of a timestep
+ */
+void SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
+
 // ReadAggregates() //{{{
 /**
  * \brief Function reading information about aggregates from `.agg` file
@@ -223,7 +233,6 @@ void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
  * \param [in] Counts     numbers of beads, molecules, etc.
  * \param [in] BeadType   information about bead types
  * \param [in] Bead       coordinates of individual beads
- * \param [in] BoxLength   dimensions of simulation box
  * \param [in] stuff      array of chars containing comment line to place at the beginning
  */
 void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff); //}}}

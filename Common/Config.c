@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  if (argc < 2) {
+  if (count < 2) {
     fprintf(stderr, "Too little mandatory arguments (%d instead of 2)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
@@ -136,6 +136,7 @@ int main(int argc, char *argv[]) {
   stuff = calloc(128,sizeof(int)); //}}}
 
   // main loop //{{{
+  fpos_t pos; // for saving pointer position in vcf file
   int test;
   count = 0;
   while ((test = getc(vcf)) != EOF) {
@@ -147,24 +148,32 @@ int main(int argc, char *argv[]) {
       printf("\rStep: %6d", count);
     }
 
-    // read indexed timestep from input .vcf file //{{{
-    if (indexed) {
-      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
-        exit(1);
-      } //}}}
-    // or read ordered timestep from input .vcf file //{{{
-    } else {
-      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
-        exit(1);
-      }
-    } //}}}
+    // save pointer position in file
+    fgetpos(vcf, &pos);
 
-    // if -V option used, print comment at the beginning of a timestep
+    SkipCoor(vcf, Counts, &stuff);
+
+    // if -V option used, print comment from the beginning of a timestep
     if (verbose2)
       printf("\n%s", stuff);
   }
+
+  // restore pointer position in FIELD file
+  fsetpos(vcf, &pos);
+
+  // read indexed timestep from input .vcf file //{{{
+  if (indexed) {
+    if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
+      fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+      exit(1);
+    } //}}}
+  // or read ordered timestep from input .vcf file //{{{
+  } else {
+    if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
+      fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+      exit(1);
+    }
+  } //}}}
 
   if (!silent) {
     fflush(stdout);

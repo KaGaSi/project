@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  if (argc < 6) {
+  if (count < 6) {
     fprintf(stderr, "Too little mandatory arguments (%d instead of at least 6)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);

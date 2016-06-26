@@ -5,20 +5,19 @@
 #include <math.h>
 #include "../AnalysisTools.h"
 
+#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
+
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <input.agg> <output> <agg sizes> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.vcf> <output> <molecule names> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>         input filename with information about aggregates (agg format)\n");
   fprintf(stderr, "   <output>            output file with radii of gyration\n");
-  fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
+  fprintf(stderr, "   <molecule names>    molecule types to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      -j               specify that joined coordinates are used\n");
   CommonHelp(1);
 } //}}}
-
-#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
 
 void jacobi(double **a, int n, double d[], double **v, int *nrot) { //{{{
 
@@ -112,8 +111,7 @@ void jacobi(double **a, int n, double d[], double **v, int *nrot) { //{{{
   }
 } //}}}
 
-Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
-                BeadType *BeadType, Bead **Bead) { //{{{
+Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) { //{{{
 
   // gyration tensor (3x3 array) //{{{
   struct Tensor {
@@ -203,23 +201,23 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("                                                                            \n");
-      printf("                                                                            \n");
-      printf("                                                                            \n\n");
+      printf("GyrationAggregates calculates radii of gyration during the simulation for   \n");
+      printf("given molecule type(s). The radius of gyration is calculated from           \n");
+      printf("eigenvalues of gyration tensor. It also prints average radii of gyration to \n");
+      printf("the screen. Currently, it uses all beads present in the molecules.          \n\n");
 
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
       printf("(along with optional bond file) files to determine all information about    \n");
       printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
-      printf("   %s <input.vcf> <input.agg> <output> <agg sizes> <options>\n\n", argv[0]);
+      printf("   %s <input.vcf> <output> <molecule names> <options>\n\n", argv[0]);
 
       printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <input.agg>         input filename with information about aggregates (agg format)\n");
       printf("   <output>            output file with radii of gyration\n");
-      printf("   <agg sizes>         aggregate sizes to calculate radius of gyration for\n");
+      printf("   <molecule names>    molecule types to calculate radius of gyration for\n");
       printf("   <options>\n");
-      printf("      -j               specify that aggregates with joined coordinates are used\n");
+      printf("      -j               specify that joined coordinates are used\n");
       CommonHelp(0);
       exit(0);
     }
@@ -231,7 +229,7 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  if (argc < 5) {
+  if (count < 4) {
     fprintf(stderr, "Too little mandatory arguments (%d instead of at least 5)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
@@ -278,10 +276,6 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <input.agg> - filename of input file with aggregate information //{{{
-  char input_agg[32];
-  strcpy(input_agg, argv[++count]); //}}}
-
   // <output> - filename with radii of gyration //{{{
   char output[16];
   strcpy(output, argv[++count]); //}}}
@@ -296,25 +290,25 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
-  // <agg sizes> - aggregate sizes for calculation //{{{
-  int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
-  for (int i = 0; i < Counts.Molecules; i++) {
-    agg_sizes[i] = calloc(2,sizeof(int));
-  }
-
-  int aggs = 0;
-
+  // <molecule names> - types of molecules for calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
 
-    // Error - non-numeric argument //{{{
-    if (argv[count][0] < '1' || argv[count][0] > '9') {
-      fprintf(stderr, "Non-numeric option in <agg sizes>!\n");
+    bool test = false;
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      if (strcmp(argv[count], MoleculeType[i].Name) == 0) {
+        MoleculeType[i].Use = true;
+
+        test = true;
+
+        break;
+      }
+    }
+
+    // wrong molecule name //{{{
+    if (!test) {
+      fprintf(stderr, "Non-existent molecule name: %s!\n", argv[count]);
       exit(1);
     } //}}}
-
-    agg_sizes[aggs][0] = atoi(argv[count]);
-
-    aggs++; // number of aggregate sizes
   } //}}}
 
   // write initial stuff to output file //{{{
@@ -330,51 +324,16 @@ int main(int argc, char *argv[]) {
     fprintf(out, " %s", argv[i]);
   putc('\n', out); //}}}
 
-  // print agg sizes to output file //{{{
+  // print molecule names to output file //{{{
   fprintf(out, "# timestep");
-  for (int i = 0; i < aggs; i++) {
-    fprintf(out, " %10d", agg_sizes[i][0]);
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (MoleculeType[i].Use) {
+      fprintf(out, " %10s", MoleculeType[i].Name);
+    }
   }
   putc('\n', out); //}}}
 
   fclose(out); //}}}
-
-  // open input aggregate file and read info from first line (Aggregates command) //{{{
-  FILE *agg;
-  if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_agg);
-    exit(1);
-  }
-
-  // read minimum distance for closeness check (<distance> argument in Aggregates utility)
-  double distance;
-  fscanf(agg, "%*s %*s %lf", &distance);
-
-  // skip <contacts> and <output.agg> in Aggregates command
-  fscanf(agg, "%*s %*s");
-
-  // read <type names> from Aggregates command //{{{
-  int test;
-  while ((test = getc(agg)) != '-') {
-    ungetc(test, agg);
-
-    char name[10];
-    fscanf(agg, "%s ", name);
-    int type = FindBeadType(name, Counts, BeadType);
-
-    // Error - specified bead type name not in vcf input file
-    if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", name, input_vcf);
-      exit(1);
-    }
-
-    BeadType[type].Use = true;
-  } //}}}
-
-  while (getc(agg) != '\n')
-    ;
-  while (getc(agg) != '\n')
-    ; //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -420,33 +379,17 @@ int main(int argc, char *argv[]) {
     stuff[i] = '\0';
   } //}}}
 
-  // allocate Aggregate struct //{{{
-  Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
-  for (int i = 0; i < Counts.Molecules; i++) {
-    // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
-    Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
-    // assumes all bonded beads can be in one aggregate - memory-heavy, but reliable
-    Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
-    // maximum of all molecules can be in one aggregate
-    Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
-  } //}}}
-
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-
-    printf("Chosen aggregate sizes:");
-    for (int i = 0; i < aggs; i++) {
-      printf(" %d", agg_sizes[i][0]);
-    }
-    putchar('\n');
   } //}}}
 
   // allocate memory for sum of radii of gyration
-  double *Rg_sum = calloc(aggs,sizeof(double));
+  double *Rg_sum = calloc(Counts.TypesOfMolecules,sizeof(double));
 
   // main loop //{{{
   count = 0; // count timesteps
+  int test;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
@@ -470,40 +413,26 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
-
-    // join agggregates if un-joined coordinates provided //{{{
+    // join molecules if un-joined coordinates provided //{{{
     if (!joined) {
-      RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
 
-    // allocate arrays for the timestep //{{{
-    int *agg_counts = calloc(aggs,sizeof(int));
-    double *Rg = calloc(aggs,sizeof(double)); //}}}
+    // allocate arrays for the timestep
+    double *Rg = calloc(Counts.TypesOfMolecules,sizeof(double));
 
     // calculate radii of gyration //{{{
-    for (int i = 0; i < Counts.Aggregates; i++) {
+    for (int i = 0; i < Counts.Molecules; i++) {
 
-      // test if aggregate is of correct size //{{{
-      int correct_size = -1;
-      for (int j = 0; j < aggs; j++) {
-        if (agg_sizes[j][0] == Aggregate[i].nMolecules) {
-          correct_size = j;
-        }
-      } //}}}
+      if (MoleculeType[Molecule[i].Type].Use) {
+        Vector eigen = Gyration(MoleculeType[Molecule[i].Type].nBeads, Molecule[i].Bead, Counts, BoxLength, BeadType, &Bead);
 
-      if (correct_size != -1) {
-        agg_counts[correct_size]++;
-        agg_sizes[correct_size][1]++;
-
-        Vector eigen = Gyration(Aggregate[i].nBeads, Aggregate[i].Bead, Counts, BoxLength, BeadType, &Bead);
-
-        Rg[correct_size] += sqrt(eigen.x + eigen.y + eigen.z);
+        Rg[Molecule[i].Type] += sqrt(eigen.x + eigen.y + eigen.z);
       }
     } //}}}
 
     // add radii to sum //{{{
-    for (int i = 0; i < aggs; i++) {
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       Rg_sum[i] += Rg[i];
     } //}}}
 
@@ -515,8 +444,10 @@ int main(int argc, char *argv[]) {
     }
 
     fprintf(out, "%d", count);
-    for (int i = 0; i < aggs; i++) {
-      fprintf(out, " %lf", Rg[i]/agg_counts[i]);
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      if (MoleculeType[i].Use) {
+        fprintf(out, " %lf", Rg[i]/MoleculeType[i].Number);
+      }
     }
     putc('\n', out);
 
@@ -527,29 +458,25 @@ int main(int argc, char *argv[]) {
       printf("\n%s", stuff);
     } //}}}
 
-    free(agg_counts);
     free(Rg);
   }
   fclose(vcf);
-  fclose(agg);
 
   if (!silent) {
     fflush(stdout);
     printf("\rLast Step: %6d\n", count);
   } //}}}
 
-  // calculate simple averages
-  for (int i = 0; i < aggs; i++) {
-    printf("%lf\n", Rg_sum[i]/agg_sizes[i][1]);
-  }
+  // calculate simple averages //{{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    printf("%10s %lf\n", MoleculeType[i].Name, Rg_sum[i]/(count*MoleculeType[i].Number));
+  } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
-  free(agg_sizes);
   free(Rg_sum);
   free(stuff); //}}}
 

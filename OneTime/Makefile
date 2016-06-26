@@ -13,7 +13,7 @@ ODIR = obj
 BIN = ../bin/ChargeRatio \
 			../bin/DistrAgg2D \
 			../bin/AggDensity-CICheck \
-			../bin/DistrAgg-NoNanoAggs
+      ../bin/DistrAgg-NumberOfAbsorbedHomopolymerChains
 
 all: dir $(BIN) $(OBJ)
 
@@ -35,7 +35,7 @@ $(ODIR)/%.o: %.c
 ../bin/AggDensity-CICheck: $(OBJ) $(ODIR)/AggDensity-CICheck.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-../bin/DistrAgg-NoNanoAggs: $(OBJ) $(ODIR)/DistrAgg-NoNanoAggs.o
+../bin/DistrAgg-NumberOfAbsorbedHomopolymerChains: $(OBJ) $(ODIR)/DistrAgg-NumberOfAbsorbedHomopolymerChains.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 clean:

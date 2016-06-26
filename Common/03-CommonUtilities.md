@@ -51,6 +51,8 @@ Usage:
 > > `-j`
 > > > join individual molecules by removing periodic boundary conditions
 
+\todo change `<start>` and `<skip>` into `options`
+
 # Config utility {#Config}
 
 This utility takes `.vcf` file containing either
@@ -279,11 +281,14 @@ Usage:
 > `<output avg file>`
 > > output filename with weight and number average aggregation number in
 > > each timestep
+> `<options>`
+> > `-n <int>`
+> > > starting timestep for calculation
 
 \todo Look into volume fractions with beads of arbitrary (and different)
 masses.
 
-# AggDensity {#AggDensity}
+# DensityAggregates {#AggDensity}
 
 This utility calculates number bead density for aggregates of specified
 size from their center of mass. During the calculation, only the current
@@ -294,7 +299,7 @@ never present in an aggregate of specified size, its density will always be
 
 Usage:
 
-`AggDensity <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
+`DensityAggregates <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
 
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
@@ -311,13 +316,11 @@ Usage:
 > `<options>`
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
-> > > coordinates - DOES NOT SEEM TO BE WORKING CORRECTLY
+> > > coordinates
 
-\todo check implementation of `-j` option
+# DensityMolecules {#DensityMolecules}
 
-# MolDensity {#MolDensity}
-
-MolDensity works in similar way as the AggDensity, only instead of aggregates,
+DensityMolecules works in similar way as the DensityAggregates, only instead of aggregates,
 the densities are calculated for specified molecule types.  Care must be taken
 with beadtype names in various molecules types, because if one beadtype appears
 in more molecule types, the resulting density for that beadtype will be
@@ -325,7 +328,7 @@ averaged without regard for the various types of molecule it appears in.
 
 Usage:
 
-`AggDensity <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
+`DensityMolecules <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
 
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
@@ -342,9 +345,117 @@ Usage:
 > `<options>`
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
-> > > coordinates - DOES NOT SEEM TO BE WORKING CORRECTLY
+> > > coordinates
 
-\todo check implementation of `-j` option
+# GyrationAggregates utility {#GyrationAggregates}
+
+This utility calculates a gyration tensor and its eigenvalues (using Jacobi
+transformations) for aggregates of given size. It then determines their
+radius of gyration. It saves average radii of gyration during the
+simulation to an output file and prints overall average.
+
+Right now it calculates gyration for all beads in the aggregates.
+
+Usage:
+
+`GyrationAggregates <input.vcf> <input.agg> <output> <agg sizes> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
+> `<input.agg>`
+> > input filename (must end with `.agg`) containing information about
+> > aggregates
+> `<output.vcf>`
+> > output filename with radii of gyration throughout simulation (automatic
+> > ending #.txt)
+> `<agg sizes>`
+> > aggregate sizes for gyration calculation
+> `<options>`
+> > `-j`
+> > > specify that the `<input.vcf>` contains aggregates with joined
+> > > coordinates
+
+\todo implement using only selected bead types for calculation
+
+\todo understand `jacobi` function
+
+# GyrationMolecules utility {#GyrationMolecules}
+
+This utility function in the same way as GyrationAggregates, but it
+calculates radii of gyration for specified molecule names instead of
+aggregate sizes.
+
+Right now it calculates gyration for all beads in the aggregates.
+
+Usage:
+
+`GyrationMolecules <input.vcf> <input.agg> <output> <molecule names> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
+> `<input.agg>`
+> > input filename (must end with `.agg`) containing information about
+> > aggregates
+> `<output.vcf>`
+> > output filename with radii of gyration throughout simulation (automatic
+> > ending #.txt)
+> `<molecule names>`
+> > molecule types for gyration calculation
+> `<options>`
+> > `-j`
+> > > specify that the `<input.vcf>` contains joined coordinates
+
+\todo implement using only selected bead types for calculation
+
+\todo understand `jacobi` function
+
+# JoinRuns utility {#JoinRuns}
+
+This program is to be used if two simulation runs with different initial
+seeds (that is, two simulations with different bead id numbers `.vsf`
+files, but identical `FIELD` files) should be joined. Two `.vcf` files that
+contain the same bead types must be provided as well as the `.vsf`
+structure file for the second simulation. The output `.vcf` coordinate
+files has bead ids according to the structure file of the first simulation.
+The program is, however, extremely inefficient with unbonded beads, while
+bonded beads are always sorted in the same way by DL_MESO simulation
+software. The usefullness of such utility is confined to cases with more
+then one type of unbonded beads and under those conditions the utility may
+take around 1 minute per step (of the second simulation run) for system in
+box of side length 40.
+
+Usage:
+
+`JoinRuns <1st input.vcf> <2nd input.vcf> <2nd input.vsf> <output.vcf> <type names> <options>`
+
+>  `<1st input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps for the first simulation
+>  `<2nd input.vcf>`
+> > input coordinate filename for the second sumation in the same format as
+> > the first coordinate file
+>  `<2nd input.vsf>`
+> > `.vsf` structure file for the second simulation (must end with `.vsf`)
+>  `<output.vcf>`
+> > output filename with indexed coordinates (must end with `.vcf`)
+> `<type names>`
+> > names of bead types to save
+> `<options>`
+> > `-j`
+> > > join individual molecules by removing periodic boundary conditions
+> >   `-n1 <int>`
+> > > number of timestep to start the first simulation from
+> >   `-n2 <int>`
+> > > number of timestep to start the second simulation from
+> >   `-u1 <int>`
+> > > leave out every `skip` steps in the first simulation
+> >   `-u2 <int>`
+> > > leave out every `skip` steps in the second simulation
+
+\todo base reindexing of beads in the second simulation on comparison
+between the two `.vsf` files
 
 # Average utility {#Average}
 

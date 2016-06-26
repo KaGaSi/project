@@ -4,6 +4,8 @@ This section provides information about utilities with calculations that
 are sensible to do only on linear polymer chains. No check whether the
 molecules are linear is done.
 
+\todo change utilities in the same way as Common utilities
+
 # EndToEnd utility {#EndToEnd}
 
 This utility calculates end-to-end distance of specified molecules.

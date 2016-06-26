@@ -13,15 +13,17 @@ ODIR = obj
 BIN = ../bin/SelectedVcf \
 			../bin/Aggregates \
 			../bin/Aggregates-NotSameBeads \
-			../bin/AggDensity \
-			../bin/MolDensity \
+			../bin/DensityAggregates \
+			../bin/DensityMolecules \
 			../bin/TransformVsf \
 			../bin/Config \
 			../bin/BondLength \
 			../bin/DistrAgg \
 			../bin/JoinAggregates \
-			../bin/RgAgg \
+			../bin/GyrationAggregates \
+			../bin/GyrationMolecules \
 			../bin/Average \
+			../bin/JoinRuns \
 			../bin/traject-v2_5 \
 			../bin/traject-v2_6
 
@@ -54,10 +56,10 @@ $(ODIR)/traject-v2_6.o:
 ../bin/Aggregates-NotSameBeads: $(OBJ) $(ODIR)/Aggregates-NotSameBeads.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-../bin/AggDensity: $(OBJ) $(ODIR)/AggDensity.o
+../bin/DensityAggregates: $(OBJ) $(ODIR)/DensityAggregates.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-../bin/MolDensity: $(OBJ) $(ODIR)/MolDensity.o
+../bin/DensityMolecules: $(OBJ) $(ODIR)/DensityMolecules.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/Config: $(OBJ) $(ODIR)/Config.o
@@ -69,13 +71,19 @@ $(ODIR)/traject-v2_6.o:
 ../bin/JoinAggregates: $(OBJ) $(ODIR)/JoinAggregates.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-../bin/RgAgg: $(OBJ) $(ODIR)/RgAgg.o
+../bin/GyrationAggregates: $(OBJ) $(ODIR)/GyrationAggregates.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/GyrationMolecules: $(OBJ) $(ODIR)/GyrationMolecules.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/DistrAgg: $(OBJ) $(ODIR)/DistrAgg.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/Average: $(OBJ) $(ODIR)/Average.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/JoinRuns: $(OBJ) $(ODIR)/JoinRuns.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/traject-v2_5: $(ODIR)/traject-v2_5.o

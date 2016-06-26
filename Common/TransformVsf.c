@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  if (argc < 2) {
+  if (count < 2) {
     fprintf(stderr, "Too little mandatory arguments (%d instead of 2)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
