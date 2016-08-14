@@ -51,16 +51,18 @@ int main(int argc, char *argv[]) {
       CommonHelp(0);
       exit(0);
     }
-  } //}}}
+  }
+
+  int options = 5; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
     count++;
   }
 
-  if (count < 6) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 6)!\n\n", count);
+  if (count < options) {
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -522,7 +524,6 @@ int main(int argc, char *argv[]) {
       used[i] = false;
     }
 
-    putchar('\n');
     for (int i = 0; i < Counts.Unbonded; i++) {
       for (int j = 0; j < Counts.Unbonded; j++) {
         if (strcmp(BeadType2[Bead2[j].Type].Name, BeadType1[Bead1[i].Type].Name) == 0

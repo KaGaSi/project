@@ -487,16 +487,18 @@ int main(int argc, char *argv[]) {
       CommonHelp(0);
       exit(0);
     }
-  } //}}}
+  }
+
+  int options = 6; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
     count++;
   }
 
-  if (count < 7) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 7)!\n\n", count);
+  if (count < options) {
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}

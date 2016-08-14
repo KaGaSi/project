@@ -10,12 +10,12 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "<output.vcf> <type names> <options>\n\n");
 
   fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <start>           number of timestep to start from\n");
-  fprintf(stderr, "   <skip>            leave out every 'skip' steps\n");
   fprintf(stderr, "   <output.vcf>      output filename (vcf format)\n");
   fprintf(stderr, "   <type names>      names of bead types to save\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j             join molecules (remove pbc)\n");
+  fprintf(stderr, "      -st <start>    number of timestep to start from\n");
+  fprintf(stderr, "      -sk <skip>     leave out every 'skip' steps\n");
   CommonHelp(1);
 } //}}}
 
@@ -37,25 +37,27 @@ int main(int argc, char *argv[]) {
       printf("<output.vcf> <type names> <options>\n\n");
 
       printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <start>           number of timestep to start from\n");
-      printf("   <skip>            leave out every 'skip' steps\n");
       printf("   <output.vcf>      output filename (vcf format)\n");
       printf("   <type names>      names of bead types to save\n");
       printf("   <options>\n");
       printf("      -j             join molecules (remove pbc)\n");
+      printf("      -st <start>    number of timestep to start from\n");
+      printf("      -sk <skip>     leave out every 'skip' steps\n");
       CommonHelp(0);
       exit(0);
     }
-  } //}}}
+  }
+
+  int options = 3; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
     count++;
   }
 
-  if (count < 6) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 6)!\n\n", count);
+  if (count < options) {
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -82,6 +84,40 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  // -st <start> - number of starting timestep //{{{
+  int start = 1;
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-st") == 0) {
+
+      // Error - non-numeric argument
+      if (argv[++count][0] < '0' || argv[count][0] > '9') {
+        fprintf(stderr, "Non-numeric argement for <start>!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
+
+      start = atoi(argv[count]);
+    }
+  } //}}}
+
+  // -sk <skip> - number of steps to skip per one used //{{{
+  int skip = 0;
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-st") == 0) {
+
+      // Error - non-numeric argument
+      if (argv[++count][0] < '0' || argv[count][0] > '9') {
+        fprintf(stderr, "Non-numeric argement for <skip>!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
+
+      skip = atoi(argv[count]);
+    }
+  } //}}}
+
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
@@ -102,24 +138,6 @@ int main(int argc, char *argv[]) {
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
-
-  // <start> - number of starting timestep //{{{
-  // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <start>!\n");
-    ErrorHelp(argv[0]);
-    exit(1);
-  }
-  int start = atoi(argv[count]); //}}}
-
-  // <skip> - number of steps to skip per one used //{{{
-  // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <skip>!\n");
-    ErrorHelp(argv[0]);
-    exit(1);
-  }
-  int skip = atoi(argv[count]); //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char output_vcf[32];
