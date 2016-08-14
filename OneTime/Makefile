@@ -1,6 +1,6 @@
 CC = gcc
-#CFLAGS = -std=c11 -Wall -Werror -O3
-CFLAGS = -std=c11 -Wall -Werror -ggdb
+CFLAGS = -std=c11 -Wall -Werror -O3
+#CFLAGS = -std=c11 -Wall -Werror -ggdb
 LIBS = -lm
 
 SOURCE = ../AnalysisTools.c
@@ -13,7 +13,12 @@ ODIR = obj
 BIN = ../bin/ChargeRatio \
 			../bin/DistrAgg2D \
 			../bin/AggDensity-CICheck \
-      ../bin/DistrAgg-NumberOfAbsorbedHomopolymerChains
+			../bin/DistrAgg-NumberOfAbsorbedHomopolymerChains \
+			../bin/GyrationAggregates-NotHomopol \
+			../bin/GyrationAggregates-NotHomopolNotB \
+			../bin/GyrationAggregates-NotBBlock \
+			../bin/DensityAggregates-NotHomop \
+			../bin/DensityMolecules-NearNanoSurf
 
 all: dir $(BIN) $(OBJ)
 
@@ -36,6 +41,21 @@ $(ODIR)/%.o: %.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/DistrAgg-NumberOfAbsorbedHomopolymerChains: $(OBJ) $(ODIR)/DistrAgg-NumberOfAbsorbedHomopolymerChains.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/GyrationAggregates-NotHomopol: $(OBJ) $(ODIR)/GyrationAggregates-NotHomopol.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/GyrationAggregates-NotHomopolNotB: $(OBJ) $(ODIR)/GyrationAggregates-NotHomopolNotB.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/GyrationAggregates-NotBBlock: $(OBJ) $(ODIR)/GyrationAggregates-NotBBlock.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/DensityAggregates-NotHomop: $(OBJ) $(ODIR)/DensityAggregates-NotHomop.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/DensityMolecules-NearNanoSurf: $(OBJ) $(ODIR)/DensityMolecules-NearNanoSurf.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 clean:

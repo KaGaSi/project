@@ -51,7 +51,7 @@ Usage:
 > > `-j`
 > > > join individual molecules by removing periodic boundary conditions
 
-\todo change `<start>` and `<skip>` into `options`
+\todo SelectedVcf: change `<start>` and `<skip>` into `options`
 
 # Config utility {#Config}
 
@@ -71,7 +71,7 @@ Usage:
 > > input coordinate filename (must end with `.vcf`) containing either
 > > ordered or indexed timesteps
 
-\todo Implement possibility to choose timestep number for creating `CONFIG`
+\todo Config: implement possibility to choose timestep number for creating `CONFIG`
 file.
 
 # TransformVsf utility {#TransformVsf}
@@ -124,9 +124,9 @@ For VMD atom selection:
 > `mass <m>`
 > > selects all beads with given mass(es)
 
-\todo Somehow avoid the need to use the special optional bond file, where
-the ids of beads must strictly adhere to FIELD. Possibly require use of a
-vcf file in conjunction with bond file
+\todo Optional bond file format: somehow avoid the need to use the special
+optional bond file, where the ids of beads must strictly adhere to FIELD.
+Possibly require use of a vcf file in conjunction with bond file
 
 # BondLength utility {#BondLength}
 
@@ -185,8 +185,8 @@ types `A` and `B` are provided, Aggregates will calculate contact pairs `A-B`,
 Aggregates-NotSameBeads will calculate only `A-B` contact pair. Therefore at
 least two bead types must be provided for `<type names>` argument.
 
-\todo Add the possibility to save only certain bead types to output vcf
-file with joined coordinates.
+\todo Aggregates: add the possibility to save only certain bead types to output
+vcf file with joined coordinates.
 
 # JoinAggregates utility {#JoinAggregates}
 
@@ -285,8 +285,8 @@ Usage:
 > > `-n <int>`
 > > > starting timestep for calculation
 
-\todo Look into volume fractions with beads of arbitrary (and different)
-masses.
+\todo DistrAgg: look into volume fractions with beads of arbitrary (and
+different) masses.
 
 # DensityAggregates {#AggDensity}
 
@@ -376,9 +376,10 @@ Usage:
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
 
-\todo implement using only selected bead types for calculation
+\todo GyrationAggregates: implement using only selected bead types for
+calculation
 
-\todo understand `jacobi` function
+\todo GyrationAggregates: understand `jacobi` function
 
 # GyrationMolecules utility {#GyrationMolecules}
 
@@ -407,9 +408,10 @@ Usage:
 > > `-j`
 > > > specify that the `<input.vcf>` contains joined coordinates
 
-\todo implement using only selected bead types for calculation
+\todo GyrationMolecules: implement using only selected bead types for
+calculation
 
-\todo understand `jacobi` function
+\todo GyrationMolecules: understand `jacobi` function
 
 # JoinRuns utility {#JoinRuns}
 
@@ -454,7 +456,7 @@ Usage:
 > >   `-u2 <int>`
 > > > leave out every `skip` steps in the second simulation
 
-\todo base reindexing of beads in the second simulation on comparison
+\todo JoinRuns: base reindexing of beads in the second simulation on comparison
 between the two `.vsf` files
 
 # Average utility {#Average}
@@ -477,5 +479,5 @@ Usage:
 > `<n_blocks>`
 > > number of blocks for binning analysis
 
-\todo Completely rewrite - especially remove requirement for number of
+\todo Average: completely rewrite - especially remove requirement for number of
 lines on the first line of input file

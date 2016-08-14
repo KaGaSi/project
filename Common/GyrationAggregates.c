@@ -15,6 +15,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      -t               specify bead types to be used for calculation (default is all)\n");
   CommonHelp(1);
 } //}}}
 
@@ -218,19 +219,22 @@ int main(int argc, char *argv[]) {
       printf("   <agg sizes>         aggregate sizes to calculate radius of gyration for\n");
       printf("   <options>\n");
       printf("      -j               specify that aggregates with joined coordinates are used\n");
+      printf("      -t               specify bead types to be used for calculation (default is all)\n");
       CommonHelp(0);
       exit(0);
     }
-  } //}}}
+  }
+
+  int options = 4; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
     count++;
   }
 
-  if (count < 5) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 5)!\n\n", count);
+  if (count < options) {
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -240,6 +244,14 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-j") == 0) {
       joined = true;
+    }
+  } //}}}
+
+  // -t option - bead types to be used //{{{
+  int types = -1;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-t") == 0) {
+      types = i;
     }
   } //}}}
 
@@ -313,6 +325,21 @@ int main(int argc, char *argv[]) {
     agg_sizes[aggs][0] = atoi(argv[count]);
 
     aggs++; // number of aggregate sizes
+  } //}}}
+
+// USE OTHER BOOL - POSSIBLY ADD BeadType[].Join FOR CHECK IF USED TO JOIN AGGREGATES
+  // specify what bead types to use - either specified by '-t' option or all //{{{
+  if (types != -1) { // '-t' option is present
+    // <type names> - names of bead types to save
+    while (++types < argc && argv[types][0] != '-') {
+      int type = FindBeadType(argv[types], Counts, BeadType);
+
+      BeadType[type].Use = true;
+      printf("%s\n", BeadType[type].Name);
+    }
+  } else {
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    }
   } //}}}
 
   // write initial stuff to output file //{{{
@@ -440,8 +467,9 @@ int main(int argc, char *argv[]) {
     putchar('\n');
   } //}}}
 
-  // allocate memory for sum of radii of gyration
+  // allocate memory for sum of radii of gyration //{{{
   double *Rg_sum = calloc(aggs,sizeof(double));
+  double *Anis_sum = calloc(aggs,sizeof(double)); //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -478,7 +506,8 @@ int main(int argc, char *argv[]) {
 
     // allocate arrays for the timestep //{{{
     int *agg_counts = calloc(aggs,sizeof(int));
-    double *Rg = calloc(aggs,sizeof(double)); //}}}
+    double *Rg = calloc(aggs,sizeof(double));
+    double *Anis = calloc(aggs,sizeof(double)); //}}}
 
     // calculate radii of gyration //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
@@ -497,13 +526,16 @@ int main(int argc, char *argv[]) {
 
         Vector eigen = Gyration(Aggregate[i].nBeads, Aggregate[i].Bead, Counts, BoxLength, BeadType, &Bead);
 
-        Rg[correct_size] += sqrt(eigen.x + eigen.y + eigen.z);
+        Rg[correct_size] += sqrt(eigen.x + eigen.y + eigen.z);;
+
+        Anis[correct_size] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
       }
     } //}}}
 
     // add radii to sum //{{{
     for (int i = 0; i < aggs; i++) {
       Rg_sum[i] += Rg[i];
+      Anis_sum[i] += Anis[i];
     } //}}}
 
     // print radii of gyration to output file //{{{
@@ -515,7 +547,7 @@ int main(int argc, char *argv[]) {
 
     fprintf(out, "%d", count);
     for (int i = 0; i < aggs; i++) {
-      fprintf(out, " %lf", Rg[i]/agg_counts[i]);
+      fprintf(out, " %lf %lf", Rg[i]/agg_counts[i], Anis[i]/agg_counts[i]);
     }
     putc('\n', out);
 
@@ -528,6 +560,7 @@ int main(int argc, char *argv[]) {
 
     free(agg_counts);
     free(Rg);
+    free(Anis);
   }
   fclose(vcf);
   fclose(agg);
@@ -539,7 +572,7 @@ int main(int argc, char *argv[]) {
 
   // calculate simple averages //{{{
   for (int i = 0; i < aggs; i++) {
-    printf("%d %lf\n", agg_sizes[i][0], Rg_sum[i]/agg_sizes[i][1]);
+    printf("%d %lf %lf\n", agg_sizes[i][0], Rg_sum[i]/agg_sizes[i][1], Anis_sum[i]/agg_sizes[i][1]);
   } //}}}
 
   // free memory - to make valgrind happy //{{{
