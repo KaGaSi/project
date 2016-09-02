@@ -229,7 +229,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -305,6 +305,9 @@ int main(int argc, char *argv[]) {
 
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+
+  // vsf file is not needed anymore
+  free(vsf_file);
 
   // <agg sizes> - aggregate sizes for calculation //{{{
   int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
@@ -465,7 +468,10 @@ int main(int argc, char *argv[]) {
       printf(" %d", agg_sizes[i][0]);
     }
     putchar('\n');
-  } //}}}
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // allocate memory for sum of radii of gyration //{{{
   double *Rg_sum = calloc(aggs,sizeof(double));

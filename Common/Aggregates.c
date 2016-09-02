@@ -11,13 +11,13 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   %s <input.vcf> <distance> <contacts> ", cmd);
   fprintf(stderr, "<output.agg> <type names> <options>\n\n");
 
-  fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
-  fprintf(stderr, "   <distance>          minimum distance for contact for aggregate check\n");
-  fprintf(stderr, "   <contacts>          minimum number of contacts for aggregate check\n");
-  fprintf(stderr, "   <output.agg>        output filename (agg format)\n");
-  fprintf(stderr, "   <type names>        names of bead types to use for closeness calculation\n");
+  fprintf(stderr, "   <input.vcf>      input filename (vcf format)\n");
+  fprintf(stderr, "   <distance>       minimum distance for contact for aggregate check\n");
+  fprintf(stderr, "   <contacts>       minimum number of contacts for aggregate check\n");
+  fprintf(stderr, "   <output.agg>     output filename (agg format)\n");
+  fprintf(stderr, "   <type names>     names of bead types to use for closeness calculation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j <joined.vcf>  output vcf file with joined coordinates\n");
+  fprintf(stderr, "      -j <out.vcf>  output vcf file with joined coordinates\n");
   CommonHelp(1);
 } //}}}
 
@@ -481,13 +481,13 @@ int main(int argc, char *argv[]) {
       printf("   %s <input.vcf> <distance> <contacts> ", argv[0]);
       printf("<output.agg> <type names> <options>\n\n");
 
-      printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <distance>          minimum distance for contact for aggregate check\n");
-      printf("   <contacts>          minimum number of contacts for aggregate check\n");
-      printf("   <output.agg>        output filename (agg format)\n");
-      printf("   <type names>        names of bead types for closeness calculation\n");
+      printf("   <input.vcf>      input filename (vcf format)\n");
+      printf("   <distance>       minimum distance for contact for aggregate check\n");
+      printf("   <contacts>       minimum number of contacts for aggregate check\n");
+      printf("   <output.agg>     output filename (agg format)\n");
+      printf("   <type names>     names of bead types for closeness calculation\n");
       printf("   <options>\n");
-      printf("      -j <joined.vcf>  output vcf file with joined coordinates\n");
+      printf("      -j <out.vcf>  output vcf file with joined coordinates\n");
       CommonHelp(0);
       exit(0);
     }
@@ -497,7 +497,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -507,7 +507,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // -j <joined.vcf> - filename of output vcf file (must end with .vcf) //{{{
+  // -j <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char joined_vcf[32];
   joined_vcf[0] = '\0'; // no -j option
   for (int i = 1; i < argc; i++) {
@@ -522,10 +522,10 @@ int main(int argc, char *argv[]) {
 
       strcpy(joined_vcf, argv[i+1]);
 
-      // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
+      // test if <out.vcf> filename ends with '.vcf' (required by VMD)
       char *dot = strrchr(joined_vcf, '.');
       if (!dot || strcmp(dot, ".vcf")) {
-        fprintf(stderr, "<joined.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
+        fprintf(stderr, "<out.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
         ErrorHelp(argv[0]);
         exit(1);
       }
@@ -605,6 +605,9 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
+  // vsf file is not needed anymore
+  free(vsf_file);
+
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
@@ -667,15 +670,16 @@ int main(int argc, char *argv[]) {
     printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
-  // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
+  // write bead type names and pbc to <out.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {
 
-    // for now all bead types are to be written in joined.vcf
+    // bead types are to be written in out.vcf -- probably will never change,
+    // since the beadtypes should correspond to those in .agg file
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
       BeadType[i].Write = true;
     }
 
-    // open <joined.vcf>
+    // open <out.vcf>
     FILE *joined;
     if ((joined = fopen(joined_vcf, "w")) == NULL) {
       fprintf(stderr, "Cannot open output %s vcf file!\n", joined_vcf);
@@ -721,7 +725,10 @@ int main(int argc, char *argv[]) {
 
     printf("\n   Distance for closeness check: %lf\n", distance);
     printf("   Number of needed contacts for aggregate check: %d\n", contacts);
-  } //}}}
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -753,14 +760,14 @@ int main(int argc, char *argv[]) {
 
     CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, BoxLength, BeadType, &Bead, MoleculeType, &Molecule);
 
-    // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
+    // calculate & write joined coordinatest to <out.vcf> if '-j' option is used //{{{
     if (joined_vcf[0] != '\0') {
 
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
-      // open <joined.vcf> file //{{{
+      // open <out.vcf> file //{{{
       FILE *joined;
       if ((joined = fopen(joined_vcf, "a")) == NULL) {
         fprintf(stderr, "Cannot open output %s vcf file!\n", joined_vcf);

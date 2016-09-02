@@ -7,13 +7,12 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <output distr file> <output avg file> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input> <output distr file> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input>              input filename (agg format)\n");
   fprintf(stderr, "   <output distr file>  filename with weight and number distributions\n");
-  fprintf(stderr, "   <output avg file>    filename with weight and number averages throughout simulation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -n <int>          start weight distribution calculation with <int>-th step\n");
+  fprintf(stderr, "      -n <int>          start with <int>-th step\n");
   CommonHelp(1);
 } //}}}
 
@@ -31,28 +30,25 @@ int main(int argc, char *argv[]) {
       printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
-      printf("   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
+      printf("   %s <input> <output distr file> <options>\n\n", argv[0]);
 
       printf("   <input>              input filename (agg format)\n");
       printf("   <output distr file>  filename with weight and number distributions\n");
-      printf("   <output avg file>    filename with weight and number averages throughout simulation\n");
+      printf("      -n <int>          start with <int>-th step\n");
       printf("   <options>\n");
-      printf("      -n <int>          start weight distribution calculation with <int>-th step\n");
       CommonHelp(0);
       exit(0);
     }
-  }
-
-  int options = 3; //}}}
+  } //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
     count++;
   }
 
-  if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of %d)!\n\n", count, options);
+  if (argc < 3) {
+    fprintf(stderr, "Too little mandatory arguments (%d instead of 4)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -114,10 +110,6 @@ int main(int argc, char *argv[]) {
   char output_distr[32];
   strcpy(output_distr, argv[++count]); //}}}
 
-  // <output avg file> - filename with weight and number average aggregation numbers //{{{
-  char output_avg[32];
-  strcpy(output_avg, argv[++count]); //}}}
-
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
@@ -128,9 +120,6 @@ int main(int argc, char *argv[]) {
   // read system information
   ReadStructure(vsf_file, '\0', bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
-  // vsf file is not needed anymore
-  free(vsf_file);
-
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
 
@@ -140,22 +129,14 @@ int main(int argc, char *argv[]) {
     Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
   } //}}}
 
-  // open output files and print first line //{{{
+  // open output file and print first line //{{{
   FILE *out;
   if ((out = fopen(output_distr, "w")) == NULL) {
     fprintf(stderr, "Cannot open file %s!\n", output_distr);
     exit(1);
   }
 
-  fprintf(out, "# A_s  wdistr  ndistr voldistr\n");
-  fclose(out);
-
-  if ((out = fopen(output_avg, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_avg);
-    exit(1);
-  }
-
-  fprintf(out, "# step  w-avg  n-avg\n");
+  fprintf(out, "# A_s  Absorbed D_n chains\n");
   fclose(out); //}}}
 
   // print information - verbose output //{{{
@@ -163,21 +144,15 @@ int main(int argc, char *argv[]) {
     printf("Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
     char null[1] = {'\0'};
     VerboseOutput(verbose2, null, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
+  } //}}}
 
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
-
-  // arrays for distribution //{{{
-  double wdistr[Counts.Molecules];
-  int ndistr[Counts.Molecules];
-  int voldistr[Counts.Molecules];
+  // allocate & zeroize arrays //{{{
+  int sum[Counts.Molecules], AbsorbedHomopolymers[Counts.Molecules];
 
   // zeroize arrays
   for (int i = 0; i < Counts.Molecules; i++) {
-    wdistr[i] = 0;
-    ndistr[i] = 0;
-    voldistr[i] = 0;
+    sum[i] = 0;
+    AbsorbedHomopolymers[i] = 0;
   } //}}}
 
   // main loop //{{{
@@ -214,30 +189,28 @@ int main(int argc, char *argv[]) {
       putchar('\n');
     } //}}}
 
-    // go through all aggregates
-    double avg_n = 0,
-           avg_w = 0;
-    for (int i = 0; i < Counts.Aggregates; i++) {
-      // distribution
-      if (count >= start) {
-        ndistr[Aggregate[i].nMolecules-1]++;
-        wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
-        voldistr[Aggregate[i].nMolecules-1] += Aggregate[i].nBeads;
+    if (count >= start) {
+      // go through all aggregates
+      for (int i = 0; i < Counts.Aggregates; i++) {
+
+        // calculate number of charged polymers in aggregate //{{{
+        int neutral = 0;
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          if (strcmp("Neutral", MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name) == 0) {
+            neutral++;
+          }
+        }
+        int charged = Aggregate[i].nMolecules - neutral; //}}}
+
+        sum[charged]++;
+
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          if (strcmp("Neutral", MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name) == 0) {
+            AbsorbedHomopolymers[charged]++;
+          }
+        }
       }
-
-      // average aggregation number
-      avg_n += Aggregate[i].nMolecules;
-      avg_w += SQR(Aggregate[i].nMolecules);
     }
-
-    // print averages to output file //{{{
-    if ((out = fopen(output_avg, "a")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", output_avg);
-      exit(1);
-    }
-
-    fprintf(out, "%5d %lf %lf\n", count, avg_w/Counts.Molecules, avg_n/Counts.Aggregates);
-    fclose(out); //}}}
   }
   fclose(agg);
 
@@ -260,29 +233,15 @@ int main(int argc, char *argv[]) {
     printf("%10d monomeric beads\n", mons);
   } //}}}
 
-  // total number of Aggregates in the simulation //{{{
-  int sum_agg = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
-    sum_agg += ndistr[i];
-  } //}}}
-
-  // print distributions to output file //{{{
+  // print results to output file //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
     fprintf(stderr, "Cannot open file %s!\n", output_distr);
     exit(1);
   }
 
-  // mass of all molecules
-  double molecules_mass = 0;
-  double molecules_vol = 0;
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    molecules_mass += MoleculeType[i].Mass * MoleculeType[i].Number;
-    molecules_vol += MoleculeType[i].Number;
-  }
-
   count -= start -1;
   for (int i = 0; i < mols; i++) {
-    fprintf(out, "%4d %lf %lf %lf\n", i+1, (double)(wdistr[i])/(mols*count), (double)(ndistr[i])/sum_agg, voldistr[i]/(count*molecules_vol));
+    fprintf(out, "%4d %lf %d\n", i, (double)(AbsorbedHomopolymers[i])/sum[i], sum[i]);
   }
   fclose(out); //}}}
 

@@ -356,20 +356,20 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
         // read bead numbers to Bond array //{{{
         for (int j = 0; j < (*MoleculeType)[mols].nBonds; j++) {
           if (fscanf(field, "%s %d %d", str, &(*MoleculeType)[mols].Bond[j][0],
-                                          &(*MoleculeType)[mols].Bond[j][1]) != 3) {
+                                             &(*MoleculeType)[mols].Bond[j][1]) != 3) {
             fprintf(stderr, "Cannot read bond data from FIELD!\n");
             exit(1);
           }
 
           // decrement bead numbers, because in FIELD they start from 1
-          (*MoleculeType)[i].Bond[j][0]--;
-          (*MoleculeType)[i].Bond[j][1]--;
+          (*MoleculeType)[mols].Bond[j][0]--;
+          (*MoleculeType)[mols].Bond[j][1]--;
 
           // make sure the first bead id is lower then the second //{{{
-          if ((*MoleculeType)[i].Bond[j][0] > (*MoleculeType)[i].Bond[j][1]) {
+          if ((*MoleculeType)[mols].Bond[j][0] > (*MoleculeType)[mols].Bond[j][1]) {
             int swap = (*MoleculeType)[i].Bond[j][0];
-            (*MoleculeType)[i].Bond[j][0] = (*MoleculeType)[i].Bond[j][1];
-            (*MoleculeType)[i].Bond[j][1] = swap;
+            (*MoleculeType)[mols].Bond[j][0] = (*MoleculeType)[mols].Bond[j][1];
+            (*MoleculeType)[mols].Bond[j][1] = swap;
           } //}}}
 
           while (getc(field) != '\n')

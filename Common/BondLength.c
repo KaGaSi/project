@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -112,6 +112,9 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
+  // vsf file is not needed anymore
+  free(vsf_file);
+
   // <molecule names> - names of molecule types to use //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindMoleculeType(argv[count], Counts, MoleculeType);
@@ -127,7 +130,10 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-  } //}}}
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;

@@ -9,13 +9,13 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <width> <output.rho> <molecule names> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <width>           width of a single bin\n");
-  fprintf(stderr, "   <output.rho>      output density file (automatic ending 'agg#.rho' added)\n");
-  fprintf(stderr, "   <molecule names>  molecule names to calculate density for\n");
+  fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
+  fprintf(stderr, "   <width>             width of a single bin\n");
+  fprintf(stderr, "   <output.rho>        output density file (automatic ending 'agg#.rho' added)\n");
+  fprintf(stderr, "   <molecule names>    molecule names to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j             specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -n <average>   number of bins to average\n");
+  fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      -n <average>     number of bins to average\n");
   CommonHelp(1);
 } //}}}
 
@@ -24,6 +24,12 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
+      printf("This one-time utility calculates radial density profilesof all beads from   \n");
+      printf("graft beads directly connected to the nanoparticle surface. Nanoparticle    \n");
+      printf("must be named 'Nano' and <molecule names> has no effect. Meant for          \n");
+      printf("nanoparticles with 32 grafts of length 4, that is 281 beads per one         \n");
+      printf("nanoparticle.                                                               \n\n");
+
       printf("MolDensity utility calculates number beads density for all bead types from  \n");
       printf("the center of mass of specified molecules. Care must be taken with beadtype \n");
       printf("names in various molecules types, because if one beadtype appears in more   \n");
@@ -37,28 +43,26 @@ int main(int argc, char *argv[]) {
       printf("Usage:\n");
       printf("   %s <input.vcf> <width> <output.rho> <molecule names> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <width>           width of a single bin\n");
-      printf("   <output.rho>      output density file (automatic ending 'agg#.rho' added)\n");
-      printf("   <molecule names>  molecule names to calculate density for\n");
+      printf("   <input.vcf>         input filename (vcf format)\n");
+      printf("   <width>             width of a single bin\n");
+      printf("   <output.rho>        output density file (automatic ending 'agg#.rho' added)\n");
+      printf("   <molecule names>    molecule names to calculate density for\n");
       printf("   <options>\n");
-      printf("      -j             specify that aggregates with joined coordinates are used\n");
-      printf("      -n <average>   number of bins to average\n");
+      printf("      -j               specify that aggregates with joined coordinates are used\n");
+      printf("      -n <average>     number of bins to average\n");
       CommonHelp(0);
       exit(0);
     }
-  }
-
-  int options = 4; //}}}
+  } //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  for (int i = 0; i < argc && argv[count][0] != '-'; i++) {
     count++;
   }
 
-  if (count < 4) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
+  if (count < 5) {
+    fprintf(stderr, "Too little mandatory arguments (%d instead of at least 5)!\n\n", count);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -142,9 +146,6 @@ int main(int argc, char *argv[]) {
 
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
-
-  // vsf file is not needed anymore
-  free(vsf_file);
 
   // <molecule names> - types of molecules for calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -271,10 +272,7 @@ int main(int argc, char *argv[]) {
       }
     }
     putchar('\n');
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+  } //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -309,46 +307,49 @@ int main(int argc, char *argv[]) {
 
     // calculate densities //{{{
     for (int i = 0; i < Counts.Molecules; i++) {
-      if (MoleculeType[Molecule[i].Type].Use) {
-        Vector com = CenterOfMass(MoleculeType[Molecule[i].Type].nBeads, Molecule[i].Bead, Bead, BeadType);
+      if (strcmp(MoleculeType[Molecule[i].Type].Name, "Nano") == 0) {
 
-        // molecule beads
-        for (int j = 0; j < MoleculeType[Molecule[i].Type].nBeads; j++) {
-          Vector dist = Distance(Bead[Molecule[i].Bead[j]].Position, com, BoxLength);
-          dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+        for (int x = 153; x < 281; x += 4) {
+          int bead1 = Molecule[i].Bead[x];
 
-          if (dist.x < max_dist) {
-            int k = dist.x / width;
+          // molecule beads
+          for (int j = 0; j < MoleculeType[Molecule[i].Type].nBeads; j++) {
+            Vector dist = Distance(Bead[Molecule[i].Bead[j]].Position, Bead[bead1].Position, BoxLength);
+            dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
-            rho[Bead[Molecule[i].Bead[j]].Type][Molecule[i].Type][k]++;
+            if (dist.x < max_dist) {
+              int k = dist.x / width;
+
+              rho[Bead[Molecule[i].Bead[j]].Type][Molecule[i].Type][k]++;
+            }
           }
-        }
 
-        // beads from other molecules
-        for (int j = 0; j < Counts.Molecules; j++) {
-          if (strcmp(MoleculeType[Molecule[i].Type].Name, MoleculeType[Molecule[j].Type].Name) != 0) {
-            for (int k = 0; k < MoleculeType[Molecule[j].Type].nBeads; k++) {
-              Vector dist = Distance(Bead[Molecule[j].Bead[k]].Position, com, BoxLength);
-              dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+          // beads from other molecules
+          for (int j = 0; j < Counts.Molecules; j++) {
+            if (strcmp(MoleculeType[Molecule[i].Type].Name, MoleculeType[Molecule[j].Type].Name) != 0) {
+              for (int k = 0; k < MoleculeType[Molecule[j].Type].nBeads; k++) {
+                Vector dist = Distance(Bead[Molecule[j].Bead[k]].Position, Bead[bead1].Position, BoxLength);
+                dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
-              if (dist.x < max_dist) {
-                int l = dist.x / width;
+                if (dist.x < max_dist) {
+                  int l = dist.x / width;
 
-                rho[Bead[Molecule[j].Bead[k]].Type][Molecule[i].Type][l]++;
+                  rho[Bead[Molecule[j].Bead[k]].Type][Molecule[i].Type][l]++;
+                }
               }
             }
           }
-        }
 
-        // monomeric beads
-        for (int j = 0; j < Counts.Unbonded; j++) {
-          Vector dist = Distance(Bead[j].Position, com, BoxLength);
-          dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+          // monomeric beads
+          for (int j = 0; j < Counts.Unbonded; j++) {
+            Vector dist = Distance(Bead[j].Position, Bead[bead1].Position, BoxLength);
+            dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
-          if (dist.x < max_dist) {
-            int k = dist.x / width;
+            if (dist.x < max_dist) {
+              int k = dist.x / width;
 
-            rho[Bead[j].Type][Molecule[i].Type][k]++;
+              rho[Bead[j].Type][Molecule[i].Type][k]++;
+            }
           }
         }
       }
@@ -394,7 +395,7 @@ int main(int argc, char *argv[]) {
 
           // sum rdfs from all shells to be averaged
           for (int l = 0; l < avg; l++) {
-            temp += rho[k][i][j+l] / (shell[l] * MoleculeType[i].Number * count);
+            temp += rho[k][i][j+l] / (shell[l] * MoleculeType[i].Number * count * 32/*number of grafts*/);
           }
 
           // print average value to output file

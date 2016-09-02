@@ -11,13 +11,13 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   %s <input.vcf> <distance> <contacts> ", cmd);
   fprintf(stderr, "<output.agg> <type names> <options>\n\n");
 
-  fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
-  fprintf(stderr, "   <distance>          minimum distance for contact for aggregate check\n");
-  fprintf(stderr, "   <contacts>          minimum number of contacts for aggregate check\n");
-  fprintf(stderr, "   <output.agg>        output filename (agg format)\n");
-  fprintf(stderr, "   <type names>        names of bead types to use for closeness calculation (at least two)\n");
+  fprintf(stderr, "   <input.vcf>      input filename (vcf format)\n");
+  fprintf(stderr, "   <distance>       minimum distance for contact for aggregate check\n");
+  fprintf(stderr, "   <contacts>       minimum number of contacts for aggregate check\n");
+  fprintf(stderr, "   <output.agg>     output filename (agg format)\n");
+  fprintf(stderr, "   <type names>     names of bead types to use for closeness calculation (at least two)\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j <joined.vcf>  output vcf file with joined coordinates\n");
+  fprintf(stderr, "      -j <out.vcf>  output vcf file with joined coordinates\n");
   CommonHelp(1);
 } //}}}
 
@@ -477,13 +477,13 @@ int main(int argc, char *argv[]) {
       printf("   %s <input.vcf> <distance> <contacts> ", argv[0]);
       printf("<output.agg> <type names> <options>\n\n");
 
-      printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <distance>          minimum distance for contact for aggregate check\n");
-      printf("   <contacts>          minimum number of contacts for aggregate check\n");
-      printf("   <output.agg>        output filename (agg format)\n");
-      printf("   <type names>        names of bead types for closeness calculation (at least two)\n");
+      printf("   <input.vcf>      input filename (vcf format)\n");
+      printf("   <distance>       minimum distance for contact for aggregate check\n");
+      printf("   <contacts>       minimum number of contacts for aggregate check\n");
+      printf("   <output.agg>     output filename (agg format)\n");
+      printf("   <type names>     names of bead types for closeness calculation (at least two)\n");
       printf("   <options>\n");
-      printf("      -j <joined.vcf>  output vcf file with joined coordinates\n");
+      printf("      -j <out.vcf>  output vcf file with joined coordinates\n");
       CommonHelp(0);
       exit(0);
     }
@@ -493,7 +493,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -503,7 +503,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // -j <joined.vcf> - filename of output vcf file (must end with .vcf) //{{{
+  // -j <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char joined_vcf[32];
   joined_vcf[0] = '\0'; // no -j option
   for (int i = 1; i < argc; i++) {
@@ -600,6 +600,9 @@ int main(int argc, char *argv[]) {
 
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+
+  // vsf file is not needed anymore
+  free(vsf_file);
 
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -717,7 +720,10 @@ int main(int argc, char *argv[]) {
 
     printf("\n   Distance for closeness check: %lf\n", distance);
     printf("   Number of needed contacts for aggregate check: %d\n", contacts);
-  } //}}}
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
