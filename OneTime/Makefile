@@ -18,7 +18,8 @@ BIN = ../bin/ChargeRatio \
 			../bin/GyrationAggregates-NotHomopolNotB \
 			../bin/GyrationAggregates-NotBBlock \
 			../bin/DensityAggregates-NotHomop \
-			../bin/DensityMolecules-NearNanoSurf
+			../bin/DensityMolecules-NearNanoSurf \
+			../bin/DistrAgg-NotHomopol-NumberOfAbsorbedHomopolymerChains
 
 all: dir $(BIN) $(OBJ)
 
@@ -56,6 +57,9 @@ $(ODIR)/%.o: %.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 ../bin/DensityMolecules-NearNanoSurf: $(OBJ) $(ODIR)/DensityMolecules-NearNanoSurf.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/DistrAgg-NotHomopol-NumberOfAbsorbedHomopolymerChains: $(OBJ) $(ODIR)/DistrAgg-NotHomopol-NumberOfAbsorbedHomopolymerChains.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 clean:

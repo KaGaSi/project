@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <2nd input.vsf> - second structure file (must end with .vsf) //{{{
-  char vsf_file_2[32];
+  char *vsf_file_2 = calloc(32,sizeof(char *));
   strcpy(vsf_file_2, argv[++count]);
 
   // test if <1st input.vcf> filename ends with '.vcf' (required by VMD)
@@ -223,6 +223,10 @@ int main(int argc, char *argv[]) {
   bool indexed = ReadStructure(vsf_file_1, input_vcf_1, bonds_file, &Counts, &BeadType1, &Bead1, &MoleculeType1, &Molecule1);
   ReadStructure(vsf_file_2, input_vcf_2, bonds_file, &Counts, &BeadType2, &Bead2, &MoleculeType2, &Molecule2);
 
+  // vsf files are not needed anymore
+  free(vsf_file_1);
+  free(vsf_file_2);
+
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType1);
@@ -256,7 +260,10 @@ int main(int argc, char *argv[]) {
 
     printf("\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
     printf("   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
-  } //}}}
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // open input coordinate files //{{{
   FILE *vcf_1, *vcf_2;
@@ -603,8 +610,6 @@ int main(int argc, char *argv[]) {
   FreeBead(Counts, &Bead1);
   FreeBead(Counts, &Bead2);
   free(stuff);
-  free(vsf_file_1);
-  free(bonds_file);
   //}}}
 
   return 0;

@@ -9,9 +9,9 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>         input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <output.vcf>        output filename with joined coordinates (vcf format)\n");
+  fprintf(stderr, "   <input.vcf>      input filename (vcf format)\n");
+  fprintf(stderr, "   <input.agg>      input filename with information about aggregates (agg format)\n");
+  fprintf(stderr, "   <output.vcf>     output filename with joined coordinates (vcf format)\n");
   fprintf(stderr, "   <options>\n");
   CommonHelp(1);
 } //}}}
@@ -33,9 +33,9 @@ int main(int argc, char *argv[]) {
       printf("Usage:\n");
       printf("   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <input.agg>         input filename with information about aggregates (agg format)\n");
-      printf("   <output.vcf>        output filename with joined coordinates (vcf format)\n");
+      printf("   <input.vcf>      input filename (vcf format)\n");
+      printf("   <input.agg>      input filename with information about aggregates (agg format)\n");
+      printf("   <output.vcf>     output filename with joined coordinates (vcf format)\n");
       printf("   <options>\n");
       CommonHelp(0);
       exit(0);
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -114,6 +114,9 @@ int main(int argc, char *argv[]) {
 
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+
+  // vsf file is not needed anymore
+  free(vsf_file);
 
   // open input aggregate file and read info from first line (Aggregates command) //{{{
   FILE *agg;
@@ -236,7 +239,10 @@ int main(int argc, char *argv[]) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     printf("\nDistance for closeness check:  %lf\n\n", distance);
-  } //}}}
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // main loop //{{{
   count = 0; // count timesteps

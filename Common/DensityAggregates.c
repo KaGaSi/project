@@ -9,14 +9,14 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>         input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <width>             width of a single bin\n");
-  fprintf(stderr, "   <output.rho>        output density file (automatic ending '#.rho' added)\n");
-  fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
+  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+  fprintf(stderr, "   <width>           width of a single bin\n");
+  fprintf(stderr, "   <output.rho>      output density file (automatic ending '#.rho' added)\n");
+  fprintf(stderr, "   <agg sizes>       aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -n <average>     number of bins to average\n");
+  fprintf(stderr, "      -j             specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      -n <average>   number of bins to average\n");
   CommonHelp(1);
 } //}}}
 
@@ -36,14 +36,14 @@ int main(int argc, char *argv[]) {
       printf("Usage:\n");
       printf("   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <input.agg>         input filename with information about aggregates (agg format)\n");
-      printf("   <width>             width of a single bin\n");
-      printf("   <output.rho>        output density file (automatic ending '#.rho' added)\n");
-      printf("   <agg sizes>         aggregate sizes to calculate density for\n");
+      printf("   <input.vcf>       input filename (vcf format)\n");
+      printf("   <input.agg>       input filename with information about aggregates (agg format)\n");
+      printf("   <width>           width of a single bin\n");
+      printf("   <output.rho>      output density file (automatic ending '#.rho' added)\n");
+      printf("   <agg sizes>       aggregate sizes to calculate density for\n");
       printf("   <options>\n");
-      printf("      -j               specify that aggregates with joined coordinates are used\n");
-      printf("      -n <average>     number of bins to average\n");
+      printf("      -j             specify that aggregates with joined coordinates are used\n");
+      printf("      -n <average>   number of bins to average\n");
       CommonHelp(0);
       exit(0);
     }
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -146,6 +146,9 @@ int main(int argc, char *argv[]) {
 
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+
+  // vsf file is not needed anymore
+  free(vsf_file);
 
   // <agg sizes> - aggregate sizes for calculation //{{{
   int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
@@ -307,7 +310,10 @@ int main(int argc, char *argv[]) {
       printf(" %d", agg_sizes[i][0]);
     }
     putchar('\n');
-  } //}}}
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // main loop //{{{
   count = 0; // count timesteps

@@ -6,7 +6,7 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <start> <skip> ", cmd);
+  fprintf(stderr, "   %s <input.vcf> ", cmd);
   fprintf(stderr, "<output.vcf> <type names> <options>\n\n");
 
   fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
       printf("the system.                                                                 \n\n");
 
       printf("Usage:\n");
-      printf("   %s <input.vcf> <start> <skip> ", argv[0]);
+      printf("   %s <input.vcf> ", argv[0]);
       printf("<output.vcf> <type names> <options>\n\n");
 
       printf("   <input.vcf>       input filename (vcf format)\n");
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -91,13 +91,13 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-st") == 0) {
 
       // Error - non-numeric argument
-      if (argv[++count][0] < '0' || argv[count][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for <start>!\n");
+      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
+        fprintf(stderr, "Non-numeric argement for '-st' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
       }
 
-      start = atoi(argv[count]);
+      start = atoi(argv[i+1]);
     }
   } //}}}
 
@@ -105,16 +105,16 @@ int main(int argc, char *argv[]) {
   int skip = 0;
 
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-st") == 0) {
+    if (strcmp(argv[i], "-sk") == 0) {
 
       // Error - non-numeric argument
-      if (argv[++count][0] < '0' || argv[count][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for <skip>!\n");
+      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
+        fprintf(stderr, "Non-numeric argement for '-sk' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
       }
 
-      skip = atoi(argv[count]);
+      skip = atoi(argv[i+1]);
     }
   } //}}}
 
@@ -161,6 +161,9 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
+  // vsf file is not needed anymore
+  free(vsf_file);
+
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
@@ -202,7 +205,10 @@ int main(int argc, char *argv[]) {
 
     printf("\n   Starting from %d. timestep\n", start);
     printf("   Every %d. timestep used\n", skip+1);
-  } //}}}
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -388,8 +394,6 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(stuff);
-  free(vsf_file);
-  free(bonds_file);
   //}}}
 
   return 0;

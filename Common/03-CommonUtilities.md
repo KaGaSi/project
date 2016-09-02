@@ -51,8 +51,6 @@ Usage:
 > > `-j`
 > > > join individual molecules by removing periodic boundary conditions
 
-\todo SelectedVcf: change `<start>` and `<skip>` into `options`
-
 # Config utility {#Config}
 
 This utility takes `.vcf` file containing either
@@ -70,9 +68,6 @@ Usage:
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
 > > ordered or indexed timesteps
-
-\todo Config: implement possibility to choose timestep number for creating `CONFIG`
-file.
 
 # TransformVsf utility {#TransformVsf}
 
@@ -184,9 +179,6 @@ types `A` and `B` are provided, Aggregates will calculate contact pairs `A-B`,
 `A-A` and `B-B` (provided the beads are in different molecules), while
 Aggregates-NotSameBeads will calculate only `A-B` contact pair. Therefore at
 least two bead types must be provided for `<type names>` argument.
-
-\todo Aggregates: add the possibility to save only certain bead types to output
-vcf file with joined coordinates.
 
 # JoinAggregates utility {#JoinAggregates}
 
@@ -318,6 +310,9 @@ Usage:
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
 
+\todo DensityAggregates: check if only chains in one aggregate are used --
+anomalies in VanDerBurgh/AddedPol/
+
 # DensityMolecules {#DensityMolecules}
 
 DensityMolecules works in similar way as the DensityAggregates, only instead of aggregates,
@@ -378,6 +373,10 @@ Usage:
 
 \todo GyrationAggregates: implement using only selected bead types for
 calculation
+
+\todo GyrationAggregates: implement option for using only specific molecule
+names for finding out the aggregation number (i.e. make
+OneTime/GyragionAggregates-NotHomopol more general)
 
 \todo GyrationAggregates: understand `jacobi` function
 
