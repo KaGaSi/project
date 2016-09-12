@@ -209,8 +209,9 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
  * \param [in]  vcf_file   file with vcf coordinates
  * \param [in]  Counts     number of beads in vcf file
  * \param [out] stuff      first line of a timestep
+ * \return 1 if premature end of file or 0 for no error
  */
-void SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
+int SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
 
 // ReadAggregates() //{{{
 /**

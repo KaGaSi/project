@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
   stuff = calloc(128,sizeof(int)); //}}}
 
   // main loop //{{{
-  fpos_t pos; // for saving pointer position in vcf file
+  fpos_t pos, pos_old; // for saving pointer position in vcf file
   int test;
   count = 0;
   while ((test = getc(vcf)) != EOF && count != timestep) {
@@ -176,9 +176,15 @@ int main(int argc, char *argv[]) {
     }
 
     // save pointer position in file
+    pos_old = pos;
     fgetpos(vcf, &pos);
 
-    SkipCoor(vcf, Counts, &stuff);
+
+    if (SkipCoor(vcf, Counts, &stuff) == 1) {
+      fprintf(stderr, "\nPremature end of %s file!\n", input_vcf);
+      pos = pos_old;
+      count--;
+    }
 
     // if -V option used, print comment from the beginning of a timestep
     if (verbose2)
@@ -204,7 +210,7 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     fflush(stdout);
-    printf("\rConfig Step: %6d\n", count);
+    printf("\nConfig Step: %6d\n", count);
   }
 
   fclose(vcf); //}}}
