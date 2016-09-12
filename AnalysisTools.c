@@ -1040,7 +1040,7 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
  * Function to skip one timestep in coordinates file. It works with both
  * indexed and ordered vcf files.
  */
-void SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
+int SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
 
   // save the first line containing '# <number>' //{{{
   int i = 0;
@@ -1052,11 +1052,18 @@ void SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
     //}}}
 
   for (int i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
-    while (getc(vcf_file) != '\n')
+    int test;
+    while ((test = getc(vcf_file)) != '\n' && test != EOF)
       ;
+
+    // premature end of file
+    if (test == EOF)
+      return(1);
   }
 
   getc(vcf_file);
+
+  return(0);
 } //}}}
 
 // ReadAggregates() //{{{
