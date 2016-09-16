@@ -7,8 +7,6 @@ SOURCE = ../AnalysisTools.c
 OBJ = ../obj/AnalysisTools.o
 
 ODIR = obj
-#_OBJ = $(SOURCES:.c=.o)
-#OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 BIN = ../bin/SelectedVcf \
 			../bin/Aggregates \
