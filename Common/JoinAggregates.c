@@ -131,12 +131,12 @@ int main(int argc, char *argv[]) {
   fscanf(agg, "%*s %*s");
 
   // read <type names> from Aggregates command //{{{
-  int test;
-  while ((test = getc(agg)) != '-') {
+  int test = getc(agg);
+  while ((test = getc(agg)) != '-' && test != '\n') {
     ungetc(test, agg);
 
     char name[10];
-    fscanf(agg, "%s ", name);
+    fscanf(agg, "%s", name);
     int type = FindBeadType(name, Counts, BeadType);
 
     // Error - specified bead type name not in vcf input file
@@ -147,6 +147,7 @@ int main(int argc, char *argv[]) {
 
     BeadType[type].Use = true;
   } //}}}
+  ungetc(test, agg);
 
   while (getc(agg) != '\n')
     ;
