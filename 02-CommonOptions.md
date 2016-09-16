@@ -19,5 +19,7 @@ otherwise. These options must be specified after any mandatory arguments.
 > > `-s`
 > > > run silently, that is without any output at all (overrides verbose
 > > > options)
+> > `--script`
+> > > do not rewrite terminal line (useful if output is routed to file)
 > > `-h`
 > > > print help and exit

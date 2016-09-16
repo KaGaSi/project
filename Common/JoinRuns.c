@@ -70,8 +70,8 @@ int main(int argc, char *argv[]) {
   // standard options //{{{
   char *vsf_file_1 = calloc(32,sizeof(char *));
   char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent;
-  bool error = CommonOptions(argc, argv, &vsf_file_1, &bonds_file, &verbose, &verbose2, &silent);
+  bool verbose, verbose2, silent, script;
+  bool error = CommonOptions(argc, argv, &vsf_file_1, &bonds_file, &verbose, &verbose2, &silent, &script);
 
   // was there error during CommonOptions()?
   if (error) {
@@ -335,14 +335,16 @@ int main(int argc, char *argv[]) {
   int test;
   // first run
   count = 0;
-  if (!silent)
-    printf("\rDiscarded from 1st coordinate file: %6d", count);
   for (int i = 1; i < start_1; i++) {
     count++;
 
     if (!silent) {
-      fflush(stdout);
-      printf("\rDiscarded from 1st coordinate file: %6d", count);
+      if (script) {
+        printf("Discarded from 1st coordinate file: %6d\n", count);
+      } else {
+        fflush(stdout);
+        printf("\rDiscarded from 1st coordinate file: %6d", count);
+      }
     }
 
     SkipCoor(vcf_1, Counts, &stuff);
@@ -370,8 +372,12 @@ int main(int argc, char *argv[]) {
 
     count++;
     if (!silent) {
-      fflush(stdout);
-      printf("\rStep from 1st run: %6d", count);
+      if (script) {
+        printf("Step: %6d\n", count);
+      } else {
+        fflush(stdout);
+        printf("\rStep from 1st run: %6d", count);
+      }
     }
 
     // join molecules? //{{{

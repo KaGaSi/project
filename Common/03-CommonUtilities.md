@@ -276,6 +276,8 @@ Usage:
 > `<options>`
 > > `-n <int>`
 > > > starting timestep for calculation
+> > `--no-unimers`
+> > > free chains shouldn't be used to calcalute average aggregation numbers
 
 \todo DistrAgg: look into volume fractions with beads of arbitrary (and
 different) masses.
@@ -457,6 +459,7 @@ Usage:
 
 \todo JoinRuns: base reindexing of beads in the second simulation on comparison
 between the two `.vsf` files
+\todo JoinRuns: implement wholy --script common option
 
 # Average utility {#Average}
 

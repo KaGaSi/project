@@ -14,6 +14,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output avg file>    filename with weight and number averages throughout simulation\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -n <int>          start weight distribution calculation with <int>-th step\n");
+  fprintf(stderr, "      --no-unimers      do not count unimers into averages\n");
   CommonHelp(1);
 } //}}}
 
@@ -38,6 +39,7 @@ int main(int argc, char *argv[]) {
       printf("   <output avg file>    filename with weight and number averages throughout simulation\n");
       printf("   <options>\n");
       printf("      -n <int>          start weight distribution calculation with <int>-th step\n");
+      printf("      --no-unimers      do not count unimers into averages\n");
       CommonHelp(0);
       exit(0);
     }
@@ -73,11 +75,19 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  // --no-unimers - do not count unimers towards averages //{{{
+  bool no_uni = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--no-unimers") == 0) {
+      no_uni = true;
+    }
+  } //}}}
+
   // standard options //{{{
   char *vsf_file = calloc(32,sizeof(char *));
   char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent;
-  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent);
+  bool verbose, verbose2, silent, script;
+  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent, &script);
 
   // was there error during CommonOptions()?
   if (error) {
@@ -188,8 +198,12 @@ int main(int argc, char *argv[]) {
 
     count++;
     if (!silent) {
-      fflush(stdout);
-      printf("\rStep: %6d", count);
+      if (script) {
+        printf("Step: %6d\n", count);
+      } else {
+        fflush(stdout);
+        printf("\rStep: %6d", count);
+      }
     }
 
     ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
@@ -217,6 +231,8 @@ int main(int argc, char *argv[]) {
     // go through all aggregates
     double avg_n = 0,
            avg_w = 0;
+    int aggs = 0, // number of aggregates (w/o unimers if --no-unimers)
+        mols = 0; // number of molecules (w/o those in unimers if --no-unimers)
     for (int i = 0; i < Counts.Aggregates; i++) {
       // distribution
       if (count >= start) {
@@ -226,8 +242,13 @@ int main(int argc, char *argv[]) {
       }
 
       // average aggregation number
-      avg_n += Aggregate[i].nMolecules;
-      avg_w += SQR(Aggregate[i].nMolecules);
+      if (!no_uni || Aggregate[i].nMolecules != 1) {
+        aggs++;
+        mols += Aggregate[i].nMolecules;
+
+        avg_n += Aggregate[i].nMolecules;
+        avg_w += SQR(Aggregate[i].nMolecules);
+      }
     }
 
     // print averages to output file //{{{
@@ -236,14 +257,18 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
 
-    fprintf(out, "%5d %lf %lf\n", count, avg_w/Counts.Molecules, avg_n/Counts.Aggregates);
+    fprintf(out, "%5d %lf %lf\n", count, avg_w/mols, avg_n/aggs);
     fclose(out); //}}}
   }
   fclose(agg);
 
   if (!silent) {
-    fflush(stdout);
-    printf("\rLast Step: %6d\n", count);
+    if (script) {
+      printf("Last Step: %6d\n", count);
+    } else {
+      fflush(stdout);
+      printf("\rLast Step: %6d\n", count);
+    }
   } //}}}
 
   // number of species in agg file //{{{

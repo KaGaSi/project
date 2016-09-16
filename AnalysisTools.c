@@ -549,19 +549,23 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
  */
 void CommonHelp(bool error) {
   if (error) {
+    fprintf(stderr, "   <common options>\n");
     fprintf(stderr, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
     fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
     fprintf(stderr, "      -v             verbose output\n");
     fprintf(stderr, "      -V             verbose output with comments from input .vcf file\n");
     fprintf(stderr, "      -s             no output (overrides verbose options)\n");
     fprintf(stderr, "      -h             print this help and exit\n");
+    fprintf(stderr, "      --script       do not reprint line (useful when output goes to file)\n");
   } else {
-    fprintf(stdout, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
-    fprintf(stdout, "      -b <name>      file containing bond alternatives to FIELD\n");
-    fprintf(stdout, "      -v             verbose output\n");
-    fprintf(stdout, "      -V             verbose output with comments from input .vcf file\n");
-    fprintf(stdout, "      -s             no output (overrides verbose options)\n");
-    fprintf(stdout, "      -h             print this help and exit\n");
+    printf("   <common options>\n");
+    printf("      -i <name>      use input .vsf file different from dl_meso.vsf\n");
+    printf("      -b <name>      file containing bond alternatives to FIELD\n");
+    printf("      -v             verbose output\n");
+    printf("      -V             verbose output with comments from input .vcf file\n");
+    printf("      -s             no output (overrides verbose options)\n");
+    printf("      -h             print this help and exit\n");
+    printf("      --script       do not reprint line (useful when output goes to file)\n");
   }
 } //}}}
 
@@ -570,7 +574,7 @@ void CommonHelp(bool error) {
  * Function for options common to most of the utilities.
  */
 bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
-                   bool *verbose, bool *verbose2, bool *silent) {
+                   bool *verbose, bool *verbose2, bool *silent, bool *script) {
 
   bool error = false;
 
@@ -650,6 +654,16 @@ bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
       *verbose = false;
       *verbose2 = false;
       *silent = true;
+
+      break;
+    }
+  } //}}}
+
+  // --script  option - meant for when output is routed to file, so don't use flush & \r //{{{
+  *script = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--script") == 0) {
+      *script = true;
 
       break;
     }
