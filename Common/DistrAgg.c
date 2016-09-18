@@ -59,17 +59,34 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // test if non-standard options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "--no-unimers") != 0) {
+
+      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+  } //}}}
+
   // -n <int> option - number of starting timestep //{{{
   int start = 1;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-n") == 0) {
 
-      // Error - non-numeric argument
+      // Error - non-numeric argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
       if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
         fprintf(stderr, "Non-numeric argement for '-n' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
-      }
+      } //}}}
 
       start = atoi(argv[i+1]);
     }

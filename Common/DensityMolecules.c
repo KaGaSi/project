@@ -63,6 +63,18 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // test if non-standard options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-j") != 0 &&
+        strcmp(argv[i], "-n") != 0) {
+
+      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+  } //}}}
+
   // -j option - coordinates are joined //{{{
   bool joined = false;
   for (int i = 1; i < argc; i++) {
@@ -71,17 +83,22 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // -n option - number of bins to average //{{{
+  // -n <int> option - number of bins to average //{{{
   int avg = 1;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-n") == 0) {
 
-      // Error - non-numeric argument
+      // Error - missing or non-numeric argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
       if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
         fprintf(stderr, "Non-numeric argement for '-n' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
-      }
+      } //}}}
 
       avg = atoi(argv[i+1]);
     }

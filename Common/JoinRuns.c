@@ -25,7 +25,7 @@ void ErrorHelp(char cmd[50]) { //{{{
 
 int main(int argc, char *argv[]) {
 
-  // -h option - print help and exit //{{{
+  // -h option - print help nd exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       printf("JoinRuns joins two simulation runs with different .vsf files. The first .vsf\n");
@@ -79,6 +79,21 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // test if non-standard options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-j") != 0 &&
+        strcmp(argv[i], "-n1") != 0 &&
+        strcmp(argv[i], "-u1") != 0 &&
+        strcmp(argv[i], "-u2") != 0 &&
+        strcmp(argv[i], "-u2") != 0) {
+
+      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+  } //}}}
+
   // -j option - join molecules //{{{
   bool join = false;
   for (int i = 1; i < argc; i++) {
@@ -94,12 +109,17 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-n1") == 0) {
 
-      // Error - non-numeric argument
+      // Error - missing or non-numeric argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-n1' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
       if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
         fprintf(stderr, "Non-numeric argement for '-n1' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
-      }
+      } //}}}
 
       start_1 = atoi(argv[i+1]);
     }
@@ -109,12 +129,17 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-n2") == 0) {
 
-      // Error - non-numeric argument
+      // Error - non-numeric argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-n2' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
       if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
         fprintf(stderr, "Non-numeric argement for '-n2' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
-      }
+      } //}}}
 
       start_2 = atoi(argv[i+1]);
     }
@@ -125,12 +150,18 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-u1") == 0) {
 
-      // Error - non-numeric argument
+      // Error - non-numeric argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-u1' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
       if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
         fprintf(stderr, "Non-numeric argement for '-u1' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
-      }
+      } //}}}
+
       skip_1 = atoi(argv[count]);
     }
   }
@@ -138,12 +169,18 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-u2") == 0) {
 
-      // Error - non-numeric argument
+      // Error - non-numeric argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-u2' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
       if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
         fprintf(stderr, "Non-numeric argement for '-u2' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
-      }
+      } //}}}
+
       skip_2 = atoi(argv[count]);
     }
   } //}}}

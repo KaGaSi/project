@@ -74,6 +74,19 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // test if non-standard options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-j") != 0 &&
+        strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-sk") != 0) {
+
+      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+  } //}}}
+
   // -j option - join molecules //{{{
   bool join = false;
   for (int i = 1; i < argc; i++) {
@@ -90,12 +103,17 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-st") == 0) {
 
-      // Error - non-numeric argument
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-st' option!\n");
+      // Error - non-numeric or missing argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-st' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
       }
+      if ((i+1) >= argc || argv[i+1][0] < '0' || argv[i+1][0] > '9') {
+        fprintf(stderr, "Non-numeric argement for '-st' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      } //}}}
 
       start = atoi(argv[i+1]);
     }
@@ -107,12 +125,17 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-sk") == 0) {
 
-      // Error - non-numeric argument
+      // Error - non-numeric or missing argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-sk' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
       if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
         fprintf(stderr, "Non-numeric argement for '-sk' option!\n");
         ErrorHelp(argv[0]);
         exit(1);
-      }
+      } //}}}
 
       skip = atoi(argv[i+1]);
     }
