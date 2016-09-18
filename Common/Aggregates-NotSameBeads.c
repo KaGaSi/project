@@ -503,6 +503,17 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // test if non-standard options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-j") != 0) {
+
+      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+  } //}}}
+
   // -j <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char joined_vcf[32];
   joined_vcf[0] = '\0'; // no -j option

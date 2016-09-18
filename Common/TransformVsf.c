@@ -138,6 +138,19 @@ int main(int argc, char *argv[]) {
     printf(" %s", argv[i]);
   putchar('\n'); //}}}
 
+  // test if options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-i") != 0 &&
+        strcmp(argv[i], "-b") != 0 &&
+        strcmp(argv[i], "-v") != 0) {
+
+      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+  } //}}}
+
   // -i <name> option - filename of input structure file //{{{
   char vsf_file[32];
   vsf_file[0] = '\0'; // check if -i option is used
