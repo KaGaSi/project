@@ -67,21 +67,16 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // standard options //{{{
-  char *vsf_file_1 = calloc(32,sizeof(char *));
-  char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent, script;
-  bool error = CommonOptions(argc, argv, &vsf_file_1, &bonds_file, &verbose, &verbose2, &silent, &script);
-
-  // was there error during CommonOptions()?
-  if (error) {
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
-
-  // test if non-standard options are given correctly //{{{
+  // test if options are given correctly //{{{
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-i") != 0 &&
+        strcmp(argv[i], "-b") != 0 &&
+        strcmp(argv[i], "-v") != 0 &&
+        strcmp(argv[i], "-V") != 0 &&
+        strcmp(argv[i], "-s") != 0 &&
+        strcmp(argv[i], "-h") != 0 &&
+        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-j") != 0 &&
         strcmp(argv[i], "-n1") != 0 &&
         strcmp(argv[i], "-u1") != 0 &&
@@ -92,6 +87,18 @@ int main(int argc, char *argv[]) {
       ErrorHelp(argv[0]);
       exit(1);
     }
+  } //}}}
+
+  // standard options //{{{
+  char *vsf_file_1 = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(32,sizeof(char *));
+  bool verbose, verbose2, silent, script;
+  bool error = CommonOptions(argc, argv, &vsf_file_1, &bonds_file, &verbose, &verbose2, &silent, &script);
+
+  // was there error during CommonOptions()?
+  if (error) {
+    ErrorHelp(argv[0]);
+    exit(1);
   } //}}}
 
   // -j option - join molecules //{{{
