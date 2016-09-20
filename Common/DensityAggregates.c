@@ -63,6 +63,25 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // test if options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-i") != 0 &&
+        strcmp(argv[i], "-b") != 0 &&
+        strcmp(argv[i], "-v") != 0 &&
+        strcmp(argv[i], "-V") != 0 &&
+        strcmp(argv[i], "-s") != 0 &&
+        strcmp(argv[i], "-h") != 0 &&
+        strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "-j") != 0 &&
+        strcmp(argv[i], "-n") != 0) {
+
+      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+  } //}}}
+
   // standard options //{{{
   char *vsf_file = calloc(32,sizeof(char *));
   char *bonds_file = calloc(32,sizeof(char *));
@@ -73,18 +92,6 @@ int main(int argc, char *argv[]) {
   if (error) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
-
-  // test if non-standard options are given correctly //{{{
-  for (int i = 1; i < argc; i++) {
-    if (argv[i][0] == '-' &&
-        strcmp(argv[i], "-j") != 0 &&
-        strcmp(argv[i], "-n") != 0) {
-
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
-      ErrorHelp(argv[0]);
-      exit(1);
-    }
   } //}}}
 
   // -j option - coordinates are joined //{{{
