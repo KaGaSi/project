@@ -323,6 +323,19 @@ with beadtype names in various molecules types, because if one beadtype appears
 in more molecule types, the resulting density for that beadtype will be
 averaged without regard for the various types of molecule it appears in.
 
+It is possible to use specified bead instead of the center of mass for the
+coordinates to calculate densities from. Care must be taken, because the
+order of molecule types is taken from `FIELD` rather then from
+`DensityMolcules` arguments. For example: whether bead 1 will be connected
+with `NameA` or `NameB` in `DensityMolecules ... NameA NameB -c 1 2`
+depends on molecules' order in `FIELD` file; that is if `NameA` is first in
+`FIELD`, 1 will be associated  with `NameA` and 2 with `NameB`, but if
+`NameB` is first, the associations are reverse, regardless of the order of
+names in the command's arguments. If the center of mass should be used, `x`
+is given as argument. In the above example (assuming `NameA` is first in
+`FIELD`) if bead 1 is intended to be used for `NameB`, but center of mass
+for `NameA`, then an argument of the form `-c x 1` must be used.
+
 Usage:
 
 `DensityMolecules <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
@@ -343,6 +356,10 @@ Usage:
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
+> > `-n <average>`
+> > > number of bins to average
+> > `-c <int>`
+> > > use specified molecule bead instead of center of mass
 
 # GyrationAggregates utility {#GyrationAggregates}
 

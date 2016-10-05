@@ -277,6 +277,10 @@ int main(int argc, char *argv[]) {
 
     // print averages to output file //{{{
     if ((out = fopen(output_avg, "a")) == NULL) {
+      // print newline to stdout if Step... doesn't end with one
+      if (!script && !silent) {
+        putchar('\n');
+      }
       fprintf(stderr, "Cannot open file %s!\n", output_avg);
       exit(1);
     }

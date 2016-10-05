@@ -533,7 +533,7 @@ int main(int argc, char *argv[]) {
 
       // wrong argument to -i option
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-j' option ");
+        fprintf(stderr, "Missing argument to '-j' option ");
         fprintf(stderr, "(or filename beginning with a dash)!\n");
         exit(1);
       }
@@ -767,12 +767,20 @@ int main(int argc, char *argv[]) {
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
       if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
+        // print newline to stdout if Step... doesn't end with one
+        if (!script && !silent) {
+          putchar('\n');
+        }
         fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
     } else {
       if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
+        // print newline to stdout if Step... doesn't end with one
+        if (!script && !silent) {
+          putchar('\n');
+        }
         fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
         exit(1);
       }
