@@ -403,12 +403,20 @@ int main(int argc, char *argv[]) {
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
       if ((test = ReadCoorIndexed(vcf_1, Counts, &Bead1, &stuff)) != 0) {
+        // print newline to stdout if Step... doesn't end with one
+        if (!script && !silent) {
+          putchar('\n');
+        }
         fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_1, count, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
     } else {
       if ((test = ReadCoorOrdered(vcf_1, Counts, &Bead1, &stuff)) != 0) {
+        // print newline to stdout if Step... doesn't end with one
+        if (!script && !silent) {
+          putchar('\n');
+        }
         fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_1, count, test);
         exit(1);
       }
@@ -454,6 +462,10 @@ int main(int argc, char *argv[]) {
 
     // open output .vcf file for appending //{{{
     if ((out = fopen(output_vcf, "a")) == NULL) {
+      // print newline to stdout if Step... doesn't end with one
+      if (!script && !silent) {
+        putchar('\n');
+      }
       fprintf(stderr, "Cannot open file %s!\n", output_vcf);
       exit(1);
     } //}}}
@@ -476,12 +488,20 @@ int main(int argc, char *argv[]) {
       // read indexed timestep from input .vcf file //{{{
       if (indexed) {
         if ((test = ReadCoorIndexed(vcf_1, Counts, &Bead1, &stuff)) != 0) {
+          // print newline to stdout if Step... doesn't end with one
+          if (!script && !silent) {
+            putchar('\n');
+          }
           fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_1, count, test);
           exit(1);
         } //}}}
       // or read ordered timestep from input .vcf file //{{{
       } else {
         if ((test = ReadCoorOrdered(vcf_1, Counts, &Bead1, &stuff)) != 0) {
+          // print newline to stdout if Step... doesn't end with one
+          if (!script && !silent) {
+            putchar('\n');
+          }
           fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_1, count, test);
           exit(1);
         }
@@ -524,12 +544,20 @@ int main(int argc, char *argv[]) {
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
       if ((test = ReadCoorIndexed(vcf_2, Counts, &Bead2, &stuff)) != 0) {
+        // print newline to stdout if Step... doesn't end with one
+        if (!script && !silent) {
+          putchar('\n');
+        }
         fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_2, count, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
     } else {
       if ((test = ReadCoorOrdered(vcf_2, Counts, &Bead2, &stuff)) != 0) {
+        // print newline to stdout if Step... doesn't end with one
+        if (!script && !silent) {
+          putchar('\n');
+        }
         fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_2, count, test);
         exit(1);
       }
@@ -537,8 +565,12 @@ int main(int argc, char *argv[]) {
 
     count++;
     if (!silent) {
-      fflush(stdout);
-      printf("\rStep from 2nd run: %6d", count);
+      if (script) {
+        printf("Step from 2nd run: %6d\n", count);
+      } else {
+        fflush(stdout);
+        printf("\rStep from 2nd run: %6d", count);
+      }
     }
 
     // join molecules? //{{{
@@ -571,6 +603,10 @@ int main(int argc, char *argv[]) {
 
     // open output .vcf file for appending //{{{
     if ((out = fopen(output_vcf, "a")) == NULL) {
+      // print newline to stdout if Step... doesn't end with one
+      if (!script && !silent) {
+        putchar('\n');
+      }
       fprintf(stderr, "Cannot open file %s!\n", output_vcf);
       exit(1);
     } //}}}
@@ -626,12 +662,20 @@ int main(int argc, char *argv[]) {
       // read indexed timestep from input .vcf file //{{{
       if (indexed) {
         if ((test = ReadCoorIndexed(vcf_2, Counts, &Bead2, &stuff)) != 0) {
+          // print newline to stdout if Step... doesn't end with one
+          if (!script && !silent) {
+            putchar('\n');
+          }
           fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_2, count, test);
           exit(1);
         } //}}}
       // or read ordered timestep from input .vcf file //{{{
       } else {
         if ((test = ReadCoorOrdered(vcf_2, Counts, &Bead2, &stuff)) != 0) {
+          // print newline to stdout if Step... doesn't end with one
+          if (!script && !silent) {
+            putchar('\n');
+          }
           fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_2, count, test);
           exit(1);
         }
