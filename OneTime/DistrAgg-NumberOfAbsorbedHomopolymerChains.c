@@ -74,8 +74,8 @@ int main(int argc, char *argv[]) {
   // standard options //{{{
   char *vsf_file = calloc(32,sizeof(char *));
   char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent;
-  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent);
+  bool verbose, verbose2, silent, script;
+  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent, &script);
 
   // was there error during CommonOptions()?
   if (error) {
@@ -180,8 +180,12 @@ int main(int argc, char *argv[]) {
 
     count++;
     if (!silent) {
-      fflush(stdout);
-      printf("\rStep: %6d", count);
+      if (script) {
+        printf("Step: %6d\n", count);
+      } else {
+        fflush(stdout);
+        printf("\rStep: %6d", count);
+      }
     }
 
     ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
@@ -240,8 +244,12 @@ int main(int argc, char *argv[]) {
   fclose(agg);
 
   if (!silent) {
-    fflush(stdout);
-    printf("\rLast Step: %6d\n", count);
+    if (script) {
+      printf("Last Step: %6d\n", count);
+    } else {
+      fflush(stdout);
+      printf("\rLast Step: %6d", count);
+    }
   } //}}}
 
   // number of species in agg file //{{{
