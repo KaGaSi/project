@@ -163,6 +163,11 @@ int main(int argc, char *argv[]) {
     }
 
     BeadType[type].Use = true;
+
+    // ignore spaces
+    while((test = getc(agg)) == ' ')
+      ;
+    ungetc(test, agg);
   } //}}}
   ungetc(test, agg);
 
@@ -302,6 +307,31 @@ int main(int argc, char *argv[]) {
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
     RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+
+    for (int i = 0; i < Counts.Aggregates; i++) {
+      Vector com = CenterOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
+
+      IntVector move;
+      move.x = com.x / BoxLength.x;
+      move.y = com.y / BoxLength.y;
+      move.z = com.z / BoxLength.z;
+      if (com.x < 0) {
+        move.x--;
+      }
+      if (com.y < 0) {
+        move.y--;
+      }
+      if (com.z < 0) {
+        move.z--;
+      }
+
+      for (int j = 0; j < Aggregate[i].nBeads; j++) {
+        int bead = Aggregate[i].Bead[j];
+        Bead[bead].Position.x -= move.x * BoxLength.x;
+        Bead[bead].Position.y -= move.y * BoxLength.y;
+        Bead[bead].Position.z -= move.z * BoxLength.z;
+      }
+    }
 
     // open output .vcf file for appending //{{{
     if ((out = fopen(output_vcf, "a")) == NULL) {
