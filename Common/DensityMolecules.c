@@ -178,22 +178,15 @@ int main(int argc, char *argv[]) {
   // <molecule names> - types of molecules for calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
 
-    bool test = false; // to make sure the molecule name exists
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (strcmp(argv[count], MoleculeType[i].Name) == 0) {
-        MoleculeType[i].Use = true;
+    int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
+    printf("%s\n", argv[count]);
 
-        test = true;
-
-        break;
-      }
-    }
-
-    // wrong molecule name //{{{
-    if (!test) {
-      fprintf(stderr, "Non-existent molecule name:%s!\n", argv[count]);
+    if (mol_type == -1) {
+      fprintf(stderr, "Molecule '%s' does not exist in FIELD!\n", argv[count]);
       exit(1);
-    } //}}}
+    } else {
+      MoleculeType[mol_type].Use = true;
+    }
 
     // write initial stuff to output density file //{{{
     FILE *out;

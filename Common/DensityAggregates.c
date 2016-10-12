@@ -16,7 +16,8 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <agg sizes>       aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j             specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -n <average>   number of bins to average\n");
+  fprintf(stderr, "      -n <int>       number of bins to average\n");
+  fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
   CommonHelp(1);
 } //}}}
 
@@ -43,7 +44,8 @@ int main(int argc, char *argv[]) {
       printf("   <agg sizes>       aggregate sizes to calculate density for\n");
       printf("   <options>\n");
       printf("      -j             specify that aggregates with joined coordinates are used\n");
-      printf("      -n <average>   number of bins to average\n");
+      printf("      -n <int>       number of bins to average\n");
+      printf("      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
       CommonHelp(0);
       exit(0);
     }
@@ -74,7 +76,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-j") != 0 &&
-        strcmp(argv[i], "-n") != 0) {
+        strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "-m") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -174,6 +177,26 @@ int main(int argc, char *argv[]) {
   // vsf file is not needed anymore
   free(vsf_file);
 
+  // -m <name> option - specify MoleculeType that is used for determining agg sizes //{{{
+  int specific_molecule = -1;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-m") == 0) {
+
+      // Error - missing or wrong argument //{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing argument for '-m' option (or molecule name beginning with a dash)!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      } //}}}
+
+      specific_molecule = FindMoleculeType(argv[i+1], Counts, MoleculeType);
+      if (specific_molecule == -1) {
+        fprintf(stderr, "Molecule '%s' does not exist in FIELD ('-m' option)!\n", argv[i+1]);
+        exit(1);
+      }
+    }
+  } //}}}
+
   // <agg sizes> - aggregate sizes for calculation //{{{
   int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
   for (int i = 0; i < Counts.Molecules; i++) {
@@ -196,7 +219,11 @@ int main(int argc, char *argv[]) {
     FILE *out;
     char str[32];
 
-    sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
+    if (specific_molecule == -1) {
+      sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
+    } else {
+      sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_molecule].Name, agg_sizes[aggs][0]);
+    }
     if ((out = fopen(str, "w")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -236,11 +263,11 @@ int main(int argc, char *argv[]) {
 
   // read <type names> from Aggregates command //{{{
   int test;
-  while ((test = getc(agg)) != '-') {
+  while ((test = getc(agg)) != '-' && test != '\n') {
     ungetc(test, agg);
 
     char name[10];
-    fscanf(agg, "%s ", name);
+    fscanf(agg, "%s", name);
     int type = FindBeadType(name, Counts, BeadType);
 
     // Error - specified bead type name not in vcf input file
@@ -250,6 +277,10 @@ int main(int argc, char *argv[]) {
     }
 
     BeadType[type].Use = true;
+
+    while ((test = getc(agg)) == ' ')
+      ;
+    ungetc(test, agg);
   } //}}}
 
   while (getc(agg) != '\n')
@@ -341,10 +372,13 @@ int main(int argc, char *argv[]) {
 
   // main loop //{{{
   count = 0; // count timesteps
+  int other_mols = 0; // if '-m' option is used, number of other molecules in aggregates is calculated
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
+
+    // print step? //{{{
     if (!silent) {
       if (script) {
         printf("Step: %6d\n", count);
@@ -352,7 +386,7 @@ int main(int argc, char *argv[]) {
         fflush(stdout);
         printf("\rStep: %6d", count);
       }
-    }
+    } //}}}
 
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
@@ -387,18 +421,32 @@ int main(int argc, char *argv[]) {
     // calculate densities //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
 
-      // test if aggregate size should be used //{{{
+      // test if aggregate 'i' should be used //{{{
+      int mols = 0; // agg size
+      if (specific_molecule != -1) { // agg size = number of molecules of type 'specific_molecule'
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          int id = Aggregate[i].Molecule[j];
+          if (specific_molecule == Molecule[id].Type) {
+            mols++;
+          }
+        }
+      } else { // agg size = total number of all molecules
+        mols = Aggregate[i].nMolecules;
+      }
+      // is 'mols' agg size in provided list?
       int correct_size = -1;
       for (int j = 0; j < aggs; j++) {
-        if (agg_sizes[j][0] == Aggregate[i].nMolecules) {
+        if (agg_sizes[j][0] == mols) {
           correct_size = j;
         }
       } //}}}
 
       if (correct_size != -1) {
+        other_mols += Aggregate[i].nMolecules - mols;
+
         Vector com = CenterOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
-        // aggregate beads
+        // aggregate beads //{{{
         for (int j = 0; j < Aggregate[i].nBeads; j++) {
           Vector dist = Distance(Bead[Aggregate[i].Bead[j]].Position, com, BoxLength);
           dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
@@ -408,9 +456,9 @@ int main(int argc, char *argv[]) {
 
             rho[Bead[Aggregate[i].Bead[j]].Type][correct_size][k]++;
           }
-        }
+        } //}}}
 
-        // monomeric beads
+        // monomeric beads //{{{
         for (int j = 0; j < Counts.Unbonded; j++) {
           Vector dist = Distance(Bead[j].Position, com, BoxLength);
           dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
@@ -420,7 +468,7 @@ int main(int argc, char *argv[]) {
 
             rho[Bead[j].Type][correct_size][k]++;
           }
-        }
+        } //}}}
 
         agg_sizes[correct_size][1]++;
       }
@@ -448,7 +496,11 @@ int main(int argc, char *argv[]) {
     FILE *out;
     char str[32];
 
-    sprintf(str, "%s%d.rho", output_rho, agg_sizes[i][0]);
+    if (specific_molecule == -1) {
+      sprintf(str, "%s%d.rho", output_rho, agg_sizes[i][0]);
+    } else {
+      sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_molecule].Name, agg_sizes[i][0]);
+    }
     if ((out = fopen(str, "a")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -481,6 +533,14 @@ int main(int argc, char *argv[]) {
 
     fclose(out);
   } //}}}
+
+  // print to stdout number of unspecified molecules if '-m' option was used
+  if (specific_molecule != -1 && !silent) {
+    for (int i = 0; i < aggs; i++) {
+      printf("%d %s molecules in aggregate and %.2f other molecules\n",
+          agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols)/agg_sizes[i][1]);
+    }
+  }
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
