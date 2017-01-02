@@ -534,13 +534,13 @@ int main(int argc, char *argv[]) {
     fclose(out);
   } //}}}
 
-  // print to stdout number of unspecified molecules if '-m' option was used
+  // print to stdout number of unspecified molecules if '-m' option was used //{{{
   if (specific_molecule != -1 && !silent) {
     for (int i = 0; i < aggs; i++) {
       printf("%d %s molecules in aggregate and %.2f other molecules\n",
           agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols)/agg_sizes[i][1]);
     }
-  }
+  } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
