@@ -206,7 +206,6 @@ int main(int argc, char *argv[]) {
     pos_old = pos;
     fgetpos(vcf, &pos);
 
-
     if (SkipCoor(vcf, Counts, &stuff) == 1) {
       fprintf(stderr, "\nPremature end of %s file!\n", input_vcf);
       pos = pos_old;

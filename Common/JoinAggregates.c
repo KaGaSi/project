@@ -305,7 +305,6 @@ int main(int argc, char *argv[]) {
     ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
 
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-
     RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
     for (int i = 0; i < Counts.Aggregates; i++) {

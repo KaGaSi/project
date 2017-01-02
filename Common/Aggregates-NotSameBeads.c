@@ -781,7 +781,6 @@ int main(int argc, char *argv[]) {
     if (joined_vcf[0] != '\0') {
 
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
       // open <joined.vcf> file //{{{
