@@ -335,6 +335,15 @@ Vector CenterOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
  */
 double Min3(double x, double y, double z); //}}}
 
+// Sort3() //{{{
+/**
+ * \brief Function returning sorted numbers x < y < z.
+ *
+ * \param [in] in   first double precision number
+ * \return sorted vector
+ */
+Vector Sort3(Vector in); //}}}
+
 //FreeBead() //{{{
 /**
  * \brief Free memory allocated for Bead struct array.

@@ -17,6 +17,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j             specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -n <int>       number of bins to average\n");
+  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
   fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
   CommonHelp(1);
 } //}}}
@@ -45,6 +46,7 @@ int main(int argc, char *argv[]) {
       printf("   <options>\n");
       printf("      -j             specify that aggregates with joined coordinates are used\n");
       printf("      -n <int>       number of bins to average\n");
+      printf("      -st <int>      starting timestep for calculation\n");
       printf("      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
       CommonHelp(0);
       exit(0);
@@ -77,6 +79,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-j") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-m") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
@@ -123,6 +126,27 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       avg = atoi(argv[i+1]);
+    }
+  } //}}}
+
+  // -st <int> option - number of starting timestep //{{{
+  int start = 1;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-st") == 0) {
+
+      // Error - non-numeric argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      }
+      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
+        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
+        ErrorHelp(argv[0]);
+        exit(1);
+      } //}}}
+
+      start = atoi(argv[i+1]);
     }
   } //}}}
 
@@ -199,8 +223,10 @@ int main(int argc, char *argv[]) {
 
   // <agg sizes> - aggregate sizes for calculation //{{{
   int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
+  int *other_mols = malloc(Counts.Molecules*sizeof(int));
   for (int i = 0; i < Counts.Molecules; i++) {
     agg_sizes[i] = calloc(2,sizeof(int));
+    other_mols[i] = 0;
   }
 
   int aggs = 0;
@@ -249,6 +275,7 @@ int main(int argc, char *argv[]) {
 
   // open input aggregate file and read info from first line (Aggregates command) //{{{
   FILE *agg;
+  // open for the first time to read the distance and type names
   if ((agg = fopen(input_agg, "r")) == NULL) {
     fprintf(stderr, "Cannot open file %s!\n", input_agg);
     exit(1);
@@ -263,6 +290,7 @@ int main(int argc, char *argv[]) {
 
   // read <type names> from Aggregates command //{{{
   int test;
+  // reading ends if next argument (beginning with '-') or the following empty line is read
   while ((test = getc(agg)) != '-' && test != '\n') {
     ungetc(test, agg);
 
@@ -282,9 +310,17 @@ int main(int argc, char *argv[]) {
       ;
     ungetc(test, agg);
   } //}}}
+  fclose(agg);
 
+  // open again for production run - to ensure the pointer position in file is correct (at first 'Step')
+  if ((agg = fopen(input_agg, "r")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", input_agg);
+    exit(1);
+  }
+  // skip line with command to produce the agg file
   while (getc(agg) != '\n')
     ;
+  // skip empty line
   while (getc(agg) != '\n')
     ; //}}}
 
@@ -370,9 +406,42 @@ int main(int argc, char *argv[]) {
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
+  // skip first start-1 steps //{{{
+  count = 0;
+  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
+    ungetc(test, vcf);
+
+    count++;
+
+    // print step? //{{{
+    if (!silent) {
+      if (script) {
+        printf("Discarding step: %6d\n", count);
+      } else {
+        fflush(stdout);
+        printf("\rDiscarding step: %6d", count);
+      }
+    } //}}}
+
+    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
+    if (SkipCoor(vcf, Counts, &stuff) == 1) {
+      fprintf(stderr, "Premature end of %s file!\n", input_vcf);
+      exit(1);
+    }
+  }
+  // print number of discarded steps? //{{{
+  if (!silent) {
+    if (script) {
+      printf("Discarded steps: %6d\n", count);
+    } else {
+      fflush(stdout);
+      printf("\rDiscarded steps: %6d\n", count);
+    }
+  } //}}}
+  //}}}
+
   // main loop //{{{
   count = 0; // count timesteps
-  int other_mols = 0; // if '-m' option is used, number of other molecules in aggregates is calculated
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
@@ -411,6 +480,15 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
+    for (int i = 0; i < Counts.Aggregates; i++) {
+      int nanos = 0;
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
+        if (strcmp(MoleculeType[mol_type].Name, "Nano") == 0) {
+          nanos++;
+        }
+      }
+    }
 
     // join agggregates if un-joined coordinates provided //{{{
     if (!joined) {
@@ -441,8 +519,16 @@ int main(int argc, char *argv[]) {
         }
       } //}}}
 
+//    if (mols == 1) {
+//      putchar('\n');
+//      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+//        printf("%d ", Aggregate[i].Molecule[j]+1);
+//      }
+//      putchar('\n');
+//    }
+
       if (correct_size != -1) {
-        other_mols += Aggregate[i].nMolecules - mols;
+        other_mols[correct_size] += Aggregate[i].nMolecules - mols;
 
         Vector com = CenterOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
@@ -537,8 +623,8 @@ int main(int argc, char *argv[]) {
   // print to stdout number of unspecified molecules if '-m' option was used //{{{
   if (specific_molecule != -1 && !silent) {
     for (int i = 0; i < aggs; i++) {
-      printf("%d %s molecules in aggregate and %.2f other molecules\n",
-          agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols)/agg_sizes[i][1]);
+      printf("%d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
+          agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
     }
   } //}}}
 

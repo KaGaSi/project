@@ -32,7 +32,8 @@ int main(int argc, char *argv[]) {
       printf("the system.                                                                 \n\n");
 
       printf("This version calculates distributions of aggregate that don't contain       \n");
-      printf("nanoparticles (they contain only polymer chains - done for A4B30 chains)    \n\n");
+      printf("nanoparticles (they contain only polymer chains - done for A4B30 chains).   \n");
+      printf("It also prints ids of all molecules in aggregates with a single 'nano'.     \n\n");
 
       printf("Usage:\n");
       printf("   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
@@ -263,13 +264,24 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < Counts.Aggregates; i++) {
       // check if aggregate contains Nano molecule type
       bool nano = false;
+      int nanos = 0;
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
         if (strcmp(MoleculeType[mol_type].Name, "Nano") == 0) {
           nano = true;
-          break;
+          nanos++;
+//        break;
         }
       }
+
+//    // print all molecule ids for aggregates containing 1 nanoparticle
+//    if (nanos == 1 && count >= start) {
+//      putchar('\n');
+//      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+//        printf("%d ", Aggregate[i].Molecule[j]+1);
+//      }
+//      putchar('\n');
+//    }
 
       // distribution if no Nano in aggregate
       if (!nano && count >= start) {
