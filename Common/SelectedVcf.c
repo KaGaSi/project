@@ -285,42 +285,43 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
+  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{ //{{{
   char *stuff;
   stuff = calloc(128,sizeof(int)); //}}}
 
-  // start with start-th step //{{{
-  int test;
+  // skip first start-1 steps //{{{
   count = 0;
-  if (!silent)
-    printf("\rDiscarded: %6d", count);
-  for (int i = 1; i < start; i++) {
+  int test;
+  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
+    ungetc(test, vcf);
+
     count++;
 
+    // print step? //{{{
     if (!silent) {
       if (script) {
-        printf("Discarded: %6d\n", count);
+        printf("Discarding step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rDiscarded: %6d", count);
-      }
-    }
-
-    // read indexed timestep from input .vcf file //{{{
-    if (indexed) {
-      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
-        exit(1);
-      } //}}}
-    // or read ordered timestep from input .vcf file //{{{
-    } else {
-      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
-        exit(1);
+        printf("\rDiscarding step: %6d", count);
       }
     } //}}}
+
+    if (SkipCoor(vcf, Counts, &stuff) == 1) {
+      fprintf(stderr, "Premature end of %s file!\n", input_vcf);
+      exit(1);
+    }
   }
-  putchar('\n'); //}}}
+  // print number of discarded steps? //{{{
+  if (!silent) {
+    if (script) {
+      printf("Discarded steps: %6d\n", count);
+    } else {
+      fflush(stdout);
+      printf("\rDiscarded steps: %6d\n", count);
+    }
+  } //}}}
+  //}}} //}}}
 
   // main loop //{{{
   while ((test = getc(vcf)) != EOF) {

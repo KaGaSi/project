@@ -1464,6 +1464,47 @@ double Min3(double x, double y, double z) {
   }
 } //}}}
 
+// Sort3() //{{{
+/**
+ * Function returning sorted numbers x < y < z.
+ */
+Vector Sort3(Vector in) {
+
+  Vector out;
+
+  if (in.x < in.y) {
+    if (in.y < in.z) {
+      out.x = in.x;
+      out.y = in.y;
+      out.z = in.z;
+    } else if (in.x < in.z) {
+      out.x = in.x;
+      out.y = in.z;
+      out.z = in.y;
+    } else {
+      out.x = in.z;
+      out.y = in.x;
+      out.z = in.y;
+    }
+  } else {
+    if (in.x < in.z) {
+      out.x = in.y;
+      out.y = in.x;
+      out.z = in.z;
+    } else if (in.y < in.z) {
+      out.x = in.y;
+      out.y = in.z;
+      out.z = in.x;
+    } else {
+      out.x = in.z;
+      out.y = in.y;
+      out.z = in.x;
+    }
+  }
+
+  return (out);
+} //}}}
+
 // FreeBead() //{{{
 /**
  * Free memory allocated for Bead struct array. This function makes it

@@ -50,6 +50,10 @@ Usage:
 > `<options>`
 > > `-j`
 > > > join individual molecules by removing periodic boundary conditions
+> > `-st <int>`
+> > > starting timestep for calculation
+> > `-sk <int>`
+> > > number of steps to skip per one used
 
 # Config utility {#Config}
 
@@ -288,8 +292,13 @@ This utility calculates number bead density for aggregates of specified
 size from their center of mass. During the calculation, only the current
 aggregate is taken into account, so there is no possibility of getting
 'false' densities from adjacent aggregates. Therefore if some bead type is
-never present in an aggregate of specified size, its density will always be
-0.
+never present in an aggregate of specified size (but is in the `.vcf` file),
+its density will always be 0.
+
+Instead of true aggregate size, a number of molecules of specified name can
+be used, i.e. an aggregate with 1 `A` molecule and 2 `B` molecules can be
+specified with `<agg sizes>` of 3 without `-m` option or 1 if `-m A` is
+used (or 2 if `-m B` is used).
 
 Usage:
 
@@ -311,6 +320,13 @@ Usage:
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
+> > `-n <int>`
+> > > number of bins to average
+> > `-st <int>`
+> > > starting timestep for calculation
+> > `-m <molecule type name>`
+> > > instead of aggregate size, use number of molecules of specified molecule
+> > > types
 
 \todo DensityAggregates: check if only chains in one aggregate are used --
 anomalies in VanDerBurgh/AddedPol/
