@@ -93,7 +93,7 @@ mass, charge and name. Atom lines for beads in molecules also contain
 molecule's id number and the name of the type of molecule. The bond section of
 `output.vsf` lists all bonds one by one (i.e. no chains of bonds in the format
 `<id1>:: <id2>` are used). Information about which bonds belong to which
-molecule is provided as has comment. The file has the following format:
+molecule is provided as a comment. The file has the following format:
 > `atom default name <name> mass <m> charge <q>`
 >
 > `...`
@@ -146,14 +146,20 @@ Usage:
 > `<molecule names>`
 > > names of molecule types to calculate the distribution for
 
-# Aggregates utility {#Aggregates}
+# Aggregates & Aggregates-NotSameBeads utility {#Aggregates}
 
-This utility determines which molecules belong to which aggregates
+These utilities determine which molecules belong to which aggregates
 according to a simple criterion: two molecules belong to the same aggregate
-if they at least a specified number of contact pairs. A contact pair is a
-pair of two beads belonging to different molecules which are closer than
-certain distance. Both the distance and the number of needed contact pairs
-are arguments of the command.
+if they share at least a specified number of contact pairs. A contact pair
+is a pair of two beads belonging to different molecules which are closer
+than certain distance. Both the distance and the number of needed contact
+pairs are arguments of the command as well as bead types to consider.
+
+While the Aggregates utility uses all possible pairs of given bead types,
+Aggregates-NotSameBeads does not use same-type pairs. That is, if bead
+types `A`, `B` and `C` are given, Aggregates utility will use all six bead
+type pairs (`A-A`, `A-B`, `A-C`, `B-B`, `B-C` and `C-C`), but
+Aggregates-NotSameBeads will not utilise `A-A`, `B-B` or `C-C` contacts.
 
 Usage:
 
@@ -209,13 +215,13 @@ Usage:
 # DistrAgg utility {#DistrAgg}
 
 DistrAgg calculates number and weight average aggregation numbers
-for each timestep.
+for each timestep (time evolution).
 \latexonly
 The number average aggregation number, $\langle A_{\mathrm{s}} \rangle_n$
 is defined as:
 
 \begin{equation}
-\langle A_{\mathrm{s}} \rangle_n = \frac{\sum_i m_i}{N} \mbox{,}
+\langle A_{\mathrm{s}} \rangle_n = \frac{\sum_{i=1}^N m_i}{N} \mbox{,}
 \end{equation}
 
 where $m_i$ is weight (aggregation number) of aggregate $i$ and $N$ is
@@ -223,7 +229,7 @@ total number of aggregates. The weight average aggregation number, $\langle
 A_{\mathrm{s}} \rangle_w$ is then defined as:
 
 \begin{equation}
-\langle A_{\mathrm{s}} \rangle_w = \frac{\sum_i m_i^2}{\sum_i m_i} \mbox{.}
+\langle A_{\mathrm{s}} \rangle_w = \frac{\sum_{i=1}^N m_i^2}{\sum_{i=1}^N m_i} \mbox{.}
 \end{equation}
 \endlatexonly
 
@@ -232,7 +238,7 @@ It also calculates overall number and weight distribution function.
 The number distribution function, $F_n (A_{\mathrm{s}})$ is defined as:
 
 \begin{equation}
-F_n (A_{\mathrm{s}}) = \frac{N_{A_{\mathrm{s}}}}{\sum_i N_i} \mbox{,}
+F_n (A_{\mathrm{s}}) = \frac{N_{A_{\mathrm{s}}}}{\sum_{i=1}^N N_i} \mbox{,}
 \end{equation}
 
 where $N_i$ is the number of aggregates with aggregation number
@@ -240,11 +246,13 @@ $A_{\mathrm{s}} = i$.  The weight distribution function, $F_w
 (A_{\mathrm{s}})$ is then defined as:
 
 \begin{equation}
-F_w(A_{\mathrm{s}}) = \frac{m_{A_{\mathrm{s}}} N_{A_{\mathrm{s}}}}{\sum_i m_i N_i} \mbox{,}
+F_w(A_{\mathrm{s}}) = \frac{m_{A_{\mathrm{s}} }
+N_{A_{\mathrm{s}}}}{\sum_{i=1}^N
+m_i N_i} \mbox{,}
 \end{equation}
 
-where $m_{A_{\mathrm{s}} }$ is the weight, that is the number of aggregates
-with the given aggregation number.
+where $m_{A_{\mathrm{s}} }$ and $m_i$ are again the weight, that is the
+aggregation number.
 \endlatexonly
 
 Lastly, the utility calculates volume fractions of all aggregates, where it
@@ -254,17 +262,20 @@ Volume fraction of an aggregate with aggregation number $A_{\mathrm{s}}$ is
 defined as:
 
 \begin{equation}
-\phi(A_{\mathrm{s}}) = \frac{m_{A_{\mathrm{s}}} N_{A_{\mathrm{s}}}}{\sum_i m_i N_i} \mbox{,}
+\phi(A_{\mathrm{s}}) = \frac{n_{A_{\mathrm{s}}} N_{A_{\mathrm{s}}}}{\sum_{i=1}^N n_i N_i} \mbox{,}
 \end{equation}
 
-where $m_i$ is the actual mass of an aggregate -- it equals to aggregate's
-volume assuming all beads have a unit mass.
+where $n_i$ is volume of an aggregate with $A_{\mathrm{s}} = i$ -- that is
+the number of beads in the aggregate.
+
+It should be noted that weight average aggregation number and weight
+distribution function do not take into account the actual weight of an
+associates -- it is weighted via the aggregation number itself.
 \endlatexonly
 
 The utility reads information about aggregate from input file with
-[Aggregate format](\ref AggregateFile)
-
-This file can be generated using [Aggregates utility](\ref Aggregates).
+[Aggregate format](\ref AggregateFile). This file can be generated using
+[Aggregates utility](\ref Aggregates).
 
 Usage:
 
@@ -279,12 +290,11 @@ Usage:
 > > each timestep
 > `<options>`
 > > `-n <int>`
-> > > starting timestep for calculation
+> > > starting timestep for calculation (does not affect calculation of
+> > > time evolution)
 > > `--no-unimers`
-> > > free chains shouldn't be used to calcalute average aggregation numbers
-
-\todo DistrAgg: look into volume fractions with beads of arbitrary (and
-different) masses.
+> > > free chains shouldn't be used to calcalute average aggregation
+> > > numbers
 
 # DensityAggregates {#AggDensity}
 
@@ -380,11 +390,33 @@ Usage:
 # GyrationAggregates utility {#GyrationAggregates}
 
 This utility calculates a gyration tensor and its eigenvalues (using Jacobi
-transformations) for aggregates of given size. It then determines their
-radius of gyration. It saves average radii of gyration during the
-simulation to an output file and prints overall average.
+transformations) for aggregates of given size. It then determines various
+shape descriptors. It saves averages during the simulation (time evolution)
+to an output file and prints overall averages to standard output.
 
-Right now it calculates gyration for all beads in the aggregates.
+It calculates radius of gyration,\latexonly $R_{\mathrm{G}}$:
+
+\begin{equation}
+  R_{\mathrm{G}}^2 = \lambda_x^2 + \lambda_y^2 + \lambda_z^2 \mbox{,}
+\end{equation} where $\lambda_i^2$ is the $i$-th principle moment of the tensor
+of gyration ($\lambda_x^2 \leq \lambda_y^2 \leq \lambda_z^2$).
+Then it calculates\endlatexonly the asphericity, \latexonly $b$:
+
+\begin{equation}
+  b = \lambda_z^2 - \frac{1}{2} \left( \lambda_x^2 + \lambda_y^2 \right) = \frac{3}{2} \lambda_z^2 - \frac{R_{\mathrm{G}}^2}{2} \mbox{,}
+\end{equation}
+\endlatexonly the acylindricity, \latexonly $c$:
+
+\begin{equation}
+  c = \lambda_y^2 - \lambda_x^2
+\end{equation}
+\endlatexonly and the relative shape anisotropy\latexonly , $\kappa$:
+\begin{equation}
+  \kappa^2 = \frac{b^2 + 0.75 c^2}{R_{\mathrm{G}}^4} = \frac{3}{2}
+  \frac{\lambda_x^4 + \lambda_y^4 + \lambda_z^4}{\left( \lambda_x^2 +
+  \lambda_y^2 + \lambda_z^2 \right)^2}
+\end{equation}
+\endlatexonly
 
 Usage:
 
@@ -397,31 +429,28 @@ Usage:
 > > input filename (must end with `.agg`) containing information about
 > > aggregates
 > `<output.vcf>`
-> > output filename with radii of gyration throughout simulation (automatic
-> > ending #.txt)
+> > output filename with shape descriptors for chosen sizes throughout
+> > simulation
 > `<agg sizes>`
 > > aggregate sizes for gyration calculation
 > `<options>`
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
-
-\todo GyrationAggregates: implement using only selected bead types for
-calculation
-
-\todo GyrationAggregates: implement option for using only specific molecule
-names for finding out the aggregation number (i.e. make
-OneTime/GyragionAggregates-NotHomopol more general)
+> > `-t`
+> > > specify bead types to be used for calculation (default is all)
+> > `-m <name>`
+> > > take as an aggregate size the number of `<name>` molecules in aggregates
+> > > instead of the number of all molecules
 
 \todo GyrationAggregates: understand `jacobi` function
 
 # GyrationMolecules utility {#GyrationMolecules}
 
-This utility function in the same way as GyrationAggregates, but it
-calculates radii of gyration for specified molecule names instead of
-aggregate sizes.
+This utility function in the same way as GyrationAggregates, but it calculates
+radii of gyration for specified molecule names instead of aggregate sizes.
 
-Right now it calculates gyration for all beads in the aggregates.
+Right now it calculates gyration for all beads in the specified molecule types.
 
 Usage:
 
@@ -446,6 +475,9 @@ Usage:
 calculation
 
 \todo GyrationMolecules: understand `jacobi` function
+
+\todo Gyration: move function from GyrationAggregates and GyrationMolecules
+to a separate header file
 
 # JoinRuns utility {#JoinRuns}
 
@@ -492,7 +524,7 @@ Usage:
 
 \todo JoinRuns: base reindexing of beads in the second simulation on comparison
 between the two `.vsf` files
-\todo JoinRuns: implement wholy --script common option
+\todo JoinRuns: implement wholy `--script` common option
 
 # Average utility {#Average}
 

@@ -13,7 +13,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output distr file>  filename with weight and number distributions\n");
   fprintf(stderr, "   <output avg file>    filename with weight and number averages throughout simulation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -n <int>          start weight distribution calculation with <int>-th step\n");
+  fprintf(stderr, "      -n <int>          start distribution calculation with <int>-th step\n");
   fprintf(stderr, "      --no-unimers      do not count unimers into averages\n");
   CommonHelp(1);
 } //}}}
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
       printf("   <output distr file>  filename with weight and number distributions\n");
       printf("   <output avg file>    filename with weight and number averages throughout simulation\n");
       printf("   <options>\n");
-      printf("      -n <int>          start weight distribution calculation with <int>-th step\n");
+      printf("      -n <int>          start distribution calculation with <int>-th step\n");
       printf("      --no-unimers      do not count unimers into averages\n");
       CommonHelp(0);
       exit(0);

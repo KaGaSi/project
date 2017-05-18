@@ -17,7 +17,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.agg>     output filename (agg format)\n");
   fprintf(stderr, "   <type names>     names of bead types to use for closeness calculation (at least two)\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j <out.vcf>  output vcf file with joined coordinates\n");
+  fprintf(stderr, "      -j <joined.vcf>  output vcf file with joined coordinates\n");
   CommonHelp(1);
 } //}}}
 
@@ -483,7 +483,7 @@ int main(int argc, char *argv[]) {
       printf("   <output.agg>     output filename (agg format)\n");
       printf("   <type names>     names of bead types for closeness calculation (at least two)\n");
       printf("   <options>\n");
-      printf("      -j <out.vcf>  output vcf file with joined coordinates\n");
+      printf("      -j <joined.vcf>  output vcf file with joined coordinates\n");
       CommonHelp(0);
       exit(0);
     }
