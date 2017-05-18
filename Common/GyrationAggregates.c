@@ -11,7 +11,7 @@ void ErrorHelp(char cmd[50]) { //{{{
 
   fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
   fprintf(stderr, "   <input.agg>         input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <output>            output file with radii of gyration\n");
+  fprintf(stderr, "   <output>            output file with data during simulation run\n");
   fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j               specify that aggregates with joined coordinates are used\n");
@@ -206,10 +206,13 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("GyrationAggregates calculates radii of gyration during the simulation for   \n");
-      printf("aggregates of given size(s). The radius of gyration is calculated from      \n");
-      printf("eigenvalues of gyration tensor. It also prints average radii of gyration to \n");
-      printf("the screen. Currently, it uses all beads present in the aggregates.         \n\n");
+      printf("GyrationAggregates calculates radii of gyration, acylindricities,           \n");
+      printf("asphericities and relative shape anisotropies during the simulation for     \n");
+      printf("aggregates of given size(s). The shape descriptors are calculated from      \n");
+      printf("eigenvalues of gyration tensor. It also prints simplie averages to the      \n");
+      printf("screen. Instead of aggregate size, a number of specified molecular species  \n");
+      printf("in an aggregate can be used and only specified bead types can be used for   \n");
+      printf("all calculations.                                                           \n\n");
 
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
       printf("(along with optional bond file) files to determine all information about    \n");
@@ -220,7 +223,7 @@ int main(int argc, char *argv[]) {
 
       printf("   <input.vcf>         input filename (vcf format)\n");
       printf("   <input.agg>         input filename with information about aggregates (agg format)\n");
-      printf("   <output>            output file with radii of gyration\n");
+      printf("   <output>            output file with data during simulation run\n");
       printf("   <agg sizes>         aggregate sizes to calculate radius of gyration for\n");
       printf("   <options>\n");
       printf("      -j               specify that aggregates with joined coordinates are used\n");
@@ -318,7 +321,7 @@ int main(int argc, char *argv[]) {
   char input_agg[32];
   strcpy(input_agg, argv[++count]); //}}}
 
-  // <output> - filename with radii of gyration //{{{
+  // <output> - filename with data during simulation run //{{{
   char output[32];
   strcpy(output, argv[++count]); //}}}
 
