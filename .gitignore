@@ -4,4 +4,5 @@ latex
 test
 obj
 bin
+*/bin
 */*.o
