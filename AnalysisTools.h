@@ -244,18 +244,18 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *B
  *
  * \param [in]  name      bead name
  * \param [in]  Counts    numbers of beads, residues, etc.
- * \param [in]  BeadType  informationn about bead types
- * \return bead type id corresponding to index in BeadType struct
+ * \param [in]  BeadType  information about bead types
+ * \return bead type id corresponding to index in BeadType struct (or -1 if non-existent bead name)
  */
 int FindBeadType(char *name, Counts Counts, BeadType *BeadType); //}}}
 
 // FindMoleculeType() //{{{
-/** \brief Function to identify type of bead from its name
+/** \brief Function to identify type of molecule from its name
  *
- * \param [in]  name          bead name
+ * \param [in]  name          molecule name
  * \param [in]  Counts        numbers of beads, residues, etc.
- * \param [in]  MoleculeType  informationn about bead types
- * \return molecule type      id corresponding to index in BeadType struct
+ * \param [in]  MoleculeType  information about bead types
+ * \return molecule type      id corresponding to index in BeadType struct (or -1 for non-existent molecule)
  */
 int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}}}
 

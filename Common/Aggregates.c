@@ -18,6 +18,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <type names>     names of bead types to use for closeness calculation\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j <out.vcf>  output vcf file with joined coordinates\n");
+  fprintf(stderr,"      -x <name(s)>  exclude specified molecule(s)\n");
   CommonHelp(1);
 } //}}}
 
@@ -488,6 +489,7 @@ int main(int argc, char *argv[]) {
       printf("   <type names>     names of bead types for closeness calculation\n");
       printf("   <options>\n");
       printf("      -j <out.vcf>  output vcf file with joined coordinates\n");
+      printf("      -x <name(s)>  exclude specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -505,7 +507,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-j") != 0) {
+        strcmp(argv[i], "-j") != 0 &&
+        strcmp(argv[i], "-x") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -625,6 +628,43 @@ int main(int argc, char *argv[]) {
 
   // vsf file is not needed anymore
   free(vsf_file);
+
+  // -x <name(s)>  exclude specified molecule(s)\n"); //{{{
+  int exclude[Counts.TypesOfMolecules];
+
+  // initialize array wit -1 (aka nothing excluded){{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    exclude[i] = -1;
+  } //}}}
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-x") == 0) {
+
+      // wrong argument to -x option{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing first argument to '-x' option ");
+        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
+        exit(1);
+      } //}}}
+
+      // read all molecule names
+      int j = 0;
+      while ((i+1+j) < argc && argv[i+1][0] != '-') {
+
+        if ((exclude[j] = FindMoleculeType(argv[i+1+j], Counts, MoleculeType)) == -1) {
+          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
+          fprintf(stderr, "Molecule names in FIELD:\n");
+          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
+            fprintf(stderr, "%3d %s\n", k, MoleculeType[k].Name);
+          }
+          exit(1);
+        }
+
+        j++;
+      }
+    }
+
+  } //}}}
 
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
