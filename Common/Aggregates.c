@@ -17,8 +17,8 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.agg>     output filename (agg format)\n");
   fprintf(stderr, "   <type names>     names of bead types to use for closeness calculation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j <out.vcf>  output vcf file with joined coordinates\n");
-  fprintf(stderr,"      -x <name(s)>  exclude specified molecule(s)\n");
+  fprintf(stderr, "     -x <name(s)>  exclude specified molecule(s)\n");
+  fprintf(stderr, "     -j <joined.vcf>  output vcf file with joined coordinates\n");
   CommonHelp(1);
 } //}}}
 
@@ -132,8 +132,10 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
             } //}}}
 
             while (j != -1) {
-              if (BeadType[(*Bead)[i].Type].Use &&
-                  BeadType[(*Bead)[j].Type].Use) {
+              if (BeadType[(*Bead)[i].Type].Use && // bead i must be of specified type
+                  BeadType[(*Bead)[j].Type].Use && // bead j as well
+                  MoleculeType[(*Molecule)[(*Bead)[i].Molecule].Type].Use && // molecule with i cannot be excluded
+                  MoleculeType[(*Molecule)[(*Bead)[j].Molecule].Type].Use) { // molecule with j the same
 
                 // calculate distance between i and j beads
                 Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
@@ -482,14 +484,14 @@ int main(int argc, char *argv[]) {
       printf("   %s <input.vcf> <distance> <contacts> ", argv[0]);
       printf("<output.agg> <type names> <options>\n\n");
 
-      printf("   <input.vcf>      input filename (vcf format)\n");
-      printf("   <distance>       minimum distance for contact for aggregate check\n");
-      printf("   <contacts>       minimum number of contacts for aggregate check\n");
-      printf("   <output.agg>     output filename (agg format)\n");
-      printf("   <type names>     names of bead types for closeness calculation\n");
+      printf("   <input.vcf>         input filename (vcf format)\n");
+      printf("   <distance>          minimum distance for contact for aggregate check\n");
+      printf("   <contacts>          minimum number of contacts for aggregate check\n");
+      printf("   <output.agg>        output filename (agg format)\n");
+      printf("   <type names>        names of bead types for closeness calculation\n");
       printf("   <options>\n");
-      printf("      -j <out.vcf>  output vcf file with joined coordinates\n");
-      printf("      -x <name(s)>  exclude specified molecule(s)\n");
+      printf("      -x <name(s)>     exclude specified molecule(s)\n");
+      printf("      -j <joined.vcf>  output vcf file with joined coordinates\n");
       CommonHelp(0);
       exit(0);
     }
@@ -507,8 +509,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-j") != 0 &&
-        strcmp(argv[i], "-x") != 0) {
+        strcmp(argv[i], "-x") != 0 &&
+        strcmp(argv[i], "-j") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -543,10 +545,10 @@ int main(int argc, char *argv[]) {
 
       strcpy(joined_vcf, argv[i+1]);
 
-      // test if <out.vcf> filename ends with '.vcf' (required by VMD)
+      // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
       char *dot = strrchr(joined_vcf, '.');
       if (!dot || strcmp(dot, ".vcf")) {
-        fprintf(stderr, "<out.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
+        fprintf(stderr, "<joined.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
         ErrorHelp(argv[0]);
         exit(1);
       }
@@ -629,43 +631,6 @@ int main(int argc, char *argv[]) {
   // vsf file is not needed anymore
   free(vsf_file);
 
-  // -x <name(s)>  exclude specified molecule(s)\n"); //{{{
-  int exclude[Counts.TypesOfMolecules];
-
-  // initialize array wit -1 (aka nothing excluded){{{
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    exclude[i] = -1;
-  } //}}}
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-x") == 0) {
-
-      // wrong argument to -x option{{{
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing first argument to '-x' option ");
-        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
-        exit(1);
-      } //}}}
-
-      // read all molecule names
-      int j = 0;
-      while ((i+1+j) < argc && argv[i+1][0] != '-') {
-
-        if ((exclude[j] = FindMoleculeType(argv[i+1+j], Counts, MoleculeType)) == -1) {
-          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
-          fprintf(stderr, "Molecule names in FIELD:\n");
-          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
-            fprintf(stderr, "%3d %s\n", k, MoleculeType[k].Name);
-          }
-          exit(1);
-        }
-
-        j++;
-      }
-    }
-
-  } //}}}
-
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
@@ -677,6 +642,50 @@ int main(int argc, char *argv[]) {
     }
 
     BeadType[type].Use = true;
+  } //}}}
+
+  // -x <name(s)>  exclude specified molecule(s) //{{{
+  // without -x - use all molecules #{{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType[i].Use = true;
+  } //}}}
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-x") == 0) {
+
+      // wrong argument to -x option{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing first argument to '-x' option ");
+        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
+        exit(1);
+      } //}}}
+
+      // switch all molecules to 'do not use'{{{
+      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+        MoleculeType[j].Use = false;
+      } //}}}
+
+      // read molecule(s) names
+      int j = 0;
+      while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
+
+        int type = FindMoleculeType(argv[i+1+j], Counts, MoleculeType);
+
+        if (type == -1) { // is it in FIELD?
+          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
+          fprintf(stderr, "Molecule names in FIELD:\n");
+          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
+            fprintf(stderr, "%3d %s\n", k, MoleculeType[k].Name);
+          }
+          exit(1);
+        } else {
+          // use that molecule
+          MoleculeType[type].Use = true;
+        }
+
+        j++;
+      }
+    }
+
   } //}}}
 
   // print command to output .agg file //{{{
@@ -728,16 +737,16 @@ int main(int argc, char *argv[]) {
     printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
-  // write bead type names and pbc to <out.vcf> if '-j' option was used //{{{
+  // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {
 
-    // bead types are to be written in out.vcf -- probably will never change,
+    // bead types are to be written in joined.vcf -- probably will never change,
     // since the beadtypes should correspond to those in .agg file
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
       BeadType[i].Write = true;
     }
 
-    // open <out.vcf>
+    // open <joined.vcf>
     FILE *joined;
     if ((joined = fopen(joined_vcf, "w")) == NULL) {
       fprintf(stderr, "Cannot open output %s vcf file!\n", joined_vcf);
@@ -830,14 +839,13 @@ int main(int argc, char *argv[]) {
 
     CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, BoxLength, BeadType, &Bead, MoleculeType, &Molecule);
 
-    // calculate & write joined coordinatest to <out.vcf> if '-j' option is used //{{{
+    // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
     if (joined_vcf[0] != '\0') {
 
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
-      // open <out.vcf> file //{{{
+      // open <joined.vcf> file //{{{
       FILE *joined;
       if ((joined = fopen(joined_vcf, "a")) == NULL) {
         fprintf(stderr, "Cannot open output %s vcf file!\n", joined_vcf);
@@ -864,19 +872,22 @@ int main(int argc, char *argv[]) {
 
       test_count += Aggregate[i].nMolecules;
 
-      // go through all molecules in aggregate 'i'
-      fprintf(out, "%d :", Aggregate[i].nMolecules);
-      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-        fprintf(out, " %d", Aggregate[i].Molecule[j]+1);
-      }
-      putc('\n', out);
+      if (MoleculeType[Molecule[Aggregate[i].Molecule[0]].Type].Use) {
 
-      // go through all monomeric beads in aggregate 'i'
-      fprintf(out, "   %d :", Aggregate[i].nMonomers);
-      for (int j = 0; j < Aggregate[i].nMonomers; j++) {
-        fprintf(out, " %d", Aggregate[i].Monomer[j]);
+        // go through all molecules in aggregate 'i'
+        fprintf(out, "%d :", Aggregate[i].nMolecules);
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          fprintf(out, " %d", Aggregate[i].Molecule[j]+1);
+        }
+        putc('\n', out);
+
+        // go through all monomeric beads in aggregate 'i'
+        fprintf(out, "   %d :", Aggregate[i].nMonomers);
+        for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+          fprintf(out, " %d", Aggregate[i].Monomer[j]);
+        }
+        putc('\n', out);
       }
-      putc('\n', out);
     }
 
     fclose(out); //}}}

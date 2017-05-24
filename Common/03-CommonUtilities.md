@@ -154,12 +154,16 @@ if they share at least a specified number of contact pairs. A contact pair
 is a pair of two beads belonging to different molecules which are closer
 than certain distance. Both the distance and the number of needed contact
 pairs are arguments of the command as well as bead types to consider.
+Specified molecule(s) can be excluded from aggregate calculation (both from
+aggregate calculation and the output `.agg` file).
 
 While the Aggregates utility uses all possible pairs of given bead types,
 Aggregates-NotSameBeads does not use same-type pairs. That is, if bead
 types `A`, `B` and `C` are given, Aggregates utility will use all six bead
-type pairs (`A-A`, `A-B`, `A-C`, `B-B`, `B-C` and `C-C`), but
-Aggregates-NotSameBeads will not utilise `A-A`, `B-B` or `C-C` contacts.
+type pairs, that is `A-A`, `A-B`, `A-C`, `B-B`, `B-C` and `C-C` (provided
+the beads are in different molecules), but Aggregates-NotSameBeads will not
+use `A-A`, `B-B` or `C-C` contacts.  Therefore at least two bead types must
+be provided for `<type names>` argument in Aggregates-NotSameBeads.
 
 Usage:
 
@@ -180,15 +184,10 @@ Usage:
 > `<type names>`
 > > names of bead types to use for calculating contact pairs
 > `<options>`
+> > `-x <name(s)>`
+> > > exclude specified molecule(s) from calculation of aggregates
 > > `-j <joined.vcf>`
 > > > filename for coordinates of joined aggregates (must end with `.vcf`)
-
-The NotSameBeads variant of the Aggregate utility works in exactly the same,
-but does not calculates contacts between beads of the same type, i.e. if bead
-types `A` and `B` are provided, Aggregates will calculate contact pairs `A-B`,
-`A-A` and `B-B` (provided the beads are in different molecules), while
-Aggregates-NotSameBeads will calculate only `A-B` contact pair. Therefore at
-least two bead types must be provided for `<type names>` argument.
 
 # JoinAggregates utility {#JoinAggregates}
 
