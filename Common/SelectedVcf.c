@@ -16,6 +16,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -j             join molecules (remove pbc)\n");
   fprintf(stderr, "      -st <start>    number of timestep to start from\n");
   fprintf(stderr, "      -sk <skip>     leave out every 'skip' steps\n");
+  fprintf(stderr, "     -x <name(s)>    exclude specified molecule(s)\n");
   CommonHelp(1);
 } //}}}
 
@@ -43,6 +44,7 @@ int main(int argc, char *argv[]) {
       printf("      -j             join molecules (remove pbc)\n");
       printf("      -st <start>    number of timestep to start from\n");
       printf("      -sk <skip>     leave out every 'skip' steps\n");
+      printf("      -x <name(s)>   exclude specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -74,7 +76,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-j") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
-        strcmp(argv[i], "-sk") != 0) {
+        strcmp(argv[i], "-sk") != 0 &&
+        strcmp(argv[i], "-x") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -213,6 +216,50 @@ int main(int argc, char *argv[]) {
 //  ErrorHelp(argv[0]);
 //  exit(1);
 //} //}}}
+
+  // -x <name(s)>  exclude specified molecule(s) //{{{
+  // without -x - use all molecules #{{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType[i].Use = true;
+  } //}}}
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-x") == 0) {
+
+      // wrong argument to -x option{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing first argument to '-x' option ");
+        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
+        exit(1);
+      } //}}}
+
+      // switch all molecules to 'do not use'{{{
+      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+        MoleculeType[j].Use = false;
+      } //}}}
+
+      // read molecule(s) names
+      int j = 0;
+      while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
+
+        int type = FindMoleculeType(argv[i+1+j], Counts, MoleculeType);
+
+        if (type == -1) { // is it in FIELD?
+          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
+          fprintf(stderr, "Molecule names in FIELD:\n");
+          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
+            fprintf(stderr, "%3d %s\n", k, MoleculeType[k].Name);
+          }
+          exit(1);
+        } else {
+          // use that molecule
+          MoleculeType[type].Use = true;
+        }
+
+        j++;
+      }
+    }
+
+  } //}}}
 
   // print selected bead type names to output .vcf file //{{{
   FILE *out;

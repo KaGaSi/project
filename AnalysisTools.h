@@ -114,6 +114,8 @@ typedef struct Aggregate {
       *Monomer; ///< ids of monomeric beads in aggregate
 
   double Mass; ///< total mass of the aggregate
+
+  bool Use; ///< should aggregate be used for calculation?
 } Aggregate; //}}}
 
 // CommonHelp() //{{{

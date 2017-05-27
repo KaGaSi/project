@@ -132,10 +132,13 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
             } //}}}
 
             while (j != -1) {
+              int type_i = (*Molecule)[(*Bead)[i].Molecule].Type;
+              int type_j = (*Molecule)[(*Bead)[j].Molecule].Type;
+
               if (BeadType[(*Bead)[i].Type].Use && // bead i must be of specified type
                   BeadType[(*Bead)[j].Type].Use && // bead j as well
-                  MoleculeType[(*Molecule)[(*Bead)[i].Molecule].Type].Use && // molecule with i cannot be excluded
-                  MoleculeType[(*Molecule)[(*Bead)[j].Molecule].Type].Use) { // molecule with j the same
+                  MoleculeType[type_i].Use && // molecule with i cannot be excluded
+                  MoleculeType[type_j].Use) { // molecule with j the same
 
                 // calculate distance between i and j beads
                 Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
@@ -645,10 +648,11 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // -x <name(s)>  exclude specified molecule(s) //{{{
-  // without -x - use all molecules #{{{
+  // set all molecules to use #{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Use = true;
   } //}}}
+
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-x") == 0) {
 
@@ -657,11 +661,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Missing first argument to '-x' option ");
         fprintf(stderr, "(or molecule name beginning with a dash)!\n");
         exit(1);
-      } //}}}
-
-      // switch all molecules to 'do not use'{{{
-      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-        MoleculeType[j].Use = false;
       } //}}}
 
       // read molecule(s) names
@@ -678,14 +677,13 @@ int main(int argc, char *argv[]) {
           }
           exit(1);
         } else {
-          // use that molecule
-          MoleculeType[type].Use = true;
+          // exclude that molecule
+          MoleculeType[type].Use = false;
         }
 
         j++;
       }
     }
-
   } //}}}
 
   // print command to output .agg file //{{{
@@ -864,15 +862,39 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // write data to output .agg file //{{{
-    fprintf(out, "\nStep: %d\n%d\n\n", count, Counts.Aggregates);
-    int test_count = 0; // to test that all molecules are in aggregate
+
+    // find the number of aggregates - remove aggregates only of excluded mols //{{{
+    int no_excluded_aggs = 0;
+    int test_count = 0; // to test that every molecule is in an aggregate
+    for (int i = 0; i < Counts.Aggregates; i++) {
+      Aggregate[i].Use = false;
+
+      test_count += Aggregate[i].nMolecules;
+
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        int moltype = Molecule[Aggregate[i].Molecule[j]].Type;
+        if (MoleculeType[moltype].Use) {
+          Aggregate[i].Use = true;
+          no_excluded_aggs++;
+          break;
+        }
+      }
+    } //}}}
+
+    // are all molecules accounted for? //{{{
+    if (test_count != Counts.Molecules) {
+      fprintf(stderr, "Not all molecules were assigned to aggregates!\n");
+      fprintf(stderr, "Counts.Molecules = %5d; Molecules in aggregates: %d\n", Counts.Molecules, test_count);
+      exit(1);
+    } //}}}
+
+    // print number of aggregates to agg file
+    fprintf(out, "\nStep: %d\n%d\n\n", count, no_excluded_aggs);
 
     // go through all aggregates
     for (int i = 0; i < Counts.Aggregates; i++) {
 
-      test_count += Aggregate[i].nMolecules;
-
-      if (MoleculeType[Molecule[Aggregate[i].Molecule[0]].Type].Use) {
+      if (Aggregate[i].Use) {
 
         // go through all molecules in aggregate 'i'
         fprintf(out, "%d :", Aggregate[i].nMolecules);
@@ -891,13 +913,6 @@ int main(int argc, char *argv[]) {
     }
 
     fclose(out); //}}}
-
-    // making sure all molecules are in aggregates //{{{
-    if (test_count != Counts.Molecules) {
-      fprintf(stderr, "Not all molecules were assigned to aggregates!\n");
-      fprintf(stderr, "Counts.Molecules = %5d; Molecules in aggregates: %d\n", Counts.Molecules, test_count);
-      exit(1);
-    } //}}}
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
