@@ -61,7 +61,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
   // open vcf file (if exists) //{{{
   bool no_vcf = false;
   FILE *vcf;
-  if (vcf_file != '\0') {
+  if (vcf_file[0] != '\0') {
     if ((vcf = fopen(vcf_file, "r")) == NULL) {
       fprintf(stderr, "Cannot open %s for reading!\n", vcf_file);
       exit(1);
@@ -136,7 +136,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
     // increment total number of bead types
     (*Counts).TypesOfBeads++;
   }
-  if (vcf_file != '\0') {
+  if (vcf_file[0] != '\0') {
     fclose(vcf);
   } //}}}
 
