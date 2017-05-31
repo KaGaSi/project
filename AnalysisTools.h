@@ -233,13 +233,15 @@ void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
 /**
  * \brief Function writing indexed coordinates to a .vcf file.
  *
- * \param [in] vcf_file   name of output .vcf coordinate file
- * \param [in] Counts     numbers of beads, molecules, etc.
- * \param [in] BeadType   information about bead types
- * \param [in] Bead       coordinates of individual beads
- * \param [in] stuff      array of chars containing comment line to place at the beginning
+ * \param [in] vcf_file      name of output .vcf coordinate file
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BeadType      information about bead types
+ * \param [in] Bead          coordinates of individual beads
+ * \param [in] MoleculeType  information about molecule types
+ * \param [in] Molecule      coordinates of individual molecules
+ * \param [in] stuff         array of chars containing comment line to place at the beginning
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff); //}}}
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, MoleculeType *MoleculeType, Molecule *Molecule, char *stuff); //}}}
 
 // FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name

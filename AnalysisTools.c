@@ -68,6 +68,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
     }
   } else {
    no_vcf = true;
+   vcf = fopen(NULL, "r");
   } //}}}
 
   // if first character in vcf file is '#' => read info for indexed timesteps //{{{
@@ -136,7 +137,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
     // increment total number of bead types
     (*Counts).TypesOfBeads++;
   }
-  if (vcf_file[0] != '\0') {
+  if (!no_vcf) {
     fclose(vcf);
   } //}}}
 
@@ -900,6 +901,11 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
     mols += (*MoleculeType)[i].Number;
   } //}}}
 
+  // set all molecule types to be used //{{{
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].Use = true;
+  } //}}}
+
   return (indexed);
 } //}}}
 
@@ -1159,13 +1165,15 @@ void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
  * in BeadType structure only certain bead types will be saved into the
  * indexed timestep in .vcf file (\ref IndexedCoorFile).
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, char *stuff) {
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, MoleculeType *MoleculeType, Molecule *Molecule, char *stuff) {
 
   // print comment at the beginning of a timestep and 'indexed' on second line
   fprintf(vcf_file, "\n%sindexed\n", stuff);
 
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
-    if (BeadType[Bead[i].Type].Write) {
+    int type_b = Bead[i].Type;
+    int type_m = Molecule[Bead[i].Molecule].Type;
+    if (BeadType[type_b].Write && MoleculeType[type_m].Use) {
       fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                    Bead[i].Position.x,
                                                    Bead[i].Position.y,
