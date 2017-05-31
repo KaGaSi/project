@@ -29,8 +29,11 @@ DL_MESO `traject` utility which was modified by me) or
 [indexed timesteps](\ref IndexedCoorFile)
 and creates a new `.vcf` coordinate file containing only beads
 of selected types with an option of removing periodic boundary condition
-and thus joining molecules.  The otput `.vcf` file therefore contains
-indexed timesteps.
+and thus joining molecules. The otput `.vcf` file therefore contains
+i ndexed timesteps.
+
+Specified molecules can be excluded which is useful when the same bead type is
+shared between more molecule types.
 
 Usage:
 
@@ -54,6 +57,8 @@ Usage:
 > > > starting timestep for calculation
 > > `-sk <int>`
 > > > number of steps to skip per one used
+> > `-x <name(s)>`
+> > > exclude specified molecule(s)
 
 # Config utility {#Config}
 
@@ -480,6 +485,8 @@ to a separate header file
 
 # JoinRuns utility {#JoinRuns}
 
+MOST LIKELY NOT WORKING
+
 This program is to be used if two simulation runs with different initial
 seeds (that is, two simulations with different bead id numbers `.vsf`
 files, but identical `FIELD` files) should be joined. Two `.vcf` files that
@@ -523,7 +530,9 @@ Usage:
 
 \todo JoinRuns: base reindexing of beads in the second simulation on comparison
 between the two `.vsf` files
-\todo JoinRuns: implement wholy `--script` common option
+\todo JoinRuns: implement wholy `--script` common option \todo Completely
+change this - either implement `-x` option or remove function
+`WriteCoorIndexed` and hard code the writing to file
 
 # Average utility {#Average}
 

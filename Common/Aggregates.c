@@ -850,7 +850,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       } //}}}
 
-      WriteCoorIndexed(joined, Counts, BeadType, Bead, stuff);
+      WriteCoorIndexed(joined, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
 
       fclose(joined);
     } //}}}

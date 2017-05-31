@@ -16,7 +16,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -j             join molecules (remove pbc)\n");
   fprintf(stderr, "      -st <start>    number of timestep to start from\n");
   fprintf(stderr, "      -sk <skip>     leave out every 'skip' steps\n");
-  fprintf(stderr, "     -x <name(s)>    exclude specified molecule(s)\n");
+  fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
   CommonHelp(1);
 } //}}}
 
@@ -218,23 +218,19 @@ int main(int argc, char *argv[]) {
 //} //}}}
 
   // -x <name(s)>  exclude specified molecule(s) //{{{
-  // without -x - use all molecules #{{{
+  // set all molecules to use //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Use = true;
   } //}}}
+
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-x") == 0) {
 
-      // wrong argument to -x option{{{
+      // wrong argument to -x option //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
         fprintf(stderr, "Missing first argument to '-x' option ");
         fprintf(stderr, "(or molecule name beginning with a dash)!\n");
         exit(1);
-      } //}}}
-
-      // switch all molecules to 'do not use'{{{
-      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-        MoleculeType[j].Use = false;
       } //}}}
 
       // read molecule(s) names
@@ -251,14 +247,13 @@ int main(int argc, char *argv[]) {
           }
           exit(1);
         } else {
-          // use that molecule
-          MoleculeType[type].Use = true;
+          // exclude that molecule
+          MoleculeType[type].Use = false;
         }
 
         j++;
       }
     }
-
   } //}}}
 
   // print selected bead type names to output .vcf file //{{{
@@ -444,7 +439,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    WriteCoorIndexed(out, Counts, BeadType, Bead, stuff);
+    WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
 
     fclose(out);
 
