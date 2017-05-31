@@ -644,7 +644,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // -x <name(s)>  exclude specified molecule(s) //{{{
-  // set all molecules to use #{{{
+  // set all molecules to use //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Use = true;
   } //}}}
@@ -652,7 +652,7 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-x") == 0) {
 
-      // wrong argument to -x option{{{
+      // wrong argument to -x option //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
         fprintf(stderr, "Missing first argument to '-x' option ");
         fprintf(stderr, "(or molecule name beginning with a dash)!\n");
@@ -846,7 +846,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       } //}}}
 
-      WriteCoorIndexed(joined, Counts, BeadType, Bead, stuff);
+      WriteCoorIndexed(joined, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
 
       fclose(joined);
     } //}}}

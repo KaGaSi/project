@@ -470,7 +470,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    WriteCoorIndexed(out, Counts, BeadType1, Bead1, stuff);
+    WriteCoorIndexed(out, Counts, BeadType1, Bead1, MoleculeType1, Molecule1, stuff);
 
     fclose(out);
 
@@ -644,7 +644,10 @@ int main(int argc, char *argv[]) {
       Bead1[i].Position.z = Bead2[i].Position.z;
     } //}}}
 
-    WriteCoorIndexed(out, Counts, BeadType1, Bead1, stuff);
+    // TODO: there probably shouldn't be Molecule(Type)1, but Molecule(Type)2
+    // or something different -- this program isn't used anyway
+    // TODO: implement -x or maybe the write should be hardcoded in?
+    WriteCoorIndexed(out, Counts, BeadType1, Bead1, MoleculeType1, Molecule1, stuff);
 
     fclose(out);
 
