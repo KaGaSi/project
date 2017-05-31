@@ -342,7 +342,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    WriteCoorIndexed(out, Counts, BeadType, Bead, stuff);
+    WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
 
     fclose(out);
 
