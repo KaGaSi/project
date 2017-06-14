@@ -124,7 +124,9 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  ReadStructure(vsf_file, '\0', bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  char vcf[1];
+  vcf[0] = '\0';
+  ReadStructure(vsf_file, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
@@ -225,7 +227,10 @@ int main(int argc, char *argv[]) {
         avg_w += SQR(Aggregate[i].nMolecules);
 
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          if (strcmp("Neutral", MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name) == 0) {
+//        if (strcmp("Neutral", MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name) == 0) {
+          int mol = Aggregate[i].Molecule[j];
+          int bead0 = Molecule[mol].Bead[0];
+          if (strcmp("D", BeadType[Bead[bead0].Type].Name) == 0) {
             AbsorbedHomopolymers[Aggregate[i].nMolecules-1]++;
           }
         }
