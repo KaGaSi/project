@@ -11,14 +11,14 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   %s <input.vcf> <distance> <contacts> ", cmd);
   fprintf(stderr, "<output.agg> <type names> <options>\n\n");
 
-  fprintf(stderr, "   <input.vcf>      input filename (vcf format)\n");
-  fprintf(stderr, "   <distance>       minimum distance for contact for aggregate check\n");
-  fprintf(stderr, "   <contacts>       minimum number of contacts for aggregate check\n");
-  fprintf(stderr, "   <output.agg>     output filename (agg format)\n");
-  fprintf(stderr, "   <type names>     names of bead types to use for closeness calculation\n");
+  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <distance>        minimum distance for contact for aggregate check\n");
+  fprintf(stderr, "   <contacts>        minimum number of contacts for aggregate check\n");
+  fprintf(stderr, "   <output.agg>      output filename (agg format)\n");
+  fprintf(stderr, "   <type names>      names of bead types to use for closeness calculation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "     -x <name(s)>  exclude specified molecule(s)\n");
-  fprintf(stderr, "     -j <joined.vcf>  output vcf file with joined coordinates\n");
+  fprintf(stderr, "     -x <name(s)>    exclude specified molecule(s)\n");
+  fprintf(stderr, "     -j <joined.vcf> output vcf file with joined coordinates\n");
   CommonHelp(1);
 } //}}}
 
