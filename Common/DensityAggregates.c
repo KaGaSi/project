@@ -9,16 +9,17 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>       input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <width>           width of a single bin\n");
-  fprintf(stderr, "   <output.rho>      output density file (automatic ending '#.rho' added)\n");
-  fprintf(stderr, "   <agg sizes>       aggregate sizes to calculate density for\n");
+  fprintf(stderr, "   <input.vcf>    input filename (vcf format)\n");
+  fprintf(stderr, "   <input.agg>    input filename with information about aggregates (agg format)\n");
+  fprintf(stderr, "   <width>        width of a single bin\n");
+  fprintf(stderr, "   <output.rho>   output density file (automatic ending '#.rho' added)\n");
+  fprintf(stderr, "   <agg sizes>    aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j             specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -n <int>       number of bins to average\n");
-  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      -j          specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      -n <int>    number of bins to average\n");
+  fprintf(stderr, "      -st <int>   starting timestep for calculation\n");
+  fprintf(stderr, "      -m <name>   agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "     -x <name(s)> exclude specified molecule(s)\n");
   CommonHelp(1);
 } //}}}
 
@@ -38,16 +39,17 @@ int main(int argc, char *argv[]) {
       printf("Usage:\n");
       printf("   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <input.agg>       input filename with information about aggregates (agg format)\n");
-      printf("   <width>           width of a single bin\n");
-      printf("   <output.rho>      output density file (automatic ending '#.rho' added)\n");
-      printf("   <agg sizes>       aggregate sizes to calculate density for\n");
+      printf("   <input.vcf>     input filename (vcf format)\n");
+      printf("   <input.agg>     input filename with information about aggregates (agg format)\n");
+      printf("   <width>         width of a single bin\n");
+      printf("   <output.rho>    output density file (automatic ending '#.rho' added)\n");
+      printf("   <agg sizes>     aggregate sizes to calculate density for\n");
       printf("   <options>\n");
-      printf("      -j             specify that aggregates with joined coordinates are used\n");
-      printf("      -n <int>       number of bins to average\n");
-      printf("      -st <int>      starting timestep for calculation\n");
-      printf("      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+      printf("      -j           specify that aggregates with joined coordinates are used\n");
+      printf("      -n <int>     number of bins to average\n");
+      printf("      -st <int>    starting timestep for calculation\n");
+      printf("      -m <name>    agg size means number of <name> molecule types in an aggregate\n");
+      printf("      -x <name(s)> exclude specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -80,7 +82,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-j") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
-        strcmp(argv[i], "-m") != 0) {
+        strcmp(argv[i], "-m") != 0 &&
+        strcmp(argv[i], "-x") != 0 ) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -217,6 +220,45 @@ int main(int argc, char *argv[]) {
       if (specific_molecule == -1) {
         fprintf(stderr, "Molecule '%s' does not exist in FIELD ('-m' option)!\n", argv[i+1]);
         exit(1);
+      }
+    }
+  } //}}}
+
+  // -x <name(s)>  exclude specified molecule(s) //{{{
+  // set all molecules to use #{{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType[i].Use = true;
+  } //}}}
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-x") == 0) {
+
+      // wrong argument to -x option{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing first argument to '-x' option ");
+        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
+        exit(1);
+      } //}}}
+
+      // read molecule(s) names
+      int j = 0;
+      while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
+
+        int type = FindMoleculeType(argv[i+1+j], Counts, MoleculeType);
+
+        if (type == -1) { // is it in FIELD?
+          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
+          fprintf(stderr, "Molecule names in FIELD:\n");
+          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
+            fprintf(stderr, "%3d %s\n", k, MoleculeType[k].Name);
+          }
+          exit(1);
+        } else {
+          // exclude that molecule
+          MoleculeType[type].Use = false;
+        }
+
+        j++;
       }
     }
   } //}}}
@@ -480,15 +522,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
-    for (int i = 0; i < Counts.Aggregates; i++) {
-      int nanos = 0;
-      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-        int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
-        if (strcmp(MoleculeType[mol_type].Name, "Nano") == 0) {
-          nanos++;
-        }
-      }
-    }
 
     // join agggregates if un-joined coordinates provided //{{{
     if (!joined) {
@@ -519,14 +552,6 @@ int main(int argc, char *argv[]) {
         }
       } //}}}
 
-//    if (mols == 1) {
-//      putchar('\n');
-//      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-//        printf("%d ", Aggregate[i].Molecule[j]+1);
-//      }
-//      putchar('\n');
-//    }
-
       if (correct_size != -1) {
         other_mols[correct_size] += Aggregate[i].nMolecules - mols;
 
@@ -534,13 +559,21 @@ int main(int argc, char *argv[]) {
 
         // aggregate beads //{{{
         for (int j = 0; j < Aggregate[i].nBeads; j++) {
-          Vector dist = Distance(Bead[Aggregate[i].Bead[j]].Position, com, BoxLength);
-          dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+          int bead = Aggregate[i].Bead[j];
+          int mol = Bead[bead].Molecule;
+          int moltype = Molecule[mol].Type;
 
-          if (dist.x < max_dist) {
-            int k = dist.x / width;
+          if (MoleculeType[moltype].Use) {
+//          printf("%s: %d\n", MoleculeType[moltype].Name, MoleculeType[moltype].Use);
 
-            rho[Bead[Aggregate[i].Bead[j]].Type][correct_size][k]++;
+            Vector dist = Distance(Bead[Aggregate[i].Bead[j]].Position, com, BoxLength);
+            dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+
+            if (dist.x < max_dist) {
+              int k = dist.x / width;
+
+              rho[Bead[Aggregate[i].Bead[j]].Type][correct_size][k]++;
+            }
           }
         } //}}}
 

@@ -314,6 +314,13 @@ be used, i.e. an aggregate with 1 `A` molecule and 2 `B` molecules can be
 specified with `<agg sizes>` of 3 without `-m` option or 1 if `-m A` is
 used (or 2 if `-m B` is used).
 
+Also specified molecule type(s) can be excluded via the `-x` option. This
+is useful in case of several molecules sharing the same bead type.
+Calculated densities take into account only name of a bead type, not in
+which molecule(s) it occurs. The density from the bead type in different
+molecule types will therefore be the sum of the densities from those
+molecules.
+
 Usage:
 
 `DensityAggregates <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
@@ -341,6 +348,8 @@ Usage:
 > > `-m <molecule type name>`
 > > > instead of aggregate size, use number of molecules of specified molecule
 > > > types
+> > `-x <name(s)>`
+> > > exclude specified molecule(s)
 
 \todo DensityAggregates: check if only chains in one aggregate are used --
 anomalies in VanDerBurgh/AddedPol/

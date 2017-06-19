@@ -3,6 +3,12 @@ all:
 	cd Linear; make
 	cd OneTime; make
 
+install:
+	cd Common; make
+	cd Linear; make
+	cd OneTime; make
+	cp bin/* ~/Prace/bin/
+
 clean:
 	rm -rf bin/* obj *.o *~ core
 	cd Common; make clean
