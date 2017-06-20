@@ -68,7 +68,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
     }
   } else {
    no_vcf = true;
-   vcf = fopen(NULL, "r");
+// vcf = fopen(NULL, "r");
   } //}}}
 
   // if first character in vcf file is '#' => read info for indexed timesteps //{{{
@@ -1173,7 +1173,7 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *B
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
     int type_b = Bead[i].Type;
     int type_m = Molecule[Bead[i].Molecule].Type;
-    if (BeadType[type_b].Write && MoleculeType[type_m].Use) {
+    if (BeadType[type_b].Write && MoleculeType[type_m].Write) {
       fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                    Bead[i].Position.x,
                                                    Bead[i].Position.y,

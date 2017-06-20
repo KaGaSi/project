@@ -74,7 +74,8 @@ typedef struct MoleculeType {
 
   double Mass; ///< total mass of every molecule of given type
 
-  bool Use; ///< should molecule type be used for calculation?
+  bool Use, ///< should molecule type be used for calculation?
+       Write; ///< should molecule type be used for calculation?
 } MoleculeType; //}}}
 
 // struct Bead //{{{
