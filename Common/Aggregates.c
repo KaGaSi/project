@@ -651,6 +651,7 @@ int main(int argc, char *argv[]) {
   // set all molecules to use #{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Use = true;
+    MoleculeType[i].Write = true;
   } //}}}
 
   for (int i = 1; i < argc; i++) {

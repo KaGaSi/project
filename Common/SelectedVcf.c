@@ -220,7 +220,7 @@ int main(int argc, char *argv[]) {
   // -x <name(s)>  exclude specified molecule(s) //{{{
   // set all molecules to use //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    MoleculeType[i].Use = true;
+    MoleculeType[i].Write = true;
   } //}}}
 
   for (int i = 1; i < argc; i++) {
@@ -248,7 +248,7 @@ int main(int argc, char *argv[]) {
           exit(1);
         } else {
           // exclude that molecule
-          MoleculeType[type].Use = false;
+          MoleculeType[type].Write = false;
         }
 
         j++;
