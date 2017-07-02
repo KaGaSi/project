@@ -650,6 +650,8 @@ int main(int argc, char *argv[]) {
       putc('\n',out);
     }
 
+    fprintf(out, "# %d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
+        agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
     fclose(out);
   } //}}}
 
