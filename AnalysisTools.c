@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include "AnalysisTools.h"
 
+//TODO: somehow implement Join flag for bead types (throughout all utilities)
+
 // ReadFIELD() - auxiliary for ReadStructure() //{{{
 /*
  * Function reading information about all bead types (name, mass, charge) from
@@ -901,9 +903,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
     mols += (*MoleculeType)[i].Number;
   } //}}}
 
-  // set all molecule types to be used //{{{
+  // set all molecule types to be unused //{{{
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-    (*MoleculeType)[i].Use = true;
+    (*MoleculeType)[i].Use = false;
   } //}}}
 
   return (indexed);

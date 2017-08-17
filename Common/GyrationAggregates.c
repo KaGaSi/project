@@ -161,10 +161,11 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   //}}}
 
   // create variables and arrays for jacobi() //{{{
-  double **a = malloc(3*sizeof(double *));
-  a[0] = malloc(3*sizeof(double));
-  a[1] = malloc(3*sizeof(double));
-  a[2] = malloc(3*sizeof(double));
+  double **a;
+  a = malloc(3*sizeof(double *));
+  for (int i = 0; i < 3; i++) {
+    a[i] = malloc(3*sizeof(double));
+  }
 
   a[0][0] = GyrationTensor.x.x;
   a[0][1] = GyrationTensor.y.x;
@@ -178,9 +179,9 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
 
   double *d = malloc(3*sizeof(double));
   double **v = malloc(3*sizeof(double *));
-  v[0] = malloc(3*sizeof(double));
-  v[1] = malloc(3*sizeof(double));
-  v[2] = malloc(3*sizeof(double));
+  for (int i = 0; i < 3; i++) {
+    v[i] = malloc(3*sizeof(double));
+  }
   int nrot, size = 3; //}}}
   jacobi(a, size, d, v, &nrot);
 
@@ -193,10 +194,12 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   eigen = Sort3(eigen);
 
   free(d);
-  free(v[0]);
-  free(v[1]);
-  free(v[2]);
+  for (int i = 0; i < 3; i++) {
+    free(v[i]);
+    free(a[i]);
+  }
   free(v);
+  free(a);
 
   return (eigen);
 } //}}}
@@ -206,17 +209,18 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("GyrationAggregates calculates radii of gyration, acylindricities,           \n");
-      printf("asphericities and relative shape anisotropies during the simulation for     \n");
-      printf("aggregates of given size(s). The shape descriptors are calculated from      \n");
-      printf("eigenvalues of gyration tensor. It also prints simplie averages to the      \n");
-      printf("screen. Instead of aggregate size, a number of specified molecular species  \n");
-      printf("in an aggregate can be used and only specified bead types can be used for   \n");
-      printf("all calculations.                                                           \n\n");
+      printf("\
+GyrationAggregates calculates radii of gyration, acylindricities, \
+asphericities and relative shape anisotropies during the simulation for all \
+aggregates izes. The shape descriptors are calculated from eigenvalues of \
+gyration tensor. It also prints averages to the stdout. Instead of aggregate \
+size, a number of specified molecular species in an aggregate can be used and \
+only specified bead types can be used for all calculations.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <input.agg> <output> <agg sizes> <options>\n\n", argv[0]);
@@ -234,7 +238,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  int options = 4; //}}}
+  int options = 3; //}}}
 
   // test if options are given correctly //{{{
   for (int i = 1; i < argc; i++) {
@@ -366,15 +370,9 @@ int main(int argc, char *argv[]) {
 
   int aggs = 0;
 
-  while (++count < argc && argv[count][0] != '-') {
+  for (int i = 0; i < Counts.Molecules; i++) {
 
-    // Error - non-numeric argument //{{{
-    if (argv[count][0] < '1' || argv[count][0] > '9') {
-      fprintf(stderr, "Non-numeric option in <agg sizes>!\n");
-      exit(1);
-    } //}}}
-
-    agg_sizes[aggs][0] = atoi(argv[count]);
+    agg_sizes[aggs][0] = i + 1;
 
     aggs++; // number of aggregate sizes
   } //}}}
@@ -401,18 +399,15 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  // print command to output file //{{{
+  // print command to output file
   putc('#', out);
   for (int i = 0; i < argc; i++)
     fprintf(out, " %s", argv[i]);
-  putc('\n', out); //}}}
+  putc('\n', out);
 
-  // print agg sizes to output file //{{{
-  fprintf(out, "# dt");
-  for (int i = 0; i < aggs; i++) {
-    fprintf(out, " |%4d: Rg  Anis     Acyl     Aspher   eigen_x  eigen_y  eigen_z", agg_sizes[i][0]);
-  }
-  putc('\n', out); //}}}
+  // print legend line to output file
+  fprintf(out, "# 1:dt 2:<Rg>_n 3:<Rg>_w 4:<Rg>_z ");
+  fprintf(out, "5:<Anis>_n 6:<Acyl>_n 7:<Aspher>_n\n");
 
   fclose(out); //}}}
 
@@ -521,25 +516,23 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-
-    printf("Chosen aggregate sizes:");
-    for (int i = 0; i < aggs; i++) {
-      printf(" %d", agg_sizes[i][0]);
-    }
-    putchar('\n');
   }
 
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
-  // allocate memory for sum of radii of gyration //{{{
-  double *Rg_sum = calloc(aggs,sizeof(double));
+  // allocate memory for sum of various things //{{{
+  double **Rg_sum = malloc(aggs*sizeof(double *));
   double *Anis_sum = calloc(aggs,sizeof(double));
   double *Acyl_sum = calloc(aggs,sizeof(double));
   double *Aspher_sum = calloc(aggs,sizeof(double));
-  double *eigen_x_sum = calloc(aggs,sizeof(double));
-  double *eigen_y_sum = calloc(aggs,sizeof(double));
-  double *eigen_z_sum = calloc(aggs,sizeof(double)); //}}}
+  int **Size_sum = malloc(aggs*sizeof(int *));
+  int **Molecules_sum = malloc(aggs*sizeof(int *));
+  for (int i = 0; i < aggs; i++) {
+    Rg_sum[i] = calloc(3,sizeof(double));
+    Size_sum[i] = calloc(2,sizeof(int));
+    Molecules_sum[i] = calloc(5,sizeof(int));
+  } //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -588,24 +581,17 @@ int main(int argc, char *argv[]) {
 
     // allocate arrays for the timestep //{{{
     int *agg_counts = calloc(aggs,sizeof(int));
-    double *Rg = calloc(aggs,sizeof(double));
+    double **Rg = malloc(aggs*sizeof(double *));
     double *Anis = calloc(aggs,sizeof(double));
     double *Acyl = calloc(aggs,sizeof(double));
     double *Aspher = calloc(aggs,sizeof(double));
-    double *eigen_x = calloc(aggs,sizeof(double));
-    double *eigen_y = calloc(aggs,sizeof(double));
-    double *eigen_z = calloc(aggs,sizeof(double)); //}}}
+    for (int i = 0; i < aggs; i++) {
+      Rg[i] = calloc(3,sizeof(double));
+    } //}}}
 
     // calculate radii of gyration //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
 
-//    // OLD - test if aggregate is of correct size //{{{
-//    int correct_size = -1;
-//    for (int j = 0; j < aggs; j++) {
-//      if (agg_sizes[j][0] == Aggregate[i].nMolecules) {
-//        correct_size = j;
-//      }
-//    } //}}}
       // test if aggregate 'i' should be used //{{{
       int mols = 0; // agg size
       if (specific_molecule != -1) { // agg size = number of molecules of type 'specific_molecule'
@@ -630,57 +616,89 @@ int main(int argc, char *argv[]) {
         agg_counts[correct_size]++;
         agg_sizes[correct_size][1]++;
 
+        // copy bead ids to a separate array{{{
         int *list = malloc(Aggregate[i].nBeads*sizeof(int));
         int n = 0;
-
         for (int j = 0; j < Aggregate[i].nBeads; j++) {
           int id = Aggregate[i].Bead[j];
           if (BeadType[Bead[id].Type].Use) {
             list[n] = id;
             n++;
           }
-        }
+        } //}}}
 
         Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+        free(list);
 
-        eigen_x[correct_size] += eigen.x;
-        eigen_y[correct_size] += eigen.y;
-        eigen_z[correct_size] += eigen.z;
-
-        Rg[correct_size] += sqrt(eigen.x + eigen.y + eigen.z);
+        // Radius of gyration
+        Rg[correct_size][0] +=      sqrt(eigen.x + eigen.y + eigen.z);
+        Rg[correct_size][1] +=           eigen.x + eigen.y + eigen.z;
+        Rg[correct_size][2] += CUBE(sqrt(eigen.x + eigen.y + eigen.z));
+        // relative shape anisotropy
         Anis[correct_size] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
+        // acylindricity
         Acyl[correct_size] += eigen.y - eigen.x;
+        // asphericity
         Aspher[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
+        // aggregate size
+        Size_sum[correct_size][0] +=     Aggregate[i].nMolecules;
+        Size_sum[correct_size][1] += SQR(Aggregate[i].nMolecules);
+
+        // count number of Diblocks and Surfacts in aggrate
+        // TODO: generalise
+        int Diblock = 0, Surfact = 0;
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Diblock") == 0) {
+            Diblock++;
+          } else {
+            Surfact++;
+          }
+        }
+
+        Molecules_sum[correct_size][0] +=     Diblock;
+        Molecules_sum[correct_size][1] += SQR(Diblock);
+        Molecules_sum[correct_size][2] +=     Surfact;
+        Molecules_sum[correct_size][3] += SQR(Surfact);
       }
     } //}}}
 
     // add values to sums //{{{
     for (int i = 0; i < aggs; i++) {
-      eigen_x_sum[i] += eigen_x[i];
-      eigen_y_sum[i] += eigen_y[i];
-      eigen_z_sum[i] += eigen_z[i];
-
-      Rg_sum[i] += Rg[i];
+      Rg_sum[i][0] += Rg[i][0];
+      Rg_sum[i][1] += Rg[i][1];
+      Rg_sum[i][2] += Rg[i][2];
       Anis_sum[i] += Anis[i];
       Acyl_sum[i] += Acyl[i];
       Aspher_sum[i] += Aspher[i];
     } //}}}
 
-    // print radii of gyration to output file //{{{
+    // print data to output file //{{{
     FILE *out;
-    if ((out = fopen(output, "a")) == NULL) {
+    if ((out = fopen(output, "a")) == NULL) { // out file opened fine? //{{{
       // print newline to stdout if Step... doesn't end with one
       if (!script && !silent) {
         putchar('\n');
       }
       fprintf(stderr, "Cannot open file %s!\n", output);
       exit(1);
-    }
+    } //}}}
 
-    fprintf(out, "%5d", count);
-    for (int i = 0; i < aggs; i++) {
-      fprintf(out, " %8.5f %8.5f %8.5f %8.5f %8.5f %8.5f %8.5f", Rg[i]/agg_counts[i], Anis[i]/agg_counts[i], Acyl[i]/agg_counts[i], Aspher[i]/agg_counts[i], eigen_x[i]/agg_counts[i], eigen_y[i]/agg_counts[i], eigen_z[i]/agg_counts[i]);
+    fprintf(out, "%5d", count); // timestep
+    // radius of gyration
+    for (int i = 1; i < aggs; i++) {
+      Rg[0][0] += Rg[i][0];
+      Rg[0][1] += Rg[i][1];
+      Rg[0][2] += Rg[i][2];
+      Anis[0] += Anis[i];
+      Acyl[0] += Acyl[i];
+      Aspher[0] += Aspher[i];
+
+      agg_counts[0] += agg_counts[i];
     }
+    fprintf(out, " %8.5f %8.5f %8.5f", Rg[0][0]/agg_counts[0], Rg[0][1]/Rg[0][0], Rg[0][2]/Rg[0][1]);
+    fprintf(out, " %8.5f", Anis[0]/agg_counts[0]);
+    fprintf(out, " %8.5f", Acyl[0]/agg_counts[0]);
+    fprintf(out, " %8.5f", Aspher[0]/agg_counts[0]);
     putc('\n', out);
 
     fclose(out); //}}}
@@ -690,9 +708,15 @@ int main(int argc, char *argv[]) {
       printf("\n%s", stuff);
     } //}}}
 
+    // free memory //{{{
     free(agg_counts);
+    for (int i = 0; i < aggs; i++) {
+      free(Rg[i]);
+    }
     free(Rg);
     free(Anis);
+    free(Acyl);
+    free(Aspher); //}}}
   }
   fclose(vcf);
   fclose(agg);
@@ -707,10 +731,52 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // calculate simple averages //{{{
-  fprintf(out, "Size     Rg     Acyl     Ashper   Anis     tensor_x  tensor_y  tensor_z");
+  printf("1:Size 2:<Rg> 3:<Acyl> 4:<Ashper> 5:<Anis>\n");
   for (int i = 0; i < aggs; i++) {
-    printf("%8d %6f %6f %6f %6f %6f %6f %6f\n", agg_sizes[i][0], Rg_sum[i]/agg_sizes[i][1], Acyl_sum[i]/agg_sizes[i][1], Aspher_sum[i]/agg_sizes[i][1], Anis_sum[i]/agg_sizes[i][1], eigen_x_sum[i]/agg_sizes[i][1], eigen_y_sum[i]/agg_sizes[i][1], eigen_z_sum[i]/agg_sizes[i][1]);
+    if (agg_sizes[i][1] > 0) {
+      printf("%8d", agg_sizes[i][0]);
+      printf(" %7.3f", Rg_sum[i][0]/agg_sizes[i][1]);
+      printf(" %7.3f", Anis_sum[i]/agg_sizes[i][1]);
+      printf(" %7.3f", Acyl_sum[i]/agg_sizes[i][1]);
+      printf(" %7.3f", Aspher_sum[i]/agg_sizes[i][1]);
+      putchar('\n');
+    }
   } //}}}
+
+  // total averages //{{{
+  for (int i = 1; i < aggs; i++) {
+    Rg_sum[0][0] += Rg_sum[i][0];
+    Rg_sum[0][1] += Rg_sum[i][1];
+    Rg_sum[0][2] += Rg_sum[i][2];
+    Anis_sum[0] += Anis_sum[i];
+    Acyl_sum[0] += Acyl_sum[i];
+    Aspher_sum[0] += Aspher_sum[i];
+
+    agg_sizes[0][1] += agg_sizes[i][1];
+
+    Size_sum[0][0] += Size_sum[i][0];
+    Size_sum[0][1] += Size_sum[i][1];
+
+    Molecules_sum[0][0] += Molecules_sum[i][0];
+    Molecules_sum[0][1] += Molecules_sum[i][1];
+    Molecules_sum[0][2] += Molecules_sum[i][2];
+    Molecules_sum[0][3] += Molecules_sum[i][3];
+  }
+  printf("1:<A_s>_w 2:Diblock 3:Surfact 4:<A_s>_n 5:Diblock 6:Surfact ");
+  printf("7:<R_G>_n 8:_w 9:_z 10:<Anis> 11:<Acyl> 12:<Aspher>\n");
+  printf("%7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f\n",
+    (double)(Size_sum[0][1])/Size_sum[0][0], //<A_s>_w
+    (double)(Molecules_sum[0][1])/Molecules_sum[0][0], //<# of Diblocks>_w
+    (double)(Molecules_sum[0][3])/Molecules_sum[0][2], //<# of Surfacts>_w
+    (double)(Size_sum[0][0])/agg_sizes[0][1], //<A_s>_n
+    (double)(Molecules_sum[0][0])/agg_sizes[0][1], //<# of Diblocks>_n
+    (double)(Molecules_sum[0][2])/agg_sizes[0][1], //<# of Surfacts>_n
+    Rg_sum[0][0]/agg_sizes[0][1],
+    Rg_sum[0][1]/Rg_sum[0][0],
+    Rg_sum[0][2]/Rg_sum[0][1],
+    Anis_sum[0]/agg_sizes[0][1],
+    Acyl_sum[0]/agg_sizes[0][1],
+    Aspher_sum[0]/agg_sizes[0][1]); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
@@ -718,8 +784,19 @@ int main(int argc, char *argv[]) {
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
+  for (int i = 0; i < aggs; i++) {
+    free(agg_sizes[i]);
+    free(Rg_sum[i]);
+    free(Size_sum[i]);
+    free(Molecules_sum[i]);
+  }
+  free(Molecules_sum);
+  free(Size_sum);
   free(agg_sizes);
   free(Rg_sum);
+  free(Anis_sum);
+  free(Acyl_sum);
+  free(Aspher_sum);
   free(stuff); //}}}
 
   return 0;
