@@ -7,10 +7,9 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.vcf> <width> <output.pcf> <bead type(s)> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input.vcf>    input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>    input filename with information about aggregates (agg format)\n");
   fprintf(stderr, "   <width>        width of a single bin\n");
   fprintf(stderr, "   <output.pcf>   output file with pair correlation function(s)\n");
   fprintf(stderr, "   <bead type(s)> bead type name(s) for pcf calculation\n");
@@ -26,20 +25,18 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("PairCorrelPerAgg utility calculates pair correlation function for specified \n");
-      printf("bead types. The calculation is done per aggregates - that is only beads in  \n");
-      printf("the same aggregate are used. If aggregate size(s) is not specified, average \n");
-      printf("pcf is calculated (that is, regardless of aggregate size). All pairs of bead\n");
-      printf("types (including same pair) are calculated - given A and B types, pcf       \n");
-      printf("between A-A, A-B and B-B are calculated.                                    \n\n");
+      printf(" \
+PairCorrelPerAgg utility calculates pair correlation function for specified \
+bead types. All pairs of bead types (including same pair) are calculated - \
+given A and B types, pcf between A-A, A-B and B-B are calculated.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
-      printf("   %s <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>\n\n", argv[0]);
+      printf(" \
+The utility uses dl_meso.vsf (or other input structure file) and FIELD \
+(along with optional bond file) files to determine all information about \
+the system.\n\n");
+      printf("   %s <input.vcf> <width> <output.pcf> <bead type(s)> <options>\n\n", argv[0]);
 
       printf("   <input.vcf>     input filename (vcf format)\n");
-      printf("   <input.agg>     input filename with information about aggregates (agg format)\n");
       printf("   <width>         width of a single bin\n");
       printf("   <output.pcf>    output file with pair correlation function(s)\n");
       printf("   <bead type(s)>  bead type name(s) for pcf calculation \n");
@@ -51,7 +48,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  int mandatory = 5; //}}}
+  int mandatory = 4; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -159,10 +156,6 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <input.agg> - filename of input file with aggregate information //{{{
-  char input_agg[32];
-  strcpy(input_agg, argv[++count]); //}}}
-
   // <width> - width of single bin //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
@@ -201,57 +194,6 @@ int main(int argc, char *argv[]) {
 
     BeadType[type].Use = true;
   } //}}}
-
-  // open input aggregate file and read info from first line (Aggregates command) //{{{
-  FILE *agg;
-  // open for the first time to read the distance and type names
-  if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_agg);
-    exit(1);
-  }
-
-  // read minimum distance for closeness check (<distance> argument in Aggregates utility)
-//double distance;
-//fscanf(agg, "%*s %*s %lf", &distance);
-
-//// skip <contacts> and <output.agg> in Aggregates command
-//fscanf(agg, "%*s %*s");
-
-//// read <type names> from Aggregates command //{{{
-//int test;
-//// reading ends if next argument (beginning with '-') or the following empty line is read
-//while ((test = getc(agg)) != '-' && test != '\n') {
-//  ungetc(test, agg);
-
-//  char name[10];
-//  fscanf(agg, "%s", name);
-//  int type = FindBeadType(name, Counts, BeadType);
-
-//  // Error - specified bead type name not in vcf input file
-//  if (type == -1) {
-//    fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", name, input_vcf);
-//    exit(1);
-//  }
-
-//  BeadType[type].Use = true;
-
-//  while ((test = getc(agg)) == ' ')
-//    ;
-//  ungetc(test, agg);
-//} //}}}
-  fclose(agg);
-
-  // open again for production run - to ensure the pointer position in file is correct (at first 'Step')
-  if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_agg);
-    exit(1);
-  }
-  // skip line with command to produce the agg file
-  while (getc(agg) != '\n')
-    ;
-  // skip empty line
-  while (getc(agg) != '\n')
-    ; //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -337,17 +279,6 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // allocate Aggregate struct //{{{
-  Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
-  for (int i = 0; i < Counts.Molecules; i++) {
-    // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
-    Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
-    // assumes all bonded beads can be in one aggregate - memory-heavy, but reliable
-    Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
-    // maximum of all molecules can be in one aggregate
-    Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
-  } //}}}
-
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
@@ -374,7 +305,6 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
     if (SkipCoor(vcf, Counts, &stuff) == 1) {
       fprintf(stderr, "Premature end of %s file!\n", input_vcf);
       exit(1);
@@ -393,7 +323,6 @@ int main(int argc, char *argv[]) {
 
   // main loop //{{{
   count = 0; // count timesteps
-  int aggs = 0; // number of aggregates
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
@@ -431,25 +360,21 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
-
     // calculate pair correlation function //{{{
-    for (int i = 0; i < Counts.Aggregates; i++) {
-      aggs++;
+    for (int j = 0; j < (Counts.Bonded+Counts.Unbonded); j++) {
 
-      for (int j = 0; j < Aggregate[i].nBeads; j++) {
-        if (BeadType[Bead[Aggregate[i].Bead[j]].Type].Use) {
+        if (BeadType[Bead[j].Type].Use) {
 
-          for (int k = (j+1); k < Aggregate[i].nBeads; k++) {
-            if (BeadType[Bead[Aggregate[i].Bead[j]].Type].Use) {
+          for (int k = (j+1); k < (Counts.Bonded+Counts.Unbonded); k++) {
+            if (BeadType[k].Use) {
 
-              int bead1 = Aggregate[i].Bead[j];
-              int bead2 = Aggregate[i].Bead[k];
+              int bead1 = j;
+              int bead2 = k;
 
               int type1 = Bead[bead1].Type;
               int type2 = Bead[bead2].Type;
 
-              // type1 shouldn't be larger then type2 //{{{
+              // type1 shouldn't be larger then type2{{{
               if (type1 > type2) {
                 int temp = type1;
                 type1 = type2;
@@ -472,7 +397,6 @@ int main(int argc, char *argv[]) {
             }
           }
         }
-      }
     } //}}}
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
@@ -481,7 +405,6 @@ int main(int argc, char *argv[]) {
     } //}}}
   }
   fclose(vcf);
-  fclose(agg);
 
   if (!silent) {
     if (script) {
@@ -493,6 +416,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // write data to output file(s) //{{{
+//  FILE *out;
   if ((out = fopen(output_pcf, "a")) == NULL) {
     fprintf(stderr, "Cannot open file %s!\n", str);
     exit(1);
@@ -556,7 +480,6 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
-  FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);

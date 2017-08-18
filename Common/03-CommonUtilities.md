@@ -492,9 +492,63 @@ calculation
 \todo Gyration: move function from GyrationAggregates and GyrationMolecules
 to a separate header file
 
+# PairCorrel utility (#PairCorrel)
+
+This utility calculates pair correlation function between specified bead types.
+All pairs of bead types (including same pair) are calculated - given A and B
+types, pcf between A-A, A-B and B-B are calculated.
+
+Usage:
+
+`PairCorrel <input.vcf> <width> <output.pcf> <bead type(s)> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
+> `<width>`
+> > width of each bin for the distribution
+> `<output.pcf>`
+> > output file with pair correlation function(s)
+> `<bead type(s)>`
+> > bead type name(s) for pcf calculation
+> `<options>`
+> >  `-n <int>`
+> > > number of bins to average
+> >  `-st <int>`
+> > > starting timestep for calculation
+
+# PairCorrelPerAgg utility (#PairCorrel)
+
+PairCorrelPerAgg utility calculates pair correlation function per
+aggregates - that is only beads in the same aggregate are used. If
+aggregate size(s) is not specified, average pcf is calculated (that is,
+regardless of aggregate size). In all probability the utility is working,
+but since it is not really useful, it has never been thouroughly tested.
+
+Usage:
+
+`PairCorrel <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing either
+> > ordered or indexed timesteps
+> `<input.agg>`
+> > input filename (must end with `.agg`) containing information about
+> `<width>`
+> > width of each bin for the distribution
+> `<output.pcf>`
+> > output file with pair correlation function(s)
+> `<bead type(s)>`
+> > bead type name(s) for pcf calculation
+> `<options>`
+> >  `-n <int>`
+> > > number of bins to average
+> >  `-st <int>`
+> > > starting timestep for calculation
+
 # JoinRuns utility {#JoinRuns}
 
-MOST LIKELY NOT WORKING
+MOST LIKELY NOT WORKING -- IT'S NOT USED.
 
 This program is to be used if two simulation runs with different initial
 seeds (that is, two simulations with different bead id numbers `.vsf`
