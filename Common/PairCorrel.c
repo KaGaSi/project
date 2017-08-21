@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       printf(" \
-PairCorrelPerAgg utility calculates pair correlation function for specified \
+PairCorrel utility calculates pair correlation function for specified \
 bead types. All pairs of bead types (including same pair) are calculated - \
 given A and B types, pcf between A-A, A-B and B-B are calculated.\n\n");
 
@@ -166,7 +166,7 @@ the system.\n\n");
   double width = atof(argv[count]); //}}}
 
   // <output.pcf> - filename with pcf(s) //{{{
-  char output_pcf[16];
+  char output_pcf[32];
   strcpy(output_pcf, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -457,7 +457,7 @@ the system.\n\n");
       shell[k] = 4 * PI * CUBE(width) *(CUBE(j+k+1) - CUBE(j+k)) / 3;
     }
 
-    fprintf(out, "%.2f", width*(j+0.5*avg));
+    fprintf(out, "%8.5f", width*(j+0.5*avg));
 
     for (int k = 0; k < Counts.TypesOfBeads; k++) {
       for (int l = k; l < Counts.TypesOfBeads; l++) {

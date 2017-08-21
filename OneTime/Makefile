@@ -21,7 +21,8 @@ BIN = bin/ChargeRatio \
 			bin/DensityMolecules-NearNanoSurf \
 			bin/DistrAgg-NotHomopol-NumberOfAbsorbedHomopolymerChains \
 			bin/DistrAgg-OnlyPols \
-			bin/NanoparticleDistances
+			bin/NanoparticleDistances \
+			bin/PairCorrel-Fluor
 
 all: dir $(BIN) $(OBJ)
 
@@ -68,6 +69,9 @@ bin/DistrAgg-OnlyPols: $(OBJ) $(ODIR)/DistrAgg-OnlyPols.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 bin/NanoparticleDistances: $(OBJ) $(ODIR)/NanoparticleDistances.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+bin/PairCorrel-Fluor: $(OBJ) $(ODIR)/PairCorrel-Fluor.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 clean:
