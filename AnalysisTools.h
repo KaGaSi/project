@@ -41,6 +41,8 @@ typedef struct Counts {
       Aggregates; ///< total number of aggregates
 } Counts; //}}}
 
+//TODO: somehow implement Join flag for bead types (throughout all utilities)
+
 // struct BeadType //{{{
 /**
  * \brief Information about bead types.

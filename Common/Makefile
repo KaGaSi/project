@@ -20,6 +20,8 @@ BIN = ../bin/SelectedVcf \
 			../bin/JoinAggregates \
 			../bin/GyrationAggregates \
 			../bin/GyrationMolecules \
+			../bin/PairCorrelPerAgg \
+			../bin/PairCorrel \
 			../bin/Average \
 			../bin/JoinRuns \
 			../bin/traject-v2_5 \
@@ -77,6 +79,13 @@ $(ODIR)/traject-v2_6.o:
 
 ../bin/DistrAgg: $(OBJ) $(ODIR)/DistrAgg.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/PairCorrelPerAgg: $(OBJ) $(ODIR)/PairCorrelPerAgg.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+../bin/PairCorrel: $(OBJ) $(ODIR)/PairCorrel.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
 
 ../bin/Average: $(OBJ) $(ODIR)/Average.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
