@@ -266,7 +266,7 @@ int FindBeadType(char *name, Counts Counts, BeadType *BeadType); //}}}
  */
 int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}}}
 
-// Distance //{{{
+// Distance between two beads //{{{
 /**
  * \brief Function to calculate distance vector between two beads.
  *
@@ -351,7 +351,7 @@ double Min3(double x, double y, double z); //}}}
  */
 Vector Sort3(Vector in); //}}}
 
-//FreeBead() //{{{
+// FreeBead() //{{{
 /**
  * \brief Free memory allocated for Bead struct array.
  *
@@ -360,7 +360,7 @@ Vector Sort3(Vector in); //}}}
  */
 void FreeBead(Counts Counts, Bead **Bead); //}}}
 
-//FreeMolecule() //{{{
+// FreeMolecule() //{{{
 /**
  * \brief Free memory allocated for Molecule struct array.
  *
@@ -369,7 +369,7 @@ void FreeBead(Counts Counts, Bead **Bead); //}}}
  */
 void FreeMolecule(Counts Counts, Molecule **Molecule); //}}}
 
-//FreeMoleculeType() //{{{
+// FreeMoleculeType() //{{{
 /**
  * \brief Free memory allocated for MoleculeType struct array.
  *
@@ -378,7 +378,7 @@ void FreeMolecule(Counts Counts, Molecule **Molecule); //}}}
  */
 void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType); //}}}
 
-//FreeAggregate() //{{{
+// FreeAggregate() //{{{
 /**
  * \brief Free memory allocated for MoleculeType struct array.
  *
