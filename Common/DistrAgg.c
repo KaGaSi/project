@@ -159,13 +159,13 @@ int main(int argc, char *argv[]) {
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information
+  // read system information //{{{
   char vcf[1];
   vcf[0] = '\0';
   ReadStructure(vsf_file, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file);
+  free(vsf_file); //}}}
 
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
@@ -209,6 +209,15 @@ int main(int argc, char *argv[]) {
   int ndistr[Counts.Molecules];
   int voldistr[Counts.Molecules];
 
+  // molecule typs in aggregates: [agg size][mol type][number or SQR(number)]
+  int ***molecules = malloc(Counts.Molecules*sizeof(int **));
+  for (int i = 0; i < Counts.Molecules; i++) {
+    molecules[i] = malloc(Counts.TypesOfMolecules*sizeof(int *));
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      molecules[i][j] = calloc(2,sizeof(int));
+    }
+  }
+
   // zeroize arrays
   for (int i = 0; i < Counts.Molecules; i++) {
     wdistr[i] = 0;
@@ -217,7 +226,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // main loop //{{{
-  int test;
+  int test, size_sqr = 0;
   count = 0;
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
@@ -265,6 +274,19 @@ int main(int argc, char *argv[]) {
         ndistr[Aggregate[i].nMolecules-1]++;
         wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
         voldistr[Aggregate[i].nMolecules-1] += Aggregate[i].nBeads;
+        size_sqr += SQR(Aggregate[i].nMolecules);
+
+        // number of various species in the aggregate
+        int *mol_count = calloc(Counts.TypesOfMolecules,sizeof(int));
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          mol_count[Molecule[Aggregate[i].Molecule[j]].Type]++;
+        }
+        for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+          molecules[Aggregate[i].nMolecules-1][j][0] += mol_count[j];
+          molecules[Aggregate[i].nMolecules-1][j][1] += SQR(mol_count[j]);
+        }
+
+        free(mol_count);
       }
 
       // average aggregation number
@@ -341,12 +363,71 @@ int main(int argc, char *argv[]) {
   }
   fclose(out); //}}}
 
+  // print numbers of various molecules types in the aggregates //{{{
+  printf("1:sum");
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    printf(" %d:%s", i+1, MoleculeType[i].Name);
+  }
+  putchar('\n');
+  for (int i = 0; i < Counts.Molecules; i++) {
+    if (ndistr[i] > 0) { // are there any aggregates of size 'i'?
+      printf("%3d", i+1);
+      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+        printf(" %7.3f", (double)(molecules[i][j][0])/ndistr[i]);
+      }
+      putchar('\n');
+    }
+  } //}}}
+
+  // print overall averages //{{{
+  // sum up total number (and SQR(number)) of each molecular species
+  for (int i = 1; i < Counts.Molecules; i++) {
+    ndistr[0] += ndistr[i]; // total number of aggregates
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      molecules[0][j][0] += molecules[i][j][0];
+      molecules[0][j][1] += molecules[i][j][1];
+    }
+  }
+  // sum up total number (and SQR(number)) of all molecules
+  for (int i = 1; i < Counts.Molecules; i++) {
+    wdistr[0] += wdistr[i];
+  }
+
+  // print legend (with column numbers)
+  printf("1:<A_s>_w");
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    printf(" %d:<%s>_n", i+1, MoleculeType[i].Name);
+  }
+  printf(" %d:<A_s>_n", Counts.TypesOfMolecules+1);
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    printf(" %d:<%s>_n", Counts.TypesOfMolecules+i+2, MoleculeType[i].Name);
+  }
+  putchar('\n');
+
+  // print the averages
+  printf("%7.3f", (double)(size_sqr)/wdistr[0]); // <A_s>_w
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    printf(" %7.3f", (double)(molecules[0][i][1])/molecules[0][i][0]); // <species>_w
+  }
+  printf("%7.3f", (double)(wdistr[0])/ndistr[0]); // <A_s>_n
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    printf(" %7.3f", (double)(molecules[0][i][0])/ndistr[0]); // <species>_n
+  }
+  putchar('\n'); //}}}
+
   // free memory - to make valgrind happy //{{{
   free(BeadType);
   FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead); //}}}
+  FreeBead(Counts, &Bead);
+  for (int i = 0; i < Counts.Molecules; i++) {
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      free(molecules[i][j]);
+    }
+    free(molecules[i]);
+  }
+  free(molecules); //}}}
 
   return 0;
 }

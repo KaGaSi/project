@@ -531,7 +531,7 @@ system.\n\n");
   for (int i = 0; i < aggs; i++) {
     Rg_sum[i] = calloc(3,sizeof(double));
     Size_sum[i] = calloc(2,sizeof(int));
-    Molecules_sum[i] = calloc(5,sizeof(int));
+    Molecules_sum[i] = calloc((Counts.TypesOfMolecules*2),sizeof(int));
   } //}}}
 
   // main loop //{{{
@@ -646,12 +646,14 @@ system.\n\n");
 
         // count number of Diblocks and Surfacts in aggrate
         // TODO: generalise
-        int Diblock = 0, Surfact = 0;
+        int Diblock = 0, Surfact = 0, Fluores = 0;
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
           if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Diblock") == 0) {
             Diblock++;
-          } else {
+          } else if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Surfact") == 0) {
             Surfact++;
+          } else {
+            Fluores++;
           }
         }
 
@@ -659,6 +661,8 @@ system.\n\n");
         Molecules_sum[correct_size][1] += SQR(Diblock);
         Molecules_sum[correct_size][2] +=     Surfact;
         Molecules_sum[correct_size][3] += SQR(Surfact);
+        Molecules_sum[correct_size][4] +=     Fluores;
+        Molecules_sum[correct_size][5] += SQR(Fluores);
       }
     } //}}}
 
@@ -731,7 +735,7 @@ system.\n\n");
   } //}}}
 
   // calculate simple averages //{{{
-  printf("1:Size 2:<Rg> 3:<Acyl> 4:<Ashper> 5:<Anis>\n");
+  printf("1:Size 2:<Rg> 3:<Acyl> 4:<Ashper> 5:<Anis> 6:<Diblocks> 7:<Surfact>\n");
   for (int i = 0; i < aggs; i++) {
     if (agg_sizes[i][1] > 0) {
       printf("%8d", agg_sizes[i][0]);
@@ -739,6 +743,8 @@ system.\n\n");
       printf(" %7.3f", Anis_sum[i]/agg_sizes[i][1]);
       printf(" %7.3f", Acyl_sum[i]/agg_sizes[i][1]);
       printf(" %7.3f", Aspher_sum[i]/agg_sizes[i][1]);
+      printf(" %7.3f", (double)(Molecules_sum[i][0])/agg_sizes[i][1]);
+      printf(" %7.3f", (double)(Molecules_sum[i][2])/agg_sizes[i][1]);
       putchar('\n');
     }
   } //}}}
@@ -761,16 +767,21 @@ system.\n\n");
     Molecules_sum[0][1] += Molecules_sum[i][1];
     Molecules_sum[0][2] += Molecules_sum[i][2];
     Molecules_sum[0][3] += Molecules_sum[i][3];
+    Molecules_sum[0][4] += Molecules_sum[i][4];
+    Molecules_sum[0][5] += Molecules_sum[i][5];
   }
-  printf("1:<A_s>_w 2:Diblock 3:Surfact 4:<A_s>_n 5:Diblock 6:Surfact ");
-  printf("7:<R_G>_n 8:_w 9:_z 10:<Anis> 11:<Acyl> 12:<Aspher>\n");
-  printf("%7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f\n",
+  printf("1:<A_s>_w 2:Diblock 3:Surfact 4:FLuores ");
+  printf("5:<A_s>_n 6:Diblock 7:Surfact 8:Fluores ");
+  printf("9:<R_G>_n 10:_w 11:_z 12:<Anis> 13:<Acyl> 14:<Aspher>\n");
+  printf("%7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f\n",
     (double)(Size_sum[0][1])/Size_sum[0][0], //<A_s>_w
     (double)(Molecules_sum[0][1])/Molecules_sum[0][0], //<# of Diblocks>_w
     (double)(Molecules_sum[0][3])/Molecules_sum[0][2], //<# of Surfacts>_w
+    (double)(Molecules_sum[0][5])/Molecules_sum[0][2], //<# of Fluores>_w
     (double)(Size_sum[0][0])/agg_sizes[0][1], //<A_s>_n
     (double)(Molecules_sum[0][0])/agg_sizes[0][1], //<# of Diblocks>_n
     (double)(Molecules_sum[0][2])/agg_sizes[0][1], //<# of Surfacts>_n
+    (double)(Molecules_sum[0][4])/agg_sizes[0][1], //<# of Fluores>_n
     Rg_sum[0][0]/agg_sizes[0][1],
     Rg_sum[0][1]/Rg_sum[0][0],
     Rg_sum[0][2]/Rg_sum[0][1],
