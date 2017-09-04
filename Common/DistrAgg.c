@@ -231,6 +231,7 @@ int main(int argc, char *argv[]) {
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
+    // print (or not) step number{{{
     count++;
     if (!silent) {
       if (script) {
@@ -239,7 +240,7 @@ int main(int argc, char *argv[]) {
         fflush(stdout);
         printf("\rStep: %6d", count);
       }
-    }
+    } //}}}
 
     ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
 
@@ -269,14 +270,14 @@ int main(int argc, char *argv[]) {
     int aggs = 0, // number of aggregates (w/o unimers if --no-unimers)
         mols = 0; // number of molecules (w/o those in unimers if --no-unimers)
     for (int i = 0; i < Counts.Aggregates; i++) {
-      // distribution
-      if (count >= start) {
+      if (count >= start) { // start calculation of averages from specified 'start' timestep
+        // distribution //{{{
         ndistr[Aggregate[i].nMolecules-1]++;
         wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
         voldistr[Aggregate[i].nMolecules-1] += Aggregate[i].nBeads;
-        size_sqr += SQR(Aggregate[i].nMolecules);
+        size_sqr += SQR(Aggregate[i].nMolecules); //}}}
 
-        // number of various species in the aggregate
+        // number of various species in the aggregate //{{{
         int *mol_count = calloc(Counts.TypesOfMolecules,sizeof(int));
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
           mol_count[Molecule[Aggregate[i].Molecule[j]].Type]++;
@@ -284,19 +285,19 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < Counts.TypesOfMolecules; j++) {
           molecules[Aggregate[i].nMolecules-1][j][0] += mol_count[j];
           molecules[Aggregate[i].nMolecules-1][j][1] += SQR(mol_count[j]);
-        }
+        } //}}}
 
         free(mol_count);
       }
 
-      // average aggregation number
+      // average aggregation number //{{{
       if (!no_uni || Aggregate[i].nMolecules != 1) {
         aggs++;
         mols += Aggregate[i].nMolecules;
 
         avg_n += Aggregate[i].nMolecules;
         avg_w += SQR(Aggregate[i].nMolecules);
-      }
+      } //}}}
     }
 
     // print averages to output file //{{{
@@ -396,7 +397,7 @@ int main(int argc, char *argv[]) {
   // print legend (with column numbers)
   printf("1:<A_s>_w");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf(" %d:<%s>_n", i+1, MoleculeType[i].Name);
+    printf(" %d:<%s>_w", i+1, MoleculeType[i].Name);
   }
   printf(" %d:<A_s>_n", Counts.TypesOfMolecules+1);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
