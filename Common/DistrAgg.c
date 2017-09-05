@@ -351,11 +351,9 @@ int main(int argc, char *argv[]) {
   }
 
   // mass of all molecules
-  double molecules_mass = 0;
   double molecules_vol = 0;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    molecules_mass += MoleculeType[i].Mass * MoleculeType[i].Number;
-    molecules_vol += MoleculeType[i].Number;
+    molecules_vol += MoleculeType[i].Number * MoleculeType[i].nBeads;
   }
 
   count -= start -1;
@@ -394,26 +392,42 @@ int main(int argc, char *argv[]) {
     wdistr[0] += wdistr[i];
   }
 
+  // open file with time evolution //{{{
+  if ((out = fopen(output_avg, "a")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output_avg);
+    exit(1);
+  } //}}}
+
   // print legend (with column numbers)
   printf("1:<A_s>_w");
+  fprintf(out, "# 1:<A_s>_w");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     printf(" %d:<%s>_w", i+1, MoleculeType[i].Name);
+    fprintf(out, " %d:<%s>_w", i+1, MoleculeType[i].Name);
   }
   printf(" %d:<A_s>_n", Counts.TypesOfMolecules+1);
+  fprintf(out, " %d:<A_s>_n", Counts.TypesOfMolecules+1);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     printf(" %d:<%s>_n", Counts.TypesOfMolecules+i+2, MoleculeType[i].Name);
+    fprintf(out, " %d:<%s>_n", Counts.TypesOfMolecules+i+2, MoleculeType[i].Name);
   }
   putchar('\n');
+  putc('\n', out);
 
   // print the averages
   printf("%7.3f", (double)(size_sqr)/wdistr[0]); // <A_s>_w
+  fprintf(out, "# %7.3f", (double)(size_sqr)/wdistr[0]); // <A_s>_w
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     printf(" %7.3f", (double)(molecules[0][i][1])/molecules[0][i][0]); // <species>_w
+    fprintf(out, " %7.3f", (double)(molecules[0][i][1])/molecules[0][i][0]); // <species>_w
   }
   printf("%7.3f", (double)(wdistr[0])/ndistr[0]); // <A_s>_n
+  fprintf(out, "%7.3f", (double)(wdistr[0])/ndistr[0]); // <A_s>_n
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     printf(" %7.3f", (double)(molecules[0][i][0])/ndistr[0]); // <species>_n
+    fprintf(out, " %7.3f", (double)(molecules[0][i][0])/ndistr[0]); // <species>_n
   }
+  putc('\n', out);
   putchar('\n'); //}}}
 
   // free memory - to make valgrind happy //{{{
