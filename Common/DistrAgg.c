@@ -392,8 +392,8 @@ int main(int argc, char *argv[]) {
     wdistr[0] += wdistr[i];
   }
 
-  // open file with time evolution //{{{
-  if ((out = fopen(output_avg, "a")) == NULL) {
+  // open file with distribution //{{{
+  if ((out = fopen(output_distr, "a")) == NULL) {
     fprintf(stderr, "Cannot open file %s!\n", output_avg);
     exit(1);
   } //}}}
@@ -402,14 +402,14 @@ int main(int argc, char *argv[]) {
   printf("1:<A_s>_w");
   fprintf(out, "# 1:<A_s>_w");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf(" %d:<%s>_w", i+1, MoleculeType[i].Name);
-    fprintf(out, " %d:<%s>_w", i+1, MoleculeType[i].Name);
+    printf(" %d:<%s>_w", i+2, MoleculeType[i].Name);
+    fprintf(out, " %d:<%s>_w", i+2, MoleculeType[i].Name);
   }
-  printf(" %d:<A_s>_n", Counts.TypesOfMolecules+1);
-  fprintf(out, " %d:<A_s>_n", Counts.TypesOfMolecules+1);
+  printf(" %d:<A_s>_n", Counts.TypesOfMolecules+2);
+  fprintf(out, " %d:<A_s>_n", Counts.TypesOfMolecules+2);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf(" %d:<%s>_n", Counts.TypesOfMolecules+i+2, MoleculeType[i].Name);
-    fprintf(out, " %d:<%s>_n", Counts.TypesOfMolecules+i+2, MoleculeType[i].Name);
+    printf(" %d:<%s>_n", Counts.TypesOfMolecules+i+3, MoleculeType[i].Name);
+    fprintf(out, " %d:<%s>_n", Counts.TypesOfMolecules+i+3, MoleculeType[i].Name);
   }
   putchar('\n');
   putc('\n', out);
