@@ -770,9 +770,9 @@ system.\n\n");
     Molecules_sum[0][4] += Molecules_sum[i][4];
     Molecules_sum[0][5] += Molecules_sum[i][5];
   }
-  printf("1:<A_s>_w ");
-  printf("5:<A_s>_n ");
-  printf("9:<R_G>_n 10:_w 11:_z 12:<Anis> 13:<Acyl> 14:<Aspher>\n");
+
+  // print to stdout
+  printf("1:<A_s>_w 2:<A_s>_n 3:<R_G>_n 4:_w 5:_z 6:<Anis> 7:<Acyl> 8:<Aspher>\n");
   printf("%7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f\n",
     (double)(Size_sum[0][1])/Size_sum[0][0], //<A_s>_w
     (double)(Size_sum[0][0])/agg_sizes[0][1], //<A_s>_n
@@ -781,7 +781,25 @@ system.\n\n");
     Rg_sum[0][2]/Rg_sum[0][1],
     Anis_sum[0]/agg_sizes[0][1],
     Acyl_sum[0]/agg_sizes[0][1],
-    Aspher_sum[0]/agg_sizes[0][1]); //}}}
+    Aspher_sum[0]/agg_sizes[0][1]);
+
+  if ((out = fopen(output, "a")) == NULL) { //{{{
+    fprintf(stderr, "Cannot open file %s!\n", output);
+    exit(1);
+  } //}}}
+
+  fprintf(out, "# 1:<A_s>_w 2:<A_s>_n 3:<R_G>_n 4:_w 5:_z 6:<Anis> 7:<Acyl> 8:<Aspher>\n");
+  fprintf(out, "# %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f\n",
+    (double)(Size_sum[0][1])/Size_sum[0][0], //<A_s>_w
+    (double)(Size_sum[0][0])/agg_sizes[0][1], //<A_s>_n
+    Rg_sum[0][0]/agg_sizes[0][1],
+    Rg_sum[0][1]/Rg_sum[0][0],
+    Rg_sum[0][2]/Rg_sum[0][1],
+    Anis_sum[0]/agg_sizes[0][1],
+    Acyl_sum[0]/agg_sizes[0][1],
+    Aspher_sum[0]/agg_sizes[0][1]);
+
+  fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
