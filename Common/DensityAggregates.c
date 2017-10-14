@@ -9,17 +9,17 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>    input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>    input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <width>        width of a single bin\n");
-  fprintf(stderr, "   <output.rho>   output density file (automatic ending '#.rho' added)\n");
-  fprintf(stderr, "   <agg sizes>    aggregate sizes to calculate density for\n");
+  fprintf(stderr, "   <input.vcf>     input filename (vcf format)\n");
+  fprintf(stderr, "   <input.agg>     input filename with information about aggregates (agg format)\n");
+  fprintf(stderr, "   <width>         width of a single bin\n");
+  fprintf(stderr, "   <output.rho>    output density file (automatic ending '#.rho' added)\n");
+  fprintf(stderr, "   <agg sizes>     aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j          specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -n <int>    number of bins to average\n");
-  fprintf(stderr, "      -st <int>   starting timestep for calculation\n");
-  fprintf(stderr, "      -m <name>   agg size means number of <name> molecule types in an aggregate\n");
-  fprintf(stderr, "     -x <name(s)> exclude specified molecule(s)\n");
+  fprintf(stderr, "      -j           specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      -n <int>     number of bins to average\n");
+  fprintf(stderr, "      -st <int>    starting timestep for calculation\n");
+  fprintf(stderr, "      -m <name>    agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      -x <name(s)> exclude specified molecule(s)\n");
   CommonHelp(1);
 } //}}}
 
@@ -198,11 +198,11 @@ int main(int argc, char *argv[]) {
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information
+  // read system information{{{
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file);
+  free(vsf_file); //}}}
 
   // -m <name> option - specify MoleculeType that is used for determining agg sizes //{{{
   int specific_molecule = -1;
