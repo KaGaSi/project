@@ -15,6 +15,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -n <int>          start distribution calculation with <int>-th step\n");
   fprintf(stderr, "      --no-unimers      do not count unimers into averages\n");
+  fprintf(stderr, "      -x <name(s)>      exclude aggregate containing only specified molecule(s)\n");
   CommonHelp(1);
 } //}}}
 
@@ -40,6 +41,7 @@ int main(int argc, char *argv[]) {
       printf("   <options>\n");
       printf("      -n <int>          start distribution calculation with <int>-th step\n");
       printf("      --no-unimers      do not count unimers into averages\n");
+      printf("      -x <name(s)>      exclude aggregate containing only specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -58,7 +60,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
-        strcmp(argv[i], "--no-unimers") != 0) {
+        strcmp(argv[i], "--no-unimers") &&
+        strcmp(argv[i], "-x") != 0 ) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -167,6 +170,45 @@ int main(int argc, char *argv[]) {
   // vsf file is not needed anymore
   free(vsf_file); //}}}
 
+  // -x <name(s)>  exclude aggregate containing only specified molecule(s) //{{{
+  // set all molecules to use #{{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType[i].Use = true;
+  } //}}}
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-x") == 0) {
+
+      // wrong argument to -x option{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing first argument to '-x' option ");
+        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
+        exit(1);
+      } //}}}
+
+      // read molecule(s) names
+      int j = 0;
+      while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
+
+        int type = FindMoleculeType(argv[i+1+j], Counts, MoleculeType);
+
+        if (type == -1) { // is it in FIELD?
+          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
+          fprintf(stderr, "Molecule names in FIELD:\n");
+          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
+            fprintf(stderr, "%3d %s\n", k, MoleculeType[k].Name);
+          }
+          exit(1);
+        } else {
+          // exclude that molecule
+          MoleculeType[type].Use = false;
+        }
+
+        j++;
+      }
+    }
+  } //}}}
+
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
 
@@ -271,6 +313,19 @@ int main(int argc, char *argv[]) {
         mols = 0; // number of molecules (w/o those in unimers if --no-unimers)
     for (int i = 0; i < Counts.Aggregates; i++) {
       if (count >= start) { // start calculation of averages from specified 'start' timestep
+        // if '-x' option is used, discount aggregates with only specified molecule types{{{
+        bool test = true; // aggregate with only excluded molecules?
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          if (MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Use) {
+            test = false;
+            break;
+          }
+        }
+        // should the rest of the for loop be skipped?
+        if (test) {
+          continue;
+        } //}}}
+
         // distribution //{{{
         ndistr[Aggregate[i].nMolecules-1]++;
         wdistr[Aggregate[i].nMolecules-1] += Aggregate[i].nMolecules;
