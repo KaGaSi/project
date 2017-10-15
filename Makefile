@@ -1,22 +1,7 @@
 all:
-	cd Common; make
-	cd Linear; make
-	cd OneTime; make
-
-install:
-	cd Common; make
-	cd Linear; make
-	cd OneTime; make
-	cp bin/* ~/Prace/bin/
-
-clean:
-	rm -rf bin/* obj *.o *~ core
-	cd Common; make clean
-	cd Linear; make clean
-	cd OneTime; make clean
-
-doc:
 	doxygen doxyconfig;
 	cd latex/; pdflatex refman.tex
 	cd latex/; pdflatex refman.tex
 	cp latex/refman.pdf .
+	if [ -d "doc" ]; then rm -r doc/*; else mkdir doc; fi
+	mv latex html DoxyErrors.txt doc
