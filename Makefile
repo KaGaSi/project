@@ -1,3 +1,4 @@
+# simplistic way to create documentation
 all:
 	doxygen doxyconfig;
 	cd latex/; pdflatex refman.tex
