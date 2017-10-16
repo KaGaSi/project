@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include "../AnalysisTools.h"
+#include "../Options.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -170,44 +171,17 @@ int main(int argc, char *argv[]) {
   // vsf file is not needed anymore
   free(vsf_file); //}}}
 
-  // -x <name(s)>  exclude aggregate containing only specified molecule(s) //{{{
-  // set all molecules to use #{{{
+  // '-x' option //{{{
+  error = ExcludeOption(argc, argv, Counts, &MoleculeType);
+  if (error) {
+    exit(1);
+  }
+
+  // copy Use flag to Write (for '-x' option)
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    MoleculeType[i].Use = true;
-  } //}}}
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-x") == 0) {
-
-      // wrong argument to -x option{{{
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing first argument to '-x' option ");
-        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
-        exit(1);
-      } //}}}
-
-      // read molecule(s) names
-      int j = 0;
-      while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
-
-        int type = FindMoleculeType(argv[i+1+j], Counts, MoleculeType);
-
-        if (type == -1) { // is it in FIELD?
-          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
-          fprintf(stderr, "Molecule names in FIELD:\n");
-          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
-            fprintf(stderr, "%3d %s\n", k, MoleculeType[k].Name);
-          }
-          exit(1);
-        } else {
-          // exclude that molecule
-          MoleculeType[type].Use = false;
-        }
-
-        j++;
-      }
-    }
-  } //}}}
+    MoleculeType[i].Write = MoleculeType[i].Use;
+  }
+  //}}}
 
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));

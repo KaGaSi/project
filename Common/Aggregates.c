@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include "../AnalysisTools.h"
+#include "../Options.h"
 #include "Aggregates.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
@@ -533,36 +534,41 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // -j <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
+//// -j <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
+//char joined_vcf[32];
+//joined_vcf[0] = '\0'; // no -j option
+//for (int i = 1; i < argc; i++) {
+//  if (strcmp(argv[i], "-j") == 0) {
+
+//    // wrong argument to -i option
+//    if ((i+1) >= argc || argv[i+1][0] == '-') {
+//      fprintf(stderr, "Missing argument to '-j' option ");
+//      fprintf(stderr, "(or filename beginning with a dash)!\n");
+//      exit(1);
+//    }
+
+//    strcpy(joined_vcf, argv[i+1]);
+
+//    // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
+//    char *dot = strrchr(joined_vcf, '.');
+//    if (!dot || strcmp(dot, ".vcf")) {
+//      fprintf(stderr, "<joined.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
+//      ErrorHelp(argv[0]);
+//      exit(1);
+//    }
+//  }
+//} //}}}
   char joined_vcf[32];
-  joined_vcf[0] = '\0'; // no -j option
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-j") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing argument to '-j' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
-        exit(1);
-      }
-
-      strcpy(joined_vcf, argv[i+1]);
-
-      // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
-      char *dot = strrchr(joined_vcf, '.');
-      if (!dot || strcmp(dot, ".vcf")) {
-        fprintf(stderr, "<joined.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-    }
+  bool error = JoinCoorOption(argc, argv, joined_vcf); //{{{
+  if (error) {
+    exit(1);
   } //}}}
 
   // standard options //{{{
   char *vsf_file = calloc(32,sizeof(char *));
   char *bonds_file = calloc(32,sizeof(char *));
   bool verbose, verbose2, silent, script;
-  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent, &script);
+  error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent, &script);
 
   // was there error during CommonOptions()?
   if (error) {
@@ -647,44 +653,10 @@ int main(int argc, char *argv[]) {
     BeadType[type].Use = true;
   } //}}}
 
-  // -x <name(s)>  exclude specified molecule(s) //{{{
-  // set all molecules to use #{{{
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    MoleculeType[i].Use = true;
-    MoleculeType[i].Write = true;
-  } //}}}
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-x") == 0) {
-
-      // wrong argument to -x option{{{
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing first argument to '-x' option ");
-        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
-        exit(1);
-      } //}}}
-
-      // read molecule(s) names
-      int j = 0;
-      while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
-
-        int type = FindMoleculeType(argv[i+1+j], Counts, MoleculeType);
-
-        if (type == -1) { // is it in FIELD?
-          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
-          fprintf(stderr, "Molecule names in FIELD:\n");
-          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
-            fprintf(stderr, "%3d %s\n", k, MoleculeType[k].Name);
-          }
-          exit(1);
-        } else {
-          // exclude that molecule
-          MoleculeType[type].Use = false;
-        }
-
-        j++;
-      }
-    }
+  // '-x' option //{{{
+  error = ExcludeOption(argc, argv, Counts, &MoleculeType);
+  if (error) {
+    exit(1);
   } //}}}
 
   // print command to output .agg file //{{{
