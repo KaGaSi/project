@@ -16,23 +16,6 @@
  */
 void CommonHelp(bool error); //}}}
 
-// CommonOptions() //{{{
-/**
- * \brief Function to setup common options.
- *
- * \param [in]  argc         number of program's arguments
- * \param [in]  argv         program's arguments
- * \param [out] vsf_file     filename with structure information
- * \param [out] bonds_file   filename with bonds
- * \param [out] verbose      bool for `-v` option (verbose output)
- * \param [out] verbose2     bool for `-V` option (detailed verbose output)
- * \param [out] silent       bool for `-s` option (run silently)
- * \param [out] script       bool for `--script` option (run in script)
- * \return `true` or `false` for error on common options
- */
-bool CommonOptions(int argc, char **argv, char **vsf_file, char **bonds_file,
-                   bool *verbose, bool *verbose2, bool *silent, bool *script); //}}}
-
 // VerboseOutput() //{{{
 /**
  * \brief Function printing basic information about system if `-v` or `-V`
