@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <math.h>
 #include "../AnalysisTools.h"
+#include "../Options.h"
 
 #define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
 
@@ -255,24 +256,41 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // options before reading system data //{{{
+  // use .vsf file other than dl_meso.vsf? //{{{
+  char *vsf_file = calloc(32,sizeof(char *));
+  if (VsfFileOption(argc, argv, &vsf_file)) {
+    exit(1);
+  } //}}}
+
+  // use bonds file? //{{{
+  char *bonds_file = calloc(32,sizeof(char *));
+  if (BondsFileOption(argc, argv, &bonds_file)) {
+    exit(0);
+  } //}}}
+
+  // output verbosity //{{{
+  bool verbose, verbose2, silent, script;
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
+  VerboseShortOption(argc, argv, &verbose); // verbose output
+  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  ScriptOption(argc, argv, &script); // do not use \r & co.
+  // }}}
+
+  // print command to stdout //{{{
+  if (!silent) {
+    for (int i = 0; i < argc; i++)
+      printf(" %s", argv[i]);
+    printf("\n\n");
+  } //}}}
+  //}}}
+
   // -j option - coordinates are joined //{{{
   bool joined = false;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-j") == 0) {
       joined = true;
     }
-  } //}}}
-
-  // standard options //{{{
-  char *vsf_file = calloc(32,sizeof(char *));
-  char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent, script;
-  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent, &script);
-
-  // was there error during CommonOptions()?
-  if (error) {
-    ErrorHelp(argv[0]);
-    exit(1);
   } //}}}
 
   // print command to stdout //{{{

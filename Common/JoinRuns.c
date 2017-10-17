@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "../AnalysisTools.h"
+#include "../Options.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -89,17 +90,41 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // standard options //{{{
-  char *vsf_file_1 = calloc(32,sizeof(char *));
-  char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent, script;
-  bool error = CommonOptions(argc, argv, &vsf_file_1, &bonds_file, &verbose, &verbose2, &silent, &script);
-
-  // was there error during CommonOptions()?
+  // options before reading system data //{{{
+  // save coordinates of joined aggregates //{{{
+  char joined_vcf[32];
+  bool error = JoinCoorOption(argc, argv, joined_vcf);
   if (error) {
-    ErrorHelp(argv[0]);
     exit(1);
   } //}}}
+
+  // use .vsf file other than dl_meso.vsf? //{{{
+  char *vsf_file_1 = calloc(32,sizeof(char *));
+  if (VsfFileOption(argc, argv, &vsf_file_1)) {
+    exit(1);
+  } //}}}
+
+  // use bonds file? //{{{
+  char *bonds_file = calloc(32,sizeof(char *));
+  if (BondsFileOption(argc, argv, &bonds_file)) {
+    exit(0);
+  } //}}}
+
+  // output verbosity //{{{
+  bool verbose, verbose2, silent, script;
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
+  VerboseShortOption(argc, argv, &verbose); // verbose output
+  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  ScriptOption(argc, argv, &script); // do not use \r & co.
+  // }}}
+
+  // print command to stdout //{{{
+  if (!silent) {
+    for (int i = 0; i < argc; i++)
+      printf(" %s", argv[i]);
+    printf("\n\n");
+  } //}}}
+  //}}}
 
   // -j option - join molecules //{{{
   bool join = false;
