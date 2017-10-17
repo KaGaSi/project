@@ -534,47 +534,33 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-//// -j <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
-//char joined_vcf[32];
-//joined_vcf[0] = '\0'; // no -j option
-//for (int i = 1; i < argc; i++) {
-//  if (strcmp(argv[i], "-j") == 0) {
-
-//    // wrong argument to -i option
-//    if ((i+1) >= argc || argv[i+1][0] == '-') {
-//      fprintf(stderr, "Missing argument to '-j' option ");
-//      fprintf(stderr, "(or filename beginning with a dash)!\n");
-//      exit(1);
-//    }
-
-//    strcpy(joined_vcf, argv[i+1]);
-
-//    // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
-//    char *dot = strrchr(joined_vcf, '.');
-//    if (!dot || strcmp(dot, ".vcf")) {
-//      fprintf(stderr, "<joined.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
-//      ErrorHelp(argv[0]);
-//      exit(1);
-//    }
-//  }
-//} //}}}
+  // options before reading system data //{{{
+  // save coordinates of joined aggregates //{{{
   char joined_vcf[32];
-  bool error = JoinCoorOption(argc, argv, joined_vcf); //{{{
+  bool error = JoinCoorOption(argc, argv, joined_vcf);
   if (error) {
     exit(1);
   } //}}}
 
-  // standard options //{{{
+  // use .vsf file other than dl_meso.vsf? //{{{
   char *vsf_file = calloc(32,sizeof(char *));
-  char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent, script;
-  error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent, &script);
-
-  // was there error during CommonOptions()?
-  if (error) {
-    ErrorHelp(argv[0]);
+  if (VsfFileOption(argc, argv, &vsf_file)) {
     exit(1);
   } //}}}
+
+  // use bonds file? //{{{
+  char *bonds_file = calloc(32,sizeof(char *));
+  if (BondsFileOption(argc, argv, &bonds_file)) {
+    exit(0);
+  } //}}}
+
+  // output verbosity //{{{
+  bool verbose, verbose2, silent, script;
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
+  VerboseShortOption(argc, argv, &verbose); // verbose output
+  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  ScriptOption(argc, argv, &script); // do not use \r & co.
+  // }}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -582,6 +568,7 @@ int main(int argc, char *argv[]) {
       printf(" %s", argv[i]);
     printf("\n\n");
   } //}}}
+  //}}}
 
   count = 0; // count mandatory arguments
 
@@ -657,6 +644,10 @@ int main(int argc, char *argv[]) {
   error = ExcludeOption(argc, argv, Counts, &MoleculeType);
   if (error) {
     exit(1);
+  }
+  // used molecule type = write molecule type -- for now
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType[i].Write = MoleculeType[i].Use;
   } //}}}
 
   // print command to output .agg file //{{{
@@ -710,6 +701,7 @@ int main(int argc, char *argv[]) {
 
   // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {
+    printf("%s\n", joined_vcf);
 
     // bead types are to be written in joined.vcf -- probably will never change,
     // since the beadtypes should correspond to those in .agg file
@@ -812,7 +804,6 @@ int main(int argc, char *argv[]) {
 
     // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
     if (joined_vcf[0] != '\0') {
-
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
