@@ -85,17 +85,27 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // standard options //{{{
+  // options before reading system data //{{{
+  // use .vsf file other than dl_meso.vsf? //{{{
   char *vsf_file = calloc(32,sizeof(char *));
-  char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent, script;
-  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent, &script);
-
-  // was there error during CommonOptions()?
-  if (error) {
-    ErrorHelp(argv[0]);
+  if (VsfFileOption(argc, argv, &vsf_file)) {
     exit(1);
   } //}}}
+
+  // use bonds file? //{{{
+  char *bonds_file = calloc(32,sizeof(char *));
+  if (BondsFileOption(argc, argv, &bonds_file)) {
+    exit(0);
+  } //}}}
+
+  // output verbosity //{{{
+  bool verbose, verbose2, silent;
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
+  VerboseShortOption(argc, argv, &verbose); // verbose output
+  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
+  // }}}
+  //}}}
 
   // -n <int> option - number of bins to average //{{{
   int avg = 1;

@@ -102,28 +102,16 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent, script;
+  bool verbose, verbose2, silent;
   SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   VerboseShortOption(argc, argv, &verbose); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  ScriptOption(argc, argv, &script); // do not use \r & co.
+  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
-  // print command to stdout //{{{
-  if (!silent) {
-    for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
-  } //}}}
+  // are provided coordinates joined? //{{{
+  bool joined = BoolOption(argc, argv, "--joined"); //}}}
   //}}}
-
-  // -j option - coordinates are joined //{{{
-  bool joined = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-j") == 0) {
-      joined = true;
-    }
-  } //}}}
 
   // -n <int> option - number of bins to average //{{{
   int avg = 1;

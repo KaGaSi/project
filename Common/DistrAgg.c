@@ -14,7 +14,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output distr file>  filename with weight and number distributions\n");
   fprintf(stderr, "   <output avg file>    filename with weight and number averages throughout simulation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -n <int>          start distribution calculation with <int>-th step\n");
+  fprintf(stderr, "      -st <int>         start distribution calculation with <int>-th step\n");
   fprintf(stderr, "      --no-unimers      do not count unimers into averages\n");
   fprintf(stderr, "      -x <name(s)>      exclude aggregate containing only specified molecule(s)\n");
   CommonHelp(1);
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
       printf("   <output distr file>  filename with weight and number distributions\n");
       printf("   <output avg file>    filename with weight and number averages throughout simulation\n");
       printf("   <options>\n");
-      printf("      -n <int>          start distribution calculation with <int>-th step\n");
+      printf("      -st <int>         start distribution calculation with <int>-th step\n");
       printf("      --no-unimers      do not count unimers into averages\n");
       printf("      -x <name(s)>      exclude aggregate containing only specified molecule(s)\n");
       CommonHelp(0);
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "--no-unimers") &&
         strcmp(argv[i], "-x") != 0 ) {
 
@@ -96,41 +96,19 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent, script;
+  bool verbose, verbose2, silent;
   SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   VerboseShortOption(argc, argv, &verbose); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  ScriptOption(argc, argv, &script); // do not use \r & co.
+  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
-  // print command to stdout //{{{
-  if (!silent) {
-    for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+  // starting timestep //{{{
+  int start = 1;
+  if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
   } //}}}
   //}}}
-
-  // -n <int> option - number of starting timestep //{{{
-  int start = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n") == 0) {
-
-      // Error - non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      start = atoi(argv[i+1]);
-    }
-  } //}}}
 
   // --no-unimers - do not count unimers towards averages //{{{
   bool no_uni = false;
