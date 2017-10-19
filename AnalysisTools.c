@@ -1064,7 +1064,9 @@ void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
  * in BeadType structure only certain bead types will be saved into the
  * indexed timestep in .vcf file (\ref IndexedCoorFile).
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, MoleculeType *MoleculeType, Molecule *Molecule, char *stuff) {
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead
+                      *Bead, MoleculeType *MoleculeType, Molecule *Molecule,
+                      char *stuff) {
 
   // print comment at the beginning of a timestep and 'indexed' on second line
   fprintf(vcf_file, "\n%sindexed\n", stuff);

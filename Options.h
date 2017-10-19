@@ -8,23 +8,6 @@
 
 #include "Structs.h"
 
-// CommonOptions() //{{{
-/**
- * \brief Function to setup common options.
- *
- * \param [in]  argc         number of program's arguments
- * \param [in]  argv         program's arguments
- * \param [out] vsf_file     filename with structure information
- * \param [out] bonds_file   filename with bonds
- * \param [out] verbose      bool for `-v` option (verbose output)
- * \param [out] verbose2     bool for `-V` option (detailed verbose output)
- * \param [out] silent       bool for `-s` option (run silently)
- * \param [out] script       bool for `--script` option (run in script)
- * \return `true` or `false` for error on common options
- */
-bool CommonOptions(int argc, char **argv, char **vsf_file, char **bonds_file,
-                   bool *verbose, bool *verbose2, bool *silent, bool *script); //}}}
-
 // VsfFileOption() //{{{
 /**
  * \brief Option whether to use `.vsf` file different from `dl_meso.vsf` (`-i
@@ -39,7 +22,7 @@ bool VsfFileOption(int argc, char **argv, char **vsf_file); //}}}
 
 // BondsFileOption() //{{{
 /**
- * \brief Option whether to use bonds file (`-b <name>`)
+ * \brief Option whether to use bonds file (`-b <name>`).
  *
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
@@ -86,17 +69,6 @@ bool VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2); //
 bool SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
                   bool *silent); //}}}
 
-// ScriptOption() //{{{
-/**
- * \brief Option whether not to print rewrite stdout line (`--script`).
- *
- * \param [in]  argc         number of program's arguments
- * \param [in]  argv         program's arguments
- * \param [out] script       bool for the option option
- * \return `true` or `false` error or not error
- */
-bool ScriptOption(int argc, char **argv, bool *script); //}}}
-
 // ExcludeOption() //{{{
 /**
  * \brief Option whether to exclude molecule types (`-x <name(s)>`).
@@ -122,4 +94,28 @@ bool ExcludeOption(int argc, char **argv, Counts Counts,
  * \return `true` or `false` error or not error
  */
 bool JoinCoorOption(int argc, char **argv, char *joined_vcf); //}}}
+
+// BoolOption() //{{{
+/**
+ * \brief Option whether not to print rewrite stdout line (`--script`).
+ *
+ * \param [in] argc  number of program's arguments
+ * \param [in] argv  program's arguments
+ * \param [in] opt   option switch (e.g. array containing `-n`)
+ * \return `true` if `opt` present, `false` otherwise
+ */
+bool BoolOption(int argc, char **argv, char *opt); //}}}
+
+// IntegerOption() //{{{
+/**
+ * \breif Function for any option with integer argument.
+ *
+ * \param [in]  argc  number of program's arguments
+ * \param [in]  argv  program's arguments
+ * \param [in]  opt   option switch (e.g. array containing `-n`)
+ * \param [out] value integer value of given option
+ * \return `true` or `false` for error
+ */
+bool IntegerOption(int argc, char **argv, char *opt, int *value);
+// }}}
 #endif

@@ -14,7 +14,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.vcf>      output filename (vcf format)\n");
   fprintf(stderr, "   <type names>      names of bead types to save\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j             join molecules (remove pbc)\n");
+  fprintf(stderr, "      --join         join molecules (remove pbc)\n");
   fprintf(stderr, "      -st <start>    number of timestep to start from\n");
   fprintf(stderr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
       printf("   <output.vcf>      output filename (vcf format)\n");
       printf("   <type names>      names of bead types to save\n");
       printf("   <options>\n");
-      printf("      -j             join molecules (remove pbc)\n");
+      printf("      --join         join molecules (remove pbc)\n");
       printf("      -st <start>    number of timestep to start from\n");
       printf("      -sk <skip>     leave out every 'skip' steps\n");
       printf("      -x <name(s)>   exclude specified molecule(s)\n");
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-j") != 0 &&
+        strcmp(argv[i], "--join") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-sk") != 0 &&
         strcmp(argv[i], "-x") != 0) {
@@ -86,71 +86,42 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // standard options //{{{
+  // options before reading system data //{{{
+  // use .vsf file other than dl_meso.vsf? //{{{
   char *vsf_file = calloc(32,sizeof(char *));
-  char *bonds_file = calloc(32,sizeof(char *));
-  bool verbose, verbose2, silent, script;
-  bool error = CommonOptions(argc, argv, &vsf_file, &bonds_file, &verbose, &verbose2, &silent, &script);
-
-  // was there error during CommonOptions()?
-  if (error) {
-    ErrorHelp(argv[0]);
+  if (VsfFileOption(argc, argv, &vsf_file)) {
     exit(1);
   } //}}}
 
-  // -j option - join molecules //{{{
-  bool join = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-j") == 0) {
-      join = true;
-
-      break;
-    }
+  // use bonds file? //{{{
+  char *bonds_file = calloc(32,sizeof(char *));
+  if (BondsFileOption(argc, argv, &bonds_file)) {
+    exit(1);
   } //}}}
 
-  // -st <start> - number of starting timestep //{{{
+  // output verbosity //{{{
+  bool verbose, verbose2, silent;
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
+  VerboseShortOption(argc, argv, &verbose); // verbose output
+  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
+  // }}}
+
+  // should output coordinates be joined? //{{{
+  bool join = BoolOption(argc, argv, "--join"); //}}}
+
+  // starting timestep //{{{
   int start = 1;
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-st") == 0) {
-
-      // Error - non-numeric or missing argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-st' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if ((i+1) >= argc || argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-st' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      start = atoi(argv[i+1]);
-    }
+  if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
   } //}}}
 
-  // -sk <skip> - number of steps to skip per one used //{{{
+  // number of steps to skip per one used //{{{
   int skip = 0;
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-sk") == 0) {
-
-      // Error - non-numeric or missing argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-sk' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-sk' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      skip = atoi(argv[i+1]);
-    }
+  if (IntegerOption(argc, argv, "-sk", &skip)) {
+    exit(1);
   } //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -219,8 +190,7 @@ int main(int argc, char *argv[]) {
 //} //}}}
 
   // '-x' option //{{{
-  error = ExcludeOption(argc, argv, Counts, &MoleculeType);
-  if (error) {
+  if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
     exit(1);
   }
 
