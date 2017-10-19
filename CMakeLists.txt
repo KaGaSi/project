@@ -12,23 +12,30 @@ foreach(library ${LIBRARIES})
   add_library(${library} ${library}.c)
 endforeach(library)
 
-set(UTILITIES Aggregates
-              Aggregates-NotSameBeads
-              BondLength
-              Config
-              DensityAggregates
-              DensityMolecules
-              DistrAgg
-              GyrationAggregates
-              GyrationMolecules
-              JoinAggregates
-              JoinRuns
-              PairCorrel
-              PairCorrelPerAgg
-              SelectedVcf
-              TransformVsf)
-foreach(utility ${UTILITIES})
+set(COMMON Aggregates
+           Aggregates-NotSameBeads
+           BondLength
+           Config
+           DensityAggregates
+           DensityMolecules
+           DistrAgg
+           GyrationAggregates
+           GyrationMolecules
+           JoinAggregates
+           JoinRuns
+           PairCorrel
+           PairCorrelPerAgg
+           SelectedVcf
+           TransformVsf)
+         foreach(utility ${COMMON})
   add_executable(${utility} Common/${utility}.c)
+  target_link_libraries(${utility} m ${LIBRARIES})
+endforeach(utility)
+
+set(LINEAR EndToEnd
+           PersistenceLength)
+         foreach(utility ${LINEAR})
+  add_executable(${utility} Linear/${utility}.c)
   target_link_libraries(${utility} m ${LIBRARIES})
 endforeach(utility)
 

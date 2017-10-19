@@ -533,8 +533,7 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   // save coordinates of joined aggregates //{{{
   char joined_vcf[32];
-  bool error = JoinCoorOption(argc, argv, joined_vcf);
-  if (error) {
+  if (JoinCoorOption(argc, argv, joined_vcf)) {
     exit(1);
   } //}}}
 
@@ -551,19 +550,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent, script;
+  bool verbose, verbose2, silent;
   SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   VerboseShortOption(argc, argv, &verbose); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  ScriptOption(argc, argv, &script); // do not use \r & co.
+  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
-
-  // print command to stdout //{{{
-  if (!silent) {
-    for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
-  } //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -644,8 +636,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-x' option //{{{
-  error = ExcludeOption(argc, argv, Counts, &MoleculeType);
-  if (error) {
+  if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
     exit(1);
   } //}}}
 

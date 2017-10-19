@@ -85,19 +85,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent, script;
+  bool verbose, verbose2, silent;
   SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   VerboseShortOption(argc, argv, &verbose); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  ScriptOption(argc, argv, &script); // do not use \r & co.
+  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
-
-  // print command to stdout //{{{
-  if (!silent) {
-    for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
-  } //}}}
   //}}}
 
   // -n <step> - choose timestep to create CONFIG file from //{{{

@@ -6,106 +6,11 @@
 #include "AnalysisTools.h"
 #include "Options.h"
 
-// CommonOptions() //{{{
-/**
- * Function for options common to most of the utilities.
- */
-bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
-                   bool *verbose, bool *verbose2, bool *silent, bool *script) {
-
-//// -i <name> option - filename of input structure file //{{{
-//(*vsf_file)[0] = '\0'; // check if -i option is used
-//for (int i = 1; i < argc; i++) {
-//  if (strcmp(argv[i], "-i") == 0) {
-
-//    // wrong argument to -i option
-//    if ((i+1) >= argc || argv[i+1][0] == '-') {
-//      fprintf(stderr, "\nMissing argument to '-i' option ");
-//      fprintf(stderr, "(or filename beginning with a dash)!\n");
-
-//      return(true);
-//    }
-
-//    // check if .vsf ending is present
-//    char *vsf = strrchr(argv[i+1], '.');
-//    if (!vsf || strcmp(vsf, ".vsf")) {
-//      fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
-//      return(true);
-//    }
-
-//    strcpy(*vsf_file, argv[i+1]);
-//  }
-//}
-
-//// -i option is not used
-//if ((*vsf_file)[0] == '\0') {
-//  strcpy(*vsf_file, "dl_meso.vsf");
-//} //}}}
-
-//// -b <name> option - filename of input bond file //{{{
-//(*bonds_file)[0] = '\0'; // check if -b option is used
-//for (int i = 1; i < argc; i++) {
-//  if (strcmp(argv[i], "-b") == 0) {
-
-//    // wrong argument to -b option
-//    if ((i+1) >= argc || argv[i+1][0] == '-') {
-//      fprintf(stderr, "\nMissing argument to '-b' option ");
-//      fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-
-//      return(true);
-//    }
-
-//    strcpy(*bonds_file, argv[i+1]);
-//  }
-//} //}}}
-
-//// -v option - verbose output //{{{
-//*verbose = false;
-//for (int i = 1; i < argc; i++) {
-//  if (strcmp(argv[i], "-v") == 0) {
-//    *verbose = true;
-
-//    break;
-//  }
-//} //}}}
-
-//// -V option - verbose output with comments from input .vcf file //{{{
-//*verbose2 = false;
-//for (int i = 1; i < argc; i++) {
-//  if (strcmp(argv[i], "-V") == 0) {
-//    *verbose = true;
-//    *verbose2 = true;
-
-//    break;
-//  }
-//} //}}}
-
-//// -s option - silent mode //{{{
-//*silent = false;
-//for (int i = 1; i < argc; i++) {
-//  if (strcmp(argv[i], "-s") == 0) {
-//    *verbose = false;
-//    *verbose2 = false;
-//    *silent = true;
-
-//    break;
-//  }
-//} //}}}
-
-//// --script  option - meant for when output is routed to file, so don't use flush & \r //{{{
-//*script = false;
-//for (int i = 1; i < argc; i++) {
-//  if (strcmp(argv[i], "--script") == 0) {
-//    *script = true;
-
-//    break;
-//  }
-//} //}}}
-
-  return(false);
-} //}}}
-
 // VsfFileOption() //{{{
+/**
+ * Option whether to use `.vsf` file different from the default
+ * `dl_meso.vsf`.
+ */
 bool VsfFileOption(int argc, char **argv, char **vsf_file) {
 
   (*vsf_file)[0] = '\0'; // check if -i option is used
@@ -141,6 +46,9 @@ bool VsfFileOption(int argc, char **argv, char **vsf_file) {
 } //}}}
 
 // BondsFileOption() //{{{
+/**
+ * Option whether to use bonds file with alternative bond definitions.
+ */
 bool BondsFileOption(int argc, char **argv, char **bonds_file) {
   (*bonds_file)[0] = '\0'; // check if -b option is used
 
@@ -163,6 +71,11 @@ bool BondsFileOption(int argc, char **argv, char **bonds_file) {
 } //}}}
 
 // VerboseShortOption() //{{{
+/**
+ * Option whether to print some data to stdout. Data are printed via the
+ * VerboseOutput() function (and possibly some in-program code). Argument:
+ * `-v`
+ */
 bool VerboseShortOption(int argc, char **argv, bool *verbose) {
   *verbose = false;
 
@@ -176,6 +89,11 @@ bool VerboseShortOption(int argc, char **argv, bool *verbose) {
 } //}}}
 
 // VerboseLongOption() //{{{
+/**
+ * Option whether to print detailed data to stdout. Data are printed via
+ * VerboseOutput() function (and possibly some in-program code). Argument:
+ * `-V`
+ */
 bool VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2) {
 
   *verbose2 = false;
@@ -190,6 +108,11 @@ bool VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2) {
 } //}}}
 
 // SilentOption() //{{{
+/**
+ * Option to not print anything to stdout (or at least no system
+ * definitions and no Step: #). Overrides VerboseShortOption and
+ * VerboseLongOption. Argument: `-s`
+ */
 bool SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
                   bool *silent) {
 
@@ -206,19 +129,12 @@ bool SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
   }
 } //}}}
 
-// ScriptOption() //{{{
-bool ScriptOption(int argc, char **argv, bool *script) {
-  *script = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--script") == 0) {
-      *script = true;
-
-      break;
-    }
-  }
-} // }}}
-
 // ExcludeOption() //{{{
+/**
+ * Option to exclude specified molecule types from calculations. Gives
+ * specified molecule types `Use = false` and the rest `Use = true`.
+ * Arguments: `-x <name(s)>`
+ */
 bool ExcludeOption(int argc, char **argv, Counts Counts,
                    MoleculeType **MoleculeType) {
 
@@ -264,7 +180,11 @@ bool ExcludeOption(int argc, char **argv, Counts Counts,
   return(false);
 } //}}}
 
-// JoinedCoorOption() //{{{
+// JoinCoorOption() //{{{
+/**
+ * Option whether to join aggregates and save joined coordinates into a
+ * specified file. Arguments: `-j <joined.vcf>`
+ */
 bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
 
   joined_vcf[0] = '\0'; // no -j option
@@ -288,6 +208,47 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
 
         return(true);
       } //}}}
+    }
+  }
+
+  return(false);
+} //}}}
+
+// BoolOption() //{{{
+/**
+ * Function for any boolean option (i.e. without argument). The option
+ * (e.g. `--script`) is an argument of this function.
+ */
+bool BoolOption(int argc, char **argv, char *opt) {
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], opt) == 0) {
+      return(true);
+    }
+  }
+  return(false);
+} // }}}
+
+// IntegerOption() //{{{
+/**
+ * Function for any option with integer argument. The option (e.g. `-n`)
+ * is an argument of this function.
+ */
+bool IntegerOption(int argc, char **argv, char *opt, int *value) {
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], opt) == 0) {
+
+      // Error - non-numeric or missing argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '%s' option!\n", opt);
+        return(true);
+      }
+      if ((i+1) >= argc || argv[i+1][0] < '0' || argv[i+1][0] > '9') {
+        fprintf(stderr, "Non-numeric argement for '%s' option!\n", opt);
+        return(true);
+      } //}}}
+
+      *value = atoi(argv[i+1]);
     }
   }
 

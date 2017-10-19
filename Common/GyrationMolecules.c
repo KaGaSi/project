@@ -16,7 +16,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output>            output file with radii of gyration\n");
   fprintf(stderr, "   <molecule names>    molecule types to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j               specify that joined coordinates are used\n");
+  fprintf(stderr, "      --joined         specify that joined coordinates are used\n");
   CommonHelp(1);
 } //}}}
 
@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
       printf("   <output>            output file with radii of gyration\n");
       printf("   <molecule names>    molecule types to calculate radius of gyration for\n");
       printf("   <options>\n");
-      printf("      -j               specify that joined coordinates are used\n");
+      printf("      --joined         specify that joined coordinates are used\n");
       CommonHelp(0);
       exit(0);
     }
@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-j") != 0) {
+        strcmp(argv[i], "--joined") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -270,28 +270,16 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent, script;
+  bool verbose, verbose2, silent;
   SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   VerboseShortOption(argc, argv, &verbose); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  ScriptOption(argc, argv, &script); // do not use \r & co.
+  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
-  // print command to stdout //{{{
-  if (!silent) {
-    for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
-  } //}}}
+  // are provided coordinates joined? //{{{
+  bool joined = BoolOption(argc, argv, "--joined"); //}}}
   //}}}
-
-  // -j option - coordinates are joined //{{{
-  bool joined = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-j") == 0) {
-      joined = true;
-    }
-  } //}}}
 
   // print command to stdout //{{{
   if (!silent) {
