@@ -70,31 +70,13 @@ bool BondsFileOption(int argc, char **argv, char **bonds_file) {
   return(false);
 } //}}}
 
-// VerboseShortOption() //{{{
-/**
- * Option whether to print some data to stdout. Data are printed via the
- * VerboseOutput() function (and possibly some in-program code). Argument:
- * `-v`
- */
-bool VerboseShortOption(int argc, char **argv, bool *verbose) {
-  *verbose = false;
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") == 0) {
-      *verbose = true;
-
-      break;
-    }
-  }
-} //}}}
-
 // VerboseLongOption() //{{{
 /**
  * Option whether to print detailed data to stdout. Data are printed via
  * VerboseOutput() function (and possibly some in-program code). Argument:
  * `-V`
  */
-bool VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2) {
+void VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2) {
 
   *verbose2 = false;
   for (int i = 1; i < argc; i++) {
@@ -113,7 +95,7 @@ bool VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2) {
  * definitions and no Step: #). Overrides VerboseShortOption and
  * VerboseLongOption. Argument: `-s`
  */
-bool SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
+void SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
                   bool *silent) {
 
   *silent = false;
@@ -213,6 +195,38 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
 
   return(false);
 } //}}}
+
+// BeadTypeOption() //{{{
+/**
+ * Option to choose which bead types to use for calculation. If the option
+ * is absent, all bead types are switched to `Use = true`. Argument: `-bt
+ * <name(s)>`
+ */
+bool BeadTypeOption(int argc, char **argv, Counts Counts,
+                    BeadType **BeadType) {
+
+  // specify what bead types to use - either specified by '-bt' option or all
+  int types = -1;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-bt") == 0) {
+      types = i; // positon of the '-bt' argument in command
+      // <type names> - names of bead types to save
+      while (++types < argc && argv[types][0] != '-') {
+        int type = FindBeadType(argv[types], Counts, *BeadType);
+
+        (*BeadType)[type].Use = true;
+        printf("%s\n", (*BeadType)[type].Name);
+      }
+    }
+  }
+  if (types == -1) {
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      (*BeadType)[i].Use = true;
+    }
+  }
+
+  return(false);
+} // }}}
 
 // BoolOption() //{{{
 /**

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Arch Linux) (preloaded format=pdflatex 2017.8.2)  16 OCT 2017 20:01
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017/Arch Linux) (preloaded format=pdflatex 2017.8.2)  21 OCT 2017 10:41
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -1247,7 +1247,7 @@ cmm/m/it/10 >$ $<$\T1/pcr/m/n/10 options$\OML/cmm/m/it/10 >$
  []
 
 [13] [14]
-Underfull \hbox (badness 10000) in paragraph at lines 430--431
+Underfull \hbox (badness 10000) in paragraph at lines 432--433
 []\T1/pcr/m/n/10 Pair[]Correl $\OML/cmm/m/it/10 <$\T1/pcr/m/n/10 input.[]vcf$\O
 ML/cmm/m/it/10 >$ $<$\T1/pcr/m/n/10 input.[]agg$\OML/cmm/m/it/10 >$ $<$\T1/pcr/
 m/n/10 width$\OML/cmm/m/it/10 >$ $<$\T1/pcr/m/n/10 output.[]pcf$\OML/cmm/m/it/1
@@ -1255,7 +1255,7 @@ m/n/10 width$\OML/cmm/m/it/10 >$ $<$\T1/pcr/m/n/10 output.[]pcf$\OML/cmm/m/it/1
  []
 
 [15]
-Underfull \hbox (badness 10000) in paragraph at lines 457--458
+Underfull \hbox (badness 10000) in paragraph at lines 459--460
 []\T1/pcr/m/n/10 Join[]Runs $\OML/cmm/m/it/10 <$\T1/pcr/m/n/10 1st input.[]vcf$
 \OML/cmm/m/it/10 >$ $<$\T1/pcr/m/n/10 2nd input.[]vcf$\OML/cmm/m/it/10 >$ $<$\T
 1/pcr/m/n/10 2nd input.[]vsf$\OML/cmm/m/it/10 >$ $<$\T1/pcr/m/n/10 output.[]vcf
@@ -1293,106 +1293,164 @@ Underfull \hbox (badness 10000) in paragraph at lines 8--9
  []
 
 LaTeX Font Info:    Font shape `T1/pcr/m/it' in size <9> not available
-(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 17.
+(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 15.
 [23]
 LaTeX Font Info:    Font shape `T1/phv/m/n' will be
-(Font)              scaled to size 7.19995pt on input line 63.
+(Font)              scaled to size 7.19995pt on input line 61.
 LaTeX Font Info:    Font shape `T1/pcr/m/it' in size <8> not available
-(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 63.
+(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 61.
 LaTeX Font Info:    Font shape `T1/pcr/m/it' in size <7> not available
-(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 63.
+(Font)              Font shape `T1/pcr/m/sl' tried instead on input line 61.
 
-Underfull \hbox (badness 10000) detected at line 76
+Underfull \hbox (badness 10000) detected at line 74
 [][][]
  []
 
-[24]
 
 Package longtable Warning: Column widths have changed
-(longtable)                in table 2 on input line 89.
+(longtable)                in table 2 on input line 87.
 
 
-Underfull \hbox (badness 10000) detected at line 115
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [24]
+Underfull \hbox (badness 10000) detected at line 103
 [][][]
  []
+
+
+Underfull \hbox (badness 10000) detected at line 121
+[][][]
+ []
+
+
+Overfull \vbox (26.27332pt too high) has occurred while \output is active []
+
 
 [25]
-Underfull \hbox (badness 10000) detected at line 133
+Underfull \hbox (badness 10000) detected at line 139
 [][][]
  []
 
 
-Underfull \hbox (badness 10000) detected at line 151
-[][][]
- []
-
-
-Underfull \hbox (badness 10000) detected at line 169
-[][][]
- []
+Package longtable Warning: Column widths have changed
+(longtable)                in table 7 on input line 167.
 
 [26]
-
-Package longtable Warning: Column widths have changed
-(longtable)                in table 8 on input line 197.
+Underfull \hbox (badness 10000) detected at line 209
+[][][]
+ []
 
 [27]
-Underfull \hbox (badness 10000) detected at line 239
+
+Package longtable Warning: Column widths have changed
+(longtable)                in table 12 on input line 247.
+
+
+Underfull \hbox (badness 10000) detected at line 248
 [][][]
  []
 
 
 Package longtable Warning: Column widths have changed
-(longtable)                in table 13 on input line 277.
+(longtable)                in table 13 on input line 267.
 
 
-Overfull \vbox (7.60654pt too high) has occurred while \output is active []
-
+Underfull \hbox (badness 10000) detected at line 268
+[][][]
+ []
 
 [28]
-Underfull \hbox (badness 10000) detected at line 278
-[][][]
- []
-
-
-Package longtable Warning: Column widths have changed
-(longtable)                in table 14 on input line 297.
-
-
-Underfull \hbox (badness 10000) detected at line 298
+Underfull \hbox (badness 10000) detected at line 296
 [][][]
  []
 
 [29]
-Underfull \hbox (badness 10000) detected at line 326
-[][][]
- []
-
-
-Overfull \vbox (9.10733pt too high) has occurred while \output is active []
-
-
-[30]
 
 Package longtable Warning: Column widths have changed
-(longtable)                in table 19 on input line 404.
+(longtable)                in table 18 on input line 374.
 
 
-Underfull \hbox (badness 10000) detected at line 405
+Underfull \hbox (badness 10000) detected at line 375
 [][][]
  []
 
-
-Underfull \hbox (badness 10000) detected at line 419
+[30]
+Underfull \hbox (badness 10000) detected at line 389
 [][][]
  []
 
-[31]) (./Options_8h.tex [32]
+[31]) (./Options_8h.tex
 Underfull \hbox (badness 10000) in paragraph at lines 8--9
 
  []
 
-) (./Structs_8h.tex [33]) [34]
+[32]
+Underfull \hbox (badness 10000) detected at line 52
+[][][]
+ []
+
+
+Underfull \hbox (badness 10000) detected at line 70
+[][][]
+ []
+
+
+Package longtable Warning: Column widths have changed
+(longtable)                in table 24 on input line 87.
+
+
+Underfull \hbox (badness 10000) detected at line 88
+[][][]
+ []
+
+[33]
+Underfull \hbox (badness 10000) detected at line 108
+[][][]
+ []
+
+
+Package longtable Warning: Column widths have changed
+(longtable)                in table 26 on input line 129.
+
+
+Underfull \hbox (badness 10000) detected at line 130
+[][][]
+ []
+
+[34] [35]
+Underfull \hbox (badness 10000) detected at line 150
+[][][]
+ []
+
+
+Underfull \hbox (badness 10000) detected at line 172
+[][][]
+ []
+
+
+Overfull \vbox (19.3777pt too high) has occurred while \output is active []
+
+
+[36]
+Underfull \hbox (badness 10000) detected at line 192
+[][][]
+ []
+
+
+Package longtable Warning: Column widths have changed
+(longtable)                in table 30 on input line 209.
+
+
+Package longtable Warning: Column widths have changed
+(longtable)                in table 31 on input line 224.
+
+
+Underfull \hbox (badness 10000) detected at line 225
+[][][]
+ []
+
+) (./Structs_8h.tex [37]) [38]
 No file refman.ind.
 
 Package longtable Warning: Table widths have changed. Rerun LaTeX.
@@ -1414,10 +1472,10 @@ LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 182.
  ) 
 Here is how much of TeX's memory you used:
- 15276 strings out of 492990
- 219451 string characters out of 6138689
- 315378 words of memory out of 5000000
- 18267 multiletter control sequences out of 15000+600000
+ 15320 strings out of 492990
+ 220370 string characters out of 6138689
+ 318342 words of memory out of 5000000
+ 18283 multiletter control sequences out of 15000+600000
  56018 words of font info for 85 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  53i,16n,92p,1149b,632s stack positions out of 5000i,500n,10000p,200000b,80000s
@@ -1457,10 +1515,10 @@ pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhvb8a.pfb></usr/share/texm
 f-dist/fonts/type1/urw/helvetic/uhvb8ac.pfb></usr/share/texmf-dist/fonts/type1/
 urw/helvetic/uhvr8a.pfb></usr/share/texmf-dist/fonts/type1/urw/helvetic/uhvro8a
 .pfb>
-Output written on refman.pdf (36 pages, 256525 bytes).
+Output written on refman.pdf (40 pages, 266975 bytes).
 PDF statistics:
- 1221 PDF objects out of 1440 (max. 8388607)
- 1050 compressed objects within 11 object streams
- 279 named destinations out of 1000 (max. 500000)
+ 1307 PDF objects out of 1440 (max. 8388607)
+ 1119 compressed objects within 12 object streams
+ 307 named destinations out of 1000 (max. 500000)
  369 words of extra memory for PDF output out of 10000 (max. 10000000)
 

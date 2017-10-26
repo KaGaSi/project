@@ -11,8 +11,6 @@ Functions common to all analysis utilities.
 \item 
 void \hyperlink{AnalysisTools_8h_a40313fab170a9b6d7400f621255c2729}{Common\+Help} (bool error)
 \begin{DoxyCompactList}\small\item\em Function printing help for common options. \end{DoxyCompactList}\item 
-bool \hyperlink{AnalysisTools_8h_a57b613bc3ddbd1572600eee1504ddf30}{Common\+Options} (int argc, char $\ast$$\ast$argv, char $\ast$$\ast$vsf\+\_\+file, char $\ast$$\ast$bonds\+\_\+file, bool $\ast$verbose, bool $\ast$verbose2, bool $\ast$silent, bool $\ast$script)
-\begin{DoxyCompactList}\small\item\em Function to setup common options. \end{DoxyCompactList}\item 
 void \hyperlink{AnalysisTools_8h_a14a30f1b16038ee877eda0aa24953495}{Verbose\+Output} (bool Verbose2, char $\ast$input\+\_\+vcf, char $\ast$bonds\+\_\+file, \hyperlink{structCounts}{Counts} \hyperlink{structCounts}{Counts}, \hyperlink{structBeadType}{Bead\+Type} $\ast$\hyperlink{structBeadType}{Bead\+Type}, \hyperlink{structBead}{Bead} $\ast$\hyperlink{structBead}{Bead}, \hyperlink{structMoleculeType}{Molecule\+Type} $\ast$\hyperlink{structMoleculeType}{Molecule\+Type}, \hyperlink{structMolecule}{Molecule} $\ast$\hyperlink{structMolecule}{Molecule})
 \begin{DoxyCompactList}\small\item\em Function printing basic information about system if {\ttfamily -\/v} or {\ttfamily -\/V} option is provided. \end{DoxyCompactList}\item 
 bool \hyperlink{AnalysisTools_8h_af1a0a186a52c39e6a3f40b17619cf97c}{Read\+Structure} (char $\ast$vsf\+\_\+file, char $\ast$vcf\+\_\+file, char $\ast$bonds\+\_\+file, \hyperlink{structCounts}{Counts} $\ast$\hyperlink{structCounts}{Counts}, \hyperlink{structBeadType}{Bead\+Type} $\ast$$\ast$\hyperlink{structBeadType}{Bead\+Type}, \hyperlink{structBead}{Bead} $\ast$$\ast$\hyperlink{structBead}{Bead}, \hyperlink{structMoleculeType}{Molecule\+Type} $\ast$$\ast$\hyperlink{structMoleculeType}{Molecule\+Type}, \hyperlink{structMolecule}{Molecule} $\ast$$\ast$\hyperlink{structMolecule}{Molecule})
@@ -87,35 +85,7 @@ Function to calculate center of mass for a given list of beads. \mbox{\Hypertarg
 \mbox{\tt in}  & {\em error} & {\ttfamily true} or {\ttfamily false} whether to use stderr or stdout\\
 \hline
 \end{DoxyParams}
-Function to print help for common options, either for {\ttfamily -\/h} help option or program error. \mbox{\Hypertarget{AnalysisTools_8h_a57b613bc3ddbd1572600eee1504ddf30}\label{AnalysisTools_8h_a57b613bc3ddbd1572600eee1504ddf30}} 
-\index{Analysis\+Tools.\+h@{Analysis\+Tools.\+h}!Common\+Options@{Common\+Options}}
-\index{Common\+Options@{Common\+Options}!Analysis\+Tools.\+h@{Analysis\+Tools.\+h}}
-\paragraph{\texorpdfstring{Common\+Options()}{CommonOptions()}}
-{\footnotesize\ttfamily bool Common\+Options (\begin{DoxyParamCaption}\item[{int}]{argc,  }\item[{char $\ast$$\ast$}]{argv,  }\item[{char $\ast$$\ast$}]{vsf\+\_\+file,  }\item[{char $\ast$$\ast$}]{bonds\+\_\+file,  }\item[{bool $\ast$}]{verbose,  }\item[{bool $\ast$}]{verbose2,  }\item[{bool $\ast$}]{silent,  }\item[{bool $\ast$}]{script }\end{DoxyParamCaption})}
-
-
-\begin{DoxyParams}[1]{Parameters}
-\mbox{\tt in}  & {\em argc} & number of program\textquotesingle{}s arguments \\
-\hline
-\mbox{\tt in}  & {\em argv} & program\textquotesingle{}s arguments \\
-\hline
-\mbox{\tt out}  & {\em vsf\+\_\+file} & filename with structure information \\
-\hline
-\mbox{\tt out}  & {\em bonds\+\_\+file} & filename with bonds \\
-\hline
-\mbox{\tt out}  & {\em verbose} & bool for {\ttfamily -\/v} option (verbose output) \\
-\hline
-\mbox{\tt out}  & {\em verbose2} & bool for {\ttfamily -\/V} option (detailed verbose output) \\
-\hline
-\mbox{\tt out}  & {\em silent} & bool for {\ttfamily -\/s} option (run silently) \\
-\hline
-\mbox{\tt out}  & {\em script} & bool for {\ttfamily -\/-\/script} option (run in script) \\
-\hline
-\end{DoxyParams}
-\begin{DoxyReturn}{Returns}
-{\ttfamily true} or {\ttfamily false} for error on common options
-\end{DoxyReturn}
-Function for options common to most of the utilities. \mbox{\Hypertarget{AnalysisTools_8h_aca8c1da560e84855b4968b6d6eb2aa91}\label{AnalysisTools_8h_aca8c1da560e84855b4968b6d6eb2aa91}} 
+Function to print help for common options, either for {\ttfamily -\/h} help option or program error. \mbox{\Hypertarget{AnalysisTools_8h_aca8c1da560e84855b4968b6d6eb2aa91}\label{AnalysisTools_8h_aca8c1da560e84855b4968b6d6eb2aa91}} 
 \index{Analysis\+Tools.\+h@{Analysis\+Tools.\+h}!Distance@{Distance}}
 \index{Distance@{Distance}!Analysis\+Tools.\+h@{Analysis\+Tools.\+h}}
 \paragraph{\texorpdfstring{Distance()}{Distance()}}

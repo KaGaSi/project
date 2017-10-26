@@ -1,8 +1,11 @@
-/home/gary/Prace/Project/Options.h:12: warning: Member ExcludeOption(int argc, char **argv, Counts Counts, MoleculeType **MoleculeType) (function) of file Options.h is not documented.
-/home/gary/Prace/Project/Options.h:15: warning: parameters of member ExcludeOption are not (all) documented
-/home/gary/Prace/Project/Options.h:15: warning: return type of member ExcludeOption is not documented
-/home/gary/Prace/Project/Common/03-CommonUtilities.md:661: warning: explicit link request to 'PairCorrel' could not be resolved
-/home/gary/Prace/Project/Common/03-CommonUtilities.md:702: warning: explicit link request to 'PairCorrel' could not be resolved
+/home/gary/Prace/Project/Options.c:265: warning: Found unknown command `\breif'
+/home/gary/Prace/Project/Options.c:185: warning: argument 'Counts' of command @param is not found in the argument list of JoinCoorOption(int argc, char **argv, char *joined_vcf)
+/home/gary/Prace/Project/Options.c:185: warning: argument 'MoleculeType' of command @param is not found in the argument list of JoinCoorOption(int argc, char **argv, char *joined_vcf)
+/home/gary/Prace/Project/Options.h:96: warning: The following parameters of JoinCoorOption(int argc, char **argv, char *joined_vcf) are not documented:
+  parameter 'joined_vcf'
+/home/gary/Prace/Project/Options.h:42: warning: return type of member VerboseShortOption is not documented
+/home/gary/Prace/Project/Common/03-CommonUtilities.md:666: warning: explicit link request to 'PairCorrel' could not be resolved
+/home/gary/Prace/Project/Common/03-CommonUtilities.md:707: warning: explicit link request to 'PairCorrel' could not be resolved
 /home/gary/Prace/Project/Structs.h:27: warning: Member x (variable) of class IntVector is not documented.
 /home/gary/Prace/Project/Structs.h:27: warning: Member y (variable) of class IntVector is not documented.
 /home/gary/Prace/Project/Structs.h:27: warning: Member z (variable) of class IntVector is not documented.

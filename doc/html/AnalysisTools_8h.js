@@ -2,7 +2,6 @@ var AnalysisTools_8h =
 [
     [ "CenterOfMass", "AnalysisTools_8h.html#a9f2818f74d60e402fedf6ff36e0f2cc6", null ],
     [ "CommonHelp", "AnalysisTools_8h.html#a40313fab170a9b6d7400f621255c2729", null ],
-    [ "CommonOptions", "AnalysisTools_8h.html#a57b613bc3ddbd1572600eee1504ddf30", null ],
     [ "Distance", "AnalysisTools_8h.html#aca8c1da560e84855b4968b6d6eb2aa91", null ],
     [ "FindBeadType", "AnalysisTools_8h.html#a25cce911a1ec4c31a69f1e206383fcfc", null ],
     [ "FindMoleculeType", "AnalysisTools_8h.html#aed3f7085b60692d2502257db60f0b3ac", null ],

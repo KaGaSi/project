@@ -29,13 +29,15 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("AggDensity utility calculates bead density for aggregates of given size(s)  \n");
-      printf("from their center of mass. Beside unbonded beads it takes into account only \n");
-      printf("beads from the current aggregate, not from any other aggregate.             \n\n");
+      printf("\
+AggDensity utility calculates bead density for aggregates of given size(s) from \
+their centre of mass. Beside unbonded beads it takes into account only beads \
+from the current aggregate, not from any other aggregate.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
@@ -106,58 +108,28 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
   // are provided coordinates joined? //{{{
   bool joined = BoolOption(argc, argv, "--joined"); //}}}
-  //}}}
 
-  // -n <int> option - number of bins to average //{{{
-  int avg = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n") == 0) {
-
-      // Error - missing or non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      avg = atoi(argv[i+1]);
-    }
-  } //}}}
-
-  // -st <int> option - number of starting timestep //{{{
+  // starting timestep //{{{
   int start = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-st") == 0) {
-
-      // Error - non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      start = atoi(argv[i+1]);
-    }
+  if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
   } //}}}
+
+  // number of bins to average //{{{
+  int avg = 1;
+  if (IntegerOption(argc, argv, "-n", &avg)) {
+    exit(1);
+  } //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -527,7 +499,7 @@ int main(int argc, char *argv[]) {
       if (correct_size != -1) {
         other_mols[correct_size] += Aggregate[i].nMolecules - mols;
 
-        Vector com = CenterOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
+        Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
         // aggregate beads //{{{
         for (int j = 0; j < Aggregate[i].nBeads; j++) {
@@ -622,8 +594,12 @@ int main(int argc, char *argv[]) {
       putc('\n',out);
     }
 
-    fprintf(out, "# %d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
-        agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
+    if (specific_molecule != -1) {
+      fprintf(out, "# %d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
+          agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
+    } else {
+      fprintf(out, "# %d molecules in aggregate (%d aggregates)\n", agg_sizes[i][0], agg_sizes[i][1]);
+    }
     fclose(out);
   } //}}}
 
@@ -642,6 +618,7 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(stuff);
+  free(other_mols);
   for (int i = 0; i < Counts.Molecules; i++) {
     free(agg_sizes[i]);
   }

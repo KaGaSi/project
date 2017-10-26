@@ -18,7 +18,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -j             specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -n <average>   number of bins to average\n");
-  fprintf(stderr, "      -c <int>       use <int>-th molecule bead instead of center of mass\n");
+  fprintf(stderr, "      -c <int>       use <int>-th molecule bead instead of centre of mass\n");
   CommonHelp(1);
 } //}}}
 
@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-h") == 0) {
       printf("Just to calculate proper distances between beads in a nanoparticle.\n");
 //    printf("MolDensity utility calculates number beads density for all bead"
-//        "types from the center of mass (or specified bead number in a"
+//        "types from the centre of mass (or specified bead number in a"
 //        "molecule) of specified molecules. Care must be taken with beadtype"
 //        "names in various molecules types, because if one beadtype appears"
 //        "in more molecule types, the resulting density for that beadtype"
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 //    printf("   <options>\n");
 //    printf("      -j             specify that aggregates with joined coordinates are used\n");
 //    printf("      -n <average>   number of bins to average\n");
-//    printf("      -c <int>       use <int>-th molecule bead instead of center of mass\n");
+//    printf("      -c <int>       use <int>-th molecule bead instead of centre of mass\n");
 //    CommonHelp(0);
 //    exit(0);
     }

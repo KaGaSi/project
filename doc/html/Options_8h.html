@@ -103,21 +103,287 @@ $(document).ready(function(){initNavTree('Options_8h.html','');});
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="func-members"></a>
 Functions</h2></td></tr>
-<tr class="memitem:a0bc63ee73a9c7143e0dedfb7ed6923f3"><td class="memItemLeft" align="right" valign="top"><a id="a0bc63ee73a9c7143e0dedfb7ed6923f3"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>ExcludeOption</b> (int argc, char **argv, <a class="el" href="structCounts.html">Counts</a> <a class="el" href="structCounts.html">Counts</a>, <a class="el" href="structMoleculeType.html">MoleculeType</a> **<a class="el" href="structMoleculeType.html">MoleculeType</a>)</td></tr>
+<tr class="memitem:a9c3216997f95a5a9c0974b4e2ccd0074"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a9c3216997f95a5a9c0974b4e2ccd0074">VsfFileOption</a> (int argc, char **argv, char **vsf_file)</td></tr>
+<tr class="memdesc:a9c3216997f95a5a9c0974b4e2ccd0074"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option whether to use <code>.vsf</code> file different from <code>dl_meso.vsf</code> (<code>-i &lt;name.vsf&gt;</code>).  <a href="#a9c3216997f95a5a9c0974b4e2ccd0074">More...</a><br /></td></tr>
+<tr class="separator:a9c3216997f95a5a9c0974b4e2ccd0074"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a71a1ddcdffe928c542417ac7b54948e0"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a71a1ddcdffe928c542417ac7b54948e0">BondsFileOption</a> (int argc, char **argv, char **bonds_file)</td></tr>
+<tr class="memdesc:a71a1ddcdffe928c542417ac7b54948e0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option whether to use bonds file (<code>-b &lt;name&gt;</code>).  <a href="#a71a1ddcdffe928c542417ac7b54948e0">More...</a><br /></td></tr>
+<tr class="separator:a71a1ddcdffe928c542417ac7b54948e0"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad53468edf90365df888e4d01917df9bf"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#ad53468edf90365df888e4d01917df9bf">VerboseShortOption</a> (int argc, char **argv, bool *verbose)</td></tr>
+<tr class="memdesc:ad53468edf90365df888e4d01917df9bf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option whether to use verbose output (<code>-v</code>).  <a href="#ad53468edf90365df888e4d01917df9bf">More...</a><br /></td></tr>
+<tr class="separator:ad53468edf90365df888e4d01917df9bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c00b08dcfd1e909305fa1586f7e81b1"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a0c00b08dcfd1e909305fa1586f7e81b1">VerboseLongOption</a> (int argc, char **argv, bool *verbose, bool *verbose2)</td></tr>
+<tr class="memdesc:a0c00b08dcfd1e909305fa1586f7e81b1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option whether to use long verbose output (overrides VerboseShortOutput) (<code>-V</code>).  <a href="#a0c00b08dcfd1e909305fa1586f7e81b1">More...</a><br /></td></tr>
+<tr class="separator:a0c00b08dcfd1e909305fa1586f7e81b1"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aad1b98772df7b9a3cb1b3d067a20c417"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#aad1b98772df7b9a3cb1b3d067a20c417">SilentOption</a> (int argc, char **argv, bool *verbose, bool *verbose2, bool *silent)</td></tr>
+<tr class="memdesc:aad1b98772df7b9a3cb1b3d067a20c417"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option whether not to print to stdout (overrides Verbose options) (<code>-s</code>).  <a href="#aad1b98772df7b9a3cb1b3d067a20c417">More...</a><br /></td></tr>
+<tr class="separator:aad1b98772df7b9a3cb1b3d067a20c417"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0bc63ee73a9c7143e0dedfb7ed6923f3"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a0bc63ee73a9c7143e0dedfb7ed6923f3">ExcludeOption</a> (int argc, char **argv, <a class="el" href="structCounts.html">Counts</a> <a class="el" href="structCounts.html">Counts</a>, <a class="el" href="structMoleculeType.html">MoleculeType</a> **<a class="el" href="structMoleculeType.html">MoleculeType</a>)</td></tr>
+<tr class="memdesc:a0bc63ee73a9c7143e0dedfb7ed6923f3"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option whether to exclude molecule types (<code>-x &lt;name(s)&gt;</code>).  <a href="#a0bc63ee73a9c7143e0dedfb7ed6923f3">More...</a><br /></td></tr>
 <tr class="separator:a0bc63ee73a9c7143e0dedfb7ed6923f3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8409f420c5e6964ad2cb4c04a80ea5c9"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a8409f420c5e6964ad2cb4c04a80ea5c9">ExcludeOption</a> (int argc, char **argv, char *joined_vcf)</td></tr>
-<tr class="separator:a8409f420c5e6964ad2cb4c04a80ea5c9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a137539dd87c158c3258fd079f577ba73"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a137539dd87c158c3258fd079f577ba73">JoinCoorOption</a> (int argc, char **argv, char *joined_vcf)</td></tr>
+<tr class="memdesc:a137539dd87c158c3258fd079f577ba73"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option whether to write joined aggregate coordinates to file (<code>-j &lt;joined.vcf&gt;</code>).  <a href="#a137539dd87c158c3258fd079f577ba73">More...</a><br /></td></tr>
+<tr class="separator:a137539dd87c158c3258fd079f577ba73"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0c2551c35f99dcc6fd80b45d25a9d92f"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a0c2551c35f99dcc6fd80b45d25a9d92f">BeadTypeOption</a> (int argc, char **argv, <a class="el" href="structCounts.html">Counts</a> <a class="el" href="structCounts.html">Counts</a>, <a class="el" href="structBeadType.html">BeadType</a> **<a class="el" href="structBeadType.html">BeadType</a>)</td></tr>
+<tr class="memdesc:a0c2551c35f99dcc6fd80b45d25a9d92f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option to choose which bead types to use in calculations (<code>-bt &lt;name(s)&gt;</code>).  <a href="#a0c2551c35f99dcc6fd80b45d25a9d92f">More...</a><br /></td></tr>
+<tr class="separator:a0c2551c35f99dcc6fd80b45d25a9d92f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a998851d83307cb009d26da17a2d4b7f4"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a998851d83307cb009d26da17a2d4b7f4">BoolOption</a> (int argc, char **argv, char *opt)</td></tr>
+<tr class="memdesc:a998851d83307cb009d26da17a2d4b7f4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Option whether not to print rewrite stdout line (<code>--script</code>).  <a href="#a998851d83307cb009d26da17a2d4b7f4">More...</a><br /></td></tr>
+<tr class="separator:a998851d83307cb009d26da17a2d4b7f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a957e43a57724ef8d349b616915c5e0af"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="Options_8h.html#a957e43a57724ef8d349b616915c5e0af">IntegerOption</a> (int argc, char **argv, char *opt, int *value)</td></tr>
+<tr class="separator:a957e43a57724ef8d349b616915c5e0af"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <h2 class="groupheader">Function Documentation</h2>
-<a id="a8409f420c5e6964ad2cb4c04a80ea5c9"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a8409f420c5e6964ad2cb4c04a80ea5c9">&#9670;&nbsp;</a></span>ExcludeOption()</h2>
+<a id="a0c2551c35f99dcc6fd80b45d25a9d92f"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c2551c35f99dcc6fd80b45d25a9d92f">&#9670;&nbsp;</a></span>BeadTypeOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool BeadTypeOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structCounts.html">Counts</a>&#160;</td>
+          <td class="paramname"><em>Counts</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structBeadType.html">BeadType</a> **&#160;</td>
+          <td class="paramname"><em>BeadType</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname"><a class="el" href="structCounts.html" title="Total numbers of various things. ">Counts</a></td><td>numbers of beads, molecules, etc. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname"><a class="el" href="structBeadType.html" title="Information about bead types. ">BeadType</a></td><td>information about bead types </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> error or not error</dd></dl>
+<p>Option to choose which bead types to use for calculation. If the option is absent, all bead types are switched to <code>Use = true</code>. Argument: <code>-bt &lt;name(s)&gt;</code> </p>
+
+</div>
+</div>
+<a id="a71a1ddcdffe928c542417ac7b54948e0"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a71a1ddcdffe928c542417ac7b54948e0">&#9670;&nbsp;</a></span>BondsFileOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool BondsFileOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>bonds_file</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">bonds_file</td><td>filename with bonds </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> error or not error</dd></dl>
+<p>Option whether to use bonds file with alternative bond definitions. </p>
+
+</div>
+</div>
+<a id="a998851d83307cb009d26da17a2d4b7f4"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a998851d83307cb009d26da17a2d4b7f4">&#9670;&nbsp;</a></span>BoolOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool BoolOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>opt</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">opt</td><td>option switch (e.g. array containing <code>-n</code>) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> if <code>opt</code> present, <code>false</code> otherwise</dd></dl>
+<p>Function for any boolean option (i.e. without argument). The option (e.g. <code>--script</code>) is an argument of this function. </p>
+
+</div>
+</div>
+<a id="a0bc63ee73a9c7143e0dedfb7ed6923f3"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0bc63ee73a9c7143e0dedfb7ed6923f3">&#9670;&nbsp;</a></span>ExcludeOption()</h2>
 
 <div class="memitem">
 <div class="memproto">
       <table class="memname">
         <tr>
           <td class="memname">bool ExcludeOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structCounts.html">Counts</a>&#160;</td>
+          <td class="paramname"><em>Counts</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype"><a class="el" href="structMoleculeType.html">MoleculeType</a> **&#160;</td>
+          <td class="paramname"><em>MoleculeType</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname"><a class="el" href="structCounts.html" title="Total numbers of various things. ">Counts</a></td><td>numbers of beads, molecules, etc. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname"><a class="el" href="structMoleculeType.html" title="Information about molecule types. ">MoleculeType</a></td><td>information about molecule types </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> error or not error</dd></dl>
+<p>Option to exclude specified molecule types from calculations. Gives specified molecule types <code>Use = false</code> and the rest <code>Use = true</code>. Arguments: <code>-x &lt;name(s)&gt;</code> </p>
+
+</div>
+</div>
+<a id="a957e43a57724ef8d349b616915c5e0af"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a957e43a57724ef8d349b616915c5e0af">&#9670;&nbsp;</a></span>IntegerOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool IntegerOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char *&#160;</td>
+          <td class="paramname"><em>opt</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">int *&#160;</td>
+          <td class="paramname"><em>value</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<p>Function for any option with integer argument.</p>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">opt</td><td>option switch (e.g. array containing <code>-n</code>) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">value</td><td>integer value of given option </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> for error</dd></dl>
+<p>Function for any option with integer argument. The option (e.g. <code>-n</code>) is an argument of this function. </p>
+
+</div>
+</div>
+<a id="a137539dd87c158c3258fd079f577ba73"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a137539dd87c158c3258fd079f577ba73">&#9670;&nbsp;</a></span>JoinCoorOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool JoinCoorOption </td>
           <td>(</td>
           <td class="paramtype">int&#160;</td>
           <td class="paramname"><em>argc</em>, </td>
@@ -141,9 +407,213 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>ExcludeOption</b> (in
         </tr>
       </table>
 </div><div class="memdoc">
-<ul>
-<li></li>
-</ul>
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname"><a class="el" href="structCounts.html" title="Total numbers of various things. ">Counts</a></td><td>numbers of beads, molecules, etc. </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname"><a class="el" href="structMoleculeType.html" title="Information about molecule types. ">MoleculeType</a></td><td>information about molecule types </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> error or not error</dd></dl>
+<p>Option whether to join aggregates and save joined coordinates into a specified file. Arguments: <code>-j &lt;joined.vcf&gt;</code> </p>
+
+</div>
+</div>
+<a id="aad1b98772df7b9a3cb1b3d067a20c417"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aad1b98772df7b9a3cb1b3d067a20c417">&#9670;&nbsp;</a></span>SilentOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool SilentOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool *&#160;</td>
+          <td class="paramname"><em>verbose</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool *&#160;</td>
+          <td class="paramname"><em>verbose2</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool *&#160;</td>
+          <td class="paramname"><em>silent</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">verbose</td><td>bool for <code>-v</code> option (verbose output) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">verbose2</td><td>bool for <code>-V</code> option (detailed verbose output) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">silent</td><td>bool for this option </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> for error on common options</dd></dl>
+<p>Option to not print anything to stdout (or at least no system definitions and no Step: #). Overrides VerboseShortOption and VerboseLongOption. Argument: <code>-s</code> </p>
+
+</div>
+</div>
+<a id="a0c00b08dcfd1e909305fa1586f7e81b1"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0c00b08dcfd1e909305fa1586f7e81b1">&#9670;&nbsp;</a></span>VerboseLongOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool VerboseLongOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool *&#160;</td>
+          <td class="paramname"><em>verbose</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool *&#160;</td>
+          <td class="paramname"><em>verbose2</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">verbose</td><td>bool for <code>-v</code> option (verbose output) </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">verbose2</td><td>bool for <code>-V</code> option (detailed verbose output) </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> for error on common options</dd></dl>
+<p>Option whether to print detailed data to stdout. Data are printed via <a class="el" href="AnalysisTools_8h.html#a14a30f1b16038ee877eda0aa24953495" title="Function printing basic information about system if -v or -V option is provided. ">VerboseOutput()</a> function (and possibly some in-program code). Argument: <code>-V</code> </p>
+
+</div>
+</div>
+<a id="ad53468edf90365df888e4d01917df9bf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ad53468edf90365df888e4d01917df9bf">&#9670;&nbsp;</a></span>VerboseShortOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool VerboseShortOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">bool *&#160;</td>
+          <td class="paramname"><em>verbose</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">verbose</td><td>bool for <code>-v</code> option (verbose output)</td></tr>
+  </table>
+  </dd>
+</dl>
+<p>Option whether to print some data to stdout. Data are printed via the <a class="el" href="AnalysisTools_8h.html#a14a30f1b16038ee877eda0aa24953495" title="Function printing basic information about system if -v or -V option is provided. ">VerboseOutput()</a> function (and possibly some in-program code). Argument: <code>-v</code> </p>
+
+</div>
+</div>
+<a id="a9c3216997f95a5a9c0974b4e2ccd0074"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a9c3216997f95a5a9c0974b4e2ccd0074">&#9670;&nbsp;</a></span>VsfFileOption()</h2>
+
+<div class="memitem">
+<div class="memproto">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool VsfFileOption </td>
+          <td>(</td>
+          <td class="paramtype">int&#160;</td>
+          <td class="paramname"><em>argc</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>argv</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">char **&#160;</td>
+          <td class="paramname"><em>vsf_file</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+</div><div class="memdoc">
+<dl class="params"><dt>Parameters</dt><dd>
+  <table class="params">
+    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of utility's arguments </td></tr>
+    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>utility's arguments </td></tr>
+    <tr><td class="paramdir">[out]</td><td class="paramname">vsf_file</td><td>filename with structure information </td></tr>
+  </table>
+  </dd>
+</dl>
+<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> error or not error</dd></dl>
+<p>Option whether to use <code>.vsf</code> file different from the default <code>dl_meso.vsf</code>. </p>
 
 </div>
 </div>
@@ -153,7 +623,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>ExcludeOption</b> (in
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="Options_8h.html">Options.h</a></li>
-    <li class="footer">Generated on Mon Oct 16 2017 20:01:04 for Analysis Software Package by
+    <li class="footer">Generated on Sat Oct 21 2017 10:40:58 for Analysis Software Package by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.13 </li>
   </ul>

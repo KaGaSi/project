@@ -11,7 +11,7 @@ void ErrorHelp(char cmd[50]) { //{{{
 
   fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -n <step>      timestep for creating CONFIG (default: last)\n");
+  fprintf(stderr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
   CommonHelp(1);
 } //}}}
 
@@ -20,20 +20,23 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("Config utility generates CONFIG file from given step of a vcf file.         \n");
-      printf("Coordinate file needs to contain all beads in the simulation for to work    \n");
-      printf("with dl_meso.                                                               \n\n");
+      printf("\
+Config utility generates CONFIG file from given step of a vcf file. If the \
+given timestep is larger than the number of steps the coordinate file, the \
+last step is used. Coordinate file needs to contain all beads in the \
+simulation for it to work with dl_meso (no such check is made).\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <options>\n\n", argv[0]);
 
       printf("   <input.vcf>       input filename (vcf format)\n");
       printf("   <options>\n");
-      printf("      -n <step>      timestep for creating CONFIG (default: last)\n");
+      printf("      -st <step>     timestep for creating CONFIG (default: last)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -63,7 +66,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-n") != 0) {
+        strcmp(argv[i], "-st") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -85,35 +88,19 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
-  //}}}
 
-  // -n <step> - choose timestep to create CONFIG file from //{{{
+  // timestep to create CONFIG file from //{{{
   int timestep = -1;
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n") == 0) {
-
-      // Error - non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] <= '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric (or non-positive numeric) argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      timestep = atoi(argv[i+1]);
-    }
+  if (IntegerOption(argc, argv, "-st", &timestep)) {
+    exit(1);
   } //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {

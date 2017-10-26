@@ -16,11 +16,11 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.vcf>      output filename (vcf format)\n");
   fprintf(stderr, "   <type names>      names of bead types to save\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j             join molecules (remove pbc)\n");
-  fprintf(stderr, "      -n1 <int       starting timestep from 1st run\n");
-  fprintf(stderr, "      -n2 <int       starting timestep from 2nd run\n");
-  fprintf(stderr, "      -u1 <int>      skip every <int> steps from 1st run\n");
-  fprintf(stderr, "      -u2 <int>      skip every <int> steps from 2nd run\n");
+  fprintf(stderr, "      --join         join molecules (remove pbc)\n");
+  fprintf(stderr, "      -st1 <int>     starting timestep from 1st run\n");
+  fprintf(stderr, "      -st2 <int>     starting timestep from 2nd run\n");
+  fprintf(stderr, "      -sk1 <int>     skip every <int> steps from 1st run\n");
+  fprintf(stderr, "      -sk2 <int>     skip every <int> steps from 2nd run\n");
   CommonHelp(1);
 } //}}}
 
@@ -29,10 +29,11 @@ int main(int argc, char *argv[]) {
   // -h option - print help nd exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("JoinRuns joins two simulation runs with different .vsf files. The first .vsf\n");
-      printf("is assumed to be dl_meso.vsf (if not, use '-i' option) and the FIELD file   \n");
-      printf("has to be the same for both simulation runs. Bead types in both .vcf files  \n");
-      printf("must be the same, but only selected bead types are saved to output.vcf file.\n\n");
+      printf("\
+JoinRuns joins two simulation runs with different .vsf files. The first .vsf is \
+assumed to be dl_meso.vsf (if not, use '-i' option) and the FIELD file has to \
+be the same for both simulation runs. Bead types in both .vcf files must be the \
+same, but only selected bead types are saved to output.vcf file.\n\n");
 
       printf("Usage:\n");
       printf("   %s <1st input.vcf> <2nd input.vcf> <2nd input.vsf> ", argv[0]);
@@ -44,11 +45,11 @@ int main(int argc, char *argv[]) {
       printf("   <output.vcf>      output filename (vcf format)\n");
       printf("   <type names>      names of bead types to save\n");
       printf("   <options>\n");
-      printf("      -j             join molecules (remove pbc)\n");
-      printf("      -n1 <int       starting timestep from 1st run\n");
-      printf("      -n2 <int       starting timestep from 2nd run\n");
-      printf("      -u1 <int>      skip every <int> steps from 1st run\n");
-      printf("      -u2 <int>      skip every <int> steps from 2nd run\n");
+      printf("      --join         join molecules (remove pbc)\n");
+      printf("      -st1 <int>     starting timestep from 1st run\n");
+      printf("      -st2 <int>     starting timestep from 2nd run\n");
+      printf("      -sk1 <int>     skip every <int> steps from 1st run\n");
+      printf("      -sk2 <int>     skip every <int> steps from 2nd run\n");
       CommonHelp(0);
       exit(0);
     }
@@ -78,11 +79,11 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-j") != 0 &&
-        strcmp(argv[i], "-n1") != 0 &&
-        strcmp(argv[i], "-u1") != 0 &&
-        strcmp(argv[i], "-u2") != 0 &&
-        strcmp(argv[i], "-u2") != 0) {
+        strcmp(argv[i], "--join") != 0 &&
+        strcmp(argv[i], "-st1") != 0 &&
+        strcmp(argv[i], "-st2") != 0 &&
+        strcmp(argv[i], "-sk1") != 0 &&
+        strcmp(argv[i], "-sk2") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -111,12 +112,33 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
+
+  // should output coordinates be joined? //{{{
+  bool join = BoolOption(argc, argv, "--join"); //}}}
+
+  // starting timesteps for both simulations //{{{
+  int start_1 = 1, start_2 = 1;
+  if (IntegerOption(argc, argv, "-st1", &start_1)) {
+    exit(1);
+  }
+  if (IntegerOption(argc, argv, "-st2", &start_2)) {
+    exit(1);
+  } //}}}
+
+  // skipped timesteps per used step //{{{
+  int skip_1 = 1, skip_2 = 1;
+  if (IntegerOption(argc, argv, "-sk1", &skip_1)) {
+    exit(1);
+  }
+  if (IntegerOption(argc, argv, "-sk2", &skip_2)) {
+    exit(1);
+  } //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -125,97 +147,6 @@ int main(int argc, char *argv[]) {
     printf("\n\n");
   } //}}}
   //}}}
-
-  // -j option - join molecules //{{{
-  bool join = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-j") == 0) {
-      join = true;
-
-      break;
-    }
-  } //}}}
-
-  // -n# <int> - numbers of starting timestep //{{{
-  int start_1 = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n1") == 0) {
-
-      // Error - missing or non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n1' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n1' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      start_1 = atoi(argv[i+1]);
-    }
-  }
-
-  int start_2 = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n2") == 0) {
-
-      // Error - non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n2' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n2' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      start_2 = atoi(argv[i+1]);
-    }
-  } //}}}
-
-  // -u# <int> - numbers of steps to skip per one used //{{{
-  int skip_1 = 0;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-u1") == 0) {
-
-      // Error - non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-u1' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-u1' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      skip_1 = atoi(argv[count]);
-    }
-  }
-  int skip_2 = 0;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-u2") == 0) {
-
-      // Error - non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-u2' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-u2' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      skip_2 = atoi(argv[count]);
-    }
-  } //}}}
 
   // print command to stdout //{{{
   if (!silent) {

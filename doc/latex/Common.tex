@@ -283,7 +283,7 @@ It is possible to use specified bead instead of the center of mass for the coord
 
 Usage\+:
 
-{\ttfamily Density\+Molecules $<$input.\+vcf$>$ $<$input.\+agg$>$ $<$width$>$ $<$output.\+rho$>$ $<$agg sizes$>$ $<$options$>$}
+{\ttfamily Density\+Molecules $<$input.\+vcf$>$ $<$input.\+agg$>$ $<$width$>$ $<$output.\+rho$>$ $<$mol name(s)$>$ $<$options$>$}
 
 \begin{quote}
 {\ttfamily $<$input.\+vcf$>$} \begin{quote}
@@ -294,8 +294,8 @@ input filename (must end with {\ttfamily .agg}) containing information about agg
 width of each bin for the distribution \end{quote}
 {\ttfamily $<$output.\+rho$>$} \begin{quote}
 output density file (automatic ending {\ttfamily agg\#.rho} added) \end{quote}
-{\ttfamily $<$agg sizes$>$} \begin{quote}
-aggregate sizes for density calculation \end{quote}
+{\ttfamily $<$mol name(s)$>$} \begin{quote}
+names of molecule types to calculate density for \end{quote}
 {\ttfamily $<$options$>$} \begin{quote}
 {\ttfamily -\/j} \begin{quote}
 specify that the {\ttfamily $<$input.\+vcf$>$} contains aggregates with joined coordinates \end{quote}
@@ -348,7 +348,7 @@ aggregate sizes for gyration calculation \end{quote}
 {\ttfamily $<$options$>$} \begin{quote}
 {\ttfamily -\/j} \begin{quote}
 specify that the {\ttfamily $<$input.\+vcf$>$} contains aggregates with joined coordinates \end{quote}
-{\ttfamily -\/t} \begin{quote}
+{\ttfamily -\/bt} \begin{quote}
 specify bead types to be used for calculation (default is all) \end{quote}
 {\ttfamily -\/m $<$name$>$} \begin{quote}
 take as an aggregate size the number of {\ttfamily $<$name$>$} molecules in aggregates instead of the number of all molecules \end{quote}
@@ -377,6 +377,8 @@ output filename with radii of gyration throughout simulation (automatic ending \
 {\ttfamily $<$molecule names$>$} \begin{quote}
 molecule types for gyration calculation \end{quote}
 {\ttfamily $<$options$>$} \begin{quote}
+{\ttfamily -\/bt} \begin{quote}
+specify bead types to be used for calculation (default is all) \end{quote}
 {\ttfamily -\/j} \begin{quote}
 specify that the {\ttfamily $<$input.\+vcf$>$} contains joined coordinates \end{quote}
 \end{quote}

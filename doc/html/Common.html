@@ -329,7 +329,7 @@ DensityMolecules</h1>
 <p>DensityMolecules works in similar way as the DensityAggregates, only instead of aggregates, the densities are calculated for specified molecule types. Care must be taken with beadtype names in various molecules types, because if one beadtype appears in more molecule types, the resulting density for that beadtype will be averaged without regard for the various types of molecule it appears in.</p>
 <p>It is possible to use specified bead instead of the center of mass for the coordinates to calculate densities from. Care must be taken, because the order of molecule types is taken from <code>FIELD</code> rather then from <code>DensityMolcules</code> arguments. For example: whether bead 1 will be connected with <code>NameA</code> or <code>NameB</code> in <code>DensityMolecules ... NameA NameB -c 1 2</code> depends on molecules' order in <code>FIELD</code> file; that is if <code>NameA</code> is first in <code>FIELD</code>, 1 will be associated with <code>NameA</code> and 2 with <code>NameB</code>, but if <code>NameB</code> is first, the associations are reverse, regardless of the order of names in the command's arguments. If the center of mass should be used, <code>x</code> is given as argument. In the above example (assuming <code>NameA</code> is first in <code>FIELD</code>) if bead 1 is intended to be used for <code>NameB</code>, but center of mass for <code>NameA</code>, then an argument of the form <code>-c x 1</code> must be used.</p>
 <p>Usage:</p>
-<p><code>DensityMolecules &lt;input.vcf&gt; &lt;input.agg&gt; &lt;width&gt; &lt;output.rho&gt; &lt;agg sizes&gt; &lt;options&gt;</code></p>
+<p><code>DensityMolecules &lt;input.vcf&gt; &lt;input.agg&gt; &lt;width&gt; &lt;output.rho&gt; &lt;mol name(s)&gt; &lt;options&gt;</code></p>
 <blockquote class="doxtable">
 <p><code>&lt;input.vcf&gt;</code> </p><blockquote class="doxtable">
 <p>input coordinate filename (must end with <code>.vcf</code>) containing either ordered or indexed timesteps </p>
@@ -343,8 +343,8 @@ DensityMolecules</h1>
 <p><code>&lt;output.rho&gt;</code> </p><blockquote class="doxtable">
 <p>output density file (automatic ending <code>agg#.rho</code> added) </p>
 </blockquote>
-<p><code>&lt;agg sizes&gt;</code> </p><blockquote class="doxtable">
-<p>aggregate sizes for density calculation </p>
+<p><code>&lt;mol name(s)&gt;</code> </p><blockquote class="doxtable">
+<p>names of molecule types to calculate density for </p>
 </blockquote>
 <p><code>&lt;options&gt;</code> </p><blockquote class="doxtable">
 <p><code>-j</code> </p><blockquote class="doxtable">
@@ -380,7 +380,7 @@ GyrationAggregates utility</h1>
 <p><code>-j</code> </p><blockquote class="doxtable">
 <p>specify that the <code>&lt;input.vcf&gt;</code> contains aggregates with joined coordinates </p>
 </blockquote>
-<p><code>-t</code> </p><blockquote class="doxtable">
+<p><code>-bt</code> </p><blockquote class="doxtable">
 <p>specify bead types to be used for calculation (default is all) </p>
 </blockquote>
 <p><code>-m &lt;name&gt;</code> </p><blockquote class="doxtable">
@@ -409,6 +409,9 @@ GyrationMolecules utility</h1>
 <p>molecule types for gyration calculation </p>
 </blockquote>
 <p><code>&lt;options&gt;</code> </p><blockquote class="doxtable">
+<p><code>-bt</code> </p><blockquote class="doxtable">
+<p>specify bead types to be used for calculation (default is all) </p>
+</blockquote>
 <p><code>-j</code> </p><blockquote class="doxtable">
 <p>specify that the <code>&lt;input.vcf&gt;</code> contains joined coordinates </p>
 </blockquote>
@@ -538,7 +541,7 @@ Average utility</h1>
 <!-- start footer part -->
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
-    <li class="footer">Generated on Mon Oct 16 2017 20:01:04 for Analysis Software Package by
+    <li class="footer">Generated on Sat Oct 21 2017 10:40:58 for Analysis Software Package by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.13 </li>
   </ul>

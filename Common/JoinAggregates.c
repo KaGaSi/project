@@ -21,14 +21,16 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("JoinAggregates removes periodic boundary conditions from aggregates. It is  \n");
-      printf("meant as a replacement of '-j' option in Aggregates utility when this       \n");
-      printf("option is omitted, but later the joined coordinates are required. Distance  \n");
-      printf("and beadtypes for aggregate check are read from input.agg file.             \n\n");
+      printf("\
+JoinAggregates removes periodic boundary conditions from aggregates. It is \
+meant as a replacement of '-j' option in Aggregates utility when this option is \
+omitted, but later the joined coordinates are required. Distance and beadtypes \
+for aggregate check are read from input.agg file.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", argv[0]);
@@ -86,10 +88,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
   //}}}
@@ -143,6 +145,11 @@ int main(int argc, char *argv[]) {
 
   // vsf file is not needed anymore
   free(vsf_file);
+
+  // write all molecules{{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType[i].Write = true;
+  } //}}}
 
   // open input aggregate file and read info from first line (Aggregates command) //{{{
   FILE *agg;
@@ -317,31 +324,6 @@ int main(int argc, char *argv[]) {
 
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-
-    for (int i = 0; i < Counts.Aggregates; i++) {
-      Vector com = CenterOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
-
-      IntVector move;
-      move.x = com.x / BoxLength.x;
-      move.y = com.y / BoxLength.y;
-      move.z = com.z / BoxLength.z;
-      if (com.x < 0) {
-        move.x--;
-      }
-      if (com.y < 0) {
-        move.y--;
-      }
-      if (com.z < 0) {
-        move.z--;
-      }
-
-      for (int j = 0; j < Aggregate[i].nBeads; j++) {
-        int bead = Aggregate[i].Bead[j];
-        Bead[bead].Position.x -= move.x * BoxLength.x;
-        Bead[bead].Position.y -= move.y * BoxLength.y;
-        Bead[bead].Position.z -= move.z * BoxLength.z;
-      }
-    }
 
     // open output .vcf file for appending //{{{
     if ((out = fopen(output_vcf, "a")) == NULL) {

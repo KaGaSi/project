@@ -106,9 +106,6 @@ Functions</h2></td></tr>
 <tr class="memitem:a40313fab170a9b6d7400f621255c2729"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="AnalysisTools_8h.html#a40313fab170a9b6d7400f621255c2729">CommonHelp</a> (bool error)</td></tr>
 <tr class="memdesc:a40313fab170a9b6d7400f621255c2729"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function printing help for common options.  <a href="#a40313fab170a9b6d7400f621255c2729">More...</a><br /></td></tr>
 <tr class="separator:a40313fab170a9b6d7400f621255c2729"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a57b613bc3ddbd1572600eee1504ddf30"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="AnalysisTools_8h.html#a57b613bc3ddbd1572600eee1504ddf30">CommonOptions</a> (int argc, char **argv, char **vsf_file, char **bonds_file, bool *verbose, bool *verbose2, bool *silent, bool *script)</td></tr>
-<tr class="memdesc:a57b613bc3ddbd1572600eee1504ddf30"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function to setup common options.  <a href="#a57b613bc3ddbd1572600eee1504ddf30">More...</a><br /></td></tr>
-<tr class="separator:a57b613bc3ddbd1572600eee1504ddf30"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a14a30f1b16038ee877eda0aa24953495"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="AnalysisTools_8h.html#a14a30f1b16038ee877eda0aa24953495">VerboseOutput</a> (bool Verbose2, char *input_vcf, char *bonds_file, <a class="el" href="structCounts.html">Counts</a> <a class="el" href="structCounts.html">Counts</a>, <a class="el" href="structBeadType.html">BeadType</a> *<a class="el" href="structBeadType.html">BeadType</a>, <a class="el" href="structBead.html">Bead</a> *<a class="el" href="structBead.html">Bead</a>, <a class="el" href="structMoleculeType.html">MoleculeType</a> *<a class="el" href="structMoleculeType.html">MoleculeType</a>, <a class="el" href="structMolecule.html">Molecule</a> *<a class="el" href="structMolecule.html">Molecule</a>)</td></tr>
 <tr class="memdesc:a14a30f1b16038ee877eda0aa24953495"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function printing basic information about system if <code>-v</code> or <code>-V</code> option is provided.  <a href="#a14a30f1b16038ee877eda0aa24953495">More...</a><br /></td></tr>
 <tr class="separator:a14a30f1b16038ee877eda0aa24953495"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -244,85 +241,6 @@ Functions</h2></td></tr>
   </dd>
 </dl>
 <p>Function to print help for common options, either for <code>-h</code> help option or program error. </p>
-
-</div>
-</div>
-<a id="a57b613bc3ddbd1572600eee1504ddf30"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#a57b613bc3ddbd1572600eee1504ddf30">&#9670;&nbsp;</a></span>CommonOptions()</h2>
-
-<div class="memitem">
-<div class="memproto">
-      <table class="memname">
-        <tr>
-          <td class="memname">bool CommonOptions </td>
-          <td>(</td>
-          <td class="paramtype">int&#160;</td>
-          <td class="paramname"><em>argc</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">char **&#160;</td>
-          <td class="paramname"><em>argv</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">char **&#160;</td>
-          <td class="paramname"><em>vsf_file</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">char **&#160;</td>
-          <td class="paramname"><em>bonds_file</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool *&#160;</td>
-          <td class="paramname"><em>verbose</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool *&#160;</td>
-          <td class="paramname"><em>verbose2</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool *&#160;</td>
-          <td class="paramname"><em>silent</em>, </td>
-        </tr>
-        <tr>
-          <td class="paramkey"></td>
-          <td></td>
-          <td class="paramtype">bool *&#160;</td>
-          <td class="paramname"><em>script</em>&#160;</td>
-        </tr>
-        <tr>
-          <td></td>
-          <td>)</td>
-          <td></td><td></td>
-        </tr>
-      </table>
-</div><div class="memdoc">
-<dl class="params"><dt>Parameters</dt><dd>
-  <table class="params">
-    <tr><td class="paramdir">[in]</td><td class="paramname">argc</td><td>number of program's arguments </td></tr>
-    <tr><td class="paramdir">[in]</td><td class="paramname">argv</td><td>program's arguments </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">vsf_file</td><td>filename with structure information </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">bonds_file</td><td>filename with bonds </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">verbose</td><td>bool for <code>-v</code> option (verbose output) </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">verbose2</td><td>bool for <code>-V</code> option (detailed verbose output) </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">silent</td><td>bool for <code>-s</code> option (run silently) </td></tr>
-    <tr><td class="paramdir">[out]</td><td class="paramname">script</td><td>bool for <code>--script</code> option (run in script) </td></tr>
-  </table>
-  </dd>
-</dl>
-<dl class="section return"><dt>Returns</dt><dd><code>true</code> or <code>false</code> for error on common options</dd></dl>
-<p>Function for options common to most of the utilities. </p>
 
 </div>
 </div>
@@ -1292,7 +1210,7 @@ Functions</h2></td></tr>
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="AnalysisTools_8h.html">AnalysisTools.h</a></li>
-    <li class="footer">Generated on Mon Oct 16 2017 20:01:04 for Analysis Software Package by
+    <li class="footer">Generated on Sat Oct 21 2017 10:40:58 for Analysis Software Package by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.13 </li>
   </ul>

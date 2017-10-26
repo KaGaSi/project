@@ -133,28 +133,29 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
             } //}}}
 
             while (j != -1) {
-              int type_i = (*Molecule)[(*Bead)[i].Molecule].Type;
-              int type_j = (*Molecule)[(*Bead)[j].Molecule].Type;
+              if ((*Bead)[i].Molecule != -1 && (*Bead)[j].Molecule != -1) { // both i and j must be in molecule
+                int type_i = (*Molecule)[(*Bead)[i].Molecule].Type;
+                int type_j = (*Molecule)[(*Bead)[j].Molecule].Type;
 
-              if (BeadType[(*Bead)[i].Type].Use && // bead i must be of specified type
-                  BeadType[(*Bead)[j].Type].Use && // bead j as well
-                  MoleculeType[type_i].Use && // molecule with i cannot be excluded
-                  MoleculeType[type_j].Use) { // molecule with j the same
+                if (BeadType[(*Bead)[i].Type].Use && // bead i must be of specified type
+                    BeadType[(*Bead)[j].Type].Use && // bead j as well
+                    MoleculeType[type_i].Use && // molecule with i cannot be excluded
+                    MoleculeType[type_j].Use) { // molecule with j the same
 
-                // calculate distance between i and j beads
-                Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  // calculate distance between i and j beads
+                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
-                // are 'i' and 'j' close enough?
-                if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
-                    (SQR(rij.x) + SQR(rij.y) + SQR(rij.z)) <= sqdist) {
-                  if (i > j) {
-                    contact[(*Bead)[i].Molecule][(*Bead)[j].Molecule]++;
-                  } else {
-                    contact[(*Bead)[j].Molecule][(*Bead)[i].Molecule]++;
+                  // are 'i' and 'j' close enough?
+                  if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
+                      (SQR(rij.x) + SQR(rij.y) + SQR(rij.z)) <= sqdist) {
+                    if (i > j) {
+                      contact[(*Bead)[i].Molecule][(*Bead)[j].Molecule]++;
+                    } else {
+                      contact[(*Bead)[j].Molecule][(*Bead)[i].Molecule]++;
+                    }
                   }
                 }
               }
-
               j = Link[j];
             }
           }
@@ -472,17 +473,19 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("Aggregates utility determines which molecules belong to which aggregate on  \n");
-      printf("the basis of given parameters - the minimum distance at which a pair of     \n");
-      printf("beads from different molecules is considered a contact and the minimum      \n");
-      printf("number of such contacts between two molecules to consider them as belonging \n");
-      printf("to the same aggregate. Only distances between specified bead types are      \n");
-      printf("considered. Information about aggregates in each timestep is written to     \n");
-      printf(".agg file. Also joined coordinates can be written to an output .vcf file.   \n\n");
+      printf("\
+Aggregates utility determines which molecules belong to which aggregate on the \
+basis of given parameters - the minimum distance at which a pair of beads from \
+different molecules is considered a contact and the minimum number of such \
+contacts between two molecules to consider them as belonging to the same \
+aggregate. Only distances between specified bead types are considered. \
+Information about aggregates in each timestep is written to '.agg' file. Also \
+joined coordinates can be written to an output '.vcf' file.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <distance> <contacts> ", argv[0]);
@@ -554,10 +557,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
+  bool verbose2, silent;
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
   //}}}

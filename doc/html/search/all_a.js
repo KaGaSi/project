@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['pi',['PI',['../Structs_8h.html#a598a3330b3c21701223ee0ca14316eca',1,'Structs.h']]],
-  ['position',['Position',['../structBead.html#a0da2a14cebcc5cc1405f362d69904f62',1,'Bead']]]
+  ['options_20for_20all_20utilities',['Options for all utilities',['../CommonOptions.html',1,'']]],
+  ['options_2eh',['Options.h',['../Options_8h.html',1,'']]]
 ];

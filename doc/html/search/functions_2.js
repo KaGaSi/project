@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['excludeoption',['ExcludeOption',['../Options_8h.html#a8409f420c5e6964ad2cb4c04a80ea5c9',1,'Options.c']]]
+  ['distance',['Distance',['../AnalysisTools_8h.html#aca8c1da560e84855b4968b6d6eb2aa91',1,'AnalysisTools.c']]]
 ];

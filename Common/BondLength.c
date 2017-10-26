@@ -14,6 +14,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <width>           width of a single bin\n");
   fprintf(stderr, "   <output file>     name of output file with end-to-end distances\n");
   fprintf(stderr, "   <molecule names>  names of molecule type(s) to use for calculation\n");
+  fprintf(stderr, "   <options>\n");
   CommonHelp(1);
 } //}}}
 
@@ -22,12 +23,14 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("BondLength utility calculates distribution of bond lengths for all bead type\n");
-      printf("pairs in specified molecule(s).                                             \n\n");
+      printf("\
+BondLength utility calculates distribution of bond lengths for all bead type \
+pairs in specified molecule(s).\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <width> <output file> <molecule names> <options>\n\n", argv[0]);
@@ -36,6 +39,7 @@ int main(int argc, char *argv[]) {
       printf("   <width>           width of a single bin\n");
       printf("   <output file>     name of output file with end-to-end distances\n");
       printf("   <molecule names>  names of molecule type(s) to use for calculation\n");
+      printf("   <options>\n");
       CommonHelp(0);
       exit(0);
     }
@@ -86,10 +90,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
   //}}}

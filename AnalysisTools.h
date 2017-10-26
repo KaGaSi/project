@@ -189,17 +189,17 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
  */
 void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead); //}}}
 
-// CenterOfMass() //{{{
+// CentreOfMass() //{{{
 /**
- * \brief Function to calculate center of mass for a collection of beads.
+ * \brief Function to calculate centre of mass for a collection of beads.
  *
  * \param [in] n              number of beads
  * \param [in] list           list of bead ids (corresponding to indices in Bead struct)
  * \param [in] Bead           information about individual beads (coordinates)
  * \param [in] BeadType       information about beadtypes (masses)
- * \return coordinates of center of mass of a given aggregate
+ * \return coordinates of centre of mass of a given aggregate
  */
-Vector CenterOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
+Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
 
 // Min3() //{{{
 /**
