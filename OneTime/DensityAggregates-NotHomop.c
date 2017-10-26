@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       printf("AggDensity utility calculates bead density for aggregates of given size(s)  \n");
-      printf("from their center of mass. Beside unbonded beads it takes into account only \n");
+      printf("from their centre of mass. Beside unbonded beads it takes into account only \n");
       printf("beads from the current aggregate, not from any other aggregate.             \n\n");
 
       printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
@@ -362,7 +362,7 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       if (correct_size != -1) {
-        Vector com = CenterOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
+        Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
         // aggregate beads
         for (int j = 0; j < Aggregate[i].nBeads; j++) {

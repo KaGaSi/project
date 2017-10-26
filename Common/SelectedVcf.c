@@ -26,13 +26,15 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("SelectedVcf creates new <output.vcf> file from <input.vcf> containing only  \n");
-      printf("selected bead types. Also <start> timesteps can be omitted and every <skip> \n");
-      printf("timestep can be left out.                                                   \n\n");
+      printf("\
+SelectedVcf creates new <output.vcf> file from <input.vcf> containing only \
+selected bead types. Also <start> timesteps can be omitted and every <skip> \
+timestep can be left out.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about \
+the system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> ", argv[0]);
@@ -100,10 +102,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 

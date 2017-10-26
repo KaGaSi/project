@@ -31,16 +31,6 @@ bool VsfFileOption(int argc, char **argv, char **vsf_file); //}}}
  */
 bool BondsFileOption(int argc, char **argv, char **bonds_file); //}}}
 
-// VerboseShortOption() //{{{
-/**
- * \brief Option whether to use verbose output (`-v`).
- *
- * \param [in]  argc         number of program's arguments
- * \param [in]  argv         program's arguments
- * \param [out] verbose      bool for `-v` option (verbose output)
- */
-bool VerboseShortOption(int argc, char **argv, bool *verbose); //}}}
-
 // VerboseLongOption() //{{{
 /**
  * \brief Option whether to use long verbose output (overrides
@@ -52,7 +42,7 @@ bool VerboseShortOption(int argc, char **argv, bool *verbose); //}}}
  * \param [out] verbose2     bool for `-V` option (detailed verbose output)
  * \return `true` or `false` for error on common options
  */
-bool VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2); //}}}
+void VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2); //}}}
 
 // SilentOption() //{{{
 /**
@@ -66,7 +56,7 @@ bool VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2); //
  * \param [out] silent       bool for this option
  * \return `true` or `false` for error on common options
  */
-bool SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
+void SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
                   bool *silent); //}}}
 
 // ExcludeOption() //{{{
@@ -85,7 +75,7 @@ bool ExcludeOption(int argc, char **argv, Counts Counts,
 // JoinCoorOption() //{{{
 /**
  * \brief Option whether to write joined aggregate coordinates to file (`-j
- * <joined.vcf>`)
+ * <joined.vcf>`).
  *
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
@@ -94,6 +84,20 @@ bool ExcludeOption(int argc, char **argv, Counts Counts,
  * \return `true` or `false` error or not error
  */
 bool JoinCoorOption(int argc, char **argv, char *joined_vcf); //}}}
+
+// BeadTypeOption() //{{{
+/**
+ * \brief Option to choose which bead types to use in calculations (`-bt
+ * <name(s)>`).
+ *
+ * \param [in]  argc         number of program's arguments
+ * \param [in]  argv         program's arguments
+ * \param [in]  Counts       numbers of beads, molecules, etc.
+ * \param [out] BeadType     information about bead types
+ * \return `true` or `false` error or not error
+ */
+bool BeadTypeOption(int argc, char **argv, Counts Counts,
+                    BeadType **BeadType); //}}}
 
 // BoolOption() //{{{
 /**

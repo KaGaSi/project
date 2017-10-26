@@ -19,7 +19,6 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -st <int>   starting timestep for calculation\n");
   CommonHelp(1);
 } //}}}
-//TODO: somehow implement Join flag for bead types (throughout all utilities)
 
 int main(int argc, char *argv[]) {
 
@@ -96,55 +95,25 @@ the system.\n\n");
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
-  //}}}
 
-  // -n <int> option - number of bins to average //{{{
-  int avg = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n") == 0) {
-
-      // Error - missing or non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      avg = atoi(argv[i+1]);
-    }
-  } //}}}
-
-  // -st <int> option - number of starting timestep //{{{
+  // starting timestep //{{{
   int start = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-st") == 0) {
-
-      // Error - non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      start = atoi(argv[i+1]);
-    }
+  if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
   } //}}}
+
+  // number of bins to average //{{{
+  int avg = 1;
+  if (IntegerOption(argc, argv, "-n", &avg)) {
+    exit(1);
+  } //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -377,7 +346,7 @@ the system.\n\n");
         if (BeadType[Bead[j].Type].Use) {
 
           for (int k = (j+1); k < (Counts.Bonded+Counts.Unbonded); k++) {
-            if (BeadType[k].Use) {
+            if (BeadType[Bead[k].Type].Use) {
 
               int bead1 = j;
               int bead2 = k;
@@ -427,7 +396,6 @@ the system.\n\n");
   } //}}}
 
   // write data to output file(s) //{{{
-//  FILE *out;
   if ((out = fopen(output_pcf, "a")) == NULL) {
     fprintf(stderr, "Cannot open file %s!\n", str);
     exit(1);
@@ -487,7 +455,8 @@ the system.\n\n");
       }
     }
     putc('\n',out);
-  } //}}}
+  }
+  fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
@@ -500,8 +469,10 @@ the system.\n\n");
       free(pcf[i][j]);
     }
     free(pcf[i]);
+    free(norm[i]);
   }
   free(pcf);
+  free(norm);
   free(counter); //}}}
 
   return 0;

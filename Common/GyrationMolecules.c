@@ -13,10 +13,11 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   %s <input.vcf> <output> <molecule names> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
-  fprintf(stderr, "   <output>            output file with radii of gyration\n");
+  fprintf(stderr, "   <output>            output file with shape descriptors (automatic ending '-<name>.text')\n");
   fprintf(stderr, "   <molecule names>    molecule types to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      --joined         specify that joined coordinates are used\n");
+  fprintf(stderr, "      -bt              specify bead types to be used for calculation (default is all)\n");
   CommonHelp(1);
 } //}}}
 
@@ -114,66 +115,60 @@ void jacobi(double **a, int n, double d[], double **v, int *nrot) { //{{{
 
 Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) { //{{{
 
-  // gyration tensor (3x3 array) //{{{
-  struct Tensor {
-    Vector x, y, z;
-  } GyrationTensor;
+  Vector com = CentreOfMass(n, list, *Bead, BeadType);
 
-  GyrationTensor.x.x = 0;
-  GyrationTensor.x.y = 0;
-  GyrationTensor.x.z = 0;
-  GyrationTensor.y.x = 0;
-  GyrationTensor.y.y = 0;
-  GyrationTensor.y.z = 0;
-  GyrationTensor.z.x = 0;
-  GyrationTensor.z.y = 0;
-  GyrationTensor.z.z = 0; //}}}
-
-  Vector com = CenterOfMass(n, list, *Bead, BeadType);
-
-  // move center of mass to [0,0,0] //{{{
+  // move centre of mass to [0,0,0] //{{{
   for (int i = 0; i < n; i++) {
     (*Bead)[list[i]].Position.x -= com.x;
     (*Bead)[list[i]].Position.y -= com.y;
     (*Bead)[list[i]].Position.z -= com.z;
   } //}}}
 
+  double **a = malloc(3*sizeof(double *)); //{{{
+  a[0] = calloc(3,sizeof(double));
+  a[1] = calloc(3,sizeof(double));
+  a[2] = calloc(3,sizeof(double));
+
+//a[0][0] = GyrationTensor.x.x;
+//a[0][1] = GyrationTensor.y.x;
+//a[0][2] = GyrationTensor.z.x;
+//a[1][0] = GyrationTensor.x.y;
+//a[1][1] = GyrationTensor.y.y;
+//a[1][2] = GyrationTensor.z.y;
+//a[2][0] = GyrationTensor.x.z;
+//a[2][1] = GyrationTensor.y.z;
+//a[2][2] = GyrationTensor.z.z; //}}}
+
   // calculate gyration tensor //{{{
   for (int i = 0; i < n; i++) {
-    GyrationTensor.x.x += SQR((*Bead)[list[i]].Position.x);
-    GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
-    GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
-    GyrationTensor.y.y += SQR((*Bead)[list[i]].Position.y);
-    GyrationTensor.y.z += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
-    GyrationTensor.z.z += SQR((*Bead)[list[i]].Position.z);
+    a[0][0] += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.x;
+    a[0][1] += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
+    a[0][2] += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
+    a[1][1] += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.y;
+    a[1][2] += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
+    a[2][2] += (*Bead)[list[i]].Position.z * (*Bead)[list[i]].Position.z;
   }
-  GyrationTensor.x.x /= n;
-  GyrationTensor.x.y /= n;
-  GyrationTensor.x.z /= n;
-  GyrationTensor.y.y /= n;
-  GyrationTensor.y.z /= n;
-  GyrationTensor.z.z /= n;
+  a[0][0] /= n;
+  a[0][1] /= n;
+  a[0][2] /= n;
+  a[1][1] /= n;
+  a[2][1] /= n;
+  a[2][2] /= n;
 
   // just pro forma
-  GyrationTensor.y.x = GyrationTensor.x.y;
-  GyrationTensor.z.x = GyrationTensor.x.z;
-  GyrationTensor.z.y = GyrationTensor.y.z;
+  a[1][0] = a[0][1];
+  a[2][0] = a[0][2];
+  a[2][1] = a[1][2];
   //}}}
 
-  double **a = malloc(3*sizeof(double *)); //{{{
-  a[0] = malloc(3*sizeof(double));
-  a[1] = malloc(3*sizeof(double));
-  a[2] = malloc(3*sizeof(double));
-
-  a[0][0] = GyrationTensor.x.x;
-  a[0][1] = GyrationTensor.y.x;
-  a[0][2] = GyrationTensor.z.x;
-  a[1][0] = GyrationTensor.x.y;
-  a[1][1] = GyrationTensor.y.y;
-  a[1][2] = GyrationTensor.z.y;
-  a[2][0] = GyrationTensor.x.z;
-  a[2][1] = GyrationTensor.y.z;
-  a[2][2] = GyrationTensor.z.z; //}}}
+  putchar('\n');
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 3; j++) {
+      printf(" %lf", a[i][j]);
+    }
+    putchar('\n');
+  }
+  putchar('\n');
 
   double *d = malloc(3*sizeof(double));
   double **v = malloc(3*sizeof(double *));
@@ -188,11 +183,21 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   eigen.y = d[1];
   eigen.z = d[2];
 
+  eigen = Sort3(eigen);
+
+  printf("d=(%lf, %lf, %lf)\n", d[0], d[1], d[2]);
+  putchar('\n');
+
+  // free memory //{{{
   free(d);
   free(v[0]);
   free(v[1]);
   free(v[2]);
   free(v);
+  free(a[0]);
+  free(a[1]);
+  free(a[2]);
+  free(a); //}}}
 
   return (eigen);
 } //}}}
@@ -202,23 +207,26 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("GyrationAggregates calculates radii of gyration during the simulation for   \n");
-      printf("given molecule type(s). The radius of gyration is calculated from           \n");
-      printf("eigenvalues of gyration tensor. It also prints average radii of gyration to \n");
-      printf("the screen. Currently, it uses all beads present in the molecules.          \n\n");
+      printf("\
+GyrationAggregates calculates radii of gyration during the simulation for \
+given molecule type(s). The radius of gyration is calculated from eigenvalues \
+of gyration tensor. It also prints average radii of gyration to the screen. \
+Currently, it uses all beads present in the molecules.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <output> <molecule names> <options>\n\n", argv[0]);
 
       printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <output>            output file with radii of gyration\n");
+      printf("   <output>            output file with shape descriptors (automatic ending '-<name>.text')\n");
       printf("   <molecule names>    molecule types to calculate radius of gyration for\n");
       printf("   <options>\n");
       printf("      --joined         specify that joined coordinates are used\n");
+      printf("      -bt              specify bead types to be used for calculation (default is all)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -236,6 +244,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "--joined") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
@@ -270,10 +279,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
@@ -302,7 +311,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <output> - filename with radii of gyration //{{{
+  // <output> - filename with shape descriptors //{{{
   char output[16];
   strcpy(output, argv[++count]); //}}}
 
@@ -340,29 +349,37 @@ int main(int argc, char *argv[]) {
     } //}}}
   } //}}}
 
+  // -bt <name(s)> - specify what bead types to use //{{{
+  if (BeadTypeOption(argc, argv, Counts, &BeadType)) {
+    exit(0);
+  } //}}}
+
   // write initial stuff to output file //{{{
-  FILE *out;
-  if ((out = fopen(output, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output);
-    exit(1);
-  }
-
-  // print command to output file //{{{
-  putc('#', out);
-  for (int i = 0; i < argc; i++)
-    fprintf(out, " %s", argv[i]);
-  putc('\n', out); //}}}
-
-  // print molecule names to output file //{{{
-  fprintf(out, "# timestep");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
-      fprintf(out, " %10s", MoleculeType[i].Name);
-    }
-  }
-  putc('\n', out); //}}}
+      char str[32];
+      sprintf(str, "%s-%s.txt", output, MoleculeType[i].Name);
 
-  fclose(out); //}}}
+      FILE *out;
+      if ((out = fopen(str, "w")) == NULL) {
+        fprintf(stderr, "Cannot open file %s!\n", str);
+        exit(1);
+      }
+
+      // print command to output file //{{{
+      putc('#', out);
+      for (int i = 0; i < argc; i++)
+        fprintf(out, " %s", argv[i]);
+      putc('\n', out); //}}}
+
+      fprintf(out, "# %s\n", MoleculeType[i].Name);
+      fprintf(out, "# 1:dt 2:<Rg>_n 3:<Rg>_w 4:<Rg>_z ");
+      fprintf(out, "5:<Anis>_n 6:<Acyl>_n 7:<Aspher>_n\n");
+      putc('\n', out);
+
+      fclose(out);
+    }
+  } //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -416,8 +433,14 @@ int main(int argc, char *argv[]) {
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
-  // allocate memory for sum of radii of gyration
-  double *Rg_sum = calloc(Counts.TypesOfMolecules,sizeof(double));
+  // allocate memory for sums of shape descriptors //{{{
+  double **Rg_sum = malloc(Counts.TypesOfMolecules*sizeof(double *));
+  double *Anis_sum = calloc(Counts.TypesOfMolecules,sizeof(double));
+  double *Acyl_sum = calloc(Counts.TypesOfMolecules,sizeof(double));
+  double *Aspher_sum = calloc(Counts.TypesOfMolecules,sizeof(double));
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    Rg_sum[i] = calloc(3,sizeof(double));
+  } //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -462,51 +485,95 @@ int main(int argc, char *argv[]) {
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
 
-    // allocate arrays for the timestep
-    double *Rg = calloc(Counts.TypesOfMolecules,sizeof(double));
+    // allocate memory for shape descriptors //{{{
+    double **Rg = malloc(Counts.TypesOfMolecules*sizeof(double *));
+    double *Anis = calloc(Counts.TypesOfMolecules,sizeof(double));
+    double *Acyl = calloc(Counts.TypesOfMolecules,sizeof(double));
+    double *Aspher = calloc(Counts.TypesOfMolecules,sizeof(double));
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      Rg[i] = calloc(3,sizeof(double));
+    } //}}}
 
-    // calculate radii of gyration //{{{
+    // calculate shape descriptors //{{{
     for (int i = 0; i < Counts.Molecules; i++) {
+      int mol_type = Molecule[i].Type;
 
-      if (MoleculeType[Molecule[i].Type].Use) {
-        Vector eigen = Gyration(MoleculeType[Molecule[i].Type].nBeads, Molecule[i].Bead, Counts, BoxLength, BeadType, &Bead);
+      if (MoleculeType[mol_type].Use) {
 
-        Rg[Molecule[i].Type] += sqrt(eigen.x + eigen.y + eigen.z);
+        // copy bead ids to a separate array //{{{
+        int *list = malloc(MoleculeType[mol_type].nBeads*sizeof(int));
+        int n = 0;
+        for (int j = 0; j < MoleculeType[mol_type].nBeads; j++) {
+          int bead_id = Molecule[i].Bead[j];
+          if (BeadType[Bead[bead_id].Type].Use) {
+            list[n] = Molecule[i].Bead[j];
+            n++;
+          }
+        } //}}}
+
+        Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+
+        free(list); // free array of bead ids for gyration calculation
+
+        // Radius of gyration
+        Rg[Molecule[i].Type][0] +=      sqrt(eigen.x + eigen.y + eigen.z);
+        Rg[Molecule[i].Type][1] +=           eigen.x + eigen.y + eigen.z;
+        Rg[Molecule[i].Type][2] += CUBE(sqrt(eigen.x + eigen.y + eigen.z));
+        // relative shape anisotropy
+        Anis[Molecule[i].Type] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
+        // acylindricity
+        Acyl[Molecule[i].Type] += eigen.y - eigen.x;
+        // asphericity
+        Aspher[Molecule[i].Type] += eigen.z - 0.5 * (eigen.x + eigen.y);
+        printf("%lf %lf %lf\n", eigen.x, eigen.y, eigen.z);
       }
     } //}}}
 
-    // add radii to sum //{{{
+    // add shape descriptors to sum //{{{
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      Rg_sum[i] += Rg[i];
+      Rg_sum[i][0] += Rg[i][0];
+      Rg_sum[i][1] += Rg[i][1];
+      Rg_sum[i][2] += Rg[i][2];
+      Anis_sum[i] += Anis[i];
+      Acyl_sum[i] += Acyl[i];
+      Aspher_sum[i] += Aspher[i];
     } //}}}
 
-    // print radii of gyration to output file //{{{
-    FILE *out;
-    if ((out = fopen(output, "a")) == NULL) {
-        // print newline to stdout if Step... doesn't end with one
-        if (!script && !silent) {
-          putchar('\n');
-        }
-      fprintf(stderr, "Cannot open file %s!\n", output);
-      exit(1);
-    }
-
-    fprintf(out, "%d", count);
+    // print shape descriptors to output file(s) //{{{
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {
-        fprintf(out, " %lf", Rg[i]/MoleculeType[i].Number);
-      }
-    }
-    putc('\n', out);
+        char str[32];
+        sprintf(str, "%s-%s.txt", output, MoleculeType[i].Name);
 
-    fclose(out); //}}}
+        FILE *out;
+        if ((out = fopen(str, "a")) == NULL) {
+          fprintf(stderr, "Cannot open file %s!\n", str);
+          exit(1);
+        }
+
+        fprintf(out, "%5d", count);
+        fprintf(out, " %8.5f %8.5f %8.5f", Rg[i][0]/MoleculeType[i].Number, Rg[i][1]/Rg[i][0], Rg[i][2]/Rg[i][1]);
+        fprintf(out, " %8.5f", Anis[i]/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", Acyl[i]/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", Aspher[i]/MoleculeType[i].Number);
+        putc('\n', out);
+
+        fclose(out);
+      }
+    } //}}}
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
       printf("\n%s", stuff);
     } //}}}
 
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      free(Rg[i]);
+    }
     free(Rg);
+    free(Anis);
+    free(Acyl);
+    free(Aspher);
   }
   fclose(vcf);
 
@@ -521,7 +588,7 @@ int main(int argc, char *argv[]) {
 
   // calculate simple averages //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf("%10s %lf\n", MoleculeType[i].Name, Rg_sum[i]/(count*MoleculeType[i].Number));
+    printf("%10s %lf\n", MoleculeType[i].Name, Rg_sum[i][0]/(count*MoleculeType[i].Number));
   } //}}}
 
   // free memory - to make valgrind happy //{{{
@@ -529,7 +596,13 @@ int main(int argc, char *argv[]) {
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    free(Rg_sum[i]);
+  }
   free(Rg_sum);
+  free(Anis_sum);
+  free(Acyl_sum);
+  free(Aspher_sum);
   free(stuff); //}}}
 
   return 0;

@@ -27,16 +27,19 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("PairCorrelPerAgg utility calculates pair correlation function for specified \n");
-      printf("bead types. The calculation is done per aggregates - that is only beads in  \n");
-      printf("the same aggregate are used. If aggregate size(s) is not specified, average \n");
-      printf("pcf is calculated (that is, regardless of aggregate size). All pairs of bead\n");
-      printf("types (including same pair) are calculated - given A and B types, pcf       \n");
-      printf("between A-A, A-B and B-B are calculated.                                    \n\n");
+      printf("\
+PairCorrelPerAgg utility calculates pair correlation function for specified \
+bead types. The calculation is done per aggregates - that is only beads in the \
+same aggregate are used. If aggregate size(s) is not specified, average pcf is \
+calculated (that is, regardless of aggregate size). All pairs of bead types \
+(including same pair) are calculated - given A and B types, pcf between A-A, \
+A-B and B-B are calculated.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
+
       printf("   %s <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>\n\n", argv[0]);
 
       printf("   <input.vcf>     input filename (vcf format)\n");
@@ -99,55 +102,25 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
-  //}}}
 
-  // -n <int> option - number of bins to average //{{{
-  int avg = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n") == 0) {
-
-      // Error - missing or non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      avg = atoi(argv[i+1]);
-    }
-  } //}}}
-
-  // -st <int> option - number of starting timestep //{{{
+  // starting timestep //{{{
   int start = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-st") == 0) {
-
-      // Error - non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      start = atoi(argv[i+1]);
-    }
+  if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
   } //}}}
+
+  // number of bins to average //{{{
+  int avg = 1;
+  if (IntegerOption(argc, argv, "-n", &avg)) {
+    exit(1);
+  } //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -563,7 +536,8 @@ int main(int argc, char *argv[]) {
       }
     }
     putc('\n',out);
-  } //}}}
+  }
+  fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
@@ -577,8 +551,10 @@ int main(int argc, char *argv[]) {
       free(pcf[i][j]);
     }
     free(pcf[i]);
+    free(norm[i]);
   }
   free(pcf);
+  free(norm);
   free(counter); //}}}
 
   return 0;
