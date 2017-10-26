@@ -25,13 +25,15 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("DistrAgg calculates weight and number average aggregation numbers during    \n");
-      printf("the simulation run as well as overall weight and number distributions and   \n");
-      printf("volume fractions of aggregates.                                           \n\n");
+      printf("\
+DistrAgg calculates weight and number average aggregation numbers during the \
+simulation run as well as overall weight and number distributions and volume \
+fractions of aggregates.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD \
+(along with optional bond file) files to determine all information about \
+the system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
@@ -96,10 +98,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
@@ -108,15 +110,10 @@ int main(int argc, char *argv[]) {
   if (IntegerOption(argc, argv, "-st", &start)) {
     exit(1);
   } //}}}
-  //}}}
 
-  // --no-unimers - do not count unimers towards averages //{{{
-  bool no_uni = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--no-unimers") == 0) {
-      no_uni = true;
-    }
-  } //}}}
+  // do not count unimers towards averages //{{{
+  bool no_uni = BoolOption(argc, argv, "--no-unimers"); //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -238,6 +235,7 @@ int main(int argc, char *argv[]) {
   // main loop //{{{
   int test, size_sqr = 0;
   count = 0;
+  double avg_n_sum = 0, avg_w_sum = 0, avg_m_sum = 0;
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
@@ -275,8 +273,7 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // go through all aggregates
-    double avg_n = 0,
-           avg_w = 0;
+    double avg_n = 0, avg_w = 0, avg_m = 0;
     int aggs = 0, // number of aggregates (w/o unimers if --no-unimers)
         mols = 0; // number of molecules (w/o those in unimers if --no-unimers)
     for (int i = 0; i < Counts.Aggregates; i++) {
@@ -320,8 +317,18 @@ int main(int argc, char *argv[]) {
 
         avg_n += Aggregate[i].nMolecules;
         avg_w += SQR(Aggregate[i].nMolecules);
+        avg_m += Aggregate[i].Mass;
       } //}}}
     }
+
+    // add averages to global sums{{{
+    avg_n /= aggs;
+    avg_w /= mols;
+    avg_m /= aggs;
+
+    avg_n_sum += avg_n;
+    avg_w_sum += avg_w;
+    avg_m_sum += avg_m; //}}}
 
     // print averages to output file //{{{
     if ((out = fopen(output_avg, "a")) == NULL) {
@@ -333,7 +340,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
 
-    fprintf(out, "%5d %lf %lf\n", count, avg_w/mols, avg_n/aggs);
+    fprintf(out, "%5d %8.4f %8.4f %8.4f\n", count, avg_w, avg_n, avg_m);
     fclose(out); //}}}
   }
   fclose(agg);
@@ -346,6 +353,8 @@ int main(int argc, char *argv[]) {
       printf("\rLast Step: %6d\n", count);
     }
   } //}}}
+
+  printf("%7.3f %7.3f %7.3f\n", avg_n_sum/count, avg_w_sum/count, avg_m_sum/count);
 
   // number of species in agg file //{{{
   int mols = 0, beads = 0, mons = 0;
@@ -421,7 +430,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // print legend (with column numbers)
+  // print legend (with column numbers) //{{{
   printf("1:<A_s>_w");
   fprintf(out, "# 1:<A_s>_w");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -435,9 +444,9 @@ int main(int argc, char *argv[]) {
     fprintf(out, " %d:<%s>_n", Counts.TypesOfMolecules+i+3, MoleculeType[i].Name);
   }
   putchar('\n');
-  putc('\n', out);
+  putc('\n', out); //}}}
 
-  // print the averages
+  // print the averages //{{{
   printf("%7.3f", (double)(size_sqr)/wdistr[0]); // <A_s>_w
   fprintf(out, "# %7.3f", (double)(size_sqr)/wdistr[0]); // <A_s>_w
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -451,7 +460,9 @@ int main(int argc, char *argv[]) {
     fprintf(out, " %7.3f", (double)(molecules[0][i][0])/ndistr[0]); // <species>_n
   }
   putc('\n', out);
-  putchar('\n'); //}}}
+  putchar('\n');
+  fclose(out); //}}}
+  //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);

@@ -15,9 +15,10 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
   fprintf(stderr, "   <molecule names>  molecule names to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j             specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -n <average>   number of bins to average\n");
-  fprintf(stderr, "      -c <int>       use <int>-th molecule bead instead of center of mass\n");
+  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(stderr, "      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
   CommonHelp(1);
 } //}}}
 
@@ -26,17 +27,18 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("MolDensity utility calculates number beads density for all bead"
-          "types from the center of mass (or specified bead number in a"
-          "molecule) of specified molecules. Care must be taken with beadtype"
-          "names in various molecules types, because if one beadtype appears"
-          "in more molecule types, the resulting density for that beadtype"
-          "will be averaged without regard for the various types of molecule"
-          "it appears in.\n\n");
+      printf("\
+MolDensity utility calculates number beads density for all bead types from the \
+centre of mass (or specified bead number in a molecule) of specified molecules. \
+Care must be taken with beadtype names in various molecules types, because if \
+one beadtype appears in more molecule types, the resulting density for that \
+beadtype will be averaged without regard for the various types of molecule it \
+appears in.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and"
-          "FIELD (along with optional bond file) files to determine all"
-          "information about the system.\n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <width> <output.rho> <molecule names> <options>\n\n", argv[0]);
@@ -46,9 +48,10 @@ int main(int argc, char *argv[]) {
       printf("   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
       printf("   <molecule names>  molecule names to calculate density for\n");
       printf("   <options>\n");
-      printf("      -j             specify that aggregates with joined coordinates are used\n");
+      printf("      --joined       specify that aggregates with joined coordinates are used\n");
       printf("      -n <average>   number of bins to average\n");
-      printf("      -c <int>       use <int>-th molecule bead instead of center of mass\n");
+      printf("      -st <int>      starting timestep for calculation\n");
+      printf("      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
       CommonHelp(0);
       exit(0);
     }
@@ -66,8 +69,9 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-j") != 0 &&
+        strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-c") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
@@ -102,37 +106,28 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
   // are provided coordinates joined? //{{{
   bool joined = BoolOption(argc, argv, "--joined"); //}}}
-  //}}}
 
-  // -n <int> option - number of bins to average //{{{
-  int avg = 1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-n") == 0) {
-
-      // Error - missing or non-numeric argument //{{{
-      if ((i+1) >= argc) {
-        fprintf(stderr, "Missing numeric argument for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      }
-      if (argv[i+1][0] < '0' || argv[i+1][0] > '9') {
-        fprintf(stderr, "Non-numeric argement for '-n' option!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      avg = atoi(argv[i+1]);
-    }
+  // starting timestep //{{{
+  int start = 1;
+  if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
   } //}}}
+
+  // number of bins to average //{{{
+  int avg = 1;
+  if (IntegerOption(argc, argv, "-n", &avg)) {
+    exit(1);
+  } //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -220,12 +215,12 @@ int main(int argc, char *argv[]) {
     fclose(out); //}}}
   } //}}}
 
-  // -c <int> option - number of bins to average //{{{
+  // -c 'x's/<int(s)> option - specify which bead to use as a molecule centre //{{{
 
   // array for considering whether to use COM or specified bead number //{{{
-  int center[Counts.TypesOfMolecules];
+  int centre[Counts.TypesOfMolecules];
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    center[i] = -1;
+    centre[i] = -1; // use COM for this molecule type
   } //}}}
 
   int used_mols = 0;
@@ -243,7 +238,7 @@ int main(int argc, char *argv[]) {
         } //}}}
 
         if (argv[i+j][0] == 'x') {
-          center[j-1] = -1;
+          centre[j-1] = -1;
         } else {
 
           int k;
@@ -254,12 +249,12 @@ int main(int argc, char *argv[]) {
           }
           printf("k = %d; used_mols = %d\n", k, used_mols);
 
-          center[used_mols-1] = atoi(argv[i+j]) - 1;
+          centre[used_mols-1] = atoi(argv[i+j]) - 1;
 
           // Error - too high bead number //{{{
-          if (center[used_mols-1] > MoleculeType[j-1].nBeads) {
+          if (centre[used_mols-1] > MoleculeType[j-1].nBeads) {
             fprintf(stderr, "Incorrect number in '-c' option (%dth bead in molecule"
-              "%s containing only %d beads)\n", center[j-1]+1, MoleculeType[j-1].Name,
+              "%s containing only %d beads)\n", centre[j-1]+1, MoleculeType[j-1].Name,
               MoleculeType[j-1].nBeads);
             exit(1);
           } //}}}
@@ -352,9 +347,42 @@ int main(int argc, char *argv[]) {
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
+  // skip first start-1 steps //{{{
+  count = 0;
+  int test;
+  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
+    ungetc(test, vcf);
+
+    count++;
+
+    // print step? //{{{
+    if (!silent) {
+      if (script) {
+        printf("Discarding step: %6d\n", count);
+      } else {
+        fflush(stdout);
+        printf("\rDiscarding step: %6d", count);
+      }
+    } //}}}
+
+    if (SkipCoor(vcf, Counts, &stuff) == 1) {
+      fprintf(stderr, "Premature end of %s file!\n", input_vcf);
+      exit(1);
+    }
+  }
+  // print number of discarded steps? //{{{
+  if (!silent) {
+    if (script) {
+      printf("Discarded steps: %6d\n", count);
+    } else {
+      fflush(stdout);
+      printf("\rDiscarded steps: %6d\n", count);
+    }
+  } //}}}
+  //}}}
+
   // main loop //{{{
   count = 0; // count timesteps
-  int test;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
@@ -400,14 +428,14 @@ int main(int argc, char *argv[]) {
       int mol_type_i = Molecule[i].Type;
       if (MoleculeType[mol_type_i].Use) {
 
-        // determine center to calculate densities from //{{{
+        // determine centre to calculate densities from //{{{
         Vector com;
-        if (center[mol_type_i] == -1 ) { // use molecule's center of mass
-          com = CenterOfMass(MoleculeType[mol_type_i].nBeads, Molecule[i].Bead, Bead, BeadType);
-        } else { // use center[mol_type_i]-th molecule's bead as com
-          com.x = Bead[Molecule[i].Bead[center[mol_type_i]]].Position.x;
-          com.y = Bead[Molecule[i].Bead[center[mol_type_i]]].Position.y;
-          com.z = Bead[Molecule[i].Bead[center[mol_type_i]]].Position.z;
+        if (centre[mol_type_i] == -1 ) { // use molecule's centre of mass
+          com = CentreOfMass(MoleculeType[mol_type_i].nBeads, Molecule[i].Bead, Bead, BeadType);
+        } else { // use centre[mol_type_i]-th molecule's bead as com
+          com.x = Bead[Molecule[i].Bead[centre[mol_type_i]]].Position.x;
+          com.y = Bead[Molecule[i].Bead[centre[mol_type_i]]].Position.y;
+          com.z = Bead[Molecule[i].Bead[centre[mol_type_i]]].Position.z;
         } //}}}
 
         // molecule beads //{{{

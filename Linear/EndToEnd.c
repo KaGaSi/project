@@ -22,13 +22,15 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("EndToEnd utility calculates end to end distance for linear chains (no check \n");
-      printf("whether the molecules are linear is performed). It calculates distance      \n");
-      printf("between first and last bead in a molecule.                                  \n\n");
+      printf("\
+EndToEnd utility calculates end to end distance for linear chains (no check \
+whether the molecules are linear is performed). It calculates distance \
+between first and last bead in a molecule.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n"); \
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <output file> <molecule names> <options>\n\n", argv[0]);
@@ -70,10 +72,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
   //}}}
@@ -119,6 +121,9 @@ int main(int argc, char *argv[]) {
 
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+
+  // vsf file is not needed anymore
+  free(vsf_file);
 
   // <molecule names> - names of molecule types to use //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -278,7 +283,7 @@ int main(int argc, char *argv[]) {
       printf("Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d", count);
+      printf("\rLast Step: %6d\n", count);
     }
   }
 
@@ -290,6 +295,7 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(stuff);
+  free(bonds_file);
   //}}}
 
   return 0;

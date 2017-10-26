@@ -552,20 +552,18 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
  */
 void CommonHelp(bool error) {
   if (error) {
-    fprintf(stderr, "   <common options>\n");
     fprintf(stderr, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
     fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
     fprintf(stderr, "      -v             verbose output\n");
-    fprintf(stderr, "      -V             verbose output with comments from input .vcf file\n");
+    fprintf(stderr, "      -V             more verbose output\n");
     fprintf(stderr, "      -s             no output (overrides verbose options)\n");
     fprintf(stderr, "      -h             print this help and exit\n");
     fprintf(stderr, "      --script       do not reprint line (useful when output goes to file)\n");
   } else {
-    printf("   <common options>\n");
     printf("      -i <name>      use input .vsf file different from dl_meso.vsf\n");
     printf("      -b <name>      file containing bond alternatives to FIELD\n");
     printf("      -v             verbose output\n");
-    printf("      -V             verbose output with comments from input .vcf file\n");
+    printf("      -V             more verbose output\n");
     printf("      -s             no output (overrides verbose options)\n");
     printf("      -h             print this help and exit\n");
     printf("      --script       do not reprint line (useful when output goes to file)\n");
@@ -810,7 +808,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
 
 // MoveCOMMolecules() - auxiliary //{{{
 /*
- * Function to move molecules so that their center of mass is inside the
+ * Function to move molecules so that their centre of mass is inside the
  * simulation box. Assumes the moleces are joined.
  */
 void MoveCOMMolecules(Counts Counts, Vector BoxLength,
@@ -819,12 +817,12 @@ void MoveCOMMolecules(Counts Counts, Vector BoxLength,
 
   for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
-    Vector com; // coordinate vector for center of mass //{{{
+    Vector com; // coordinate vector for centre of mass //{{{
     com.x = 0;
     com.y = 0;
     com.z = 0; //}}}
 
-    // calculate center of mass
+    // calculate centre of mass
     for (int j = 0; j < MoleculeType[type].nBeads; j++) {
       int id = Molecule[i].Bead[j];
 
@@ -913,9 +911,10 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
   int total = Counts.Unbonded + Counts.Bonded;
 
   // allocate helper array of coordinates //{{{
+  double imp = 100000; // a value impossible for bead's coordinate
   Vector *pos = malloc(Counts.BeadsInVsf*sizeof(Vector));
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
-    pos[i].x = 1000; // a value impossible for bead's coordinate
+    pos[i].x = imp;
   } //}}}
 
   // read data //{{{
@@ -937,7 +936,7 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
   // copy coordinates to Bead struct //{{{
   int count = 0;
   for (i = 0; i < Counts.BeadsInVsf; i++) {
-    if (pos[i].x != 1000) { // a value impossible for bead coordinates
+    if (pos[i].x != imp) { // the impossible value for bead coordinates
       (*Bead)[count].Position.x = pos[i].x;
       (*Bead)[count].Position.y = pos[i].y;
       (*Bead)[count].Position.z = pos[i].z;
@@ -1064,8 +1063,9 @@ void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
  * in BeadType structure only certain bead types will be saved into the
  * indexed timestep in .vcf file (\ref IndexedCoorFile).
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead
-                      *Bead, MoleculeType *MoleculeType, Molecule *Molecule,
+void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
+                      BeadType *BeadType, Bead *Bead,
+                      MoleculeType *MoleculeType, Molecule *Molecule,
                       char *stuff) {
 
   // print comment at the beginning of a timestep and 'indexed' on second line
@@ -1073,12 +1073,23 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead
 
   for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
     int type_b = Bead[i].Type;
-    int type_m = Molecule[Bead[i].Molecule].Type;
-    if (BeadType[type_b].Write && MoleculeType[type_m].Write) {
-      fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
-                                                   Bead[i].Position.x,
-                                                   Bead[i].Position.y,
-                                                   Bead[i].Position.z);
+    if (BeadType[type_b].Write) {
+
+      if (Bead[i].Molecule != -1) { // bead in a molecule
+
+        int mol_typ = Molecule[Bead[i].Molecule].Type;
+        if (MoleculeType[mol_typ].Write) {
+          fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
+                                                       Bead[i].Position.x,
+                                                       Bead[i].Position.y,
+                                                       Bead[i].Position.z);
+        }
+      } else { // monomer bead
+        fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
+                                                     Bead[i].Position.x,
+                                                     Bead[i].Position.y,
+                                                     Bead[i].Position.z);
+      }
     }
   }
 } //}}}
@@ -1296,6 +1307,35 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
     }
   }
 
+  // put aggregates' centre of mass into the simulation box //{{{
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead,
+                              *Bead, BeadType);
+
+    // by how many BoxLength's should com by moved?
+    // for distant aggregates - it shouldn't happen, but better safe than sorry
+    IntVector move;
+    move.x = com.x / BoxLength.x;
+    move.y = com.y / BoxLength.y;
+    move.z = com.z / BoxLength.z;
+    if (com.x < 0) {
+      move.x--;
+    }
+    if (com.y < 0) {
+      move.y--;
+    }
+    if (com.z < 0) {
+      move.z--;
+    }
+
+    for (int j = 0; j < Aggregate[i].nBeads; j++) {
+      int bead = Aggregate[i].Bead[j];
+      (*Bead)[bead].Position.x -= move.x * BoxLength.x;
+      (*Bead)[bead].Position.y -= move.y * BoxLength.y;
+      (*Bead)[bead].Position.z -= move.z * BoxLength.z;
+    }
+  } //}}}
+
   free(moved);
 } //}}}
 
@@ -1331,11 +1371,11 @@ void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead) {
   }
 } //}}}
 
-// CenterOfMass() //{{{
+// CentreOfMass() //{{{
 /**
- * Function to calculate center of mass for a given list of beads.
+ * Function to calculate centre of mass for a given list of beads.
  */
-Vector CenterOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
+Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
 
   Vector com;
   com.x = 0;

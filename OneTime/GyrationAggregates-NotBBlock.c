@@ -127,9 +127,9 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   GyrationTensor.z.y = 0;
   GyrationTensor.z.z = 0; //}}}
 
-  Vector com = CenterOfMass(n, list, *Bead, BeadType);
+  Vector com = CentreOfMass(n, list, *Bead, BeadType);
 
-  // move center of mass to [0,0,0] //{{{
+  // move centre of mass to [0,0,0] //{{{
   for (int i = 0; i < n; i++) {
     (*Bead)[list[i]].Position.x -= com.x;
     (*Bead)[list[i]].Position.y -= com.y;

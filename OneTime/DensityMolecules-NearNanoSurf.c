@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
       printf("nanoparticle.                                                               \n\n");
 
       printf("MolDensity utility calculates number beads density for all bead types from  \n");
-      printf("the center of mass of specified molecules. Care must be taken with beadtype \n");
+      printf("the centre of mass of specified molecules. Care must be taken with beadtype \n");
       printf("names in various molecules types, because if one beadtype appears in more   \n");
       printf("molecule types, the resulting density for that beadtype will be averaged    \n");
       printf("without regard for the various types of molecule it appears in.             \n\n");

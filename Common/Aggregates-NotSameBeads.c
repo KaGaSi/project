@@ -133,29 +133,31 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
             } //}}}
 
             while (j != -1) {
-              int type_i = (*Molecule)[(*Bead)[i].Molecule].Type;
-              int type_j = (*Molecule)[(*Bead)[j].Molecule].Type;
+              if ((*Bead)[i].Molecule != -1 && (*Bead)[j].Molecule != -1) { // both i and j must be in molecule
+                int type_i = (*Molecule)[(*Bead)[i].Molecule].Type;
+                int type_j = (*Molecule)[(*Bead)[j].Molecule].Type;
 
-              if (BeadType[(*Bead)[i].Type].Use && // bead i must be of specified type
-                  BeadType[(*Bead)[j].Type].Use && // bead j as well
-                  MoleculeType[type_i].Use && // molecule with i cannot be excluded
-                  MoleculeType[type_j].Use && // molecule with j the same
-                  (*Bead)[i].Type != (*Bead)[j].Type) { // do not use pairs of bead with the same type
+                if (BeadType[(*Bead)[i].Type].Use && // bead i must be of specified type
+                    BeadType[(*Bead)[j].Type].Use && // bead j as well
+                    MoleculeType[type_i].Use && // molecule with i cannot be excluded
+                    MoleculeType[type_j].Use && // molecule with j the same
+                    (*Bead)[i].Type != (*Bead)[j].Type) { // do not use pairs of bead with the same type
 
-                // calculate distance between i and j beads
-                Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  // calculate distance between i and j beads
+                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
-                // are 'i' and 'j' close enough?
-                if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
-                    (SQR(rij.x) + SQR(rij.y) + SQR(rij.z)) <= sqdist) {
-                  if (i > j) {
-                    contact[(*Bead)[i].Molecule][(*Bead)[j].Molecule]++;
-                  } else {
-                    contact[(*Bead)[j].Molecule][(*Bead)[i].Molecule]++;
+                  // are 'i' and 'j' close enough?
+                  if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
+                      (SQR(rij.x) + SQR(rij.y) + SQR(rij.z)) <= sqdist) {
+                    if (i > j) {
+                      contact[(*Bead)[i].Molecule][(*Bead)[j].Molecule]++;
+                    } else {
+                      contact[(*Bead)[j].Molecule][(*Bead)[i].Molecule]++;
+                    }
                   }
                 }
-              }
 
+              }
               j = Link[j];
             }
           }
@@ -473,12 +475,14 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("Aggregates-NotSameBeads utility works in the same way as Aggregates utility,\n");
-      printf("but does not calculate contacts between beads of the same type.             \n\n");
+      printf("\
+Aggregates-NotSameBeads utility works in the same way as Aggregates utility, \
+but does not calculate contacts between beads of the same type.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <distance> <contacts> ", argv[0]);
@@ -550,10 +554,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
   //}}}

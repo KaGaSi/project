@@ -16,7 +16,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <agg sizes>         aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      --joined         specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -t               specify bead types to be used for calculation (default is all)\n");
+  fprintf(stderr, "      -bt              specify bead types to be used for calculation (default is all)\n");
   fprintf(stderr, "      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
   CommonHelp(1);
 } //}}}
@@ -115,7 +115,8 @@ void jacobi(double **a, int n, double d[], double **v, int *nrot) { //{{{
   }
 } //}}}
 
-Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) { //{{{ // gyration tensor (3x3 array) //{{{
+Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) { //{{{
+  // gyration tensor (3x3 array) //{{{
   struct Tensor {
     Vector x, y, z;
   } GyrationTensor;
@@ -130,9 +131,9 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   GyrationTensor.z.y = 0;
   GyrationTensor.z.z = 0; //}}}
 
-  Vector com = CenterOfMass(n, list, *Bead, BeadType);
+  Vector com = CentreOfMass(n, list, *Bead, BeadType);
 
-  // move center of mass to [0,0,0] //{{{
+  // move centre of mass to [0,0,0] //{{{
   for (int i = 0; i < n; i++) {
     (*Bead)[list[i]].Position.x -= com.x;
     (*Bead)[list[i]].Position.y -= com.y;
@@ -141,12 +142,12 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
 
   // calculate gyration tensor //{{{
   for (int i = 0; i < n; i++) {
-    GyrationTensor.x.x += SQR((*Bead)[list[i]].Position.x);
+    GyrationTensor.x.x += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.x;
     GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
     GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
-    GyrationTensor.y.y += SQR((*Bead)[list[i]].Position.y);
+    GyrationTensor.y.y += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.y;
     GyrationTensor.y.z += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
-    GyrationTensor.z.z += SQR((*Bead)[list[i]].Position.z);
+    GyrationTensor.z.z += (*Bead)[list[i]].Position.z * (*Bead)[list[i]].Position.z;
   }
   GyrationTensor.x.x /= n;
   GyrationTensor.x.y /= n;
@@ -232,7 +233,7 @@ system.\n\n");
       printf("   <agg sizes>         aggregate sizes to calculate radius of gyration for\n");
       printf("   <options>\n");
       printf("      --joined         specify that aggregates with joined coordinates are used\n");
-      printf("      -t               specify bead types to be used for calculation (default is all)\n");
+      printf("      -bt              specify bead types to be used for calculation (default is all)\n");
       printf("      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
       CommonHelp(0);
       exit(0);
@@ -252,7 +253,7 @@ system.\n\n");
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
-        strcmp(argv[i], "-t") != 0 &&
+        strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "-m") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
@@ -287,24 +288,16 @@ system.\n\n");
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
   // are provided coordinates joined? //{{{
   bool joined = BoolOption(argc, argv, "--joined"); //}}}
   //}}}
-
-  // -t option - bead types to be used //{{{
-  int types = -1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-t") == 0) {
-      types = i; // positon of the '-t' argument in command
-    }
-  } //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -383,19 +376,9 @@ system.\n\n");
     aggs++; // number of aggregate sizes
   } //}}}
 
-  // specify what bead types to use - either specified by '-t' option or all //{{{
-  if (types != -1) { // '-t' option is present
-    // <type names> - names of bead types to save
-    while (++types < argc && argv[types][0] != '-') {
-      int type = FindBeadType(argv[types], Counts, BeadType);
-
-      BeadType[type].Use = true;
-      printf("%s\n", BeadType[type].Name);
-    }
-  } else {
-    for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      BeadType[i].Use = true;
-    }
+  // -bt <name(s)> - specify what bead types to use //{{{
+  if (BeadTypeOption(argc, argv, Counts, &BeadType)) {
+    exit(0);
   } //}}}
 
   // write initial stuff to output file //{{{
@@ -595,7 +578,7 @@ system.\n\n");
       Rg[i] = calloc(3,sizeof(double));
     } //}}}
 
-    // calculate radii of gyration //{{{
+    // calculate shape descriptors //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
 
       // test if aggregate 'i' should be used //{{{
@@ -634,7 +617,17 @@ system.\n\n");
         } //}}}
 
         Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
-        free(list);
+
+//      // calcule Rg the 'usual way' -- for testing purposes //{{{
+//      double Rg2 = 0;
+//      Vector com = CentreOfMass(n, list, Bead, BeadType);
+//      for (int j = 0; j < n; j++) {
+//        Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
+//        Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
+//      }
+//      Rg2 /= n; //}}}
+
+        free(list); // free array of bead ids for gyration calculation
 
         // Radius of gyration
         Rg[correct_size][0] +=      sqrt(eigen.x + eigen.y + eigen.z);

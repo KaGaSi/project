@@ -22,13 +22,15 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("PersistenceLength utility calculates persistence length of linear chains (no\n");
-      printf("check whether the molecules are linear is performed). It calculates distance\n");
-      printf("between first and last bead in a molecule.                                  \n\n");
+      printf("\
+PersistenceLength utility calculates persistence length of linear chains (no \
+check whether the molecules are linear is performed). It calculates distance \
+between first and last bead in a molecule.\n\n");
 
-      printf("The utility uses dl_meso.vsf (or other input structure file) and FIELD      \n");
-      printf("(along with optional bond file) files to determine all information about    \n");
-      printf("the system.                                                                 \n\n");
+      printf("\
+The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+with optional bond file) files to determine all information about the \
+system.\n\n");
 
       printf("Usage:\n");
       printf("   %s <input.vcf> <output file> <molecule names> <options>\n\n", argv[0]);
@@ -70,10 +72,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // output verbosity //{{{
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  VerboseShortOption(argc, argv, &verbose); // verbose output
+  bool verbose2, silent;
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
   //}}}
@@ -113,6 +115,9 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
+  // vsf file is not needed anymore
+  free(vsf_file);
+
   // <molecule names> - names of molecule types to use //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindMoleculeType(argv[count], Counts, MoleculeType);
@@ -123,11 +128,6 @@ int main(int argc, char *argv[]) {
     }
 
     MoleculeType[type].Use = true;
-  } //}}}
-
-  // print information - verbose output //{{{
-  if (verbose) {
-    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // open output file and print molecule names //{{{
@@ -186,6 +186,14 @@ int main(int argc, char *argv[]) {
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
   stuff = calloc(128,sizeof(int)); //}}}
+
+  // print information - verbose output //{{{
+  if (verbose) {
+    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+  }
+
+  // bonds file is not needed anymore
+  free(bonds_file); //}}}
 
   // main loop //{{{
   int test;
@@ -319,7 +327,7 @@ int main(int argc, char *argv[]) {
       printf("Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d", count);
+      printf("\rLast Step: %6d\n", count);
     }
   }
 

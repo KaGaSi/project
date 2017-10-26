@@ -303,7 +303,7 @@ Usage:
 # DensityAggregates {#AggDensity}
 
 This utility calculates number bead density for aggregates of specified
-size from their center of mass. During the calculation, only the current
+size from their centre of mass. During the calculation, only the current
 aggregate is taken into account, so there is no possibility of getting
 'false' densities from adjacent aggregates. Therefore if some bead type is
 never present in an aggregate of specified size (but is in the `.vcf` file),
@@ -356,28 +356,29 @@ anomalies in VanDerBurgh/AddedPol/
 
 # DensityMolecules {#DensityMolecules}
 
-DensityMolecules works in similar way as the DensityAggregates, only instead of aggregates,
-the densities are calculated for specified molecule types.  Care must be taken
-with beadtype names in various molecules types, because if one beadtype appears
-in more molecule types, the resulting density for that beadtype will be
-averaged without regard for the various types of molecule it appears in.
+DensityMolecules works in similar way as the DensityAggregates, only instead of
+aggregates, the densities are calculated for specified molecule types.  Care
+must be taken with beadtype names in various molecules types, because if one
+beadtype appears in more molecule types, the resulting density for that
+beadtype will be averaged without regard for the various types of molecule it
+appears in.
 
-It is possible to use specified bead instead of the center of mass for the
-coordinates to calculate densities from. Care must be taken, because the
-order of molecule types is taken from `FIELD` rather then from
-`DensityMolcules` arguments. For example: whether bead 1 will be connected
-with `NameA` or `NameB` in `DensityMolecules ... NameA NameB -c 1 2`
-depends on molecules' order in `FIELD` file; that is if `NameA` is first in
-`FIELD`, 1 will be associated  with `NameA` and 2 with `NameB`, but if
-`NameB` is first, the associations are reverse, regardless of the order of
-names in the command's arguments. If the center of mass should be used, `x`
-is given as argument. In the above example (assuming `NameA` is first in
-`FIELD`) if bead 1 is intended to be used for `NameB`, but center of mass
-for `NameA`, then an argument of the form `-c x 1` must be used.
+It is possible to use specified bead instead of the centre of mass for the
+coordinates to calculate densities from. Care must be taken, because the order
+of molecule types is taken from `FIELD` rather then from `DensityMolcules`
+arguments. For example: whether bead 1 will be connected with `NameA` or
+`NameB` in `DensityMolecules ... NameA NameB -c 1 2` depends on molecules'
+order in `FIELD` file; that is if `NameA` is first in `FIELD`, 1 will be
+associated  with `NameA` and 2 with `NameB`, but if `NameB` is first, the
+associations are reverse, regardless of the order of names in the command's
+arguments. If the centre of mass should be used, `x` is given as argument. In
+the above example (assuming `NameA` is first in `FIELD`) if bead 1 is intended
+to be used for `NameB`, but centre of mass for `NameA`, then an argument of the
+form `-c x 1` must be used.
 
 Usage:
 
-`DensityMolecules <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
+`DensityMolecules <input.vcf> <input.agg> <width> <output.rho> <mol name(s)> <options>`
 
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
@@ -389,8 +390,8 @@ Usage:
 > > width of each bin for the distribution
 > `<output.rho>`
 > > output density file (automatic ending `agg#.rho` added)
-> `<agg sizes>`
-> > aggregate sizes for density calculation
+> `<mol name(s)>`
+> > names of molecule types to calculate density for
 > `<options>`
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
@@ -398,7 +399,7 @@ Usage:
 > > `-n <average>`
 > > > number of bins to average
 > > `-c <int>`
-> > > use specified molecule bead instead of center of mass
+> > > use specified molecule bead instead of centre of mass
 
 # GyrationAggregates utility {#GyrationAggregates}
 
@@ -450,7 +451,7 @@ Usage:
 > > `-j`
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
-> > `-t`
+> > `-bt`
 > > > specify bead types to be used for calculation (default is all)
 > > `-m <name>`
 > > > take as an aggregate size the number of `<name>` molecules in aggregates
@@ -481,6 +482,8 @@ Usage:
 > `<molecule names>`
 > > molecule types for gyration calculation
 > `<options>`
+> > `-bt`
+> > > specify bead types to be used for calculation (default is all)
 > > `-j`
 > > > specify that the `<input.vcf>` contains joined coordinates
 
