@@ -11,21 +11,25 @@ While originally it creates a `.vtf` file containing both structure and
 coordinates, I have changed it to create a separate `dl_meso.vsf` structure
 file and `All.vcf` coordinate file containing ordered timesteps.
 
+There are two versions from two versions of the
+[DL_MESO simulation package](http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx),
+namely versions 2.5 and 2.6.
+
 Usage:
 
-`traject <cores>`
+`traject-v2_5 <cores>` or `traject-v2_6 <cores>`
 
 > `<cores>`
 > > number of computer cores used for the simulation run (or the number of
 > > `HISTORY` file)
 
-The standard options cannot be used with this utility.
+The standard options cannot be used with this utility.> }}}
 
 # SelectedVcf utility {#SelectedVcf}
 
 This utility takes `.vcf` file containing either
 [ordered timesteps](\ref OrderedCoorFile) (such as `All.vcf` created by
-DL_MESO `traject` utility which was modified by me) or
+the `traject` utility which was modified by me) or
 [indexed timesteps](\ref IndexedCoorFile)
 and creates a new `.vcf` coordinate file containing only beads
 of selected types with an option of removing periodic boundary condition
@@ -42,16 +46,12 @@ Usage:
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
 > > ordered or indexed timesteps
-> `<start>`
-> > number of timestep to start from
-> `<skip>`
-> > leave out every `skip` steps
 > `<output.vcf>`
 > > output filename with indexed coordinates (must end with `.vcf`)
 > `<type names>`
 > > names of bead types to save
 > `<options>`
-> > `-j`
+> > `--join`
 > > > join individual molecules by removing periodic boundary conditions
 > > `-st <int>`
 > > > starting timestep for calculation
@@ -77,6 +77,9 @@ Usage:
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
 > > ordered or indexed timesteps
+> `<options>`
+> > `-st <int>`
+> > > timestep for creating the CONFIG file
 
 # TransformVsf utility {#TransformVsf}
 
@@ -139,15 +142,15 @@ specified molecule types.
 
 Usage:
 
-`BondLength <input.vcf> <output file> <width> <molecule names> <options>`
+`BondLength <input.vcf> <width> <output file> <molecule names> <options>`
 
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
 > > ordered or indexed timesteps
-> `<output file>`
-> > output filename containing distribution of bond lengths
 > `<width>`
 > > width of each bin for the distribution
+> `<output file>`
+> > output filename containing distribution of bond lengths
 > `<molecule names>`
 > > names of molecule types to calculate the distribution for
 
@@ -196,12 +199,11 @@ Usage:
 
 # JoinAggregates utility {#JoinAggregates}
 
-This utility reads input `.vcf` and `.agg` files and removes periodic
-boundary conditions from aggregates - e.i. it joins the aggregates. The
-distance and the bead types for closeness check are read from the first
-line of `.agg` file with contains full Aggregates command used to generate
-the file. JoinAggregates is meant for cases, where `-j` flag was omitted
-in Aggregates utility.
+This utility reads input `.vcf` and `.agg` files and removes periodic boundary
+conditions from aggregates - e.i. it joins the aggregates. The distance and the
+bead types for closeness check are read from the first line of `.agg` file with
+contains full `Aggregates` command used to generate the file. JoinAggregates is
+meant for cases, where `-j` flag was omitted in Aggregates utility.
 
 Usage:
 
@@ -221,20 +223,31 @@ Usage:
 DistrAgg calculates number and weight average aggregation numbers
 for each timestep (time evolution).
 \latexonly
-The number average aggregation number, $\langle A_{\mathrm{s}} \rangle_n$
-is defined as:
+The number average aggregation number, $\langle
+A_{\mathrm{s}}\rangle_{\mathrm{n}}$ is defined as:
 
 \begin{equation}
-\langle A_{\mathrm{s}} \rangle_n = \frac{\sum_{i=1}^N m_i}{N} \mbox{,}
+\langle A_{\mathrm{s}} \rangle_n = \frac{\sum_{i=1}^N A_{\mathrm{s},i}}{N},
 \end{equation}
 
-where $m_i$ is weight (aggregation number) of aggregate $i$ and $N$ is
-total number of aggregates. The weight average aggregation number, $\langle
-A_{\mathrm{s}} \rangle_w$ is then defined as:
+where $A_{\mathrm{s},i}$ is the aggregation number of an aggregate $i$ and $N$
+is total number of aggregates. The weight average aggregation number,
+$\langle A_{\mathrm{s}}\rangle_w$ is then defined as:
 
 \begin{equation}
-\langle A_{\mathrm{s}} \rangle_w = \frac{\sum_{i=1}^N m_i^2}{\sum_{i=1}^N m_i} \mbox{.}
+\langle A_{\mathrm{s}}\rangle_w = \frac{\sum_{i=1}^N
+A_{\mathrm{s},i}^2}{\sum_{i=1}^N A_{\mathrm{s},i}}
+ = \frac{\sum_{i=1}^N
+A_{\mathrm{s},i}^2}{N_{\mathrm{mol}}},
 \end{equation}
+where $N_{\mathrm{mol}}$ is the total number of molecules. The last average is
+the average mass of an aggregate:
+
+\begin{equation}
+\langle A_{\mathrm{s}}\rangle_m = \frac{\sum_{i=1}^N
+m_i}{N},
+\end{equation}
+where $m_i$ is mass of an aggregate $i$.
 \endlatexonly
 
 It also calculates overall number and weight distribution function.
@@ -242,7 +255,7 @@ It also calculates overall number and weight distribution function.
 The number distribution function, $F_n (A_{\mathrm{s}})$ is defined as:
 
 \begin{equation}
-F_n (A_{\mathrm{s}}) = \frac{N_{A_{\mathrm{s}}}}{\sum_{i=1}^N N_i} \mbox{,}
+F_{\mathrm{n}}(A_{\mathrm{s}}) = \frac{N_{A_{\mathrm{s}}}}{\sum_{i=1}^N N_i},
 \end{equation}
 
 where $N_i$ is the number of aggregates with aggregation number
@@ -250,17 +263,16 @@ $A_{\mathrm{s}} = i$.  The weight distribution function, $F_w
 (A_{\mathrm{s}})$ is then defined as:
 
 \begin{equation}
-F_w(A_{\mathrm{s}}) = \frac{m_{A_{\mathrm{s}} }
-N_{A_{\mathrm{s}}}}{\sum_{i=1}^N
-m_i N_i} \mbox{,}
+F_{\mathrm{w}}(A_{\mathrm{s}}) = \frac{A_{\mathrm{s}}
+N_{A_{\mathrm{s}}}}{\sum_{i=1}^N A_{\mathrm{s},i}} = \frac{A_{\mathrm{s}}
+N_{A_{\mathrm{s}}}}{N_{\mathrm{mol}}},
 \end{equation}
 
 where $m_{A_{\mathrm{s}} }$ and $m_i$ are again the weight, that is the
 aggregation number.
 \endlatexonly
 
-Lastly, the utility calculates volume fractions of all aggregates, where it
-(for now) assumes that all beads have reduced mass of 1.
+Lastly, the utility calculates volume fractions of all aggregates.
 \latexonly
 Volume fraction of an aggregate with aggregation number $A_{\mathrm{s}}$ is
 defined as:
@@ -269,12 +281,8 @@ defined as:
 \phi(A_{\mathrm{s}}) = \frac{n_{A_{\mathrm{s}}} N_{A_{\mathrm{s}}}}{\sum_{i=1}^N n_i N_i} \mbox{,}
 \end{equation}
 
-where $n_i$ is volume of an aggregate with $A_{\mathrm{s}} = i$ -- that is
-the number of beads in the aggregate.
-
-It should be noted that weight average aggregation number and weight
-distribution function do not take into account the actual weight of an
-associates -- it is weighted via the aggregation number itself.
+where $n_i$ is volume of an aggregate with $A_{\mathrm{s}} = i$ (which is
+equivalent to the number of beads in the aggregate).
 \endlatexonly
 
 The utility reads information about aggregate from input file with
@@ -293,12 +301,14 @@ Usage:
 > > output filename with weight and number average aggregation number in
 > > each timestep
 > `<options>`
-> > `-n <int>`
+> > `-st <int>`
 > > > starting timestep for calculation (does not affect calculation of
 > > > time evolution)
 > > `--no-unimers`
 > > > free chains shouldn't be used to calcalute average aggregation
 > > > numbers
+> > `-x <name(s)>`
+> > > exclude specified molecule(s)
 
 # DensityAggregates {#AggDensity}
 
@@ -338,7 +348,7 @@ Usage:
 > `<agg sizes>`
 > > aggregate sizes for density calculation
 > `<options>`
-> > `-j`
+> > `--joined`
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
 > > `-n <int>`
@@ -378,14 +388,11 @@ form `-c x 1` must be used.
 
 Usage:
 
-`DensityMolecules <input.vcf> <input.agg> <width> <output.rho> <mol name(s)> <options>`
+`DensityMolecules <input.vcf> <width> <output.rho> <mol name(s)> <options>`
 
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either
 > > ordered or indexed timesteps
-> `<input.agg>`
-> > input filename (must end with `.agg`) containing information about
-> > aggregates
 > `<width>`
 > > width of each bin for the distribution
 > `<output.rho>`
@@ -393,12 +400,12 @@ Usage:
 > `<mol name(s)>`
 > > names of molecule types to calculate density for
 > `<options>`
-> > `-j`
+> > `--joined`
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
-> > `-n <average>`
+> > `-n <int>`
 > > > number of bins to average
-> > `-c <int>`
+> > `-c x/<int>`
 > > > use specified molecule bead instead of centre of mass
 
 # GyrationAggregates utility {#GyrationAggregates}
@@ -448,7 +455,7 @@ Usage:
 > `<agg sizes>`
 > > aggregate sizes for gyration calculation
 > `<options>`
-> > `-j`
+> > `--joined`
 > > > specify that the `<input.vcf>` contains aggregates with joined
 > > > coordinates
 > > `-bt`
@@ -484,7 +491,7 @@ Usage:
 > `<options>`
 > > `-bt`
 > > > specify bead types to be used for calculation (default is all)
-> > `-j`
+> > `--joined`
 > > > specify that the `<input.vcf>` contains joined coordinates
 
 \todo GyrationMolecules: implement using only selected bead types for
@@ -583,7 +590,7 @@ Usage:
 > `<type names>`
 > > names of bead types to save
 > `<options>`
-> > `-j`
+> > `--joined`
 > > > join individual molecules by removing periodic boundary conditions
 > >   `-n1 <int>`
 > > > number of timestep to start the first simulation from

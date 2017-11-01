@@ -96,8 +96,10 @@ void analyze_bins (int n_blocks, int n_vals) { //{{{
 
   // collect block averages
   for(i = remainder; i < n_vals; i++) {
+    // overall averages
     av += data[i];
     av2 += data[i]*data[i];
+    // per-block average
     av_block[block] += data[i];
 
     if(i == block_end) {

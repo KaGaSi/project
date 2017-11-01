@@ -16,7 +16,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.rho>    output density file (automatic ending '#.rho' added)\n");
   fprintf(stderr, "   <agg sizes>     aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -j           specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      --joined     specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -n <int>     number of bins to average\n");
   fprintf(stderr, "      -st <int>    starting timestep for calculation\n");
   fprintf(stderr, "      -m <name>    agg size means number of <name> molecule types in an aggregate\n");
@@ -48,7 +48,7 @@ system.\n\n");
       printf("   <output.rho>    output density file (automatic ending '#.rho' added)\n");
       printf("   <agg sizes>     aggregate sizes to calculate density for\n");
       printf("   <options>\n");
-      printf("      -j           specify that aggregates with joined coordinates are used\n");
+      printf("      --joined     specify that aggregates with joined coordinates are used\n");
       printf("      -n <int>     number of bins to average\n");
       printf("      -st <int>    starting timestep for calculation\n");
       printf("      -m <name>    agg size means number of <name> molecule types in an aggregate\n");
@@ -82,7 +82,7 @@ system.\n\n");
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-j") != 0 &&
+        strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
@@ -166,7 +166,7 @@ system.\n\n");
   double width = atof(argv[count]); //}}}
 
   // <output.rho> - filename with bead densities //{{{
-  char output_rho[16];
+  char output_rho[32];
   strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{
