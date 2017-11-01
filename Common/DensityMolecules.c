@@ -8,7 +8,7 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <width> <output.rho> <molecule names> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.vcf> <width> <output.rho> <molecule name(s)> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
   fprintf(stderr, "   <width>           width of a single bin\n");
@@ -16,7 +16,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <molecule names>  molecule names to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -n <average>   number of bins to average\n");
+  fprintf(stderr, "      -n <int>       number of bins to average\n");
   fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
   fprintf(stderr, "      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
   CommonHelp(1);
@@ -41,7 +41,7 @@ with optional bond file) files to determine all information about the \
 system.\n\n");
 
       printf("Usage:\n");
-      printf("   %s <input.vcf> <width> <output.rho> <molecule names> <options>\n\n", argv[0]);
+      printf("   %s <input.vcf> <width> <output.rho> <molecule name(s)> <options>\n\n", argv[0]);
 
       printf("   <input.vcf>       input filename (vcf format)\n");
       printf("   <width>           width of a single bin\n");
@@ -49,7 +49,7 @@ system.\n\n");
       printf("   <molecule names>  molecule names to calculate density for\n");
       printf("   <options>\n");
       printf("      --joined       specify that aggregates with joined coordinates are used\n");
-      printf("      -n <average>   number of bins to average\n");
+      printf("      -n <int>       number of bins to average\n");
       printf("      -st <int>      starting timestep for calculation\n");
       printf("      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
       CommonHelp(0);
