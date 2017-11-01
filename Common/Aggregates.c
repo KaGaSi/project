@@ -565,6 +565,13 @@ system.\n\n");
   // }}}
   //}}}
 
+  // print command to stdout //{{{
+  if (!silent) {
+    for (int i = 0; i < argc; i++)
+      printf(" %s", argv[i]);
+    printf("\n\n");
+  } //}}}
+
   count = 0; // count mandatory arguments
 
   // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
