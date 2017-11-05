@@ -256,4 +256,12 @@ void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType); //}}}
  * \param [out] Aggregate   information about individual molecules
  */
 void FreeAggregate(Counts Counts, Aggregate **Aggregate); //}}}
+
+// Date() //{{{
+/**
+ * \brief Get the date.
+ *
+ * \param[out] date   year-month-day
+ */
+void Date(char *date); // }}}
 #endif

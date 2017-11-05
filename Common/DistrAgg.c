@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
+#include <time.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
 
@@ -183,24 +184,6 @@ the system.\n\n");
     Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
   } //}}}
 
-  // open output files and print first line //{{{
-  FILE *out;
-  if ((out = fopen(output_distr, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_distr);
-    exit(1);
-  }
-
-  fprintf(out, "# A_s  wdistr  ndistr voldistr\n");
-  fclose(out);
-
-  if ((out = fopen(output_avg, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_avg);
-    exit(1);
-  }
-
-  fprintf(out, "# step  w-avg  n-avg\n");
-  fclose(out); //}}}
-
   // print information - verbose output //{{{
   if (verbose) {
     printf("Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
@@ -235,10 +218,30 @@ the system.\n\n");
     count_agg[i] = 0;
   } //}}}
 
+  // print the first two lines to output file with per-step averages //{{{
+  FILE *out;
+  if ((out = fopen(output_avg, "w")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output_avg);
+    exit(1);
+  }
+
+  // print command
+  putc('#', out);
+  for (int i = 0; i < argc; i++){
+    fprintf(out, " %s", argv[i]);
+  }
+  // add date
+  char date[26];
+  Date(date);
+  fprintf(out, " on %s\n", date);
+
+  fprintf(out, "# 1:step 2:<M>_n 3:<M>_w\n");
+  fclose(out); //}}}
+
   // main loop //{{{
-  int test, size_sqr = 0;
+  int test, sum_agg = 0;// sum_mass = 0;
   count = 0;
-  double avg_n_sum = 0, avg_w_sum = 0;
+  double mass_sum[2] = {0}; // [0] = simple sum, [1] = sum of squares
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
@@ -276,9 +279,8 @@ the system.\n\n");
     } //}}}
 
     // go through all aggregates
-    double avg_n = 0, avg_w = 0, avg_m = 0;
     int aggs = 0, // number of aggregates (w/o unimers if --no-unimers)
-        mols = 0; // number of molecules (w/o those in unimers if --no-unimers)
+        avg_n = 0, avg_w = 0; // per-step averages
     for (int i = 0; i < Counts.Aggregates; i++) {
       int size = Aggregate[i].nMolecules;
 
@@ -298,16 +300,15 @@ the system.\n\n");
         } //}}}
 
         // distribution //{{{
-        ndistr[size-1]++;
-        wdistr[size-1] += Aggregate[i].nMolecules;
-        voldistr[size-1] += Aggregate[i].nBeads;
-        size_sqr += SQR(size); //}}}
+        ndistr[size-1] += Aggregate[i].Mass;
+        wdistr[size-1] += SQR(Aggregate[i].Mass);
+        voldistr[size-1] += Aggregate[i].nBeads; //}}}
 
         // number of various species in the aggregate //{{{
         if (!no_uni || size != 1) {
           count_agg[size-1]++;
-          avg_n_sum += Aggregate[i].Mass;
-          avg_w_sum += SQR(Aggregate[i].Mass);
+          mass_sum[0] += Aggregate[i].Mass;
+          mass_sum[1] += SQR(Aggregate[i].Mass);
 
           int *mol_count = calloc(Counts.TypesOfMolecules,sizeof(int));
 
@@ -324,15 +325,17 @@ the system.\n\n");
         } //}}}
       }
 
-      // average aggregation number //{{{
+      // average aggregation number during the step //{{{
       if (!no_uni || Aggregate[i].nMolecules != 1) {
         aggs++;
-        mols += size;
 
         avg_n += Aggregate[i].Mass;
         avg_w += SQR(Aggregate[i].Mass);
       } //}}}
     }
+
+    // add to total number of aggregates
+    sum_agg += aggs;
 
     // print averages to output file //{{{
     if ((out = fopen(output_avg, "a")) == NULL) {
@@ -344,7 +347,7 @@ the system.\n\n");
       exit(1);
     }
 
-    fprintf(out, "%5d %8.4f %8.4f %8.4f\n", count, avg_w/mols, avg_n/aggs, avg_m);
+    fprintf(out, "%5d %8.3f %8.3f\n", count, (double)(avg_n)/aggs, (double)(avg_w)/avg_n);
     fclose(out); //}}}
   }
   fclose(agg);
@@ -358,14 +361,30 @@ the system.\n\n");
     }
   } //}}}
 
-//printf("%7.3f %7.3f\n", avg_n_sum/count, avg_w_sum/count);
+  // print the first two lines to output file with distributions //{{{
+  if ((out = fopen(output_distr, "w")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output_distr);
+    exit(1);
+  }
+
+  // print command
+  putc('#', out);
+  for (int i = 0; i < argc; i++){
+    fprintf(out, " %s", argv[i]);
+  }
+  // add date
+  fprintf(out, " on %s\n", date);
+
+  fprintf(out, "# A_s  wdistr  ndistr voldistr\n");
+  fclose(out); //}}}
 
   // number of species in agg file //{{{
-  int mols = 0, beads = 0, mons = 0;
+  int mols = 0, beads = 0, mons = 0, mass = 0;
   for (int i = 0; i < Counts.Aggregates; i++) {
     mols += Aggregate[i].nMolecules;
     beads += Aggregate[i].nBeads;
     mons += Aggregate[i].nMonomers;
+    mass += Aggregate[i].Mass;
   }
   if (verbose) {
     printf("Number of species in provided .agg file: \n");
@@ -374,11 +393,11 @@ the system.\n\n");
     printf("%10d monomeric beads\n", mons);
   } //}}}
 
-  // total number of Aggregates in the simulation //{{{
-  int sum_agg = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
-    sum_agg += ndistr[i];
-  } //}}}
+  // total mass of aggregates in the simulation //{{{
+//int sum_mass = 0;
+//for (int i = 0; i < Counts.Molecules; i++) {
+//  sum_mass += ndistr[i];
+//} //}}}
 
   // print distributions to output file //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
@@ -394,7 +413,18 @@ the system.\n\n");
 
   count -= start -1;
   for (int i = 0; i < mols; i++) {
-    fprintf(out, "%4d %lf %lf %lf\n", i+1, (double)(wdistr[i])/(mols*count), (double)(ndistr[i])/sum_agg, voldistr[i]/(count*molecules_vol));
+    /* number distribution of aggregate masses, F(M_i)_n =
+     * ndistr[i]/sum_agg, is normalised by number average of mass, <M>_n =
+     * mass_sum[0]/sum_agg, so F(M_i)_n = ndistr[i]/mass_sum[0] to give a
+     * sum of 1 overall the whole of F(M_i)_w */
+    /* weighed distribution of aggregate masses, F(M_i)_w =
+     * wdistr[i]/mass_sum[0], is normalised by weighed average of mass, <M>_w =
+     * mass_sum[1]/mass_sum[0], so F(M_i)_w = wdistr[i]/mass_sum[1] to give a
+     * sum of 1 overall the whole of F(M_i)_w */
+    fprintf(out, "%4d %lf %lf %lf\n", i+1, // A_s
+                                      (double)(ndistr[i])/mass_sum[0], // weighed distribution
+                                      (double)(wdistr[i])/mass_sum[1], // number distribution
+                                      voldistr[i]/(count*molecules_vol)); // volume distribution
   }
   fclose(out); //}}}
 
@@ -436,10 +466,8 @@ the system.\n\n");
   } //}}}
 
   // print legend (with column numbers) //{{{
-  printf("1:<A_s>_w ");
-  printf("2:<A_s>_n");
-  fprintf(out, "# 1:<A_s>_w");
-  fprintf(out, " 2:<A_s>_n");
+  printf("1:<A_s>_n 2:<A_s>_w");
+  fprintf(out, "# 1:<A_s>_n 2:<A_s>_w");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     printf(" %d:<%s>_n", i+3, MoleculeType[i].Name);
     fprintf(out, " %d:<%s>_n", i+3, MoleculeType[i].Name);
@@ -448,10 +476,10 @@ the system.\n\n");
   putc('\n', out); //}}}
 
   // print the averages //{{{
-  printf("%10.3f", avg_w_sum/avg_n_sum); // <A_s>_w
-  fprintf(out, "%7.3f", avg_w_sum/avg_n_sum); // <A_s>_w
-  printf("%10.3f", (double)(avg_n_sum)/count_agg[0]); // <A_s>_n
-  fprintf(out, "%7.3f", (double)(avg_n_sum)/count_agg[0]); // <A_s>_n
+  printf("%10.3f", (double)(mass_sum[0])/count_agg[0]); // <A_s>_n
+  fprintf(out, "# %10.3f", (double)(mass_sum[0])/count_agg[0]); // <A_s>_n
+  printf("%10.3f", mass_sum[1]/mass_sum[0]); // <Mass>_w
+  fprintf(out, "%10.3f", mass_sum[1]/mass_sum[0]); // <Mass>_w
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     printf(" %7.3f", (double)(molecules[0][i][0])/count_agg[0]); // <species>_n
     fprintf(out, " %7.3f", (double)(molecules[0][i][0])/count_agg[0]); // <species>_n
