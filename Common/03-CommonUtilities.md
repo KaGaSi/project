@@ -439,6 +439,25 @@ Then it calculates\endlatexonly the asphericity, \latexonly $b$:
 \end{equation}
 \endlatexonly
 
+It calculates number averages of all the properties and weight and z averages
+for radius of gyration. \latexonly The number average for a quantity
+$\mathcal{O}$ is defined as:
+\begin{equation}
+  \langle\mathcal{O}\rangle_{\mathrm{n}} = \frac{\sum_i \mathcal{O}_i}{N},
+\end{equation}
+where $N$ is the total number of aggregates. The weight average is:
+\begin{equation}
+  \langle\mathcal{O}\rangle_{\mathrm{w}} = \frac{\sum_i m_i
+    \mathcal{O}_i}{\sum_i m_i},
+\end{equation}
+where $m_i$ is mass of an aggregate $i$. Lastly, the z-average is:
+\begin{equation}
+  \langle\mathcal{O}\rangle_{\mathrm{z}} = \frac{\sum_i m^2_i
+    \mathcal{O}_i}{\sum_i m^2_i}.
+\end{equation}
+
+\endlatexonly
+
 Usage:
 
 `GyrationAggregates <input.vcf> <input.agg> <output> <agg sizes> <options>`
@@ -463,13 +482,15 @@ Usage:
 > > `-m <name>`
 > > > take as an aggregate size the number of `<name>` molecules in aggregates
 > > > instead of the number of all molecules
+> > `--no-unimers`
+> > > free chains shouldn't be used for calculation
 
 \todo GyrationAggregates: understand `jacobi` function
 
 # GyrationMolecules utility {#GyrationMolecules}
 
 This utility function in the same way as GyrationAggregates, but it calculates
-radii of gyration for specified molecule names instead of aggregate sizes.
+radii of gyration for specified molecule types instead of aggregate sizes.
 
 Right now it calculates gyration for all beads in the specified molecule types.
 
