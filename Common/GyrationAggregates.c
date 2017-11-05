@@ -18,6 +18,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      --joined         specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -bt              specify bead types to be used for calculation (default is all)\n");
   fprintf(stderr, "      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      --no-unimers      do not count unimers into averages\n");
   CommonHelp(1);
 } //}}}
 
@@ -235,6 +236,7 @@ system.\n\n");
       printf("      --joined         specify that aggregates with joined coordinates are used\n");
       printf("      -bt              specify bead types to be used for calculation (default is all)\n");
       printf("      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
+      printf("      --no-unimers      do not count unimers into averages\n");
       CommonHelp(0);
       exit(0);
     }
@@ -254,7 +256,8 @@ system.\n\n");
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-bt") != 0 &&
-        strcmp(argv[i], "-m") != 0) {
+        strcmp(argv[i], "-m") != 0 &&
+        strcmp(argv[i], "--no-unimers") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -297,6 +300,9 @@ system.\n\n");
 
   // are provided coordinates joined? //{{{
   bool joined = BoolOption(argc, argv, "--joined"); //}}}
+
+  // do not count unimers towards averages //{{{
+  bool no_uni = BoolOption(argc, argv, "--no-unimers"); //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -511,6 +517,8 @@ system.\n\n");
   free(bonds_file); //}}}
 
   // allocate memory for sum of various things //{{{
+  double sum_mass = 0, // total mass of aggregates throughout simulation
+         sum_sqr_mass = 0; // sum of squared mass of aggregates throughout simulation
   double **Rg_sum = malloc(aggs*sizeof(double *));
   double *Anis_sum = calloc(aggs,sizeof(double));
   double *Acyl_sum = calloc(aggs,sizeof(double));
@@ -579,89 +587,100 @@ system.\n\n");
     } //}}}
 
     // calculate shape descriptors //{{{
+    double step_mass = 0, // total mass of aggregates
+           step_sqr_mass = 0; // sum of squares of aggregate masses
     for (int i = 0; i < Counts.Aggregates; i++) {
+      if (!no_uni || Aggregate[i].nMolecules != 1) {
 
-      // test if aggregate 'i' should be used //{{{
-      int mols = 0; // agg size
-      if (specific_molecule != -1) { // agg size = number of molecules of type 'specific_molecule'
-        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          int id = Aggregate[i].Molecule[j];
-          if (specific_molecule == Molecule[id].Type) {
-            mols++;
+        // test if aggregate 'i' should be used //{{{
+        int mols = 0; // agg size
+        if (specific_molecule != -1) { // agg size = number of molecules of type 'specific_molecule'
+          for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+            int id = Aggregate[i].Molecule[j];
+            if (specific_molecule == Molecule[id].Type) {
+              mols++;
+            }
           }
+        } else { // agg size = total number of all molecules
+          mols = Aggregate[i].nMolecules;
         }
-      } else { // agg size = total number of all molecules
-        mols = Aggregate[i].nMolecules;
-      }
-      // is 'mols' agg size in provided list?
-      int correct_size = -1;
-      for (int j = 0; j < aggs; j++) {
-        if (agg_sizes[j][0] == mols) {
-          correct_size = j;
-        }
-      } //}}}
-
-      if (correct_size != -1) {
-        agg_counts[correct_size]++;
-        agg_sizes[correct_size][1]++;
-
-        // copy bead ids to a separate array{{{
-        int *list = malloc(Aggregate[i].nBeads*sizeof(int));
-        int n = 0;
-        for (int j = 0; j < Aggregate[i].nBeads; j++) {
-          int id = Aggregate[i].Bead[j];
-          if (BeadType[Bead[id].Type].Use) {
-            list[n] = id;
-            n++;
+        // is 'mols' agg size in provided list?
+        int correct_size = -1;
+        for (int j = 0; j < aggs; j++) {
+          if (agg_sizes[j][0] == mols) {
+            correct_size = j;
           }
         } //}}}
 
-        Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+        if (correct_size != -1) {
+          agg_counts[correct_size]++;
+          agg_sizes[correct_size][1]++;
 
-//      // calcule Rg the 'usual way' -- for testing purposes //{{{
-//      double Rg2 = 0;
-//      Vector com = CentreOfMass(n, list, Bead, BeadType);
-//      for (int j = 0; j < n; j++) {
-//        Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
-//        Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
-//      }
-//      Rg2 /= n; //}}}
+          // copy bead ids to a separate array //{{{
+          int *list = malloc(Aggregate[i].nBeads*sizeof(int));
+          int n = 0;
+          for (int j = 0; j < Aggregate[i].nBeads; j++) {
+            int id = Aggregate[i].Bead[j];
+            if (BeadType[Bead[id].Type].Use) {
+              list[n] = id;
+              n++;
+            }
+          } //}}}
 
-        free(list); // free array of bead ids for gyration calculation
+          Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
 
-        // Radius of gyration
-        Rg[correct_size][0] +=      sqrt(eigen.x + eigen.y + eigen.z);
-        Rg[correct_size][1] +=           eigen.x + eigen.y + eigen.z;
-        Rg[correct_size][2] += CUBE(sqrt(eigen.x + eigen.y + eigen.z));
-        // relative shape anisotropy
-        Anis[correct_size] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
-        // acylindricity
-        Acyl[correct_size] += eigen.y - eigen.x;
-        // asphericity
-        Aspher[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
-        // aggregate size
-        Size_sum[correct_size][0] +=     Aggregate[i].nMolecules;
-        Size_sum[correct_size][1] += SQR(Aggregate[i].nMolecules);
+  //      // calcule Rg the 'usual way' -- for testing purposes //{{{
+  //      double Rg2 = 0;
+  //      Vector com = CentreOfMass(n, list, Bead, BeadType);
+  //      for (int j = 0; j < n; j++) {
+  //        Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
+  //        Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
+  //      }
+  //      Rg2 /= n; //}}}
 
-        // count number of Diblocks and Surfacts in aggrate
-        // TODO: generalise
-        int Diblock = 0, Surfact = 0, Fluores = 0;
-        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Diblock") == 0) {
-            Diblock++;
-          } else if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Surfact") == 0) {
-            Surfact++;
-          } else {
-            Fluores++;
+          free(list); // free array of bead ids for gyration calculation
+
+          double Rgi = sqrt(eigen.x + eigen.y + eigen.z); 
+
+          // agg masses
+          step_mass += Aggregate[i].Mass; // for this timestep
+          step_sqr_mass += SQR(Aggregate[i].Mass); // for this timestep
+          sum_mass += Aggregate[i].Mass; // for all timesteps
+          sum_sqr_mass += SQR(Aggregate[i].Mass); // for all timesteps
+          // Radius of gyration
+          Rg[correct_size][0] += Rgi; // number avg
+          Rg[correct_size][1] += Rgi * Aggregate[i].Mass; // weight average
+          Rg[correct_size][2] += Rgi * SQR(Aggregate[i].Mass); // z-average
+          // relative shape anisotropy
+          Anis[correct_size] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
+          // acylindricity
+          Acyl[correct_size] += eigen.y - eigen.x;
+          // asphericity
+          Aspher[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
+          // aggregate size
+          Size_sum[correct_size][0] +=     Aggregate[i].nMolecules;
+          Size_sum[correct_size][1] += SQR(Aggregate[i].nMolecules);
+
+          // count number of Diblocks and Surfacts in aggrate
+          // TODO: generalise
+          int Diblock = 0, Surfact = 0, Fluores = 0;
+          for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+            if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Diblock") == 0) {
+              Diblock++;
+            } else if (strcmp(MoleculeType[Molecule[Aggregate[i].Molecule[j]].Type].Name, "Surfact") == 0) {
+              Surfact++;
+            } else {
+              Fluores++;
+            }
           }
-        }
 
-        Molecules_sum[correct_size][0] +=     Diblock;
-        Molecules_sum[correct_size][1] += SQR(Diblock);
-        Molecules_sum[correct_size][2] +=     Surfact;
-        Molecules_sum[correct_size][3] += SQR(Surfact);
-        Molecules_sum[correct_size][4] +=     Fluores;
-        Molecules_sum[correct_size][5] += SQR(Fluores);
+          Molecules_sum[correct_size][0] +=     Diblock;
+          Molecules_sum[correct_size][1] += SQR(Diblock);
+          Molecules_sum[correct_size][2] +=     Surfact;
+          Molecules_sum[correct_size][3] += SQR(Surfact);
+          Molecules_sum[correct_size][4] +=     Fluores;
+          Molecules_sum[correct_size][5] += SQR(Fluores);
+        }
       }
     } //}}}
 
@@ -698,7 +717,7 @@ system.\n\n");
 
       agg_counts[0] += agg_counts[i];
     }
-    fprintf(out, " %8.5f %8.5f %8.5f", Rg[0][0]/agg_counts[0], Rg[0][1]/Rg[0][0], Rg[0][2]/Rg[0][1]);
+    fprintf(out, " %8.5f %8.5f %8.5f", Rg[0][0]/agg_counts[0], Rg[0][1]/step_mass, Rg[0][2]/step_sqr_mass);
     fprintf(out, " %8.5f", Anis[0]/agg_counts[0]);
     fprintf(out, " %8.5f", Acyl[0]/agg_counts[0]);
     fprintf(out, " %8.5f", Aspher[0]/agg_counts[0]);
@@ -776,8 +795,8 @@ system.\n\n");
     (double)(Size_sum[0][1])/Size_sum[0][0], //<A_s>_w
     (double)(Size_sum[0][0])/agg_sizes[0][1], //<A_s>_n
     Rg_sum[0][0]/agg_sizes[0][1],
-    Rg_sum[0][1]/Rg_sum[0][0],
-    Rg_sum[0][2]/Rg_sum[0][1],
+    Rg_sum[0][1]/sum_mass,
+    Rg_sum[0][2]/sum_sqr_mass,
     Anis_sum[0]/agg_sizes[0][1],
     Acyl_sum[0]/agg_sizes[0][1],
     Aspher_sum[0]/agg_sizes[0][1]);
@@ -792,8 +811,8 @@ system.\n\n");
     (double)(Size_sum[0][1])/Size_sum[0][0], //<A_s>_w
     (double)(Size_sum[0][0])/agg_sizes[0][1], //<A_s>_n
     Rg_sum[0][0]/agg_sizes[0][1],
-    Rg_sum[0][1]/Rg_sum[0][0],
-    Rg_sum[0][2]/Rg_sum[0][1],
+    Rg_sum[0][1]/sum_mass,
+    Rg_sum[0][2]/sum_sqr_mass,
     Anis_sum[0]/agg_sizes[0][1],
     Acyl_sum[0]/agg_sizes[0][1],
     Aspher_sum[0]/agg_sizes[0][1]);
