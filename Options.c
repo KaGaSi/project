@@ -215,7 +215,6 @@ bool BeadTypeOption(int argc, char **argv, Counts Counts,
         int type = FindBeadType(argv[types], Counts, *BeadType);
 
         (*BeadType)[type].Use = true;
-        printf("%s\n", (*BeadType)[type].Name);
       }
     }
   }
