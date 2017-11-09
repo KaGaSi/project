@@ -26,26 +26,26 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 DistrAgg calculates weight and number average aggregation numbers during the \
 simulation run as well as overall weight and number distributions and volume \
 fractions of aggregates.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD \
 (along with optional bond file) files to determine all information about \
 the system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
 
-      printf("   <input>              input filename (agg format)\n");
-      printf("   <output distr file>  filename with weight and number distributions\n");
-      printf("   <output avg file>    filename with weight and number averages throughout simulation\n");
-      printf("   <options>\n");
-      printf("      -st <int>         start distribution calculation with <int>-th step\n");
-      printf("      --no-unimers      do not count unimers into averages\n");
-      printf("      -x <name(s)>      exclude aggregate containing only specified molecule(s)\n");
+      fprintf(stdout, "   <input>              input filename (agg format)\n");
+      fprintf(stdout, "   <output distr file>  filename with weight and number distributions\n");
+      fprintf(stdout, "   <output avg file>    filename with weight and number averages throughout simulation\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      -st <int>         start distribution calculation with <int>-th step\n");
+      fprintf(stdout, "      --no-unimers      do not count unimers into averages\n");
+      fprintf(stdout, "      -x <name(s)>      exclude aggregate containing only specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -119,8 +119,8 @@ the system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -186,7 +186,7 @@ the system.\n\n");
 
   // print information - verbose output //{{{
   if (verbose) {
-    printf("Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
+    fprintf(stdout, "Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
     char null[1] = {'\0'};
     VerboseOutput(verbose2, null, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
   }
@@ -195,19 +195,15 @@ the system.\n\n");
   free(bonds_file); //}}}
 
   // arrays for distribution //{{{
-  double wdistr[Counts.Molecules];
   int ndistr[Counts.Molecules];
+  int wdistr[Counts.Molecules];
   int voldistr[Counts.Molecules];
   // number of aggregates throughout simulation
   int count_agg[Counts.Molecules];
-
   // molecule typs in aggregates: [agg size][mol type][number or SQR(number)]
-  int ***molecules = malloc(Counts.Molecules*sizeof(int **));
+  int **molecules_sum = malloc(Counts.Molecules*sizeof(int *));
   for (int i = 0; i < Counts.Molecules; i++) {
-    molecules[i] = malloc(Counts.TypesOfMolecules*sizeof(int *));
-    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      molecules[i][j] = calloc(2,sizeof(int));
-    }
+    molecules_sum[i] = calloc(Counts.TypesOfMolecules,sizeof(int));
   }
 
   // zeroize arrays
@@ -239,20 +235,40 @@ the system.\n\n");
   fclose(out); //}}}
 
   // main loop //{{{
-  int test, sum_agg = 0;// sum_mass = 0;
+  int test, agg_sum = 0;// sum_mass = 0;
   count = 0;
   double mass_sum[2] = {0}; // [0] = simple sum, [1] = sum of squares
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
-    // print (or not) step number{{{
+    // print (or not) step number //{{{
     count++;
-    if (!silent) {
-      if (script) {
-        printf("Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        printf("\rStep: %6d", count);
+    if (count < start) {
+      if (!silent) {
+        if (script) {
+          fprintf(stdout, "Discarding Step: %6d\n", count);
+        } else {
+          fflush(stdout);
+          fprintf(stdout, "\rDiscarding Step: %6d", count);
+        }
+      }
+    } else if (count == start) {
+      if (!silent) {
+        if (script) {
+          fprintf(stdout, "Discarded Steps: %6d\n", count-1);
+        } else {
+          fflush(stdout);
+          fprintf(stdout, "\rDiscarded Steps: %6d\n", count-1);
+        }
+      }
+    } else {
+      if (!silent) {
+        if (script) {
+          fprintf(stdout, "Step: %6d\n", count);
+        } else {
+          fflush(stdout);
+          fprintf(stdout, "\rStep: %6d", count);
+        }
       }
     } //}}}
 
@@ -261,26 +277,26 @@ the system.\n\n");
     // print info about aggregates if '-V' is used //{{{
     if (verbose2) {
       for (int i = 0; i < Counts.Aggregates; i++) {
-        printf("\nAggregate[%3d].{Mass = %6.2f,\nnMolecules = %3d:", i+1, Aggregate[i].Mass, Aggregate[i].nMolecules);
+        fprintf(stdout, "\nAggregate[%3d].{Mass = %6.2f,\nnMolecules = %3d:", i+1, Aggregate[i].Mass, Aggregate[i].nMolecules);
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          printf(" %d", Aggregate[i].Molecule[j]+1);
+          fprintf(stdout, " %d", Aggregate[i].Molecule[j]+1);
         }
-        printf(",\n nBeads = %4d:", Aggregate[i].nBeads);
+        fprintf(stdout, ",\n nBeads = %4d:", Aggregate[i].nBeads);
         for (int j = 0; j < Aggregate[i].nBeads; j++) {
-          printf(" %d", Aggregate[i].Bead[j]);
+          fprintf(stdout, " %d", Aggregate[i].Bead[j]);
         }
-        printf(",\n nMonomers = %4d:", Aggregate[i].nMonomers);
+        fprintf(stdout, ",\n nMonomers = %4d:", Aggregate[i].nMonomers);
         for (int j = 0; j < Aggregate[i].nMonomers; j++) {
-          printf(" %d", Aggregate[i].Monomer[j]);
+          fprintf(stdout, " %d", Aggregate[i].Monomer[j]);
         }
-        printf("}\n");
+        fprintf(stdout, "}\n");
       }
       putchar('\n');
     } //}}}
 
     // go through all aggregates
-    int aggs = 0, // number of aggregates (w/o unimers if --no-unimers)
-        avg_n = 0, avg_w = 0; // per-step averages
+    int aggs_step = 0, // number of aggregates (w/o unimers if --no-unimers)
+        avg_n_step = 0, avg_w_step = 0; // per-step averages
     for (int i = 0; i < Counts.Aggregates; i++) {
       int size = Aggregate[i].nMolecules;
 
@@ -317,8 +333,7 @@ the system.\n\n");
           }
 
           for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-            molecules[size-1][j][0] += mol_count[j];
-            molecules[size-1][j][1] += SQR(mol_count[j]);
+            molecules_sum[size-1][j] += mol_count[j];
           }
 
           free(mol_count);
@@ -327,15 +342,15 @@ the system.\n\n");
 
       // average aggregation number during the step //{{{
       if (!no_uni || Aggregate[i].nMolecules != 1) {
-        aggs++;
+        aggs_step++;
 
-        avg_n += Aggregate[i].Mass;
-        avg_w += SQR(Aggregate[i].Mass);
+        avg_n_step += Aggregate[i].Mass;
+        avg_w_step += SQR(Aggregate[i].Mass);
       } //}}}
     }
 
     // add to total number of aggregates
-    sum_agg += aggs;
+    agg_sum += aggs_step;
 
     // print averages to output file //{{{
     if ((out = fopen(output_avg, "a")) == NULL) {
@@ -347,17 +362,17 @@ the system.\n\n");
       exit(1);
     }
 
-    fprintf(out, "%5d %8.3f %8.3f\n", count, (double)(avg_n)/aggs, (double)(avg_w)/avg_n);
+    fprintf(out, "%5d %8.3f %8.3f\n", count, (double)(avg_n_step)/aggs_step, (double)(avg_w_step)/avg_n_step);
     fclose(out); //}}}
   }
   fclose(agg);
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
 
@@ -375,29 +390,12 @@ the system.\n\n");
   // add date
   fprintf(out, " on %s\n", date);
 
-  fprintf(out, "# A_s  wdistr  ndistr voldistr\n");
-  fclose(out); //}}}
-
-  // number of species in agg file //{{{
-  int mols = 0, beads = 0, mons = 0, mass = 0;
-  for (int i = 0; i < Counts.Aggregates; i++) {
-    mols += Aggregate[i].nMolecules;
-    beads += Aggregate[i].nBeads;
-    mons += Aggregate[i].nMonomers;
-    mass += Aggregate[i].Mass;
+  fprintf(out, "# 1:A_s 2:<M>_n 3:<M>_w 3:<volume distribution>_n ");
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    fprintf(out, " %d:<%s>_n", i+4, MoleculeType[i].Name);
   }
-  if (verbose) {
-    printf("Number of species in provided .agg file: \n");
-    printf("%10d molecules\n", mols);
-    printf("%10d beads in molecules\n", beads);
-    printf("%10d monomeric beads\n", mons);
-  } //}}}
-
-  // total mass of aggregates in the simulation //{{{
-//int sum_mass = 0;
-//for (int i = 0; i < Counts.Molecules; i++) {
-//  sum_mass += ndistr[i];
-//} //}}}
+  putc('\n', out);
+  fclose(out); //}}}
 
   // print distributions to output file //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
@@ -407,56 +405,56 @@ the system.\n\n");
 
   // mass of all molecules
   double molecules_vol = 0;
+  double molecules_mass = 0;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     molecules_vol += MoleculeType[i].Number * MoleculeType[i].nBeads;
+    molecules_mass += MoleculeType[i].Number * MoleculeType[i].Mass;
   }
 
   count -= start -1;
-  for (int i = 0; i < mols; i++) {
+  for (int i = 0; i < Counts.Molecules; i++) {
     /* number distribution of aggregate masses, F(M_i)_n =
-     * ndistr[i]/sum_agg, is normalised by number average of mass, <M>_n =
-     * mass_sum[0]/sum_agg, so F(M_i)_n = ndistr[i]/mass_sum[0] to give a
+     * ndistr[i]/agg_sum, is normalised by number average of mass, <M>_n =
+     * mass_sum[0]/agg_sum, so F(M_i)_n = ndistr[i]/mass_sum[0] to give a
      * sum of 1 overall the whole of F(M_i)_w */
     /* weighed distribution of aggregate masses, F(M_i)_w =
      * wdistr[i]/mass_sum[0], is normalised by weighed average of mass, <M>_w =
      * mass_sum[1]/mass_sum[0], so F(M_i)_w = wdistr[i]/mass_sum[1] to give a
      * sum of 1 overall the whole of F(M_i)_w */
-    fprintf(out, "%4d %lf %lf %lf\n", i+1, // A_s
-                                      (double)(ndistr[i])/mass_sum[0], // weighed distribution
-                                      (double)(wdistr[i])/mass_sum[1], // number distribution
-                                      voldistr[i]/(count*molecules_vol)); // volume distribution
+    fprintf(out, "%4d %5.3f %5.3f %5.3f", i+1, // A_s
+                                          (double)(ndistr[i])/mass_sum[0], // number distribution
+                                          (double)(wdistr[i])/mass_sum[1], // weight distribution
+                                          voldistr[i]/(count*molecules_vol)); // volume distribution
+    // print average number of molecule types in aggregates
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      if (count_agg[i] == 0) {
+        fprintf(out, "%8s", "?");
+      } else {
+        fprintf(out, " %7.3f", (double)(molecules_sum[i][j])/count_agg[i]);
+      }
+    }
+    putc('\n', out);
   }
   fclose(out); //}}}
 
   // print numbers of various molecules types in the aggregates //{{{
-  printf("1:sum");
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf(" %d:%s", i+1, MoleculeType[i].Name);
-  }
   putchar('\n');
   for (int i = 0; i < Counts.Molecules; i++) {
     if (ndistr[i] > 0) { // are there any aggregates of size 'i'?
-      printf("%3d", i+1);
+      fprintf(stdout, "%3d", i+1);
       for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-        printf(" %7.3f", (double)(molecules[i][j][0])/count_agg[i]);
+        fprintf(stdout, " %7.3f", (double)(molecules_sum[i][j])/count_agg[i]);
       }
       putchar('\n');
     }
   } //}}}
 
   // print overall averages //{{{
-  // sum up total number (and SQR(number)) of each molecular species
   for (int i = 1; i < Counts.Molecules; i++) {
-    ndistr[0] += ndistr[i]; // total number of aggregates
     count_agg[0] += count_agg[i]; // total number of aggregates (possibly without unimers)
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      molecules[0][j][0] += molecules[i][j][0];
-      molecules[0][j][1] += molecules[i][j][1];
+      molecules_sum[0][j] += molecules_sum[i][j]; // total number of each molecular species
     }
-  }
-  // sum up total number (and SQR(number)) of all molecules
-  for (int i = 1; i < Counts.Molecules; i++) {
-    wdistr[0] += wdistr[i];
   }
 
   // open file with distribution //{{{
@@ -466,26 +464,19 @@ the system.\n\n");
   } //}}}
 
   // print legend (with column numbers) //{{{
-  printf("1:<A_s>_n 2:<A_s>_w");
-  fprintf(out, "# 1:<A_s>_n 2:<A_s>_w");
+  fprintf(out, "# 1:<M>_n 2:<M>_w");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf(" %d:<%s>_n", i+3, MoleculeType[i].Name);
     fprintf(out, " %d:<%s>_n", i+3, MoleculeType[i].Name);
   }
-  putchar('\n');
   putc('\n', out); //}}}
 
   // print the averages //{{{
-  printf("%10.3f", (double)(mass_sum[0])/count_agg[0]); // <A_s>_n
   fprintf(out, "# %10.3f", (double)(mass_sum[0])/count_agg[0]); // <A_s>_n
-  printf("%10.3f", mass_sum[1]/mass_sum[0]); // <Mass>_w
   fprintf(out, "%10.3f", mass_sum[1]/mass_sum[0]); // <Mass>_w
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf(" %7.3f", (double)(molecules[0][i][0])/count_agg[0]); // <species>_n
-    fprintf(out, " %7.3f", (double)(molecules[0][i][0])/count_agg[0]); // <species>_n
+    fprintf(out, " %7.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
   }
   putc('\n', out);
-  putchar('\n');
   fclose(out); //}}}
   //}}}
 
@@ -496,12 +487,9 @@ the system.\n\n");
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   for (int i = 0; i < Counts.Molecules; i++) {
-    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      free(molecules[i][j]);
-    }
-    free(molecules[i]);
+    free(molecules_sum[i]);
   }
-  free(molecules); //}}}
+  free(molecules_sum); //}}}
 
   return 0;
 }
