@@ -405,10 +405,8 @@ the system.\n\n");
 
   // mass of all molecules
   double molecules_vol = 0;
-  double molecules_mass = 0;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     molecules_vol += MoleculeType[i].Number * MoleculeType[i].nBeads;
-    molecules_mass += MoleculeType[i].Number * MoleculeType[i].Mass;
   }
 
   count -= start -1;
@@ -421,10 +419,10 @@ the system.\n\n");
      * wdistr[i]/mass_sum[0], is normalised by weighed average of mass, <M>_w =
      * mass_sum[1]/mass_sum[0], so F(M_i)_w = wdistr[i]/mass_sum[1] to give a
      * sum of 1 overall the whole of F(M_i)_w */
-    fprintf(out, "%4d %5.3f %5.3f %5.3f", i+1, // A_s
-                                          (double)(ndistr[i])/mass_sum[0], // number distribution
-                                          (double)(wdistr[i])/mass_sum[1], // weight distribution
-                                          voldistr[i]/(count*molecules_vol)); // volume distribution
+    fprintf(out, "%4d %lf %lf %lf", i+1, // A_s
+                                    (double)(ndistr[i])/mass_sum[0], // number distribution
+                                    (double)(wdistr[i])/mass_sum[1], // weight distribution
+                                    voldistr[i]/(count*molecules_vol)); // volume distribution
     // print average number of molecule types in aggregates
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (count_agg[i] == 0) {
@@ -436,18 +434,6 @@ the system.\n\n");
     putc('\n', out);
   }
   fclose(out); //}}}
-
-  // print numbers of various molecules types in the aggregates //{{{
-  putchar('\n');
-  for (int i = 0; i < Counts.Molecules; i++) {
-    if (ndistr[i] > 0) { // are there any aggregates of size 'i'?
-      fprintf(stdout, "%3d", i+1);
-      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-        fprintf(stdout, " %7.3f", (double)(molecules_sum[i][j])/count_agg[i]);
-      }
-      putchar('\n');
-    }
-  } //}}}
 
   // print overall averages //{{{
   for (int i = 1; i < Counts.Molecules; i++) {
