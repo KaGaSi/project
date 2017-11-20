@@ -285,6 +285,18 @@ where $n_i$ is volume of an aggregate with $A_{\mathrm{s}} = i$ (which is
 equivalent to the number of beads in the aggregate).
 \endlatexonly
 
+The definition of aggregation number\latexonly,
+$A_{\mathrm{s}}$,\endlatexonly is somewhat flexible. The `-m <name>` option
+can be used to specify that the aggregation number is not the number of all
+molecules in an aggregate, but rather only the number of specified
+molecular types in the aggregate. The mass of the aggregate is than taken
+to be its true mass, that is the mass of all molecules in the aggregate.
+For example, let's assume an aggregate with 1 `A` molecule of mass 1 and 2
+`B` molecules each with mass 2. Using `-m A` will count the aggregate size
+as 1 and its mass as 5\latexonly($1\cdot1+2\cdot2$)\endlatexonly, while not
+using `-m` option will count the aggregate size as 3 and its mass still as
+5.
+
 The utility reads information about aggregate from input file with
 [Aggregate format](\ref AggregateFile). This file can be generated using
 [Aggregates utility](\ref Aggregates).
@@ -307,8 +319,11 @@ Usage:
 > > `--no-unimers`
 > > > free chains shouldn't be used to calcalute average aggregation
 > > > numbers
+> > `-m <molecule type name>`
+> > > instead of aggregate size, use number of molecules of specified molecule
+> > > types
 > > `-x <name(s)>`
-> > > exclude specified molecule(s)
+> > > exclude aggregates containing only specified molecule(s)
 
 # DensityAggregates {#AggDensity}
 
