@@ -473,7 +473,7 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 Aggregates utility determines which molecules belong to which aggregate on the \
 basis of given parameters - the minimum distance at which a pair of beads from \
 different molecules is considered a contact and the minimum number of such \
@@ -482,23 +482,23 @@ aggregate. Only distances between specified bead types are considered. \
 Information about aggregates in each timestep is written to '.agg' file. Also \
 joined coordinates can be written to an output '.vcf' file.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <distance> <contacts> ", argv[0]);
-      printf("<output.agg> <type names> <options>\n\n");
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <distance> <contacts> ", argv[0]);
+      fprintf(stdout, "<output.agg> <type names> <options>\n\n");
 
-      printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <distance>          minimum distance for contact for aggregate check\n");
-      printf("   <contacts>          minimum number of contacts for aggregate check\n");
-      printf("   <output.agg>        output filename (agg format)\n");
-      printf("   <type names>        names of bead types for closeness calculation\n");
-      printf("   <options>\n");
-      printf("      -x <name(s)>     exclude specified molecule(s)\n");
-      printf("      -j <joined.vcf>  output vcf file with joined coordinates\n");
+      fprintf(stdout, "   <input.vcf>         input filename (vcf format)\n");
+      fprintf(stdout, "   <distance>          minimum distance for contact for aggregate check\n");
+      fprintf(stdout, "   <contacts>          minimum number of contacts for aggregate check\n");
+      fprintf(stdout, "   <output.agg>        output filename (agg format)\n");
+      fprintf(stdout, "   <type names>        names of bead types for closeness calculation\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      -x <name(s)>     exclude specified molecule(s)\n");
+      fprintf(stdout, "      -j <joined.vcf>  output vcf file with joined coordinates\n");
       CommonHelp(0);
       exit(0);
     }
@@ -568,8 +568,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -697,12 +697,12 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {
-    printf("%s\n", joined_vcf);
+    fprintf(stdout, "%s\n", joined_vcf);
 
     // bead types are to be written in joined.vcf -- probably will never change,
     // since the beadtypes should correspond to those in .agg file
@@ -754,8 +754,8 @@ system.\n\n");
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
-    printf("\n   Distance for closeness check: %lf\n", distance);
-    printf("   Number of needed contacts for aggregate check: %d\n", contacts);
+    fprintf(stdout, "\n   Distance for closeness check: %lf\n", distance);
+    fprintf(stdout, "   Number of needed contacts for aggregate check: %d\n", contacts);
   }
 
   // bonds file is not needed anymore
@@ -770,10 +770,10 @@ system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -881,7 +881,7 @@ system.\n\n");
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
     } //}}}
   }
 
@@ -889,10 +889,10 @@ system.\n\n");
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
 
