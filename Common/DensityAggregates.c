@@ -29,30 +29,30 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 AggDensity utility calculates bead density for aggregates of given size(s) from \
 their centre of mass. Beside unbonded beads it takes into account only beads \
 from the current aggregate, not from any other aggregate.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>     input filename (vcf format)\n");
-      printf("   <input.agg>     input filename with information about aggregates (agg format)\n");
-      printf("   <width>         width of a single bin\n");
-      printf("   <output.rho>    output density file (automatic ending '#.rho' added)\n");
-      printf("   <agg sizes>     aggregate sizes to calculate density for\n");
-      printf("   <options>\n");
-      printf("      --joined     specify that aggregates with joined coordinates are used\n");
-      printf("      -n <int>     number of bins to average\n");
-      printf("      -st <int>    starting timestep for calculation\n");
-      printf("      -m <name>    agg size means number of <name> molecule types in an aggregate\n");
-      printf("      -x <name(s)> exclude specified molecule(s)\n");
+      fprintf(stdout, "   <input.vcf>     input filename (vcf format)\n");
+      fprintf(stdout, "   <input.agg>     input filename with information about aggregates (agg format)\n");
+      fprintf(stdout, "   <width>         width of a single bin\n");
+      fprintf(stdout, "   <output.rho>    output density file (automatic ending '#.rho' added)\n");
+      fprintf(stdout, "   <agg sizes>     aggregate sizes to calculate density for\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      --joined     specify that aggregates with joined coordinates are used\n");
+      fprintf(stdout, "      -n <int>     number of bins to average\n");
+      fprintf(stdout, "      -st <int>    starting timestep for calculation\n");
+      fprintf(stdout, "      -m <name>    agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      -x <name(s)> exclude specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -134,8 +134,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -182,24 +182,10 @@ system.\n\n");
   // vsf file is not needed anymore
   free(vsf_file); //}}}
 
-  // -m <name> option - specify MoleculeType that is used for determining agg sizes //{{{
-  int specific_molecule = -1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-m") == 0) {
-
-      // Error - missing or wrong argument //{{{
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing argument for '-m' option (or molecule name beginning with a dash)!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      specific_molecule = FindMoleculeType(argv[i+1], Counts, MoleculeType);
-      if (specific_molecule == -1) {
-        fprintf(stderr, "Molecule '%s' does not exist in FIELD ('-m' option)!\n", argv[i+1]);
-        exit(1);
-      }
-    }
+  // '-m' option //{{{
+  int specific_moltype_for_size;
+  if (AggSizeSpecificMolType(argc, argv, &specific_moltype_for_size, Counts, &MoleculeType)) {
+    exit(1);
   } //}}}
 
   // '-x' option //{{{
@@ -231,10 +217,10 @@ system.\n\n");
     FILE *out;
     char str[32];
 
-    if (specific_molecule == -1) {
+    if (specific_moltype_for_size == -1) {
       sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
     } else {
-      sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_molecule].Name, agg_sizes[aggs][0]);
+      sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_moltype_for_size].Name, agg_sizes[aggs][0]);
     }
     if ((out = fopen(str, "w")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
@@ -342,7 +328,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // number of bins //{{{
@@ -382,9 +368,9 @@ system.\n\n");
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
-    printf("Chosen aggregate sizes:");
+    fprintf(stdout, "Chosen aggregate sizes:");
     for (int i = 0; i < aggs; i++) {
-      printf(" %d", agg_sizes[i][0]);
+      fprintf(stdout, " %d", agg_sizes[i][0]);
     }
     putchar('\n');
   }
@@ -402,10 +388,10 @@ system.\n\n");
     // print step? //{{{
     if (!silent) {
       if (script) {
-        printf("Discarding step: %6d\n", count);
+        fprintf(stdout, "Discarding step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rDiscarding step: %6d", count);
+        fprintf(stdout, "\rDiscarding step: %6d", count);
       }
     } //}}}
 
@@ -418,10 +404,10 @@ system.\n\n");
   // print number of discarded steps? //{{{
   if (!silent) {
     if (script) {
-      printf("Discarded steps: %6d\n", count);
+      fprintf(stdout, "Discarded steps: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
     }
   } //}}}
   //}}}
@@ -436,10 +422,10 @@ system.\n\n");
     // print step? //{{{
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     } //}}}
 
@@ -478,10 +464,10 @@ system.\n\n");
 
       // test if aggregate 'i' should be used //{{{
       int mols = 0; // agg size
-      if (specific_molecule != -1) { // agg size = number of molecules of type 'specific_molecule'
+      if (specific_moltype_for_size != -1) { // agg size = number of molecules of type 'specific_moltype_for_size'
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
           int id = Aggregate[i].Molecule[j];
-          if (specific_molecule == Molecule[id].Type) {
+          if (specific_moltype_for_size == Molecule[id].Type) {
             mols++;
           }
         }
@@ -508,7 +494,7 @@ system.\n\n");
           int moltype = Molecule[mol].Type;
 
           if (MoleculeType[moltype].Use) {
-//          printf("%s: %d\n", MoleculeType[moltype].Name, MoleculeType[moltype].Use);
+//          fprintf(stdout, "%s: %d\n", MoleculeType[moltype].Name, MoleculeType[moltype].Use);
 
             Vector dist = Distance(Bead[Aggregate[i].Bead[j]].Position, com, BoxLength);
             dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
@@ -539,7 +525,7 @@ system.\n\n");
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
     } //}}}
   }
   fclose(vcf);
@@ -547,10 +533,10 @@ system.\n\n");
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
 
@@ -559,10 +545,10 @@ system.\n\n");
     FILE *out;
     char str[32];
 
-    if (specific_molecule == -1) {
+    if (specific_moltype_for_size == -1) {
       sprintf(str, "%s%d.rho", output_rho, agg_sizes[i][0]);
     } else {
-      sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_molecule].Name, agg_sizes[i][0]);
+      sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_moltype_for_size].Name, agg_sizes[i][0]);
     }
     if ((out = fopen(str, "a")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
@@ -594,9 +580,9 @@ system.\n\n");
       putc('\n',out);
     }
 
-    if (specific_molecule != -1) {
+    if (specific_moltype_for_size != -1) {
       fprintf(out, "# %d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
-          agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
+          agg_sizes[i][0], MoleculeType[specific_moltype_for_size].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
     } else {
       fprintf(out, "# %d molecules in aggregate (%d aggregates)\n", agg_sizes[i][0], agg_sizes[i][1]);
     }
@@ -604,10 +590,10 @@ system.\n\n");
   } //}}}
 
   // print to stdout number of unspecified molecules if '-m' option was used //{{{
-  if (specific_molecule != -1 && !silent) {
+  if (specific_moltype_for_size != -1 && !silent) {
     for (int i = 0; i < aggs; i++) {
-      printf("%d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
-          agg_sizes[i][0], MoleculeType[specific_molecule].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
+      fprintf(stdout, "%d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
+          agg_sizes[i][0], MoleculeType[specific_moltype_for_size].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
     }
   } //}}}
 
