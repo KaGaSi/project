@@ -268,3 +268,30 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
 
   return(false);
 } //}}}
+
+// AggSizeSpecificMolType() //{{{
+/**
+ * Option that defines what aggregate size means -- the size is the number of
+ * molecules of the type given in the argument to this option.
+ */
+bool AggSizeSpecificMolType(int argc, char **argv, int *moltype, Counts Counts,
+                            MoleculeType **MoleculeType) {
+  *moltype = -1;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-m") == 0) {
+
+      // Error - missing or wrong argument //{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing argument for '-m' option (or molecule name beginning with a dash)!\n");
+        return(true);
+      } //}}}
+
+      *moltype = FindMoleculeType(argv[i+1], Counts, *MoleculeType);
+      if (*moltype == -1) {
+        fprintf(stderr, "Molecule '%s' does not exist in FIELD ('-m' option)!\n", argv[i+1]);
+        return(true);
+      }
+    }
+  }
+  return(false);
+} // }}}
