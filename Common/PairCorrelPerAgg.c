@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 PairCorrelPerAgg utility calculates pair correlation function for specified \
 bead types. The calculation is done per aggregates - that is only beads in the \
 same aggregate are used. If aggregate size(s) is not specified, average pcf is \
@@ -35,21 +35,21 @@ calculated (that is, regardless of aggregate size). All pairs of bead types \
 (including same pair) are calculated - given A and B types, pcf between A-A, \
 A-B and B-B are calculated.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("   %s <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>\n\n", argv[0]);
+      fprintf(stdout, "   %s <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>     input filename (vcf format)\n");
-      printf("   <input.agg>     input filename with information about aggregates (agg format)\n");
-      printf("   <width>         width of a single bin\n");
-      printf("   <output.pcf>    output file with pair correlation function(s)\n");
-      printf("   <bead type(s)>  bead type name(s) for pcf calculation \n");
-      printf("   <options>\n");
-      printf("      -n <int>     number of bins to average\n");
-      printf("      -st <int>    starting timestep for calculation\n");
+      fprintf(stdout, "   <input.vcf>     input filename (vcf format)\n");
+      fprintf(stdout, "   <input.agg>     input filename with information about aggregates (agg format)\n");
+      fprintf(stdout, "   <width>         width of a single bin\n");
+      fprintf(stdout, "   <output.pcf>    output file with pair correlation function(s)\n");
+      fprintf(stdout, "   <bead type(s)>  bead type name(s) for pcf calculation \n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      -n <int>     number of bins to average\n");
+      fprintf(stdout, "      -st <int>    starting timestep for calculation\n");
       CommonHelp(0);
       exit(0);
     }
@@ -125,8 +125,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -269,7 +269,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // write initial stuff to output pcf file //{{{
@@ -351,10 +351,10 @@ system.\n\n");
     // print step? //{{{
     if (!silent) {
       if (script) {
-        printf("Discarding step: %6d\n", count);
+        fprintf(stdout, "Discarding step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rDiscarding step: %6d", count);
+        fprintf(stdout, "\rDiscarding step: %6d", count);
       }
     } //}}}
 
@@ -367,10 +367,10 @@ system.\n\n");
   // print number of discarded steps? //{{{
   if (!silent) {
     if (script) {
-      printf("Discarded steps: %6d\n", count);
+      fprintf(stdout, "Discarded steps: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
     }
   } //}}}
   //}}}
@@ -386,10 +386,10 @@ system.\n\n");
     // print step? //{{{
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     } //}}}
 
@@ -461,7 +461,7 @@ system.\n\n");
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
     } //}}}
   }
   fclose(vcf);
@@ -469,10 +469,10 @@ system.\n\n");
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
 

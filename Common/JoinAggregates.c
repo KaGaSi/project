@@ -21,23 +21,23 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 JoinAggregates removes periodic boundary conditions from aggregates. It is \
 meant as a replacement of '-j' option in Aggregates utility when this option is \
 omitted, but later the joined coordinates are required. Distance and beadtypes \
 for aggregate check are read from input.agg file.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>      input filename (vcf format)\n");
-      printf("   <input.agg>      input filename with information about aggregates (agg format)\n");
-      printf("   <output.vcf>     output filename with joined coordinates (vcf format)\n");
+      fprintf(stdout, "   <input.vcf>      input filename (vcf format)\n");
+      fprintf(stdout, "   <input.agg>      input filename with information about aggregates (agg format)\n");
+      fprintf(stdout, "   <output.vcf>     output filename with joined coordinates (vcf format)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -99,8 +99,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -226,7 +226,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // write bead type names and pbc to <output.vcf> //{{{
@@ -277,7 +277,7 @@ system.\n\n");
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
-    printf("\nDistance for closeness check:  %lf\n\n", distance);
+    fprintf(stdout, "\nDistance for closeness check:  %lf\n\n", distance);
   }
 
   // bonds file is not needed anymore
@@ -291,10 +291,10 @@ system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -341,7 +341,7 @@ system.\n\n");
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
     } //}}}
   }
 
@@ -350,10 +350,10 @@ system.\n\n");
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
 

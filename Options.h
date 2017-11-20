@@ -122,4 +122,19 @@ bool BoolOption(int argc, char **argv, char *opt); //}}}
  */
 bool IntegerOption(int argc, char **argv, char *opt, int *value);
 // }}}
+
+// AggSizeSpecificMolType() //{{{
+/**
+ * \brief Option defining which molecule type to take as aggregate size (`-m <name>`).
+ *
+ * \param [in]  argc         number of program's arguments
+ * \param [in]  argv         program's arguments
+ * \param [out] moltype      chosen molecule type
+ * \param [in]  Counts       numbers of beads, molecules, etc.
+ * \param [in]  MoleculeType information about molecule types
+ * \return `true` or `false` error or not error
+ */
+bool AggSizeSpecificMolType(int argc, char **argv, int *moltype, Counts Counts,
+                            MoleculeType **MoleculeType);
+// }}}
 #endif
