@@ -212,7 +212,7 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 GyrationAggregates calculates radii of gyration, acylindricities, \
 asphericities and relative shape anisotropies during the simulation for all \
 aggregates izes. The shape descriptors are calculated from eigenvalues of \
@@ -220,23 +220,23 @@ gyration tensor. It also prints averages to the stdout. Instead of aggregate \
 size, a number of specified molecular species in an aggregate can be used and \
 only specified bead types can be used for all calculations.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <input.agg> <output> <agg sizes> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <input.agg> <output> <agg sizes> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <input.agg>         input filename with information about aggregates (agg format)\n");
-      printf("   <output>            output file with data during simulation run\n");
-      printf("   <agg sizes>         aggregate sizes to calculate radius of gyration for\n");
-      printf("   <options>\n");
-      printf("      --joined         specify that aggregates with joined coordinates are used\n");
-      printf("      -bt              specify bead types to be used for calculation (default is all)\n");
-      printf("      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
-      printf("      --no-unimers      do not count unimers into averages\n");
+      fprintf(stdout, "   <input.vcf>         input filename (vcf format)\n");
+      fprintf(stdout, "   <input.agg>         input filename with information about aggregates (agg format)\n");
+      fprintf(stdout, "   <output>            output file with data during simulation run\n");
+      fprintf(stdout, "   <agg sizes>         aggregate sizes to calculate radius of gyration for\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      --joined         specify that aggregates with joined coordinates are used\n");
+      fprintf(stdout, "      -bt              specify bead types to be used for calculation (default is all)\n");
+      fprintf(stdout, "      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      --no-unimers      do not count unimers into averages\n");
       CommonHelp(0);
       exit(0);
     }
@@ -308,8 +308,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -485,7 +485,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
@@ -539,10 +539,10 @@ system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -727,7 +727,7 @@ system.\n\n");
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
     } //}}}
 
     // free memory //{{{
@@ -745,24 +745,24 @@ system.\n\n");
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
 
   // calculate simple averages //{{{
-  printf("1:Size 2:<Rg> 3:<Acyl> 4:<Ashper> 5:<Anis> 6:<Diblocks> 7:<Surfact>\n");
+  fprintf(stdout, "1:Size 2:<Rg> 3:<Acyl> 4:<Ashper> 5:<Anis> 6:<Diblocks> 7:<Surfact>\n");
   for (int i = 0; i < aggs; i++) {
     if (agg_sizes[i][1] > 0) {
-      printf("%8d", agg_sizes[i][0]);
-      printf(" %7.3f", Rg_sum[i][0]/agg_sizes[i][1]);
-      printf(" %7.3f", Anis_sum[i]/agg_sizes[i][1]);
-      printf(" %7.3f", Acyl_sum[i]/agg_sizes[i][1]);
-      printf(" %7.3f", Aspher_sum[i]/agg_sizes[i][1]);
-      printf(" %7.3f", (double)(Molecules_sum[i][0])/agg_sizes[i][1]);
-      printf(" %7.3f", (double)(Molecules_sum[i][2])/agg_sizes[i][1]);
+      fprintf(stdout, "%8d", agg_sizes[i][0]);
+      fprintf(stdout, " %7.3f", Rg_sum[i][0]/agg_sizes[i][1]);
+      fprintf(stdout, " %7.3f", Anis_sum[i]/agg_sizes[i][1]);
+      fprintf(stdout, " %7.3f", Acyl_sum[i]/agg_sizes[i][1]);
+      fprintf(stdout, " %7.3f", Aspher_sum[i]/agg_sizes[i][1]);
+      fprintf(stdout, " %7.3f", (double)(Molecules_sum[i][0])/agg_sizes[i][1]);
+      fprintf(stdout, " %7.3f", (double)(Molecules_sum[i][2])/agg_sizes[i][1]);
       putchar('\n');
     }
   } //}}}
@@ -790,8 +790,8 @@ system.\n\n");
   }
 
   // print to stdout
-  printf("1:<A_s>_w 2:<A_s>_n 3:<R_G>_n 4:_w 5:_z 6:<Anis> 7:<Acyl> 8:<Aspher>\n");
-  printf("%7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f\n",
+  fprintf(stdout, "1:<A_s>_w 2:<A_s>_n 3:<R_G>_n 4:_w 5:_z 6:<Anis> 7:<Acyl> 8:<Aspher>\n");
+  fprintf(stdout, "%7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f %7.3f\n",
     (double)(Size_sum[0][1])/Size_sum[0][0], //<A_s>_w
     (double)(Size_sum[0][0])/agg_sizes[0][1], //<A_s>_n
     Rg_sum[0][0]/agg_sizes[0][1],

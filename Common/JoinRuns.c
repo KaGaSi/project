@@ -29,27 +29,27 @@ int main(int argc, char *argv[]) {
   // -h option - print help nd exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 JoinRuns joins two simulation runs with different .vsf files. The first .vsf is \
 assumed to be dl_meso.vsf (if not, use '-i' option) and the FIELD file has to \
 be the same for both simulation runs. Bead types in both .vcf files must be the \
 same, but only selected bead types are saved to output.vcf file.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <1st input.vcf> <2nd input.vcf> <2nd input.vsf> ", argv[0]);
-      printf("<output.vcf> <type names> <options>\n\n");
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <1st input.vcf> <2nd input.vcf> <2nd input.vsf> ", argv[0]);
+      fprintf(stdout, "<output.vcf> <type names> <options>\n\n");
 
-      printf("   <1st input.vcf>   input filename of 1st run (vcf format)\n");
-      printf("   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
-      printf("   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
-      printf("   <output.vcf>      output filename (vcf format)\n");
-      printf("   <type names>      names of bead types to save\n");
-      printf("   <options>\n");
-      printf("      --join         join molecules (remove pbc)\n");
-      printf("      -st1 <int>     starting timestep from 1st run\n");
-      printf("      -st2 <int>     starting timestep from 2nd run\n");
-      printf("      -sk1 <int>     skip every <int> steps from 1st run\n");
-      printf("      -sk2 <int>     skip every <int> steps from 2nd run\n");
+      fprintf(stdout, "   <1st input.vcf>   input filename of 1st run (vcf format)\n");
+      fprintf(stdout, "   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
+      fprintf(stdout, "   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
+      fprintf(stdout, "   <output.vcf>      output filename (vcf format)\n");
+      fprintf(stdout, "   <type names>      names of bead types to save\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      --join         join molecules (remove pbc)\n");
+      fprintf(stdout, "      -st1 <int>     starting timestep from 1st run\n");
+      fprintf(stdout, "      -st2 <int>     starting timestep from 2nd run\n");
+      fprintf(stdout, "      -sk1 <int>     skip every <int> steps from 1st run\n");
+      fprintf(stdout, "      -sk2 <int>     skip every <int> steps from 2nd run\n");
       CommonHelp(0);
       exit(0);
     }
@@ -143,16 +143,16 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
   //}}}
 
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -258,8 +258,8 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   if (verbose) {
     VerboseOutput(verbose2, input_vcf_1, bonds_file, Counts, BeadType1, Bead1, MoleculeType1, Molecule1);
 
-    printf("\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
-    printf("   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
+    fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
+    fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
   }
 
   // bonds file is not needed anymore
@@ -313,7 +313,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
   //}}}
 
@@ -340,10 +340,10 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
     if (!silent) {
       if (script) {
-        printf("Discarded from 1st coordinate file: %6d\n", count);
+        fprintf(stdout, "Discarded from 1st coordinate file: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rDiscarded from 1st coordinate file: %6d", count);
+        fprintf(stdout, "\rDiscarded from 1st coordinate file: %6d", count);
       }
     }
 
@@ -381,10 +381,10 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep from 1st run: %6d", count);
+        fprintf(stdout, "\rStep from 1st run: %6d", count);
       }
     }
 
@@ -439,7 +439,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
       ungetc(test, vcf_1); //}}}
 
       fflush(stdout);
-      printf("\rStep from 1st run: %6d", ++count);
+      fprintf(stdout, "\rStep from 1st run: %6d", ++count);
 
       // read indexed timestep from input .vcf file //{{{
       if (indexed) {
@@ -466,12 +466,12 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
   }
 
   if (!silent) {
     fflush(stdout);
-    printf("\rLast Step from first run: %6d\n", count);
+    fprintf(stdout, "\rLast Step from first run: %6d\n", count);
   }
 
   fclose(vcf_1); //}}}
@@ -479,13 +479,13 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // start second run with start-th step //{{{
   count = 0;
   if (!silent)
-    printf("\rDiscarded from 2nd coordinate file: %6d", count);
+    fprintf(stdout, "\rDiscarded from 2nd coordinate file: %6d", count);
   for (int i = 1; i < start_2; i++) {
     count++;
 
     if (!silent) {
       fflush(stdout);
-      printf("\rDiscarded from 2nd coordinate file: %6d", count);
+      fprintf(stdout, "\rDiscarded from 2nd coordinate file: %6d", count);
     }
 
     SkipCoor(vcf_2, Counts, &stuff);
@@ -522,10 +522,10 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step from 2nd run: %6d\n", count);
+        fprintf(stdout, "Step from 2nd run: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep from 2nd run: %6d", count);
+        fprintf(stdout, "\rStep from 2nd run: %6d", count);
       }
     }
 
@@ -590,7 +590,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
     for (int i = 0; i < Counts.Unbonded; i++) {
       if (!used[i]) {
-        printf("ERROR - used[%d] = false\n", i);
+        fprintf(stdout, "ERROR - used[%d] = false\n", i);
       }
     }
 
@@ -616,7 +616,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
       ungetc(test, vcf_2); //}}}
 
       fflush(stdout);
-      printf("\rStep from 2st run: %6d", ++count);
+      fprintf(stdout, "\rStep from 2st run: %6d", ++count);
 
       // read indexed timestep from input .vcf file //{{{
       if (indexed) {
@@ -643,12 +643,12 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
   }
 
   if (!silent) {
     fflush(stdout);
-    printf("\rLast Step from 2nd run: %6d\n", count);
+    fprintf(stdout, "\rLast Step from 2nd run: %6d\n", count);
   }
 
   fclose(vcf_2); //}}}

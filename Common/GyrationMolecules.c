@@ -164,7 +164,7 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   putchar('\n');
   for (int i = 0; i < 3; i++) {
     for (int j = 0; j < 3; j++) {
-      printf(" %lf", a[i][j]);
+      fprintf(stdout, " %lf", a[i][j]);
     }
     putchar('\n');
   }
@@ -185,7 +185,7 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
 
   eigen = Sort3(eigen);
 
-  printf("d=(%lf, %lf, %lf)\n", d[0], d[1], d[2]);
+  fprintf(stdout, "d=(%lf, %lf, %lf)\n", d[0], d[1], d[2]);
   putchar('\n');
 
   // free memory //{{{
@@ -207,26 +207,26 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 GyrationAggregates calculates radii of gyration during the simulation for \
 given molecule type(s). The radius of gyration is calculated from eigenvalues \
 of gyration tensor. It also prints average radii of gyration to the screen. \
 Currently, it uses all beads present in the molecules.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <output> <molecule names> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <output> <molecule names> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>         input filename (vcf format)\n");
-      printf("   <output>            output file with shape descriptors (automatic ending '-<name>.text')\n");
-      printf("   <molecule names>    molecule types to calculate radius of gyration for\n");
-      printf("   <options>\n");
-      printf("      --joined         specify that joined coordinates are used\n");
-      printf("      -bt              specify bead types to be used for calculation (default is all)\n");
+      fprintf(stdout, "   <input.vcf>         input filename (vcf format)\n");
+      fprintf(stdout, "   <output>            output file with shape descriptors (automatic ending '-<name>.text')\n");
+      fprintf(stdout, "   <molecule names>    molecule types to calculate radius of gyration for\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      --joined         specify that joined coordinates are used\n");
+      fprintf(stdout, "      -bt              specify bead types to be used for calculation (default is all)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -293,8 +293,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -413,7 +413,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
@@ -451,10 +451,10 @@ system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -525,7 +525,7 @@ system.\n\n");
         Acyl[Molecule[i].Type] += eigen.y - eigen.x;
         // asphericity
         Aspher[Molecule[i].Type] += eigen.z - 0.5 * (eigen.x + eigen.y);
-        printf("%lf %lf %lf\n", eigen.x, eigen.y, eigen.z);
+        fprintf(stdout, "%lf %lf %lf\n", eigen.x, eigen.y, eigen.z);
       }
     } //}}}
 
@@ -564,7 +564,7 @@ system.\n\n");
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
     } //}}}
 
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -579,16 +579,16 @@ system.\n\n");
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
 
   // calculate simple averages //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf("%10s %lf\n", MoleculeType[i].Name, Rg_sum[i][0]/(count*MoleculeType[i].Number));
+    fprintf(stdout, "%10s %lf\n", MoleculeType[i].Name, Rg_sum[i][0]/(count*MoleculeType[i].Number));
   } //}}}
 
   // free memory - to make valgrind happy //{{{

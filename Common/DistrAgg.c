@@ -392,7 +392,7 @@ the system.\n\n");
         } //}}}
       }
 //    else {
-//      printf("ok\n");
+//      fprintf(stdout, "ok\n");
 //    }
     }
 
