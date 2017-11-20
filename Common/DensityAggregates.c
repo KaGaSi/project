@@ -463,27 +463,27 @@ system.\n\n");
     for (int i = 0; i < Counts.Aggregates; i++) {
 
       // test if aggregate 'i' should be used //{{{
-      int mols = 0; // agg size
+      int size = 0;
       if (specific_moltype_for_size != -1) { // agg size = number of molecules of type 'specific_moltype_for_size'
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
           int id = Aggregate[i].Molecule[j];
           if (specific_moltype_for_size == Molecule[id].Type) {
-            mols++;
+            size++;
           }
         }
       } else { // agg size = total number of all molecules
-        mols = Aggregate[i].nMolecules;
+        size = Aggregate[i].nMolecules;
       }
-      // is 'mols' agg size in provided list?
+      // is 'size' in provided list?
       int correct_size = -1;
       for (int j = 0; j < aggs; j++) {
-        if (agg_sizes[j][0] == mols) {
+        if (agg_sizes[j][0] == size) {
           correct_size = j;
         }
       } //}}}
 
       if (correct_size != -1) {
-        other_mols[correct_size] += Aggregate[i].nMolecules - mols;
+        other_mols[correct_size] += Aggregate[i].nMolecules - size;
 
         Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
