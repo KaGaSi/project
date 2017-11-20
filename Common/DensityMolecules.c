@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 MolDensity utility calculates number beads density for all bead types from the \
 centre of mass (or specified bead number in a molecule) of specified molecules. \
 Care must be taken with beadtype names in various molecules types, because if \
@@ -35,23 +35,23 @@ one beadtype appears in more molecule types, the resulting density for that \
 beadtype will be averaged without regard for the various types of molecule it \
 appears in.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <width> <output.rho> <molecule name(s)> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <width> <output.rho> <molecule name(s)> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <width>           width of a single bin\n");
-      printf("   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
-      printf("   <molecule names>  molecule names to calculate density for\n");
-      printf("   <options>\n");
-      printf("      --joined       specify that aggregates with joined coordinates are used\n");
-      printf("      -n <int>       number of bins to average\n");
-      printf("      -st <int>      starting timestep for calculation\n");
-      printf("      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <width>           width of a single bin\n");
+      fprintf(stdout, "   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
+      fprintf(stdout, "   <molecule names>  molecule names to calculate density for\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      --joined       specify that aggregates with joined coordinates are used\n");
+      fprintf(stdout, "      -n <int>       number of bins to average\n");
+      fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
+      fprintf(stdout, "      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
       CommonHelp(0);
       exit(0);
     }
@@ -132,8 +132,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -180,7 +180,7 @@ system.\n\n");
   while (++count < argc && argv[count][0] != '-') {
 
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
-    printf("%s\n", argv[count]);
+    fprintf(stdout, "%s\n", argv[count]);
 
     if (mol_type == -1) {
       fprintf(stderr, "Molecule '%s' does not exist in FIELD!\n", argv[count]);
@@ -228,7 +228,7 @@ system.\n\n");
     if (strcmp(argv[i], "-c") == 0) {
       int j = 0;
       while ((++j+i) < argc && argv[i+j][0] != '-') {
-        printf("%s\n", argv[i+j]);
+        fprintf(stdout, "%s\n", argv[i+j]);
 
         // Error - non-numeric or non-"x" argument //{{{
         if ((argv[i+j][0] < '0' || argv[i+j][0] > '9') && argv[i+j][0] != 'x') {
@@ -247,7 +247,7 @@ system.\n\n");
               used_mols++;
             }
           }
-          printf("k = %d; used_mols = %d\n", k, used_mols);
+          fprintf(stdout, "k = %d; used_mols = %d\n", k, used_mols);
 
           centre[used_mols-1] = atoi(argv[i+j]) - 1;
 
@@ -295,7 +295,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // number of bins //{{{
@@ -335,10 +335,10 @@ system.\n\n");
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
-    printf("Chosen molecule types:");
+    fprintf(stdout, "Chosen molecule types:");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {
-        printf(" %s", MoleculeType[i].Name);
+        fprintf(stdout, " %s", MoleculeType[i].Name);
       }
     }
     putchar('\n');
@@ -358,10 +358,10 @@ system.\n\n");
     // print step? //{{{
     if (!silent) {
       if (script) {
-        printf("Discarding step: %6d\n", count);
+        fprintf(stdout, "Discarding step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rDiscarding step: %6d", count);
+        fprintf(stdout, "\rDiscarding step: %6d", count);
       }
     } //}}}
 
@@ -373,10 +373,10 @@ system.\n\n");
   // print number of discarded steps? //{{{
   if (!silent) {
     if (script) {
-      printf("Discarded steps: %6d\n", count);
+      fprintf(stdout, "Discarded steps: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
     }
   } //}}}
   //}}}
@@ -389,10 +389,10 @@ system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -488,17 +488,17 @@ system.\n\n");
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
     } //}}}
   }
   fclose(vcf);
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
 

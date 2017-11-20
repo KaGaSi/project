@@ -100,24 +100,24 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 TransformVsf reads information from FIELD and dl_meso.vsf files and creates \
 .vsf structure file used for visualisation of trajectory (.vcf files) via VMD \
 visualisation tool.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <output.vsf>\n\n", argv[0]);
-      printf("   <output.vsf>    output structure file (*.vsf)\n");
-      printf("   <options>\n");
-      printf("      -i   use input .vsf file different from dl_meso.vsf\n");
-      printf("      -b   file containing bond alternatives to FIELD\n");
-      printf("      -v   verbose output\n");
-      printf("      -h   print this help and exit\n");
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <output.vsf>\n\n", argv[0]);
+      fprintf(stdout, "   <output.vsf>    output structure file (*.vsf)\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      -i   use input .vsf file different from dl_meso.vsf\n");
+      fprintf(stdout, "      -b   file containing bond alternatives to FIELD\n");
+      fprintf(stdout, "      -v   verbose output\n");
+      fprintf(stdout, "      -h   print this help and exit\n");
       exit(0);
     }
   }
@@ -138,7 +138,7 @@ system.\n\n");
 
   // print command to stdout //{{{
   for (int i = 0; i < argc; i++)
-    printf(" %s", argv[i]);
+    fprintf(stdout, " %s", argv[i]);
   putchar('\n'); //}}}
 
   // test if options are given correctly //{{{

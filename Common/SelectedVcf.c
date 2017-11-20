@@ -26,28 +26,28 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 SelectedVcf creates new <output.vcf> file from <input.vcf> containing only \
 selected bead types. Also <start> timesteps can be omitted and every <skip> \
 timestep can be left out.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about \
 the system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> ", argv[0]);
-      printf("<output.vcf> <type names> <options>\n\n");
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> ", argv[0]);
+      fprintf(stdout, "<output.vcf> <type names> <options>\n\n");
 
-      printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <output.vcf>      output filename (vcf format)\n");
-      printf("   <type names>      names of bead types to save\n");
-      printf("   <options>\n");
-      printf("      --join         join molecules (remove pbc)\n");
-      printf("      -st <start>    number of timestep to start from\n");
-      printf("      -sk <skip>     leave out every 'skip' steps\n");
-      printf("      -x <name(s)>   exclude specified molecule(s)\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <output.vcf>      output filename (vcf format)\n");
+      fprintf(stdout, "   <type names>      names of bead types to save\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      --join         join molecules (remove pbc)\n");
+      fprintf(stdout, "      -st <start>    number of timestep to start from\n");
+      fprintf(stdout, "      -sk <skip>     leave out every 'skip' steps\n");
+      fprintf(stdout, "      -x <name(s)>   exclude specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -128,8 +128,8 @@ the system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -221,8 +221,8 @@ the system.\n\n");
   if (verbose) {
     VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
-    printf("\n   Starting from %d. timestep\n", start);
-    printf("   Every %d. timestep used\n", skip+1);
+    fprintf(stdout, "\n   Starting from %d. timestep\n", start);
+    fprintf(stdout, "   Every %d. timestep used\n", skip+1);
   }
 
   // bonds file is not needed anymore
@@ -260,7 +260,7 @@ the system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // print pbc to output .vcf file //{{{
@@ -288,10 +288,10 @@ the system.\n\n");
     // print step? //{{{
     if (!silent) {
       if (script) {
-        printf("Discarding step: %6d\n", count);
+        fprintf(stdout, "Discarding step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rDiscarding step: %6d", count);
+        fprintf(stdout, "\rDiscarding step: %6d", count);
       }
     } //}}}
 
@@ -303,10 +303,10 @@ the system.\n\n");
   // print number of discarded steps? //{{{
   if (!silent) {
     if (script) {
-      printf("Discarded steps: %6d\n", count);
+      fprintf(stdout, "Discarded steps: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
     }
   } //}}}
   //}}} //}}}
@@ -340,10 +340,10 @@ the system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -400,9 +400,9 @@ the system.\n\n");
       if (!silent) {
         fflush(stdout);
         if (script) {
-          printf("Step: %6d\n", count);
+          fprintf(stdout, "Step: %6d\n", count);
         } else {
-          printf("\rStep: %6d", ++count);
+          fprintf(stdout, "\rStep: %6d", ++count);
         }
       }
 
@@ -431,15 +431,15 @@ the system.\n\n");
 
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
   }
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   }
 

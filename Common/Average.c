@@ -40,11 +40,11 @@ int read_data (char *filename, int column, int discard) { //{{{
 
   // first read-in the simulation parameters
   fscanf(f,"%d", &n_vals);
-//printf("\nRead from input file: n_vals=%d\n", n_vals);
+//fprintf(stdout, "\nRead from input file: n_vals=%d\n", n_vals);
 
   n_vals -= discard; // discard what shoud not be used
 
-//printf("\nDiscarding first %d samples; using %d samples for analysis.\n", discard, n_vals);
+//fprintf(stdout, "\nDiscarding first %d samples; using %d samples for analysis.\n", discard, n_vals);
 
   // the allocate appropriate space
   data = (double*)malloc(n_vals*sizeof(double));
@@ -123,7 +123,7 @@ void analyze_bins (int n_blocks, int n_vals) { //{{{
   err = sqrt(block_stdev/n_blocks);
   tau_int = 0.5 * block_size * block_stdev / (av2 - av*av);
 
-  printf("%4d %lf %lf %lf\n",n_blocks,av,err,tau_int);
+  fprintf(stdout, "%4d %lf %lf %lf\n",n_blocks,av,err,tau_int);
 
   return;
 } //}}}
@@ -151,7 +151,7 @@ int main ( int argc, char** argv ) {
   int n_blocks = atoi(argv[4]);   // number of bins for binning and jackknife
 
   /* For feedback, write down what we've read in */
-//printf("Input parameters: filename: %s, column=%d, discard=%d, n_blocks=%d\n", filename, column, discard, n_blocks);
+//fprintf(stdout, "Input parameters: filename: %s, column=%d, discard=%d, n_blocks=%d\n", filename, column, discard, n_blocks);
 
   // Read the data
   int n_vals = read_data(filename, column, discard);

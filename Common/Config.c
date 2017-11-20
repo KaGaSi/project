@@ -20,23 +20,23 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 Config utility generates CONFIG file from given step of a vcf file. If the \
 given timestep is larger than the number of steps the coordinate file, the \
 last step is used. Coordinate file needs to contain all beads in the \
 simulation for it to work with dl_meso (no such check is made).\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <options>\n");
-      printf("      -st <step>     timestep for creating CONFIG (default: last)\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <options>\n");
+      fprintf(stdout, "      -st <step>     timestep for creating CONFIG (default: last)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -105,8 +105,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -176,7 +176,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
@@ -193,10 +193,10 @@ system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -212,7 +212,7 @@ system.\n\n");
 
     // if -V option used, print comment from the beginning of a timestep
     if (verbose2)
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
   }
 
   // restore pointer position in FIELD file
@@ -234,10 +234,10 @@ system.\n\n");
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\nConfig Step: %6d\n", count);
+      fprintf(stdout, "\nConfig Step: %6d\n", count);
     }
   }
 

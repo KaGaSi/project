@@ -23,23 +23,23 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
 BondLength utility calculates distribution of bond lengths for all bead type \
 pairs in specified molecule(s).\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <width> <output file> <molecule names> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <width> <output file> <molecule names> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <width>           width of a single bin\n");
-      printf("   <output file>     name of output file with end-to-end distances\n");
-      printf("   <molecule names>  names of molecule type(s) to use for calculation\n");
-      printf("   <options>\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <width>           width of a single bin\n");
+      fprintf(stdout, "   <output file>     name of output file with end-to-end distances\n");
+      fprintf(stdout, "   <molecule names>  names of molecule type(s) to use for calculation\n");
+      fprintf(stdout, "   <options>\n");
       CommonHelp(0);
       exit(0);
     }
@@ -101,8 +101,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -197,7 +197,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // number of bins
@@ -226,10 +226,10 @@ system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -289,15 +289,15 @@ system.\n\n");
 
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
   }
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   }
 
