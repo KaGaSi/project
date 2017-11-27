@@ -201,6 +201,27 @@ void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead); //}}}
  */
 Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
 
+// jacobi() //{{{
+/**
+ * Jacobi transformation used in Gyration() function.
+ */
+void jacobi(double **a, int n, double d[], double **v, int *nrot); //}}}
+
+// Gyration() //{{{
+/*
+ * \brief Function calculating principal moments of the gyration tensor.
+ *
+ * \param [in] n             number of beads
+ * \param [in] list          array of bead ids
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BoxLength     dimensions of simulation box
+ * \param [in] BeadType      informationn about bead types
+ * \param [in] Bead          informationn about individual beads
+ * \return vector with principal moments of gyration tensor (sorted as x<y<z)
+ */
+Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
+                BeadType *BeadType, Bead **Bead); //}}}
+
 // Min3() //{{{
 /**
  * \brief Function returning the lowest number from three floats.
