@@ -6,8 +6,6 @@
 #include "../AnalysisTools.h"
 #include "../Options.h"
 
-#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
-
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <output> <molecule names> <options>\n\n", cmd);
@@ -19,187 +17,6 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      --joined         specify that joined coordinates are used\n");
   fprintf(stderr, "      -bt              specify bead types to be used for calculation (default is all)\n");
   CommonHelp(1);
-} //}}}
-
-void jacobi(double **a, int n, double d[], double **v, int *nrot) { //{{{
-
-  double b[3], z[3];
-
-  for (int ip = 0; ip < n; ip++) {
-    for (int iq = 0; iq < n; iq++) {
-      v[ip][iq] = 0;
-    }
-    v[ip][ip] = 1;
-  }
-
-  for (int ip = 0; ip < n; ip++) {
-    b[ip] = d[ip] = a[ip][ip];
-    z[ip] = 0;
-  }
-
-  *nrot = 0;
-
-  for (int i = 0; i < 50; i++) {
-    double sm = 0;
-    for (int ip = 0; ip < (n-1); ip++) {
-      for (int iq = 0; iq < (n-1); iq++) {
-        sm += fabs(a[ip][iq]);
-      }
-    }
-
-    if (sm == 0) {
-      return;
-    }
-    double tresh;
-    if (i < 4) {
-      tresh = 0.2 * sm / (SQR(n));
-    } else {
-      tresh = 0;
-    }
-
-    for (int ip = 0; ip < (n-1); ip++) {
-      for (int iq = 0; iq < (n-1); iq++) {
-        double g = 100 * fabs(a[ip][iq]);
-
-        if (i > 4 && (double)(fabs(d[ip])+g) == (double)fabs(d[ip])
-            && (double)(fabs(d[iq])+g) == (double)fabs(d[iq])) {
-          a[ip][iq] = 0;
-        } else if (fabs(a[ip][iq]) > tresh) {
-          double h = d[iq] - d[ip];
-          double t, theta;
-
-          if ((double)(fabs(h)+g) == (double)fabs(h)) {
-            t = a[ip][iq] / h;
-          } else {
-            theta = 0.5 * h / a[ip][iq];
-            t = 1 / (fabs(theta) + sqrt(1 + SQR(theta)));
-            if (theta < 0) {
-              t = -t;
-            }
-          }
-
-          double c = 1 / sqrt(1 + SQR(t));
-          double s = t * c;
-          double tau = s / (1 + c);
-          h = t * a[ip][iq];
-          z[ip] -= h;
-          z[iq] += h;
-          d[ip] -= h;
-          d[iq] += h;
-          a[ip][iq] = 0;
-
-          for (int j = 0; j < (iq-1); j++) {
-            ROTATE(a, j, ip, j, iq);
-          }
-          for (int j = (ip+1); j < (iq-1); j++) {
-            ROTATE(a, ip, j, j, iq);
-          }
-          for (int j = (iq+1); j < n; j++) {
-            ROTATE(a, ip, j, iq, j);
-          }
-          for (int j = 0; j < n; j++) {
-            ROTATE(v, j, ip, j, iq);
-          }
-          ++(*nrot);
-        }
-      }
-    }
-
-    for (int ip = 0; ip < n; ip++) {
-      b[ip] += z[ip];
-      d[ip] = b[ip];
-      z[ip] = 0;
-    }
-  }
-} //}}}
-
-Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) { //{{{
-
-  Vector com = CentreOfMass(n, list, *Bead, BeadType);
-
-  // move centre of mass to [0,0,0] //{{{
-  for (int i = 0; i < n; i++) {
-    (*Bead)[list[i]].Position.x -= com.x;
-    (*Bead)[list[i]].Position.y -= com.y;
-    (*Bead)[list[i]].Position.z -= com.z;
-  } //}}}
-
-  double **a = malloc(3*sizeof(double *)); //{{{
-  a[0] = calloc(3,sizeof(double));
-  a[1] = calloc(3,sizeof(double));
-  a[2] = calloc(3,sizeof(double));
-
-//a[0][0] = GyrationTensor.x.x;
-//a[0][1] = GyrationTensor.y.x;
-//a[0][2] = GyrationTensor.z.x;
-//a[1][0] = GyrationTensor.x.y;
-//a[1][1] = GyrationTensor.y.y;
-//a[1][2] = GyrationTensor.z.y;
-//a[2][0] = GyrationTensor.x.z;
-//a[2][1] = GyrationTensor.y.z;
-//a[2][2] = GyrationTensor.z.z; //}}}
-
-  // calculate gyration tensor //{{{
-  for (int i = 0; i < n; i++) {
-    a[0][0] += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.x;
-    a[0][1] += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
-    a[0][2] += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
-    a[1][1] += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.y;
-    a[1][2] += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
-    a[2][2] += (*Bead)[list[i]].Position.z * (*Bead)[list[i]].Position.z;
-  }
-  a[0][0] /= n;
-  a[0][1] /= n;
-  a[0][2] /= n;
-  a[1][1] /= n;
-  a[2][1] /= n;
-  a[2][2] /= n;
-
-  // just pro forma
-  a[1][0] = a[0][1];
-  a[2][0] = a[0][2];
-  a[2][1] = a[1][2];
-  //}}}
-
-  putchar('\n');
-  for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 3; j++) {
-      fprintf(stdout, " %lf", a[i][j]);
-    }
-    putchar('\n');
-  }
-  putchar('\n');
-
-  double *d = malloc(3*sizeof(double));
-  double **v = malloc(3*sizeof(double *));
-  v[0] = malloc(3*sizeof(double));
-  v[1] = malloc(3*sizeof(double));
-  v[2] = malloc(3*sizeof(double));
-  int nrot, size = 3;
-  jacobi(a, size, d, v, &nrot);
-
-  Vector eigen;
-  eigen.x = d[0];
-  eigen.y = d[1];
-  eigen.z = d[2];
-
-  eigen = Sort3(eigen);
-
-  fprintf(stdout, "d=(%lf, %lf, %lf)\n", d[0], d[1], d[2]);
-  putchar('\n');
-
-  // free memory //{{{
-  free(d);
-  free(v[0]);
-  free(v[1]);
-  free(v[2]);
-  free(v);
-  free(a[0]);
-  free(a[1]);
-  free(a[2]);
-  free(a); //}}}
-
-  return (eigen);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -525,7 +342,6 @@ system.\n\n");
         Acyl[Molecule[i].Type] += eigen.y - eigen.x;
         // asphericity
         Aspher[Molecule[i].Type] += eigen.z - 0.5 * (eigen.x + eigen.y);
-        fprintf(stdout, "%lf %lf %lf\n", eigen.x, eigen.y, eigen.z);
       }
     } //}}}
 
