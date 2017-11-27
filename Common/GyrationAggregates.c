@@ -21,191 +21,6 @@ void ErrorHelp(char cmd[50]) { //{{{
   CommonHelp(1);
 } //}}}
 
-#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
-
-void jacobi(double **a, int n, double d[], double **v, int *nrot) { //{{{
-
-  double b[3], z[3];
-
-  for (int ip = 0; ip < n; ip++) {
-    for (int iq = 0; iq < n; iq++) {
-      v[ip][iq] = 0;
-    }
-    v[ip][ip] = 1;
-  }
-
-  for (int ip = 0; ip < n; ip++) {
-    b[ip] = d[ip] = a[ip][ip];
-    z[ip] = 0;
-  }
-
-  *nrot = 0;
-
-  for (int i = 0; i < 50; i++) {
-    double sm = 0;
-    for (int ip = 0; ip < (n-1); ip++) {
-      for (int iq = 0; iq < (n-1); iq++) {
-        sm += fabs(a[ip][iq]);
-      }
-    }
-
-    if (sm == 0) {
-      return;
-    }
-    double tresh;
-    if (i < 4) {
-      tresh = 0.2 * sm / (SQR(n));
-    } else {
-      tresh = 0;
-    }
-
-    for (int ip = 0; ip < (n-1); ip++) {
-      for (int iq = 0; iq < (n-1); iq++) {
-        double g = 100 * fabs(a[ip][iq]);
-
-        if (i > 4 && (double)(fabs(d[ip])+g) == (double)fabs(d[ip])
-            && (double)(fabs(d[iq])+g) == (double)fabs(d[iq])) {
-          a[ip][iq] = 0;
-        } else if (fabs(a[ip][iq]) > tresh) {
-          double h = d[iq] - d[ip];
-          double t, theta;
-
-          if ((double)(fabs(h)+g) == (double)fabs(h)) {
-            t = a[ip][iq] / h;
-          } else {
-            theta = 0.5 * h / a[ip][iq];
-            t = 1 / (fabs(theta) + sqrt(1 + SQR(theta)));
-            if (theta < 0) {
-              t = -t;
-            }
-          }
-
-          double c = 1 / sqrt(1 + SQR(t));
-          double s = t * c;
-          double tau = s / (1 + c);
-          h = t * a[ip][iq];
-          z[ip] -= h;
-          z[iq] += h;
-          d[ip] -= h;
-          d[iq] += h;
-          a[ip][iq] = 0;
-
-          for (int j = 0; j < (iq-1); j++) {
-            ROTATE(a, j, ip, j, iq);
-          }
-          for (int j = (ip+1); j < (iq-1); j++) {
-            ROTATE(a, ip, j, j, iq);
-          }
-          for (int j = (iq+1); j < n; j++) {
-            ROTATE(a, ip, j, iq, j);
-          }
-          for (int j = 0; j < n; j++) {
-            ROTATE(v, j, ip, j, iq);
-          }
-          ++(*nrot);
-        }
-      }
-    }
-
-    for (int ip = 0; ip < n; ip++) {
-      b[ip] += z[ip];
-      d[ip] = b[ip];
-      z[ip] = 0;
-    }
-  }
-} //}}}
-
-Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) { //{{{
-  // gyration tensor (3x3 array) //{{{
-  struct Tensor {
-    Vector x, y, z;
-  } GyrationTensor;
-
-  GyrationTensor.x.x = 0;
-  GyrationTensor.x.y = 0;
-  GyrationTensor.x.z = 0;
-  GyrationTensor.y.x = 0;
-  GyrationTensor.y.y = 0;
-  GyrationTensor.y.z = 0;
-  GyrationTensor.z.x = 0;
-  GyrationTensor.z.y = 0;
-  GyrationTensor.z.z = 0; //}}}
-
-  Vector com = CentreOfMass(n, list, *Bead, BeadType);
-
-  // move centre of mass to [0,0,0] //{{{
-  for (int i = 0; i < n; i++) {
-    (*Bead)[list[i]].Position.x -= com.x;
-    (*Bead)[list[i]].Position.y -= com.y;
-    (*Bead)[list[i]].Position.z -= com.z;
-  } //}}}
-
-  // calculate gyration tensor //{{{
-  for (int i = 0; i < n; i++) {
-    GyrationTensor.x.x += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.x;
-    GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
-    GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
-    GyrationTensor.y.y += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.y;
-    GyrationTensor.y.z += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
-    GyrationTensor.z.z += (*Bead)[list[i]].Position.z * (*Bead)[list[i]].Position.z;
-  }
-  GyrationTensor.x.x /= n;
-  GyrationTensor.x.y /= n;
-  GyrationTensor.x.z /= n;
-  GyrationTensor.y.y /= n;
-  GyrationTensor.y.z /= n;
-  GyrationTensor.z.z /= n;
-
-  // just pro forma
-  GyrationTensor.y.x = GyrationTensor.x.y;
-  GyrationTensor.z.x = GyrationTensor.x.z;
-  GyrationTensor.z.y = GyrationTensor.y.z;
-  //}}}
-
-  // create variables and arrays for jacobi() //{{{
-  double **a;
-  a = malloc(3*sizeof(double *));
-  for (int i = 0; i < 3; i++) {
-    a[i] = malloc(3*sizeof(double));
-  }
-
-  a[0][0] = GyrationTensor.x.x;
-  a[0][1] = GyrationTensor.y.x;
-  a[0][2] = GyrationTensor.z.x;
-  a[1][0] = GyrationTensor.x.y;
-  a[1][1] = GyrationTensor.y.y;
-  a[1][2] = GyrationTensor.z.y;
-  a[2][0] = GyrationTensor.x.z;
-  a[2][1] = GyrationTensor.y.z;
-  a[2][2] = GyrationTensor.z.z;
-
-  double *d = malloc(3*sizeof(double));
-  double **v = malloc(3*sizeof(double *));
-  for (int i = 0; i < 3; i++) {
-    v[i] = malloc(3*sizeof(double));
-  }
-  int nrot, size = 3; //}}}
-  jacobi(a, size, d, v, &nrot);
-
-  Vector eigen;
-
-  eigen.x = d[0];
-  eigen.y = d[1];
-  eigen.z = d[2];
-
-  eigen = Sort3(eigen);
-
-  free(d);
-  for (int i = 0; i < 3; i++) {
-    free(v[i]);
-    free(a[i]);
-  }
-  free(v);
-  free(a);
-
-  return (eigen);
-} //}}}
-
 int main(int argc, char *argv[]) {
 
   // -h option - print help and exit //{{{
@@ -519,13 +334,13 @@ system.\n\n");
   // asphericity: only normal sum
   double *Aspher_sum = calloc(Counts.Molecules,sizeof(double));
   // total mass of aggregates: [size][0] normal sum, [size][1] sum of squares
-  int **mass_sum = malloc(Counts.Molecules*sizeof(int *));
+  long int **mass_sum = malloc(Counts.Molecules*sizeof(int *));
   // number of molecule types in aggregates: [size][mol type] only normal sum
   int **molecules_sum = malloc(Counts.Molecules*sizeof(int *));
   for (int i = 0; i < Counts.Molecules; i++) {
     Rg_sum[i] = calloc(3,sizeof(double));
     sqrRg_sum[i] = calloc(3,sizeof(double));
-    mass_sum[i] = calloc(2,sizeof(int));
+    mass_sum[i] = calloc(2,sizeof(long int));
     molecules_sum[i] = calloc(Counts.TypesOfMolecules,sizeof(int));
   } //}}}
 

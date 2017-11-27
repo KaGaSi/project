@@ -6,8 +6,6 @@
 #include <stdbool.h>
 #include "AnalysisTools.h"
 
-//TODO: somehow implement Join flag for bead types (throughout all utilities)
-
 // ReadFIELD() - auxiliary for ReadStructure() //{{{
 /*
  * Function reading information about all bead types (name, mass, charge) from
@@ -569,6 +567,109 @@ void CommonHelp(bool error) {
     printf("      -h             print this help and exit\n");
     printf("      --script       do not reprint line (useful when output goes to file)\n");
   }
+} //}}}
+
+// CommonOptions() //{{{
+/**
+ * Function for options common to most of the utilities.
+ */
+bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
+                   bool *verbose, bool *verbose2, bool *silent, bool *script) {
+
+  bool error = false;
+
+  // -i <name> option - filename of input structure file //{{{
+  (*vsf_file)[0] = '\0'; // check if -i option is used
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-i") == 0) {
+
+      // wrong argument to -i option
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\nMissing argument to '-i' option ");
+        fprintf(stderr, "(or filename beginning with a dash)!\n");
+
+        error = true;
+        break;
+      }
+
+      // check if .vsf ending is present
+      char *vsf = strrchr(argv[i+1], '.');
+      if (!vsf || strcmp(vsf, ".vsf")) {
+        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
+        error = true;
+      }
+
+      strcpy(*vsf_file, argv[i+1]);
+    }
+  }
+
+  // -i option is not used
+  if ((*vsf_file)[0] == '\0') {
+    strcpy(*vsf_file, "dl_meso.vsf");
+  } //}}}
+
+  // -b <name> option - filename of input bond file //{{{
+  (*bonds_file)[0] = '\0'; // check if -b option is used
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-b") == 0) {
+
+      // wrong argument to -b option
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\nMissing argument to '-b' option ");
+        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
+
+        error = true;
+        break;
+      }
+
+      strcpy(*bonds_file, argv[i+1]);
+    }
+  } //}}}
+
+  // -v option - verbose output //{{{
+  *verbose = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-v") == 0) {
+      *verbose = true;
+
+      break;
+    }
+  } //}}}
+
+  // -V option - verbose output with comments from input .vcf file //{{{
+  *verbose2 = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-V") == 0) {
+      *verbose = true;
+      *verbose2 = true;
+
+      break;
+    }
+  } //}}}
+
+  // -s option - silent mode //{{{
+  *silent = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-s") == 0) {
+      *verbose = false;
+      *verbose2 = false;
+      *silent = true;
+
+      break;
+    }
+  } //}}}
+
+  // --script  option - meant for when output is routed to file, so don't use flush & \r //{{{
+  *script = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--script") == 0) {
+      *script = true;
+
+      break;
+    }
+  } //}}}
+
+  return (error);
 } //}}}
 
 // VerboseOutput() //{{{
@@ -1393,6 +1494,198 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
   com.z /= n;
 
   return (com);
+} //}}}
+
+// jacobi() //{{{
+/**
+ * Jacobi transformation used in Gyration() function.
+ */
+void jacobi(double **a, int n, double d[], double **v, int *nrot) {
+#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
+
+  double b[3], z[3];
+
+  for (int ip = 0; ip < n; ip++) {
+    for (int iq = 0; iq < n; iq++) {
+      v[ip][iq] = 0;
+    }
+    v[ip][ip] = 1;
+  }
+
+  for (int ip = 0; ip < n; ip++) {
+    b[ip] = d[ip] = a[ip][ip];
+    z[ip] = 0;
+  }
+
+  *nrot = 0;
+
+  for (int i = 0; i < 50; i++) {
+    double sm = 0;
+    for (int ip = 0; ip < (n-1); ip++) {
+      for (int iq = 0; iq < (n-1); iq++) {
+        sm += fabs(a[ip][iq]);
+      }
+    }
+
+    if (sm == 0) {
+      return;
+    }
+    double tresh;
+    if (i < 4) {
+      tresh = 0.2 * sm / (SQR(n));
+    } else {
+      tresh = 0;
+    }
+
+    for (int ip = 0; ip < (n-1); ip++) {
+      for (int iq = 0; iq < (n-1); iq++) {
+        double g = 100 * fabs(a[ip][iq]);
+
+        if (i > 4 && (double)(fabs(d[ip])+g) == (double)fabs(d[ip])
+            && (double)(fabs(d[iq])+g) == (double)fabs(d[iq])) {
+          a[ip][iq] = 0;
+        } else if (fabs(a[ip][iq]) > tresh) {
+          double h = d[iq] - d[ip];
+          double t, theta;
+
+          if ((double)(fabs(h)+g) == (double)fabs(h)) {
+            t = a[ip][iq] / h;
+          } else {
+            theta = 0.5 * h / a[ip][iq];
+            t = 1 / (fabs(theta) + sqrt(1 + SQR(theta)));
+            if (theta < 0) {
+              t = -t;
+            }
+          }
+
+          double c = 1 / sqrt(1 + SQR(t));
+          double s = t * c;
+          double tau = s / (1 + c);
+          h = t * a[ip][iq];
+          z[ip] -= h;
+          z[iq] += h;
+          d[ip] -= h;
+          d[iq] += h;
+          a[ip][iq] = 0;
+
+          for (int j = 0; j < (iq-1); j++) {
+            ROTATE(a, j, ip, j, iq);
+          }
+          for (int j = (ip+1); j < (iq-1); j++) {
+            ROTATE(a, ip, j, j, iq);
+          }
+          for (int j = (iq+1); j < n; j++) {
+            ROTATE(a, ip, j, iq, j);
+          }
+          for (int j = 0; j < n; j++) {
+            ROTATE(v, j, ip, j, iq);
+          }
+          ++(*nrot);
+        }
+      }
+    }
+
+    for (int ip = 0; ip < n; ip++) {
+      b[ip] += z[ip];
+      d[ip] = b[ip];
+      z[ip] = 0;
+    }
+  }
+} //}}}
+
+// Gyration() //{{{
+/**
+ * Function to calculate the principle moments of the gyration tensor.
+ */
+Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) {
+  // gyration tensor (3x3 array) //{{{
+  struct Tensor {
+    Vector x, y, z;
+  } GyrationTensor;
+
+  GyrationTensor.x.x = 0;
+  GyrationTensor.x.y = 0;
+  GyrationTensor.x.z = 0;
+  GyrationTensor.y.x = 0;
+  GyrationTensor.y.y = 0;
+  GyrationTensor.y.z = 0;
+  GyrationTensor.z.x = 0;
+  GyrationTensor.z.y = 0;
+  GyrationTensor.z.z = 0; //}}}
+
+  Vector com = CentreOfMass(n, list, *Bead, BeadType);
+
+  // move centre of mass to [0,0,0] //{{{
+  for (int i = 0; i < n; i++) {
+    (*Bead)[list[i]].Position.x -= com.x;
+    (*Bead)[list[i]].Position.y -= com.y;
+    (*Bead)[list[i]].Position.z -= com.z;
+  } //}}}
+
+  // calculate gyration tensor //{{{
+  for (int i = 0; i < n; i++) {
+    GyrationTensor.x.x += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.x;
+    GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
+    GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
+    GyrationTensor.y.y += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.y;
+    GyrationTensor.y.z += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
+    GyrationTensor.z.z += (*Bead)[list[i]].Position.z * (*Bead)[list[i]].Position.z;
+  }
+  GyrationTensor.x.x /= n;
+  GyrationTensor.x.y /= n;
+  GyrationTensor.x.z /= n;
+  GyrationTensor.y.y /= n;
+  GyrationTensor.y.z /= n;
+  GyrationTensor.z.z /= n;
+
+  // just pro forma
+  GyrationTensor.y.x = GyrationTensor.x.y;
+  GyrationTensor.z.x = GyrationTensor.x.z;
+  GyrationTensor.z.y = GyrationTensor.y.z;
+  //}}}
+
+  // create variables and arrays for jacobi() //{{{
+  double **a;
+  a = malloc(3*sizeof(double *));
+  for (int i = 0; i < 3; i++) {
+    a[i] = calloc(3,sizeof(double));
+  }
+
+  a[0][0] = GyrationTensor.x.x;
+  a[0][1] = GyrationTensor.y.x;
+  a[0][2] = GyrationTensor.z.x;
+  a[1][0] = GyrationTensor.x.y;
+  a[1][1] = GyrationTensor.y.y;
+  a[1][2] = GyrationTensor.z.y;
+  a[2][0] = GyrationTensor.x.z;
+  a[2][1] = GyrationTensor.y.z;
+  a[2][2] = GyrationTensor.z.z;
+
+  double *d = malloc(3*sizeof(double));
+  double **v = malloc(3*sizeof(double *));
+  for (int i = 0; i < 3; i++) {
+    v[i] = calloc(3,sizeof(double));
+  }
+  int nrot, size = 3; //}}}
+  jacobi(a, size, d, v, &nrot);
+
+  Vector eigen;
+  eigen.x = d[0];
+  eigen.y = d[1];
+  eigen.z = d[2];
+
+  eigen = Sort3(eigen);
+
+  // free memory //{{{
+  free(d);
+  for (int i = 0; i < 3; i++) {
+    free(v[i]);
+    free(a[i]);
+  }
+  free(v);
+  free(a); //}}}
+
+  return (eigen);
 } //}}}
 
 // Min3() //{{{
