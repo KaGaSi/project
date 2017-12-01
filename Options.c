@@ -268,6 +268,30 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
   return(false);
 } //}}}
 
+// FileOption() //{{{
+/**
+ * Generic option for file name. The option is an argument of this function.
+ */
+bool FileOption(int argc, char **argv, char *opt, char **name) {
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], opt) == 0) {
+
+      // wrong argument to the option
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\nMissing argument to '%s' option ", opt);
+        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
+
+        return(true);
+      }
+
+      strcpy(*name, argv[i+1]);
+    }
+  }
+
+  return(false);
+} //}}}
+
 // AggSizeSpecificMolType() //{{{
 /**
  * Option that defines what aggregate size means -- the size is the number of
