@@ -135,18 +135,18 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value);
  */
 bool FileOption(int argc, char **argv, char *opt, char **name); //}}}
 
-// AggSizeSpecificMolType() //{{{
+// MoleculeTypeOption() //{{{
 /**
- * \brief Option defining which molecule type to take as aggregate size (`-m <name>`).
+ * \brief Function for any option with molecule type name.
  *
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
- * \param [out] moltype      chosen molecule type
+ * \param [in]  opt          option switch (e.g. array containing `-n`)
  * \param [in]  Counts       numbers of beads, molecules, etc.
+ * \param [out] moltype      id of the molecule type
  * \param [in]  MoleculeType information about molecule types
- * \return `true` or `false` error or not error
+ * \return `true` or `false` for error
  */
-bool AggSizeSpecificMolType(int argc, char **argv, int *moltype, Counts Counts,
-                            MoleculeType **MoleculeType);
-// }}}
+bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts Counts,
+                        MoleculeType **MoleculeType); //}}}
 #endif

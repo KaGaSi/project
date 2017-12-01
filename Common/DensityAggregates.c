@@ -184,7 +184,7 @@ system.\n\n");
 
   // '-m' option //{{{
   int specific_moltype_for_size;
-  if (AggSizeSpecificMolType(argc, argv, &specific_moltype_for_size, Counts, &MoleculeType)) {
+  if (MoleculeTypeOption(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
     exit(1);
   } //}}}
 
