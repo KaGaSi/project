@@ -123,6 +123,18 @@ bool BoolOption(int argc, char **argv, char *opt); //}}}
 bool IntegerOption(int argc, char **argv, char *opt, int *value);
 // }}}
 
+// FileOption() //{{{
+/**
+ * \brief Function for any option with filename.
+ *
+ * \param [in]  argc  number of program's arguments
+ * \param [in]  argv  program's arguments
+ * \param [in]  opt   option switch (e.g. array containing `-n`)
+ * \param [out] name  array containing the filename
+ * \return `true` or `false` for error
+ */
+bool FileOption(int argc, char **argv, char *opt, char **name); //}}}
+
 // AggSizeSpecificMolType() //{{{
 /**
  * \brief Option defining which molecule type to take as aggregate size (`-m <name>`).
