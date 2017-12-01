@@ -292,29 +292,31 @@ bool FileOption(int argc, char **argv, char *opt, char **name) {
   return(false);
 } //}}}
 
-// AggSizeSpecificMolType() //{{{
+// MoleculeTypeOption() //{{{
 /**
- * Option that defines what aggregate size means -- the size is the number of
- * molecules of the type given in the argument to this option.
+ * Generic option for molecule type. The option is an argument of this
+ * function.
  */
-bool AggSizeSpecificMolType(int argc, char **argv, int *moltype, Counts Counts,
-                            MoleculeType **MoleculeType) {
+bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts
+    Counts, MoleculeType **MoleculeType) {
+
   *moltype = -1;
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-m") == 0) {
+    if (strcmp(argv[i], opt) == 0) {
 
       // Error - missing or wrong argument //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing argument for '-m' option (or molecule name beginning with a dash)!\n");
+        fprintf(stderr, "Missing argument for '%s' option (or molecule name beginning with a dash)!\n", opt);
         return(true);
       } //}}}
 
       *moltype = FindMoleculeType(argv[i+1], Counts, *MoleculeType);
       if (*moltype == -1) {
-        fprintf(stderr, "Molecule '%s' does not exist in FIELD ('-m' option)!\n", argv[i+1]);
+        fprintf(stderr, "Molecule '%s' does not exist in FIELD ('%s' option)!\n", argv[i+1], opt);
         return(true);
       }
     }
   }
+
   return(false);
-} // }}}
+} //}}}

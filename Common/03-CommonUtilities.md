@@ -296,6 +296,9 @@ count the aggregate size as 1 and its mass as
 5\latexonly($1\cdot1+2\cdot2$)\endlatexonly, while not using `-m` option will
 count the aggregate size as 3 and its mass still as 5.
 
+Also using the `--only <name>` uses only aggregates composed exclusively of a
+specified molecule type.
+
 The utility reads information about aggregate from input file with
 [Aggregate format](\ref AggregateFile). This file can be generated using
 [Aggregates utility](\ref Aggregates).
@@ -321,6 +324,8 @@ Usage:
 > > `-m <molecule type name>`
 > > > instead of aggregate size, use number of molecules of specified molecule
 > > > types
+> > `--only <molecule type name>`
+> > > use only aggregates composed of specified molecule type
 > > `-x <name(s)>`
 > > > exclude aggregates containing only specified molecule(s)
 

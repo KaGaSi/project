@@ -19,6 +19,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      --no-unimers      do not count unimers into averages\n");
   fprintf(stderr, "      -m <name>         agg size means number of <name> molecule types in an aggregate\n");
   fprintf(stderr, "      -x <name(s)>      exclude aggregates containing only specified molecule(s)\n");
+  fprintf(stderr, "      --only <name>     use just aggregates composed of a specified molecule\n");
   CommonHelp(1);
 } //}}}
 
@@ -48,6 +49,7 @@ the system.\n\n");
       fprintf(stdout, "      --no-unimers      do not count unimers into averages\n");
       fprintf(stdout, "      -m <name>         agg size means number of <name> molecule types in an aggregate\n");
       fprintf(stdout, "      -x <name(s)>      exclude aggregates containing only specified molecule(s)\n");
+      fprintf(stdout, "      --only <name>     use just aggregates composed of a specified molecule\n");
       CommonHelp(0);
       exit(0);
     }
@@ -68,7 +70,8 @@ the system.\n\n");
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "--no-unimers") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
-        strcmp(argv[i], "-x") != 0 ) {
+        strcmp(argv[i], "-x") != 0 &&
+        strcmp(argv[i], "--only") != 0 ) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -169,7 +172,7 @@ the system.\n\n");
 
   // '-m' option //{{{
   int specific_moltype_for_size;
-  if (AggSizeSpecificMolType(argc, argv, &specific_moltype_for_size, Counts, &MoleculeType)) {
+  if (MoleculeTypeOption(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
     exit(1);
   } //}}}
 
@@ -183,6 +186,12 @@ the system.\n\n");
     MoleculeType[i].Write = MoleculeType[i].Use;
   }
   //}}}
+
+  // '--only' option //{{{
+  int only_specific_moltype_aggregates = -1;
+  if (MoleculeTypeOption(argc, argv, "--only", &only_specific_moltype_aggregates, Counts, &MoleculeType)) {
+    exit(1);
+  } //}}}
 
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
@@ -322,21 +331,36 @@ the system.\n\n");
         avg_n_step = 0, avg_w_step = 0; // per-step averages
     for (int i = 0; i < Counts.Aggregates; i++) {
 
-      // determine aggregate size - if `-m` is used it equals to the number of 'specific_moltype_for_size' mols //{{{
+      // determine aggregate size -- if `-m` is used size is the number of 'specific_moltype_for_size' mols //{{{
       int size = 0;
+      double agg_mass = 0;
       if (specific_moltype_for_size != -1) {
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
           int id = Aggregate[i].Molecule[j];
           if (specific_moltype_for_size == Molecule[id].Type) {
             size++;
+            agg_mass += MoleculeType[id].Mass;
           }
         }
       } else { // agg size = total number of all molecules
         size = Aggregate[i].nMolecules;
+        agg_mass = Aggregate[i].Mass;
       } //}}}
 
+      // if '--only' is used, use only aggregates composed the specified molecule
+      bool use = true;
+      if (only_specific_moltype_aggregates != -1) {
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          int id = Aggregate[i].Molecule[j];
+          if (only_specific_moltype_aggregates != Molecule[id].Type) {
+            use = false;
+            break;
+          }
+        }
+      }
+
       // make calculations only if agg size is well defined
-      if (size > 0) {
+      if (size > 0 && use == true) {
         // start calculation of averages from specified 'start' timestep
         if (count >= start) {
 
@@ -354,18 +378,18 @@ the system.\n\n");
           } //}}}
 
           // distribution //{{{
-          ndistr_As[size-1] += Aggregate[i].Mass;
-          wdistr_As[size-1] += SQR(Aggregate[i].Mass);
+          ndistr_As[size-1] += agg_mass;
+          wdistr_As[size-1] += SQR(agg_mass);
           voldistr_As[size-1] += Aggregate[i].nBeads;
-          int mass = Aggregate[i].Mass;
-          ndistr_mass[mass] += Aggregate[i].Mass;
-          wdistr_mass[mass] += SQR(Aggregate[i].Mass); //}}}
+          int mass = agg_mass;
+          ndistr_mass[mass] += agg_mass;
+          wdistr_mass[mass] += SQR(agg_mass); //}}}
 
           // number of various species in the aggregate //{{{
           if (!no_uni || size != 1) {
             count_agg[size-1]++;
-            mass_sum[0] += Aggregate[i].Mass;
-            mass_sum[1] += SQR(Aggregate[i].Mass);
+            mass_sum[0] += agg_mass;
+            mass_sum[1] += SQR(agg_mass);
 
             volume_sum += Aggregate[i].nBeads;
 
@@ -387,8 +411,8 @@ the system.\n\n");
         if (!no_uni || size != 1) {
           aggs_step++;
 
-          avg_n_step += Aggregate[i].Mass;
-          avg_w_step += SQR(Aggregate[i].Mass);
+          avg_n_step += agg_mass;
+          avg_w_step += SQR(agg_mass);
         } //}}}
       }
 //    else {
