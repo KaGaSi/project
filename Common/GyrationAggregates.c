@@ -17,7 +17,8 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      --joined         specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -bt              specify bead types to be used for calculation (default is all)\n");
   fprintf(stderr, "      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
-  fprintf(stderr, "      --no-unimers      do not count unimers into averages\n");
+  fprintf(stdout, "      -ps <filename>   save per-size averages to a file\n");
+  fprintf(stderr, "      --no-unimers     do not count unimers into averages\n");
   CommonHelp(1);
 } //}}}
 
@@ -49,7 +50,8 @@ system.\n\n");
       fprintf(stdout, "      --joined         specify that aggregates with joined coordinates are used\n");
       fprintf(stdout, "      -bt              specify bead types to be used for calculation (default is all)\n");
       fprintf(stdout, "      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
-      fprintf(stdout, "      --no-unimers      do not count unimers into averages\n");
+      fprintf(stdout, "      -ps <filename>   save per-size averages to a file\n");
+      fprintf(stdout, "      --no-unimers     do not count unimers into averages\n");
       CommonHelp(0);
       exit(0);
     }
@@ -70,6 +72,7 @@ system.\n\n");
         strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
+        strcmp(argv[i], "-ps") != 0 &&
         strcmp(argv[i], "--no-unimers") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
@@ -116,6 +119,13 @@ system.\n\n");
 
   // do not count unimers towards averages //{{{
   bool no_uni = BoolOption(argc, argv, "--no-unimers"); //}}}
+
+  // write per-agg averages to a file? //{{{
+  char *per_size_file = calloc(32,sizeof(char *));
+  per_size_file[0] = '\0';
+  if (FileOption(argc, argv, "-ps", &per_size_file)) {
+    exit(0);
+  } //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -433,40 +443,42 @@ system.\n\n");
           // copy bead ids to a separate array //{{{
           int *list = malloc(Aggregate[i].nBeads*sizeof(int));
           int n = 0;
+          double agg_mass = 0;
           for (int j = 0; j < Aggregate[i].nBeads; j++) {
             int id = Aggregate[i].Bead[j];
             if (BeadType[Bead[id].Type].Use) {
               list[n] = id;
               n++;
+              agg_mass += BeadType[Bead[id].Type].Mass;
             }
           } //}}}
 
           Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
 
-  //      // calcule Rg the 'usual way' -- for testing purposes //{{{
-  //      double Rg2 = 0;
-  //      Vector com = CentreOfMass(n, list, Bead, BeadType);
-  //      for (int j = 0; j < n; j++) {
-  //        Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
-  //        Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
-  //      }
-  //      Rg2 /= n; //}}}
+//        // calcule Rg the 'usual way' -- for testing purposes //{{{
+//        double Rg2 = 0;
+//        Vector com = CentreOfMass(n, list, Bead, BeadType);
+//        for (int j = 0; j < n; j++) {
+//          Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
+//          Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
+//        }
+//        Rg2 /= n; //}}}
 
           free(list); // free array of bead ids for gyration calculation
 
           double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
 
           // agg masses
-          mass_step[0] += Aggregate[i].Mass; // for this timestep
-          mass_step[1] += SQR(Aggregate[i].Mass); // for this timestep
+          mass_step[0] += agg_mass; // for this timestep
+          mass_step[1] += SQR(agg_mass); // for this timestep
           // radius of gyration
           Rg_step[correct_size][0] += Rgi; // for number avg
-          Rg_step[correct_size][1] += Rgi * Aggregate[i].Mass; // for weight average
-          Rg_step[correct_size][2] += Rgi * SQR(Aggregate[i].Mass); // for z-average
+          Rg_step[correct_size][1] += Rgi * agg_mass; // for weight average
+          Rg_step[correct_size][2] += Rgi * SQR(agg_mass); // for z-average
           // squared radius of gyration
           sqrRg_step[correct_size][0] += SQR(Rgi); // for number avg
-          sqrRg_step[correct_size][1] += SQR(Rgi) * Aggregate[i].Mass; // for weight average
-          sqrRg_step[correct_size][2] += SQR(Rgi) * SQR(Aggregate[i].Mass); // for z-average
+          sqrRg_step[correct_size][1] += SQR(Rgi) * agg_mass; // for weight average
+          sqrRg_step[correct_size][2] += SQR(Rgi) * SQR(agg_mass); // for z-average
           // relative shape anisotropy
           Anis_step[correct_size] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
           // acylindricity
@@ -474,8 +486,8 @@ system.\n\n");
           // asphericity
           Aspher_step[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
           // aggregate size
-          mass_sum[correct_size][0] += Aggregate[i].Mass;
-          mass_sum[correct_size][1] += SQR(Aggregate[i].Mass);
+          mass_sum[correct_size][0] += agg_mass;
+          mass_sum[correct_size][1] += SQR(agg_mass);
 
           // count number of Diblocks and Surfacts in aggrate
           // TODO: generalise
@@ -569,32 +581,54 @@ system.\n\n");
     }
   } //}}}
 
-  // calculate per-size averages //{{{
-  fprintf(stdout, "# 1:As");
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(stdout, " %d:<%s>", i+2, MoleculeType[i].Name);
-  }
-  fprintf(stdout, " %d:<Rg>", Counts.TypesOfMolecules+2);
-  fprintf(stdout, " %d:<Rg^2>", Counts.TypesOfMolecules+3);
-  fprintf(stdout, " %d:<Acyl>", Counts.TypesOfMolecules+4);
-  fprintf(stdout, " %d:<Ashper>", Counts.TypesOfMolecules+5);
-  fprintf(stdout, " %d:<Anis>", Counts.TypesOfMolecules+6);
-  fprintf(stdout, " %d:number of aggs", Counts.TypesOfMolecules+7);
-  putchar('\n');
-  for (int i = 0; i < Counts.Molecules; i++) {
-    if (agg_counts_sum[i] > 0) {
-      fprintf(stdout, "%4d", i+1);
-      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-        fprintf(stdout, " %7.3f", (double)(molecules_sum[i][j])/agg_counts_sum[i]);
-      }
-      fprintf(stdout, " %7.3f", Rg_sum[i][0]/agg_counts_sum[i]);
-      fprintf(stdout, " %7.3f", sqrRg_sum[i][0]/agg_counts_sum[i]);
-      fprintf(stdout, " %7.3f", Anis_sum[i]/agg_counts_sum[i]);
-      fprintf(stdout, " %7.3f", Acyl_sum[i]/agg_counts_sum[i]);
-      fprintf(stdout, " %7.3f", Aspher_sum[i]/agg_counts_sum[i]);
-      fprintf(stdout, " %d", agg_counts_sum[i]);
-      putchar('\n');
+  // calculate per-size averages? //{{{
+  if (per_size_file[0] != '\0') {
+
+    // open file //{{{
+    FILE *out;
+    if ((out = fopen(per_size_file, "w")) == NULL) {
+      fprintf(stderr, "Cannot open file %s!\n", per_size_file);
+      exit(1);
+    } //}}}
+
+    // print command and date to output file //{{{
+    putc('#', out);
+    for (int i = 0; i < argc; i++) {
+      fprintf(out, " %s", argv[i]);
     }
+
+    char date[26];
+    Date(date);
+    fprintf(out, " on %s\n", date); //}}}
+
+    fprintf(out, "# 1:As");
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(out, " %d:<%s>", i+2, MoleculeType[i].Name);
+    }
+    fprintf(out, " %d:<Rg>", Counts.TypesOfMolecules+2);
+    fprintf(out, " %d:<Rg^2>", Counts.TypesOfMolecules+3);
+    fprintf(out, " %d:<Acyl>", Counts.TypesOfMolecules+4);
+    fprintf(out, " %d:<Ashper>", Counts.TypesOfMolecules+5);
+    fprintf(out, " %d:<Anis>", Counts.TypesOfMolecules+6);
+    fprintf(out, " %d:number of aggs", Counts.TypesOfMolecules+7);
+    putc('\n', out);
+    for (int i = 0; i < Counts.Molecules; i++) {
+      if (agg_counts_sum[i] > 0) {
+        fprintf(out, "%4d", i+1);
+        for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+          fprintf(out, " %7.3f", (double)(molecules_sum[i][j])/agg_counts_sum[i]);
+        }
+        fprintf(out, " %7.3f", Rg_sum[i][0]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", sqrRg_sum[i][0]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", Anis_sum[i]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", Acyl_sum[i]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", Aspher_sum[i]/agg_counts_sum[i]);
+        fprintf(out, " %d", agg_counts_sum[i]);
+        putc('\n', out);
+      }
+    }
+
+    fclose(out);
   } //}}}
 
   // total averages //{{{
