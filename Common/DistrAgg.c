@@ -336,10 +336,10 @@ the system.\n\n");
       double agg_mass = 0;
       if (specific_moltype_for_size != -1) {
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          int id = Aggregate[i].Molecule[j];
-          if (specific_moltype_for_size == Molecule[id].Type) {
+          int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
+          if (specific_moltype_for_size == mol_type) {
             size++;
-            agg_mass += MoleculeType[id].Mass;
+            agg_mass += MoleculeType[mol_type].Mass;
           }
         }
       } else { // agg size = total number of all molecules
@@ -363,6 +363,7 @@ the system.\n\n");
       if (size > 0 && use == true) {
         // start calculation of averages from specified 'start' timestep
         if (count >= start) {
+//        printf("%d %lf\n", size, agg_mass);
 
           // if '-x' option is used, discount aggregates with only specified molecule types //{{{
           bool test = true; // aggregate with only excluded molecules?
