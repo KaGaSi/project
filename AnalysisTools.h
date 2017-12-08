@@ -201,12 +201,6 @@ void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead); //}}}
  */
 Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
 
-// jacobi() //{{{
-/**
- * Jacobi transformation used in Gyration() function.
- */
-void jacobi(double **a, int n, double d[], double **v, int *nrot); //}}}
-
 // Gyration() //{{{
 /*
  * \brief Function calculating principal moments of the gyration tensor.

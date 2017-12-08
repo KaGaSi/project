@@ -1496,103 +1496,6 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
   return (com);
 } //}}}
 
-// jacobi() //{{{
-/**
- * Jacobi transformation used in Gyration() function.
- */
-void jacobi(double **a, int n, double d[], double **v, int *nrot) {
-#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);a[k][l]=h+s*(g-h*tau);
-
-  double b[3], z[3];
-
-  for (int ip = 0; ip < n; ip++) {
-    for (int iq = 0; iq < n; iq++) {
-      v[ip][iq] = 0;
-    }
-    v[ip][ip] = 1;
-  }
-
-  for (int ip = 0; ip < n; ip++) {
-    b[ip] = d[ip] = a[ip][ip];
-    z[ip] = 0;
-  }
-
-  *nrot = 0;
-
-  for (int i = 0; i < 50; i++) {
-    double sm = 0;
-    for (int ip = 0; ip < (n-1); ip++) {
-      for (int iq = 0; iq < (n-1); iq++) {
-        sm += fabs(a[ip][iq]);
-      }
-    }
-
-    if (sm == 0) {
-      return;
-    }
-    double tresh;
-    if (i < 4) {
-      tresh = 0.2 * sm / (SQR(n));
-    } else {
-      tresh = 0;
-    }
-
-    for (int ip = 0; ip < (n-1); ip++) {
-      for (int iq = 0; iq < (n-1); iq++) {
-        double g = 100 * fabs(a[ip][iq]);
-
-        if (i > 4 && (double)(fabs(d[ip])+g) == (double)fabs(d[ip])
-            && (double)(fabs(d[iq])+g) == (double)fabs(d[iq])) {
-          a[ip][iq] = 0;
-        } else if (fabs(a[ip][iq]) > tresh) {
-          double h = d[iq] - d[ip];
-          double t, theta;
-
-          if ((double)(fabs(h)+g) == (double)fabs(h)) {
-            t = a[ip][iq] / h;
-          } else {
-            theta = 0.5 * h / a[ip][iq];
-            t = 1 / (fabs(theta) + sqrt(1 + SQR(theta)));
-            if (theta < 0) {
-              t = -t;
-            }
-          }
-
-          double c = 1 / sqrt(1 + SQR(t));
-          double s = t * c;
-          double tau = s / (1 + c);
-          h = t * a[ip][iq];
-          z[ip] -= h;
-          z[iq] += h;
-          d[ip] -= h;
-          d[iq] += h;
-          a[ip][iq] = 0;
-
-          for (int j = 0; j < (iq-1); j++) {
-            ROTATE(a, j, ip, j, iq);
-          }
-          for (int j = (ip+1); j < (iq-1); j++) {
-            ROTATE(a, ip, j, j, iq);
-          }
-          for (int j = (iq+1); j < n; j++) {
-            ROTATE(a, ip, j, iq, j);
-          }
-          for (int j = 0; j < n; j++) {
-            ROTATE(v, j, ip, j, iq);
-          }
-          ++(*nrot);
-        }
-      }
-    }
-
-    for (int ip = 0; ip < n; ip++) {
-      b[ip] += z[ip];
-      d[ip] = b[ip];
-      z[ip] = 0;
-    }
-  }
-} //}}}
-
 // Gyration() //{{{
 /**
  * Function to calculate the principle moments of the gyration tensor.
@@ -1624,6 +1527,9 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
 
   // calculate gyration tensor //{{{
   for (int i = 0; i < n; i++) {
+//  fprintf(stderr, " %10.5f %10.5f %10.5f \n", (*Bead)[list[i]].Position.x,
+//                                     (*Bead)[list[i]].Position.y,
+//                                     (*Bead)[list[i]].Position.z);
     GyrationTensor.x.x += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.x;
     GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
     GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
@@ -1636,54 +1542,62 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   GyrationTensor.x.z /= n;
   GyrationTensor.y.y /= n;
   GyrationTensor.y.z /= n;
-  GyrationTensor.z.z /= n;
+  GyrationTensor.z.z /= n; //}}}
 
-  // just pro forma
-  GyrationTensor.y.x = GyrationTensor.x.y;
-  GyrationTensor.z.x = GyrationTensor.x.z;
-  GyrationTensor.z.y = GyrationTensor.y.z;
-  //}}}
+  // char polynomial: a_cube * x^3 + b_cube * x^2 + c_cube * x + d_cube = 0 //{{{
+  double a_cube = -1;
+  double b_cube = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z;
+  double c_cube = - GyrationTensor.x.x * GyrationTensor.y.y
+                  - GyrationTensor.x.x * GyrationTensor.z.z
+                  - GyrationTensor.y.y * GyrationTensor.z.z
+                  + SQR(GyrationTensor.y.z)
+                  + SQR(GyrationTensor.x.y)
+                  + SQR(GyrationTensor.x.z);
+  double d_cube = + GyrationTensor.x.x * GyrationTensor.y.y * GyrationTensor.z.z
+                  + 2 * GyrationTensor.x.y * GyrationTensor.y.z * GyrationTensor.x.z
+                  - SQR(GyrationTensor.x.z) * GyrationTensor.y.y
+                  - SQR(GyrationTensor.x.y) * GyrationTensor.z.z
+                  - SQR(GyrationTensor.y.z) * GyrationTensor.x.x; //}}}
+//fprintf(stderr, "character: %lfx^3 + %lfx^2 + %lfx^1 + %lfx^0;\n", a_cube, b_cube, c_cube, d_cube);
 
-  // create variables and arrays for jacobi() //{{{
-  double **a;
-  a = malloc(3*sizeof(double *));
-  for (int i = 0; i < 3; i++) {
-    a[i] = calloc(3,sizeof(double));
-  }
+  // Newton's iterative method to get one root //{{{
+  // derivative of char. polynomial: a_deriv * x^2 + b_deriv * x + c_deriv
+  double a_deriv = 3 * a_cube;
+  double b_deriv = 2 * b_cube;
+  double c_deriv = c_cube;
 
-  a[0][0] = GyrationTensor.x.x;
-  a[0][1] = GyrationTensor.y.x;
-  a[0][2] = GyrationTensor.z.x;
-  a[1][0] = GyrationTensor.x.y;
-  a[1][1] = GyrationTensor.y.y;
-  a[1][2] = GyrationTensor.z.y;
-  a[2][0] = GyrationTensor.x.z;
-  a[2][1] = GyrationTensor.y.z;
-  a[2][2] = GyrationTensor.z.z;
+  double root0 = 0, root1 = 1;
 
-  double *d = malloc(3*sizeof(double));
-  double **v = malloc(3*sizeof(double *));
-  for (int i = 0; i < 3; i++) {
-    v[i] = calloc(3,sizeof(double));
-  }
-  int nrot, size = 3; //}}}
-  jacobi(a, size, d, v, &nrot);
+  while (fabs(root0-root1) > 0.00001) {
+    double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) + c_cube * root0 + d_cube);
+    double f_deriv_root0 = (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
+    root1 = root0 - f_root0 / f_deriv_root0;
 
+    // swap root0 and root1 for the next iteration
+    double tmp = root0;
+    root0 = root1;
+    root1 = tmp;
+//  fprintf(stderr, "%lf %lf\n", root0, root1);
+  } //}}}
+
+//fprintf(stderr, "root0=%lf; ", root0);
+
+  // determine paremeters of quadratic equation a_quad * x^2 + b_quad * x + c_quad = 0 //{{{
+  // derived by division: (x^3 + (b_cube/a_cube) * x^2 + (c_cube/a_cube) * x + (d_cube/a_cube)):(x - root0)
+  double a_quad = 1;
+  double b_quad = b_cube / a_cube + root0;
+  double c_quad = SQR(root0) + b_cube / a_cube * root0 + c_cube/a_cube; //}}}
+//fprintf(stderr, "quad: %lfx^2 + %lfx + %lf; ", a_quad, b_quad, c_quad);
+
+  // calculate & sort eigenvalues //{{{
   Vector eigen;
-  eigen.x = d[0];
-  eigen.y = d[1];
-  eigen.z = d[2];
+  eigen.x = root0; // found out by Newton's method
+  // roots of the quadratic equation
+  eigen.y = (-b_quad + sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
+  eigen.z = (-b_quad - sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
 
-  eigen = Sort3(eigen);
-
-  // free memory //{{{
-  free(d);
-  for (int i = 0; i < 3; i++) {
-    free(v[i]);
-    free(a[i]);
-  }
-  free(v);
-  free(a); //}}}
+  eigen = Sort3(eigen); //}}}
+//fprintf(stderr, "eigen=(%lf, %lf, %lf)\n", eigen.x, eigen.y, eigen.z);
 
   return (eigen);
 } //}}}
