@@ -343,6 +343,8 @@ system.\n\n");
   double *Acyl_sum = calloc(Counts.Molecules,sizeof(double));
   // asphericity: only normal sum
   double *Aspher_sum = calloc(Counts.Molecules,sizeof(double));
+  // gyration tensor eigenvalues
+  struct Vector *eigen_sum = malloc(Counts.Molecules*sizeof(struct Vector));
   // total mass of aggregates: [size][0] normal sum, [size][1] sum of squares
   long int **mass_sum = malloc(Counts.Molecules*sizeof(int *));
   // number of molecule types in aggregates: [size][mol type] only normal sum
@@ -437,9 +439,6 @@ system.\n\n");
         } //}}}
 
         if (correct_size != -1) {
-          agg_counts_step[correct_size]++;
-          agg_counts_sum[correct_size]++;
-
           // copy bead ids to a separate array //{{{
           int *list = malloc(Aggregate[i].nBeads*sizeof(int));
           int n = 0;
@@ -453,20 +452,34 @@ system.\n\n");
             }
           } //}}}
 
+//        Vector com = CentreOfMass(n, list, Bead, BeadType);
           Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
 
-//        // calcule Rg the 'usual way' -- for testing purposes //{{{
-//        double Rg2 = 0;
-//        Vector com = CentreOfMass(n, list, Bead, BeadType);
-//        for (int j = 0; j < n; j++) {
+          // calcule Rg the 'usual way' -- for testing purposes //{{{
+          double Rg2 = 0;
+          Vector test_com;
+          test_com.x = 0;
+          test_com.y = 0;
+          test_com.z = 0;
+          for (int j = 0; j < n; j++) {
 //          Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
 //          Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
-//        }
-//        Rg2 /= n; //}}}
+            Rg2 += SQR(Bead[list[j]].Position.x) + SQR(Bead[list[j]].Position.y) + SQR(Bead[list[j]].Position.z);
+            test_com.x += Bead[list[j]].Position.x;
+            test_com.y += Bead[list[j]].Position.y;
+            test_com.z += Bead[list[j]].Position.z;
+          }
+          Rg2 /= n; //}}}
 
           free(list); // free array of bead ids for gyration calculation
 
           double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
+
+//        fprintf(stderr, "eigen=(%lf,%lf,%lf); ", eigen.x, eigen.y, eigen.z);
+//        fprintf(stderr, "R_G^2 %lf; ", Rgi);
+//        fprintf(stderr, "step %d; ", count);
+//        fprintf(stderr, "size %d; ", correct_size+1);
+//        fprintf(stderr, "1st chain %d \n", Aggregate[i].Molecule[0]+1);
 
           // agg masses
           mass_step[0] += agg_mass; // for this timestep
@@ -485,9 +498,16 @@ system.\n\n");
           Acyl_step[correct_size] += eigen.y - eigen.x;
           // asphericity
           Aspher_step[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
+          // gyration vector eigenvalues
+          eigen_sum[correct_size].x += eigen.x;
+          eigen_sum[correct_size].y += eigen.y;
+          eigen_sum[correct_size].z += eigen.z;
           // aggregate size
           mass_sum[correct_size][0] += agg_mass;
           mass_sum[correct_size][1] += SQR(agg_mass);
+          // aggregate count
+          agg_counts_step[correct_size]++;
+          agg_counts_sum[correct_size]++;
 
           // count number of Diblocks and Surfacts in aggrate
           // TODO: generalise
@@ -610,7 +630,10 @@ system.\n\n");
     fprintf(out, " %d:<Acyl>", Counts.TypesOfMolecules+4);
     fprintf(out, " %d:<Ashper>", Counts.TypesOfMolecules+5);
     fprintf(out, " %d:<Anis>", Counts.TypesOfMolecules+6);
-    fprintf(out, " %d:number of aggs", Counts.TypesOfMolecules+7);
+    fprintf(out, " %d:<eigen.x>", Counts.TypesOfMolecules+7);
+    fprintf(out, " %d:<eigen.y>", Counts.TypesOfMolecules+8);
+    fprintf(out, " %d:<eigen.z>", Counts.TypesOfMolecules+9);
+    fprintf(out, " %d:number of aggs", Counts.TypesOfMolecules+10);
     putc('\n', out);
     for (int i = 0; i < Counts.Molecules; i++) {
       if (agg_counts_sum[i] > 0) {
@@ -623,6 +646,9 @@ system.\n\n");
         fprintf(out, " %7.3f", Anis_sum[i]/agg_counts_sum[i]);
         fprintf(out, " %7.3f", Acyl_sum[i]/agg_counts_sum[i]);
         fprintf(out, " %7.3f", Aspher_sum[i]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", eigen_sum[i].x/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", eigen_sum[i].y/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", eigen_sum[i].z/agg_counts_sum[i]);
         fprintf(out, " %d", agg_counts_sum[i]);
         putc('\n', out);
       }
@@ -642,6 +668,9 @@ system.\n\n");
     Anis_sum[0] += Anis_sum[i];
     Acyl_sum[0] += Acyl_sum[i];
     Aspher_sum[0] += Aspher_sum[i];
+    eigen_sum[0].x += eigen_sum[i].x;
+    eigen_sum[0].y += eigen_sum[i].y;
+    eigen_sum[0].z += eigen_sum[i].z;
 
     agg_counts_sum[0] += agg_counts_sum[i];
 
@@ -671,7 +700,11 @@ system.\n\n");
   fprintf(out, "%d:_z ", Counts.TypesOfMolecules+8);
   fprintf(out, "%d:<Anisotropy> ", Counts.TypesOfMolecules+9);
   fprintf(out, "%d:<Acylindricity> ", Counts.TypesOfMolecules+10);
-  fprintf(out, "%d:<Asphericity>\n", Counts.TypesOfMolecules+11);
+  fprintf(out, "%d:<Asphericity> ", Counts.TypesOfMolecules+11);
+  fprintf(out, "%d:<eigen.x> ", Counts.TypesOfMolecules+12);
+  fprintf(out, "%d:<eigen.y> ", Counts.TypesOfMolecules+13);
+  fprintf(out, "%d:<eigen.z> ", Counts.TypesOfMolecules+14);
+  putc('\n', out);
   fprintf(out, "# %8.3f", (double)(mass_sum[0][0])/agg_counts_sum[0]); //<M_As>_n
   fprintf(out, " %8.3f", (double)(mass_sum[0][1])/mass_sum[0][0]); //<M_As>_w
   // molecule types
@@ -686,7 +719,11 @@ system.\n\n");
   fprintf(out, " %8.3f", sqrRg_sum[0][2]/mass_sum[0][1]); // <Rg^2>_z
   fprintf(out, " %8.3f", Anis_sum[0]/agg_counts_sum[0]);
   fprintf(out, " %8.3f", Acyl_sum[0]/agg_counts_sum[0]);
-  fprintf(out, " %8.3f\n", Aspher_sum[0]/agg_counts_sum[0]);
+  fprintf(out, " %8.3f", Aspher_sum[0]/agg_counts_sum[0]);
+  fprintf(out, " %8.3f", eigen_sum[0].x/agg_counts_sum[0]);
+  fprintf(out, " %8.3f", eigen_sum[0].y/agg_counts_sum[0]);
+  fprintf(out, " %8.3f", eigen_sum[0].z/agg_counts_sum[0]);
+  putc('\n', out);
 
   fclose(out); //}}}
 
