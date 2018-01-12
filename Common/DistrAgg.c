@@ -11,15 +11,15 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input> <output distr file> <output avg file> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input>              input filename (agg format)\n");
-  fprintf(stderr, "   <output distr file>  filename with weight and number distributions\n");
-  fprintf(stderr, "   <output avg file>    filename with weight and number averages throughout simulation\n");
+  fprintf(stderr, "   <input>           input filename (agg format)\n");
+  fprintf(stderr, "   <distr file>      filename with weight and number distributions\n");
+  fprintf(stderr, "   <avg file>        filename with weight and number averages throughout simulation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -st <int>         start distribution calculation with <int>-th step\n");
-  fprintf(stderr, "      --no-unimers      do not count unimers into averages\n");
-  fprintf(stderr, "      -m <name>         agg size means number of <name> molecule types in an aggregate\n");
-  fprintf(stderr, "      -x <name(s)>      exclude aggregates containing only specified molecule(s)\n");
-  fprintf(stderr, "      --only <name>     use just aggregates composed of a specified molecule\n");
+  fprintf(stderr, "      -st <int>      start distribution calculation with <int>-th step\n");
+  fprintf(stderr, "      --no-unimers   do not count unimers into averages\n");
+  fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      -x <name(s)>   exclude aggregates containing only specified molecule(s)\n");
+  fprintf(stderr, "      --only <name>  use just aggregates composed of a specified molecule\n");
   CommonHelp(1);
 } //}}}
 
@@ -41,15 +41,15 @@ the system.\n\n");
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input>              input filename (agg format)\n");
-      fprintf(stdout, "   <output distr file>  filename with weight and number distributions\n");
-      fprintf(stdout, "   <output avg file>    filename with weight and number averages throughout simulation\n");
+      fprintf(stdout, "   <input>           input filename (agg format)\n");
+      fprintf(stdout, "   <distr file>      filename with weight and number distributions\n");
+      fprintf(stdout, "   <avg file>        filename with weight and number averages throughout simulation\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -st <int>         start distribution calculation with <int>-th step\n");
-      fprintf(stdout, "      --no-unimers      do not count unimers into averages\n");
-      fprintf(stdout, "      -m <name>         agg size means number of <name> molecule types in an aggregate\n");
-      fprintf(stdout, "      -x <name(s)>      exclude aggregates containing only specified molecule(s)\n");
-      fprintf(stdout, "      --only <name>     use just aggregates composed of a specified molecule\n");
+      fprintf(stdout, "      -st <int>      start distribution calculation with <int>-th step\n");
+      fprintf(stdout, "      --no-unimers   do not count unimers into averages\n");
+      fprintf(stdout, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      -x <name(s)>   exclude aggregates containing only specified molecule(s)\n");
+      fprintf(stdout, "      --only <name>  use just aggregates composed of a specified molecule\n");
       CommonHelp(0);
       exit(0);
     }

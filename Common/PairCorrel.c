@@ -10,13 +10,13 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <width> <output.pcf> <bead type(s)> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>    input filename (vcf format)\n");
-  fprintf(stderr, "   <width>        width of a single bin\n");
-  fprintf(stderr, "   <output.pcf>   output file with pair correlation function(s)\n");
-  fprintf(stderr, "   <bead type(s)> bead type name(s) for pcf calculation\n");
+  fprintf(stderr, "   <input.vcf>      input filename (vcf format)\n");
+  fprintf(stderr, "   <width>          width of a single bin\n");
+  fprintf(stderr, "   <output.pcf>     output file with pair correlation function(s)\n");
+  fprintf(stderr, "   <bead type(s)>   bead type name(s) for pcf calculation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -n <int>    number of bins to average\n");
-  fprintf(stderr, "      -st <int>   starting timestep for calculation\n");
+  fprintf(stderr, "      -n <int>      number of bins to average\n");
+  fprintf(stderr, "      -st <int>     starting timestep for calculation\n");
   CommonHelp(1);
 } //}}}
 
@@ -36,13 +36,13 @@ The utility uses dl_meso.vsf (or other input structure file) and FIELD \
 the system.\n\n");
       fprintf(stdout, "   %s <input.vcf> <width> <output.pcf> <bead type(s)> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>     input filename (vcf format)\n");
-      fprintf(stdout, "   <width>         width of a single bin\n");
-      fprintf(stdout, "   <output.pcf>    output file with pair correlation function(s)\n");
-      fprintf(stdout, "   <bead type(s)>  bead type name(s) for pcf calculation \n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <width>           width of a single bin\n");
+      fprintf(stdout, "   <output.pcf>      output file with pair correlation function(s)\n");
+      fprintf(stdout, "   <bead type(s)>    bead type name(s) for pcf calculation \n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -n <int>     number of bins to average\n");
-      fprintf(stdout, "      -st <int>    starting timestep for calculation\n");
+      fprintf(stdout, "      -n <int>       number of bins to average\n");
+      fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
       CommonHelp(0);
       exit(0);
     }
@@ -143,7 +143,7 @@ the system.\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
-  double width = atof(argv[count]); //}}}
+  double bin_width = atof(argv[count]); //}}}
 
   // <output.pcf> - filename with pcf(s) //{{{
   char output_pcf[32];
@@ -236,9 +236,9 @@ the system.\n\n");
 
   fclose(out); //}}}
 
-  // number of bins - maximum distance is taken as three times box's body diagonal //{{{
-  double max_dist = 3 * pow(SQR(BoxLength.x)+SQR(BoxLength.y)+SQR(BoxLength.z), 1.0/3.0);
-  int bins = ceil(max_dist / width); //}}}
+  // number of bins - maximum distance is taken as half of the shortes BoxLength //{{{
+  double max_dist = Min3(BoxLength.x, BoxLength.y, BoxLength.z) / 2;
+  int bins = ceil(max_dist / bin_width); //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
@@ -342,41 +342,42 @@ the system.\n\n");
 
     // calculate pair correlation function //{{{
     for (int j = 0; j < (Counts.Bonded+Counts.Unbonded); j++) {
+      if (BeadType[Bead[j].Type].Use) {
 
-        if (BeadType[Bead[j].Type].Use) {
+        for (int k = (j+1); k < (Counts.Bonded+Counts.Unbonded); k++) {
+          if (BeadType[Bead[k].Type].Use) {
 
-          for (int k = (j+1); k < (Counts.Bonded+Counts.Unbonded); k++) {
-            if (BeadType[Bead[k].Type].Use) {
+            int bead1 = j;
+            int bead2 = k;
 
-              int bead1 = j;
-              int bead2 = k;
+            int type1 = Bead[bead1].Type;
+            int type2 = Bead[bead2].Type;
 
-              int type1 = Bead[bead1].Type;
-              int type2 = Bead[bead2].Type;
+            // type1 shouldn't be larger then type2 //{{{
+            if (type1 > type2) {
+              int temp = type1;
+              type1 = type2;
+              type2 = temp;
 
-              // type1 shouldn't be larger then type2{{{
-              if (type1 > type2) {
-                int temp = type1;
-                type1 = type2;
-                type2 = temp;
+              temp = bead1;
+              bead1 = bead2;
+              bead2 = temp;
+            } //}}}
 
-                temp = bead1;
-                bead1 = bead2;
-                bead2 = temp;
-              } //}}}
+            counter[type2]++;
 
-              counter[type2]++;
+            // distance between bead1 and bead2
+            Vector rij = Distance(Bead[bead1].Position, Bead[bead2].Position, BoxLength);
+            rij.x = sqrt(SQR(rij.x) + SQR(rij.y) + SQR(rij.z));
 
-              // distance between bead1 and bead2
-              Vector rij = Distance(Bead[bead1].Position, Bead[bead2].Position, BoxLength);
-              rij.x = sqrt(SQR(rij.x) + SQR(rij.y) + SQR(rij.z));
-
-              int l = rij.x / width;
-
+            // count only distances up to half of the shortest box length
+            if (rij.x < max_dist) {
+              int l = rij.x / bin_width;
               pcf[type1][type2][l]++;
             }
           }
         }
+      }
     } //}}}
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
@@ -401,7 +402,6 @@ the system.\n\n");
     exit(1);
   }
 
-
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     counter[0] = 0;
   }
@@ -412,32 +412,17 @@ the system.\n\n");
   }
 
   // calculate pcf
-  // normalisation factor - just sum up the pcf (for resulting pcf = 1) %{{{
-  double **norm = malloc(Counts.TypesOfBeads*sizeof(double *));
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    norm[i] = calloc(Counts.TypesOfBeads,sizeof(double));
-  }
-  for (int j = 0; j < bins; j++) {
-    double shell = 4 * PI * CUBE(width) *(CUBE(j+1) - CUBE(j)) / 3;
-    for (int k = 0; k < Counts.TypesOfBeads; k++) {
-      for (int l = k; l < Counts.TypesOfBeads; l++) {
-        if (BeadType[k].Use && BeadType[l].Use) {
-          norm[k][l] += pcf[k][l][j] / shell;
-        }
-      }
-    }
-  } //}}}
-
-  for (int j = 0; j < bins; j++) {
+  for (int j = 1; j < bins; j++) {
 
     // calculate volume of every shell that will be averaged
     double shell[avg];
     for (int k = 0; k < avg; k++) {
-      shell[k] = 4 * PI * CUBE(width) *(CUBE(j+k+1) - CUBE(j+k)) / 3;
+      shell[k] = 4.0 / 3 * PI * CUBE(bin_width) * (CUBE(j+k+1) - CUBE(j+k));
     }
 
-    fprintf(out, "%8.5f", width*(j+0.5*avg));
+    fprintf(out, "%8.5f", bin_width*(j+0.5*avg));
 
+    double volume = BoxLength.x * BoxLength.y * BoxLength.z;
     for (int k = 0; k < Counts.TypesOfBeads; k++) {
       for (int l = k; l < Counts.TypesOfBeads; l++) {
         if (BeadType[k].Use && BeadType[l].Use) {
@@ -446,7 +431,15 @@ the system.\n\n");
 
           // sump pcfs from all shells to be averaged
           for (int m = 0; m < avg; m++) {
-            temp += pcf[k][l][j+m] / (shell[m] * norm[k][l]);
+            double pairs;
+            if (k == l) {
+              pairs = ((SQR(BeadType[k].Number) - BeadType[k].Number)) / 2;
+            } else {
+              pairs = BeadType[k].Number * BeadType[l].Number;
+            }
+            double pair_den = volume / pairs;
+            double norm_factor = pair_den / shell[m];
+            temp += pcf[k][l][j+m] * norm_factor;
           }
 
           // print average value to output file
@@ -469,10 +462,8 @@ the system.\n\n");
       free(pcf[i][j]);
     }
     free(pcf[i]);
-    free(norm[i]);
   }
   free(pcf);
-  free(norm);
   free(counter); //}}}
 
   return 0;

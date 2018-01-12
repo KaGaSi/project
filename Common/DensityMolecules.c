@@ -8,12 +8,12 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <width> <output.rho> <molecule name(s)> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.vcf> <width> <output.rho> <molecule(s)> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
   fprintf(stderr, "   <width>           width of a single bin\n");
   fprintf(stderr, "   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
-  fprintf(stderr, "   <molecule names>  molecule names to calculate density for\n");
+  fprintf(stderr, "   <molecule(s)>     molecule names to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -n <int>       number of bins to average\n");
@@ -28,9 +28,10 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       fprintf(stdout, "\
-MolDensity utility calculates number beads density for all bead types from the \
+DensityMolecules utility calculates number \
+density for all bead types from the \
 centre of mass (or specified bead number in a molecule) of specified molecules. \
-Care must be taken with beadtype names in various molecules types, because if \
+Care must be taken with beadtype names in molecule types, because if \
 one beadtype appears in more molecule types, the resulting density for that \
 beadtype will be averaged without regard for the various types of molecule it \
 appears in.\n\n");
@@ -41,12 +42,12 @@ with optional bond file) files to determine all information about the \
 system.\n\n");
 
       fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.vcf> <width> <output.rho> <molecule name(s)> <options>\n\n", argv[0]);
+      fprintf(stdout, "   %s <input.vcf> <width> <output.rho> <molecule(s)> <options>\n\n", argv[0]);
 
       fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
       fprintf(stdout, "   <width>           width of a single bin\n");
       fprintf(stdout, "   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
-      fprintf(stdout, "   <molecule names>  molecule names to calculate density for\n");
+      fprintf(stdout, "   <molecule(s)>     molecule names to calculate density for\n");
       fprintf(stdout, "   <options>\n");
       fprintf(stdout, "      --joined       specify that aggregates with joined coordinates are used\n");
       fprintf(stdout, "      -n <int>       number of bins to average\n");

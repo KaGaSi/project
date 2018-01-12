@@ -19,6 +19,7 @@ endforeach(library)
 
 set(COMMON Aggregates
            Aggregates-NotSameBeads
+           Average
            BondLength
            Config
            DensityAggregates
@@ -27,9 +28,9 @@ set(COMMON Aggregates
            GyrationAggregates
            GyrationMolecules
            JoinAggregates
-           JoinRuns
+#          JoinRuns
            PairCorrel
-           PairCorrelPerAgg
+#          PairCorrelPerAgg
            SelectedVcf
            TransformVsf)
          foreach(utility ${COMMON})

@@ -1516,7 +1516,15 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   GyrationTensor.z.y = 0;
   GyrationTensor.z.z = 0; //}}}
 
+// test print of given coordinates -- uncomment if need be //{{{
+//for (int i = 0; i < n; i++) {
+//  fprintf(stderr, " %10.5f %10.5f %10.5f \n", (*Bead)[list[i]].Position.x,
+//                                              (*Bead)[list[i]].Position.y,
+//                                              (*Bead)[list[i]].Position.z);
+//} //}}}
+
   Vector com = CentreOfMass(n, list, *Bead, BeadType);
+//fprintf(stderr, "%lf %lf %lf\n", com.x, com.y, com.z);
 
   // move centre of mass to [0,0,0] //{{{
   for (int i = 0; i < n; i++) {
@@ -1527,9 +1535,6 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
 
   // calculate gyration tensor //{{{
   for (int i = 0; i < n; i++) {
-//  fprintf(stderr, " %10.5f %10.5f %10.5f \n", (*Bead)[list[i]].Position.x,
-//                                     (*Bead)[list[i]].Position.y,
-//                                     (*Bead)[list[i]].Position.z);
     GyrationTensor.x.x += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.x;
     GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
     GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
@@ -1543,6 +1548,9 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   GyrationTensor.y.y /= n;
   GyrationTensor.y.z /= n;
   GyrationTensor.z.z /= n; //}}}
+//fprintf(stderr, "Tensor: (%lf, %lf, %lf)\n", GyrationTensor.x.x, GyrationTensor.x.y, GyrationTensor.x.z);
+//fprintf(stderr, "        (%lf, %lf, %lf)\n", GyrationTensor.x.y, GyrationTensor.y.y, GyrationTensor.y.z);
+//fprintf(stderr, "        (%lf, %lf, %lf)\n", GyrationTensor.x.z, GyrationTensor.y.z, GyrationTensor.z.z);
 
   // char polynomial: a_cube * x^3 + b_cube * x^2 + c_cube * x + d_cube = 0 //{{{
   double a_cube = -1;
@@ -1560,26 +1568,27 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
                   - SQR(GyrationTensor.y.z) * GyrationTensor.x.x; //}}}
 //fprintf(stderr, "character: %lfx^3 + %lfx^2 + %lfx^1 + %lfx^0;\n", a_cube, b_cube, c_cube, d_cube);
 
-  // Newton's iterative method to get one root //{{{
-  // derivative of char. polynomial: a_deriv * x^2 + b_deriv * x + c_deriv
-  double a_deriv = 3 * a_cube;
-  double b_deriv = 2 * b_cube;
-  double c_deriv = c_cube;
+  // first root: either 0 or Newton's iterative method to get it //{{{
+  double root0 = 0;
+  if (fabs(d_cube) > 0.0000001) {
+    // derivative of char. polynomial: a_deriv * x^2 + b_deriv * x + c_deriv
+    double a_deriv = 3 * a_cube;
+    double b_deriv = 2 * b_cube;
+    double c_deriv = c_cube;
 
-  double root0 = 0, root1 = 1;
+    double root1 = 1;
 
-  while (fabs(root0-root1) > 0.00001) {
-    double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) + c_cube * root0 + d_cube);
-    double f_deriv_root0 = (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
-    root1 = root0 - f_root0 / f_deriv_root0;
+    while (fabs(root0-root1) > 0.0000001) {
+      double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) + c_cube * root0 + d_cube);
+      double f_deriv_root0 = (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
+      root1 = root0 - f_root0 / f_deriv_root0;
 
-    // swap root0 and root1 for the next iteration
-    double tmp = root0;
-    root0 = root1;
-    root1 = tmp;
-//  fprintf(stderr, "%lf %lf\n", root0, root1);
+      // swap root0 and root1 for the next iteration
+      double tmp = root0;
+      root0 = root1;
+      root1 = tmp;
+    }
   } //}}}
-
 //fprintf(stderr, "root0=%lf; ", root0);
 
   // determine paremeters of quadratic equation a_quad * x^2 + b_quad * x + c_quad = 0 //{{{

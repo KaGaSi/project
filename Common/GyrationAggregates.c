@@ -10,15 +10,15 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <input.agg> <output> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>         input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <output>            output file with data during simulation run\n");
+  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+  fprintf(stderr, "   <output>          output file with data during simulation run\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined         specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -bt              specify bead types to be used for calculation (default is all)\n");
-  fprintf(stderr, "      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
-  fprintf(stdout, "      -ps <filename>   save per-size averages to a file\n");
-  fprintf(stderr, "      --no-unimers     do not count unimers into averages\n");
+  fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      -bt            specify bead types to be used for calculation (default is all)\n");
+  fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
+  fprintf(stderr, "      --no-unimers   do not count unimers into averages\n");
   CommonHelp(1);
 } //}}}
 
@@ -43,15 +43,15 @@ system.\n\n");
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <input.agg> <output> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>         input filename (vcf format)\n");
-      fprintf(stdout, "   <input.agg>         input filename with information about aggregates (agg format)\n");
-      fprintf(stdout, "   <output>            output file with data during simulation run\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+      fprintf(stdout, "   <output>          output file with data during simulation run\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined         specify that aggregates with joined coordinates are used\n");
-      fprintf(stdout, "      -bt              specify bead types to be used for calculation (default is all)\n");
-      fprintf(stdout, "      -m <name>        agg size means number of <name> molecule types in an aggregate\n");
-      fprintf(stdout, "      -ps <filename>   save per-size averages to a file\n");
-      fprintf(stdout, "      --no-unimers     do not count unimers into averages\n");
+      fprintf(stdout, "      --joined       specify that aggregates with joined coordinates are used\n");
+      fprintf(stdout, "      -bt            specify bead types to be used for calculation (default is all)\n");
+      fprintf(stdout, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
+      fprintf(stdout, "      --no-unimers   do not count unimers into averages\n");
       CommonHelp(0);
       exit(0);
     }
@@ -213,9 +213,11 @@ system.\n\n");
   fprintf(out, " on %s\n", date);
 
   // print legend line to output file
-  fprintf(out, "# 1:dt 2:<Rg>_n 3:<Rg>_w 4:<Rg>_z ");
-  fprintf(out, "5:<Rg^2>_n 6:<Rg^2>_w 7:<Rg^2>_z ");
-  fprintf(out, "8:<Anis>_n 9:<Acyl>_n 10:<Aspher>_n\n");
+  fprintf(out, "# 1:dt 2:<Rg>_n 3:<Rg>_w 4:<Rg>_z");
+  fprintf(out, " 5:<Rg^2>_n 6:<Rg^2>_w 7:<Rg^2>_z");
+  fprintf(out, " 8:<Anis>_n 9:<Acyl>_n 10:<Aspher>_n");
+  fprintf(out, " 11:<eigen.x>_n 12:<eigen.y>_n 13:<eigen.z>_n");
+  putc('\n', out);
 
   fclose(out); //}}}
 
@@ -408,6 +410,7 @@ system.\n\n");
     double *Anis_step = calloc(Counts.Molecules,sizeof(double));
     double *Acyl_step = calloc(Counts.Molecules,sizeof(double));
     double *Aspher_step = calloc(Counts.Molecules,sizeof(double));
+    struct Vector *eigen_step = calloc(Counts.Molecules,sizeof(struct Vector));
     for (int i = 0; i < Counts.Molecules; i++) {
       Rg_step[i] = calloc(3,sizeof(double));
       sqrRg_step[i] = calloc(3,sizeof(double));
@@ -455,21 +458,21 @@ system.\n\n");
 //        Vector com = CentreOfMass(n, list, Bead, BeadType);
           Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
 
-          // calcule Rg the 'usual way' -- for testing purposes //{{{
-          double Rg2 = 0;
-          Vector test_com;
-          test_com.x = 0;
-          test_com.y = 0;
-          test_com.z = 0;
-          for (int j = 0; j < n; j++) {
+//        // calcule Rg the 'usual way' -- for testing purposes //{{{
+//        double Rg2 = 0;
+//        Vector test_com;
+//        test_com.x = 0;
+//        test_com.y = 0;
+//        test_com.z = 0;
+//        for (int j = 0; j < n; j++) {
 //          Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
 //          Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
-            Rg2 += SQR(Bead[list[j]].Position.x) + SQR(Bead[list[j]].Position.y) + SQR(Bead[list[j]].Position.z);
-            test_com.x += Bead[list[j]].Position.x;
-            test_com.y += Bead[list[j]].Position.y;
-            test_com.z += Bead[list[j]].Position.z;
-          }
-          Rg2 /= n; //}}}
+//          Rg2 += SQR(Bead[list[j]].Position.x) + SQR(Bead[list[j]].Position.y) + SQR(Bead[list[j]].Position.z);
+//          test_com.x += Bead[list[j]].Position.x;
+//          test_com.y += Bead[list[j]].Position.y;
+//          test_com.z += Bead[list[j]].Position.z;
+//        }
+//        Rg2 /= n; //}}}
 
           free(list); // free array of bead ids for gyration calculation
 
@@ -481,6 +484,10 @@ system.\n\n");
 //        fprintf(stderr, "size %d; ", correct_size+1);
 //        fprintf(stderr, "1st chain %d \n", Aggregate[i].Molecule[0]+1);
 
+//        fprintf(stderr, "agg %2d; size %2d; eigen=(%lf, %lf, %lf)\n", i, correct_size, eigen.x, eigen.y, eigen.z);
+          if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
+            fprintf(stderr, "Negative eigenvalues! (%lf, %lf, %lf)\n", eigen.x, eigen.y, eigen.z);
+          }
           // agg masses
           mass_step[0] += agg_mass; // for this timestep
           mass_step[1] += SQR(agg_mass); // for this timestep
@@ -499,9 +506,9 @@ system.\n\n");
           // asphericity
           Aspher_step[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
           // gyration vector eigenvalues
-          eigen_sum[correct_size].x += eigen.x;
-          eigen_sum[correct_size].y += eigen.y;
-          eigen_sum[correct_size].z += eigen.z;
+          eigen_step[correct_size].x += eigen.x;
+          eigen_step[correct_size].y += eigen.y;
+          eigen_step[correct_size].z += eigen.z;
           // aggregate size
           mass_sum[correct_size][0] += agg_mass;
           mass_sum[correct_size][1] += SQR(agg_mass);
@@ -530,6 +537,9 @@ system.\n\n");
       Anis_sum[i] += Anis_step[i];
       Acyl_sum[i] += Acyl_step[i];
       Aspher_sum[i] += Aspher_step[i];
+      eigen_sum[i].x += eigen_step[i].x;
+      eigen_sum[i].y += eigen_step[i].y;
+      eigen_sum[i].z += eigen_step[i].z;
     } //}}}
 
     // print data to output file //{{{
@@ -555,6 +565,9 @@ system.\n\n");
       Anis_step[0] += Anis_step[i];
       Acyl_step[0] += Acyl_step[i];
       Aspher_step[0] += Aspher_step[i];
+      eigen_step[0].x += eigen_step[i].x;
+      eigen_step[0].y += eigen_step[i].y;
+      eigen_step[0].z += eigen_step[i].z;
 
       agg_counts_step[0] += agg_counts_step[i];
     }
@@ -568,6 +581,8 @@ system.\n\n");
     fprintf(out, " %8.5f", Acyl_step[0]/agg_counts_step[0]);
     // asphericity
     fprintf(out, " %8.5f", Aspher_step[0]/agg_counts_step[0]);
+    // eigenvalues
+    fprintf(out, " %8.5f %8.5f %8.5f", eigen_step[0].x/agg_counts_step[0], eigen_step[0].y/agg_counts_step[0], eigen_step[0].z/agg_counts_step[0]);
     putc('\n', out);
 
     fclose(out); //}}}
@@ -627,9 +642,9 @@ system.\n\n");
     }
     fprintf(out, " %d:<Rg>", Counts.TypesOfMolecules+2);
     fprintf(out, " %d:<Rg^2>", Counts.TypesOfMolecules+3);
-    fprintf(out, " %d:<Acyl>", Counts.TypesOfMolecules+4);
-    fprintf(out, " %d:<Ashper>", Counts.TypesOfMolecules+5);
-    fprintf(out, " %d:<Anis>", Counts.TypesOfMolecules+6);
+    fprintf(out, " %d:<Anis>", Counts.TypesOfMolecules+4);
+    fprintf(out, " %d:<Acyl>", Counts.TypesOfMolecules+5);
+    fprintf(out, " %d:<Aspher>", Counts.TypesOfMolecules+6);
     fprintf(out, " %d:<eigen.x>", Counts.TypesOfMolecules+7);
     fprintf(out, " %d:<eigen.y>", Counts.TypesOfMolecules+8);
     fprintf(out, " %d:<eigen.z>", Counts.TypesOfMolecules+9);
