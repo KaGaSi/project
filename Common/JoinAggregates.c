@@ -10,9 +10,9 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>      input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>      input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <output.vcf>     output filename with joined coordinates (vcf format)\n");
+  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+  fprintf(stderr, "   <output.vcf>      output filename with joined coordinates (vcf format)\n");
   CommonHelp(1);
 } //}}}
 
@@ -35,9 +35,9 @@ system.\n\n");
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>      input filename (vcf format)\n");
-      fprintf(stdout, "   <input.agg>      input filename with information about aggregates (agg format)\n");
-      fprintf(stdout, "   <output.vcf>     output filename with joined coordinates (vcf format)\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+      fprintf(stdout, "   <output.vcf>      output filename with joined coordinates (vcf format)\n");
       CommonHelp(0);
       exit(0);
     }

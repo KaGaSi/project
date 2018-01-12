@@ -213,6 +213,10 @@ bool BeadTypeOption(int argc, char **argv, Counts Counts,
       // <type names> - names of bead types to save
       while (++types < argc && argv[types][0] != '-') {
         int type = FindBeadType(argv[types], Counts, *BeadType);
+        if (type == -1) {
+          fprintf(stderr, "Bead type '%s' does not exist in FIELD ('-bt' option)!\n", argv[types]);
+          return(true);
+        }
 
         (*BeadType)[type].Use = true;
       }

@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
-#include "TransformVsf.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");

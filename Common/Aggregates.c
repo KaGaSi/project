@@ -10,16 +10,16 @@
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <distance> <contacts> ", cmd);
-  fprintf(stderr, "<output.agg> <type names> <options>\n\n");
+  fprintf(stderr, "<output.agg> <type name(s)> <options>\n\n");
 
   fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
   fprintf(stderr, "   <distance>        minimum distance for contact for aggregate check\n");
   fprintf(stderr, "   <contacts>        minimum number of contacts for aggregate check\n");
   fprintf(stderr, "   <output.agg>      output filename (agg format)\n");
-  fprintf(stderr, "   <type names>      names of bead types to use for closeness calculation\n");
+  fprintf(stderr, "   <type names>      names of bead types for closeness calculation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "     -x <name(s)>    exclude specified molecule(s)\n");
-  fprintf(stderr, "     -j <joined.vcf> output vcf file with joined coordinates\n");
+  fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
+  fprintf(stderr, "      -j <out.vcf>   output vcf file with joined coordinates\n");
   CommonHelp(1);
 } //}}}
 
@@ -479,8 +479,10 @@ basis of given parameters - the minimum distance at which a pair of beads from \
 different molecules is considered a contact and the minimum number of such \
 contacts between two molecules to consider them as belonging to the same \
 aggregate. Only distances between specified bead types are considered. \
-Information about aggregates in each timestep is written to '.agg' file. Also \
-joined coordinates can be written to an output '.vcf' file.\n\n");
+Information about aggregates in each timestep is written to '.agg' file (see \
+documentation for the format of this file). \
+Coordinates of joined aggregates can be written to an output '.vcf' file (with \
+indexed timesteps).\n\n");
 
       fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
@@ -489,16 +491,16 @@ system.\n\n");
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <distance> <contacts> ", argv[0]);
-      fprintf(stdout, "<output.agg> <type names> <options>\n\n");
+      fprintf(stdout, "<output.agg> <type name(s)> <options>\n\n");
 
-      fprintf(stdout, "   <input.vcf>         input filename (vcf format)\n");
-      fprintf(stdout, "   <distance>          minimum distance for contact for aggregate check\n");
-      fprintf(stdout, "   <contacts>          minimum number of contacts for aggregate check\n");
-      fprintf(stdout, "   <output.agg>        output filename (agg format)\n");
-      fprintf(stdout, "   <type names>        names of bead types for closeness calculation\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <distance>        minimum distance for contact for aggregate check\n");
+      fprintf(stdout, "   <contacts>        minimum number of contacts for aggregate check\n");
+      fprintf(stdout, "   <output.agg>      output filename (agg format)\n");
+      fprintf(stdout, "   <type names>      names of bead types for closeness calculation\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -x <name(s)>     exclude specified molecule(s)\n");
-      fprintf(stdout, "      -j <joined.vcf>  output vcf file with joined coordinates\n");
+      fprintf(stdout, "      -x <name(s)>   exclude specified molecule(s)\n");
+      fprintf(stdout, "      -j <out.vcf>   output vcf file with joined coordinates\n");
       CommonHelp(0);
       exit(0);
     }

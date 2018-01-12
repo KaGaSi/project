@@ -8,14 +8,14 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <output> <molecule names> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.vcf> <output> <molecule(s)> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>         input filename (vcf format)\n");
-  fprintf(stderr, "   <output>            output file with shape descriptors (automatic ending '-<name>.text')\n");
-  fprintf(stderr, "   <molecule names>    molecule types to calculate density for\n");
+  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <output>          output file with shape descriptors (automatic ending '-<name>.txt')\n");
+  fprintf(stderr, "   <molecule(s)>     molecule types to calculate shape descriptors for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined         specify that joined coordinates are used\n");
-  fprintf(stderr, "      -bt              specify bead types to be used for calculation (default is all)\n");
+  fprintf(stderr, "      --joined       specify that joined coordinates are used\n");
+  fprintf(stderr, "      -bt            specify bead types to be used for calculation (default is all)\n");
   CommonHelp(1);
 } //}}}
 
@@ -26,9 +26,9 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-h") == 0) {
       fprintf(stdout, "\
 GyrationAggregates calculates radii of gyration during the simulation for \
-given molecule type(s). The radius of gyration is calculated from eigenvalues \
+given molecule(s). The radius of gyration is calculated from eigenvalues \
 of gyration tensor. It also prints average radii of gyration to the screen. \
-Currently, it uses all beads present in the molecules.\n\n");
+Bead types to be used for calculation can be specified.\n\n");
 
       fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
@@ -36,14 +36,14 @@ with optional bond file) files to determine all information about the \
 system.\n\n");
 
       fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.vcf> <output> <molecule names> <options>\n\n", argv[0]);
+      fprintf(stdout, "   %s <input.vcf> <output> <molecule(s)> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>         input filename (vcf format)\n");
-      fprintf(stdout, "   <output>            output file with shape descriptors (automatic ending '-<name>.text')\n");
-      fprintf(stdout, "   <molecule names>    molecule types to calculate radius of gyration for\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <output>          output file with shape descriptors (automatic ending '-<name>.txt')\n");
+      fprintf(stdout, "   <molecule(s)>     molecule types to calculate shape descriptors for\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined         specify that joined coordinates are used\n");
-      fprintf(stdout, "      -bt              specify bead types to be used for calculation (default is all)\n");
+      fprintf(stdout, "      --joined       specify that joined coordinates are used\n");
+      fprintf(stdout, "      -bt            specify bead types to be used for calculation (default is all)\n");
       CommonHelp(0);
       exit(0);
     }
@@ -129,7 +129,7 @@ system.\n\n");
   } //}}}
 
   // <output> - filename with shape descriptors //{{{
-  char output[16];
+  char output[32];
   strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -329,6 +329,7 @@ system.\n\n");
         } //}}}
 
         Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+        fprintf(stderr, "eigen=(%lf,%lf,%lf)\n", eigen.x, eigen.y, eigen.z);
 
         free(list); // free array of bead ids for gyration calculation
 

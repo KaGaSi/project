@@ -8,10 +8,10 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <output file> <molecule names> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.vcf> <output> <molecule names> <options>\n\n", cmd);
 
   fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <output file>     name of output file with persistence length data\n");
+  fprintf(stderr, "   <output>          name of output file with persistence length data\n");
   fprintf(stderr, "   <molecule names>  names of molecule type(s) to use for calculation\n");
   fprintf(stderr, "   <options>\n");
   CommonHelp(1);
@@ -22,29 +22,33 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      printf("\
+      fprintf(stdout, "\
+WARNING! Probably does not work as it should.\n\n");
+
+      fprintf(stdout, "\
 PersistenceLength utility calculates persistence length of linear chains (no \
 check whether the molecules are linear is performed). It calculates distance \
 between first and last bead in a molecule.\n\n");
 
-      printf("\
+      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 
-      printf("Usage:\n");
-      printf("   %s <input.vcf> <output file> <molecule names> <options>\n\n", argv[0]);
+      fprintf(stdout, "Usage:\n");
+      fprintf(stdout, "   %s <input.vcf> <output> <molecule names> <options>\n\n", argv[0]);
 
-      printf("   <input.vcf>       input filename (vcf format)\n");
-      printf("   <output file>     name of output file with persistence length data\n");
-      printf("   <molecule names>  names of molecule type(s) to use for calculation\n");
-      printf("   <options>\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <output>          name of output file with persistence length data\n");
+      fprintf(stdout, "   <molecule names>  names of molecule type(s) to use for calculation\n");
+      fprintf(stdout, "   <options>\n");
       CommonHelp(0);
       exit(0);
     }
   }
 
   int options = 3; //}}}
+  fprintf(stdout, "WARNING! Probably does not work as it should.\n\n");
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -83,8 +87,8 @@ system.\n\n");
   // print command to stdout //{{{
   if (!silent) {
     for (int i = 0; i < argc; i++)
-      printf(" %s", argv[i]);
-    printf("\n\n");
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -180,7 +184,7 @@ system.\n\n");
 
   // print pbc if verbose output
   if (verbose) {
-    printf("   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
@@ -195,6 +199,9 @@ system.\n\n");
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
+  // allocate memory for sums of persistence length
+  double *sum_persistence = calloc(Counts.TypesOfMolecules,sizeof(double));
+
   // main loop //{{{
   int test;
   count = 0;
@@ -204,10 +211,10 @@ system.\n\n");
     count++;
     if (!silent) {
       if (script) {
-        printf("Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count);
       } else {
         fflush(stdout);
-        printf("\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count);
       }
     }
 
@@ -304,6 +311,7 @@ system.\n\n");
           persistence += cos_angle[i][j] / (MoleculeType[i].nBonds - j);
         }
         persistence *= bond_dist[i] / (MoleculeType[i].nBonds * MoleculeType[i].Number);
+        sum_persistence[i] += persistence; // overall sum
 
         fprintf(out, "%10.5f", persistence/MoleculeType[i].Number);
       }
@@ -314,7 +322,7 @@ system.\n\n");
 
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
-      printf("\n%s", stuff);
+      fprintf(stdout, "\n%s", stuff);
 
     // free calloc'd memory
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -324,14 +332,39 @@ system.\n\n");
 
   if (!silent) {
     if (script) {
-      printf("Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count);
     } else {
       fflush(stdout);
-      printf("\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   }
 
   fclose(vcf); //}}}
+
+  // write overall averages to output file //{{{
+  // open output file for appending //{{{
+  if ((out = fopen(output, "a")) == NULL) {
+    fprintf(stderr, "Cannot open file %s!\n", output);
+    exit(1);
+  } //}}}
+
+  putc('#', out);
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (MoleculeType[i].Use) {
+      fprintf(out, " %s", MoleculeType[i].Name);
+    }
+  }
+  putc('\n', out);
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (MoleculeType[i].Use) {
+      sum_persistence[i] /= count * MoleculeType[i].Number;
+
+      fprintf(out, " %lf", sum_persistence[i]);
+    }
+  }
+  putc('\n', out);
+
+  fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
