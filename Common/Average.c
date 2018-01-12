@@ -42,7 +42,7 @@ int read_data (char *filename, int column, int discard) { //{{{
   fscanf(f,"%d", &n_vals);
 //fprintf(stdout, "\nRead from input file: n_vals=%d\n", n_vals);
 
-  n_vals -= discard; // discard what shoud not be used
+  n_vals -= discard; // discard what should not be used
 
 //fprintf(stdout, "\nDiscarding first %d samples; using %d samples for analysis.\n", discard, n_vals);
 

@@ -32,19 +32,20 @@ Usage:
 
 # PersistenceLength utility {#PersistenceLength}
 
-This utility calculates persistence length of specified molecules.
-It is
+WARNING! Probably does not work as it should. Although I never needed it,
+some preliminary tests produced negative values, which is plain wrong.
+
+This utility calculates persistence length of specified molecules.  It is
 assumed that the provided molecules are linear chains, but no check is
-performed.
-Also the use of joined coordinates
-(that is, without periodic boundary condition) is required, because the
-utility does not remove periodic boundary conditions.
+performed.  Also the use of joined coordinates (that is, without periodic
+boundary condition) is required, because the utility does not remove periodic
+boundary conditions.
 
 The calculation of the persistence length is based on the projection of
 angles between bonds vectors (see e.g.
 [this paper](http://pubs.acs.org/doi/full/10.1021/ma012052u)).
 \latexonly
-The following formula for the persistence length, $l_{\mathrm{t}}$ is used:
+The following formula for the persistence length, $l_{\mathrm{P}}$ is used:
 
 \begin{equation}
   l_{\mathrm{P}} = \langle b \rangle \sum_{i=0}^{i=N_b} \langle \cos
@@ -61,7 +62,7 @@ molecule type for each timestep.
 
 Usage:
 
-`PersistenceLength <input.vcf> <output.vcf> <molecule names> <options>`
+`PersistenceLength <input.vcf> <output> <molecule names> <options>`
 
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing either

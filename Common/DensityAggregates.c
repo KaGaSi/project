@@ -10,17 +10,17 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>     input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>     input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <width>         width of a single bin\n");
-  fprintf(stderr, "   <output.rho>    output density file (automatic ending '#.rho' added)\n");
-  fprintf(stderr, "   <agg sizes>     aggregate sizes to calculate density for\n");
+  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+  fprintf(stderr, "   <width>           width of a single bin\n");
+  fprintf(stderr, "   <output.rho>      output density file (automatic ending '#.rho' added)\n");
+  fprintf(stderr, "   <agg sizes>       aggregate sizes to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined     specify that aggregates with joined coordinates are used\n");
-  fprintf(stderr, "      -n <int>     number of bins to average\n");
-  fprintf(stderr, "      -st <int>    starting timestep for calculation\n");
-  fprintf(stderr, "      -m <name>    agg size means number of <name> molecule types in an aggregate\n");
-  fprintf(stderr, "      -x <name(s)> exclude specified molecule(s)\n");
+  fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      -n <int>       number of bins to average\n");
+  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
   CommonHelp(1);
 } //}}}
 
@@ -30,7 +30,8 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       fprintf(stdout, "\
-AggDensity utility calculates bead density for aggregates of given size(s) from \
+DensityAggregates utility calculates bead density for aggregates of given \
+size(s) from \
 their centre of mass. Beside unbonded beads it takes into account only beads \
 from the current aggregate, not from any other aggregate.\n\n");
 
@@ -42,17 +43,17 @@ system.\n\n");
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>     input filename (vcf format)\n");
-      fprintf(stdout, "   <input.agg>     input filename with information about aggregates (agg format)\n");
-      fprintf(stdout, "   <width>         width of a single bin\n");
-      fprintf(stdout, "   <output.rho>    output density file (automatic ending '#.rho' added)\n");
-      fprintf(stdout, "   <agg sizes>     aggregate sizes to calculate density for\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+      fprintf(stdout, "   <width>           width of a single bin\n");
+      fprintf(stdout, "   <output.rho>      output density file (automatic ending '#.rho' added)\n");
+      fprintf(stdout, "   <agg sizes>       aggregate sizes to calculate density for\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined     specify that aggregates with joined coordinates are used\n");
-      fprintf(stdout, "      -n <int>     number of bins to average\n");
-      fprintf(stdout, "      -st <int>    starting timestep for calculation\n");
-      fprintf(stdout, "      -m <name>    agg size means number of <name> molecule types in an aggregate\n");
-      fprintf(stdout, "      -x <name(s)> exclude specified molecule(s)\n");
+      fprintf(stdout, "      --joined       specify that aggregates with joined coordinates are used\n");
+      fprintf(stdout, "      -n <int>       number of bins to average\n");
+      fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
+      fprintf(stdout, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      -x <name(s)>   exclude specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
     }

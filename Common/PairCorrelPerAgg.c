@@ -10,19 +10,22 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>    input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>    input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <width>        width of a single bin\n");
-  fprintf(stderr, "   <output.pcf>   output file with pair correlation function(s)\n");
-  fprintf(stderr, "   <bead type(s)> bead type name(s) for pcf calculation\n");
+  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+  fprintf(stderr, "   <width>           width of a single bin\n");
+  fprintf(stderr, "   <output.pcf>      output file with pair correlation function(s)\n");
+  fprintf(stderr, "   <bead type(s)>    bead type name(s) for pcf calculation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -n <int>    number of bins to average\n");
-  fprintf(stderr, "      -st <int>   starting timestep for calculation\n");
+  fprintf(stderr, "      -n <int>       number of bins to average\n");
+  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
   CommonHelp(1);
 } //}}}
-//TODO: somehow implement Join flag for bead types (throughout all utilities)
 
 int main(int argc, char *argv[]) {
+
+  // What would this be for? Per aggregate densities are calculated via DensityAggregates
+  fprintf(stderr, "THIS UTILITY IS NOT TO BE USED!\n");
+  exit(1);
 
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
@@ -42,14 +45,14 @@ system.\n\n");
 
       fprintf(stdout, "   %s <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>     input filename (vcf format)\n");
-      fprintf(stdout, "   <input.agg>     input filename with information about aggregates (agg format)\n");
-      fprintf(stdout, "   <width>         width of a single bin\n");
-      fprintf(stdout, "   <output.pcf>    output file with pair correlation function(s)\n");
-      fprintf(stdout, "   <bead type(s)>  bead type name(s) for pcf calculation \n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <input.agg>       input filename with information about aggregates (agg format)\n");
+      fprintf(stdout, "   <width>           width of a single bin\n");
+      fprintf(stdout, "   <output.pcf>      output file with pair correlation function(s)\n");
+      fprintf(stdout, "   <bead type(s)>    bead type name(s) for pcf calculation \n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -n <int>     number of bins to average\n");
-      fprintf(stdout, "      -st <int>    starting timestep for calculation\n");
+      fprintf(stdout, "      -n <int>       number of bins to average\n");
+      fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
       CommonHelp(0);
       exit(0);
     }
