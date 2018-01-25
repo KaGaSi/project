@@ -123,6 +123,19 @@ bool BoolOption(int argc, char **argv, char *opt); //}}}
 bool IntegerOption(int argc, char **argv, char *opt, int *value);
 // }}}
 
+// TwoIntegerOption() //{{{
+/**
+ * \breif Function for any option with two integer arguments.
+ *
+ * \param [in]  argc   number of program's arguments
+ * \param [in]  argv   program's arguments
+ * \param [in]  opt    option switch (e.g. array containing `-n`)
+ * \param [out] values array of two integer values of given option
+ * \return `true` or `false` for error
+ */
+bool TwoIntegerOption(int argc, char **argv, char *opt, int *values);
+// }}}
+
 // FileOption() //{{{
 /**
  * \brief Function for any option with filename.
@@ -148,5 +161,20 @@ bool FileOption(int argc, char **argv, char *opt, char **name); //}}}
  * \return `true` or `false` for error
  */
 bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts Counts,
+                        MoleculeType **MoleculeType); //}}}
+
+// MoleculeTypeOption2() //{{{
+/**
+ * \brief Function for any option with molecule type name(s).
+ *
+ * \param [in]  argc         number of program's arguments
+ * \param [in]  argv         program's arguments
+ * \param [in]  opt          option switch (e.g. array containing `-n`)
+ * \param [in]  Counts       numbers of beads, molecules, etc.
+ * \param [out] moltype      array for the molecule type
+ * \param [in]  MoleculeType information about molecule types
+ * \return `true` or `false` for error
+ */
+bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts Counts,
                         MoleculeType **MoleculeType); //}}}
 #endif

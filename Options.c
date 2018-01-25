@@ -139,7 +139,7 @@ bool ExcludeOption(int argc, char **argv, Counts Counts,
       int j = 0;
       while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
 
-        int type = FindMoleculeType(argv[i+1+j], Counts, (*MoleculeType));
+        int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
 
         if (type == -1) { // is it in FIELD?
           fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
@@ -272,6 +272,35 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
   return(false);
 } //}}}
 
+// TwoIntegerOption() //{{{
+/**
+ * Function for any option with two integer arguments. The option (e.g. `-n`)
+ * is an argument of this function.
+ */
+bool TwoIntegerOption(int argc, char **argv, char *opt, int *values) {
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], opt) == 0) {
+
+      // Error - non-numeric or missing argument //{{{
+      if ((i+2) >= argc) {
+        fprintf(stderr, "Missing numeric argument(s) for '%s' option (two are required)!\n", opt);
+        return(true);
+      }
+      if ((i+1) >= argc || argv[i+1][0] < '0' || argv[i+1][0] > '9' ||
+          ((i+2) >= argc || argv[i+2][0] < '0' || argv[i+2][0] > '9')) {
+        fprintf(stderr, "Non-numeric argement(s) for '%s' option!\n", opt);
+        return(true);
+      } //}}}
+
+      values[0] = atoi(argv[i+1]);
+      values[1] = atoi(argv[i+2]);
+    }
+  }
+
+  return(false);
+} //}}}
+
 // FileOption() //{{{
 /**
  * Generic option for file name. The option is an argument of this function.
@@ -298,8 +327,8 @@ bool FileOption(int argc, char **argv, char *opt, char **name) {
 
 // MoleculeTypeOption() //{{{
 /**
- * Generic option for molecule type. The option is an argument of this
- * function.
+ * Generic option for molecule type that can take more than one
+ * argument. The option is an argument of this function.
  */
 bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts
     Counts, MoleculeType **MoleculeType) {
@@ -318,6 +347,47 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts
       if (*moltype == -1) {
         fprintf(stderr, "Molecule '%s' does not exist in FIELD ('%s' option)!\n", argv[i+1], opt);
         return(true);
+      }
+    }
+  }
+
+  return(false);
+} //}}}
+
+// MoleculeTypeOption2() //{{{
+/**
+ * Generic option for molecule types. The option is an argument of this
+ * function.
+ */
+bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts
+    Counts, MoleculeType **MoleculeType) {
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], opt) == 0) {
+
+      // set all moltypes not to be used
+      for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+        (*moltype)[i] = 0;
+      }
+
+      // Error - missing or wrong argument //{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "Missing argument for '%s' option (or molecule name beginning with a dash)!\n", opt);
+        return(true);
+      } //}}}
+
+      // read molecule(s) names
+      int j = 0;
+      while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
+
+        int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
+        if (type == -1) { // is argv[i+1+j] in FIELD?
+          fprintf(stderr, "Molecule '%s' does not exist in FIELD ('%s' option)!\n", argv[i+1+j], opt);
+          return(true);
+        }
+        (*moltype)[type] = 1;
+
+        j++;
       }
     }
   }

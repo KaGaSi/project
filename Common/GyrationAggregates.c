@@ -170,24 +170,15 @@ system.\n\n");
   // vsf file is not needed anymore
   free(vsf_file);
 
-  // -m <name> option - specify MoleculeType that is used for determining agg sizes //{{{
-  int specific_molecule = -1;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-m") == 0) {
-
-      // Error - missing or wrong argument //{{{
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing argument for '-m' option (or molecule name beginning with a dash)!\n");
-        ErrorHelp(argv[0]);
-        exit(1);
-      } //}}}
-
-      specific_molecule = FindMoleculeType(argv[i+1], Counts, MoleculeType);
-      if (specific_molecule == -1) {
-        fprintf(stderr, "Molecule '%s' does not exist in FIELD ('-m' option)!\n", argv[i+1]);
-        exit(1);
-      }
-    }
+  // '-m' option //{{{
+  int *specific_moltype_for_size;
+  specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  // all are to be used without '-m' option
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    specific_moltype_for_size[i] = 1;
+  }
+  if (MoleculeTypeOption2(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
+    exit(1);
   } //}}}
 
   // -bt <name(s)> - specify what bead types to use //{{{
@@ -422,21 +413,29 @@ system.\n\n");
       if (!no_uni || Aggregate[i].nMolecules != 1) {
 
         // test if aggregate 'i' should be used //{{{
-        int mols = 0; // agg size
-        if (specific_molecule != -1) { // agg size = number of molecules of type 'specific_molecule'
-          for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-            int id = Aggregate[i].Molecule[j];
-            if (specific_molecule == Molecule[id].Type) {
-              mols++;
-            }
+        int size = 0;
+        // agg size = number of molecules of type 'specific_moltype_for_size'
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
+          if (specific_moltype_for_size[mol_type] == 1) {
+            size++;
           }
-        } else { // agg size = total number of all molecules
-          mols = Aggregate[i].nMolecules;
         }
-        // is 'mols' agg size in provided list?
+//      int size = 0; // agg size
+//      if (specific_moltype_for_size != -1) { // agg size = number of molecules of type 'specific_moltype_for_size'
+//        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+//          int id = Aggregate[i].Molecule[j];
+//          if (specific_moltype_for_size == Molecule[id].Type) {
+//            size++;
+//          }
+//        }
+//      } else { // agg size = total number of all molecules
+//        size = Aggregate[i].nMolecules;
+//      }
+        // is 'size' agg size in provided list?
         int correct_size = -1;
         for (int j = 0; j < Counts.Molecules; j++) {
-          if ((j+1) == mols) {
+          if ((j+1) == size) {
             correct_size = j;
           }
         } //}}}
