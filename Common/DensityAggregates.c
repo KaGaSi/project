@@ -19,7 +19,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -n <int>       number of bins to average\n");
   fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
   CommonHelp(1);
 } //}}}
@@ -52,7 +52,7 @@ system.\n\n");
       fprintf(stdout, "      --joined       specify that aggregates with joined coordinates are used\n");
       fprintf(stdout, "      -n <int>       number of bins to average\n");
       fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
-      fprintf(stdout, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
       fprintf(stdout, "      -x <name(s)>   exclude specified molecule(s)\n");
       CommonHelp(0);
       exit(0);
@@ -184,8 +184,13 @@ system.\n\n");
   free(vsf_file); //}}}
 
   // '-m' option //{{{
-  int specific_moltype_for_size;
-  if (MoleculeTypeOption(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
+  int *specific_moltype_for_size;
+  specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  // all are to be used without '-m' option
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    specific_moltype_for_size[i] = 1;
+  }
+  if (MoleculeTypeOption2(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
     exit(1);
   } //}}}
 
@@ -216,13 +221,20 @@ system.\n\n");
 
     // write initial stuff to output density file //{{{
     FILE *out;
-    char str[32];
+    char str[64];
+    sprintf(str, "%s", output_rho);
 
-    if (specific_moltype_for_size == -1) {
-      sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
-    } else {
-      sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_moltype_for_size].Name, agg_sizes[aggs][0]);
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      if (specific_moltype_for_size[i] == 1) {
+        sprintf(str, "%s%s", str, MoleculeType[i].Name);
+      }
     }
+    sprintf(str, "%s%d.rho", str, agg_sizes[aggs][0]);
+//  if (specific_moltype_for_size == -1) {
+//    sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
+//  } else {
+//    sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_moltype_for_size].Name, agg_sizes[aggs][0]);
+//  }
     if ((out = fopen(str, "w")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -465,16 +477,23 @@ system.\n\n");
 
       // test if aggregate 'i' should be used //{{{
       int size = 0;
-      if (specific_moltype_for_size != -1) { // agg size = number of molecules of type 'specific_moltype_for_size'
-        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          int id = Aggregate[i].Molecule[j];
-          if (specific_moltype_for_size == Molecule[id].Type) {
-            size++;
-          }
+      // agg size = number of molecules of type 'specific_moltype_for_size'
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
+        if (specific_moltype_for_size[mol_type] == 1) {
+          size++;
         }
-      } else { // agg size = total number of all molecules
-        size = Aggregate[i].nMolecules;
       }
+//    if (specific_moltype_for_size != -1) {
+//      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+//        int id = Aggregate[i].Molecule[j];
+//        if (specific_moltype_for_size == Molecule[id].Type) {
+//          size++;
+//        }
+//      }
+//    } else { // agg size = total number of all molecules
+//      size = Aggregate[i].nMolecules;
+//    }
       // is 'size' in provided list?
       int correct_size = -1;
       for (int j = 0; j < aggs; j++) {
@@ -544,13 +563,20 @@ system.\n\n");
   // write densities to output file(s) //{{{
   for (int i = 0; i < aggs; i++) {
     FILE *out;
-    char str[32];
-
-    if (specific_moltype_for_size == -1) {
-      sprintf(str, "%s%d.rho", output_rho, agg_sizes[i][0]);
-    } else {
-      sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_moltype_for_size].Name, agg_sizes[i][0]);
+    // assemble correct name
+    char str[64];
+    sprintf(str, "%s", output_rho);
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      if (specific_moltype_for_size[j] == 1) {
+        sprintf(str, "%s%s", str, MoleculeType[j].Name);
+      }
     }
+    sprintf(str, "%s%d.rho", str, agg_sizes[i][0]);
+//  if (specific_moltype_for_size == -1) {
+//    sprintf(str, "%s%d.rho", output_rho, agg_sizes[i][0]);
+//  } else {
+//    sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_moltype_for_size].Name, agg_sizes[i][0]);
+//  }
     if ((out = fopen(str, "a")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -581,21 +607,27 @@ system.\n\n");
       putc('\n',out);
     }
 
-    if (specific_moltype_for_size != -1) {
-      fprintf(out, "# %d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
-          agg_sizes[i][0], MoleculeType[specific_moltype_for_size].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
-    } else {
-      fprintf(out, "# %d molecules in aggregate (%d aggregates)\n", agg_sizes[i][0], agg_sizes[i][1]);
+    fprintf(out, "# %d molecules in aggregate (sum of", agg_sizes[i][0]);
+    int types = 0;
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      if (specific_moltype_for_size[j] == 1) {
+        if (++types == 1) { // first mol type
+          fprintf(out, " %s", MoleculeType[j].Name);
+        } else { // second and higher mol type
+          fprintf(out, ", %s", MoleculeType[j].Name);
+        }
+      }
     }
-    fclose(out);
-  } //}}}
+    fprintf(out, ") and %.2f other molecules", (double)(other_mols[i])/agg_sizes[i][1]);
+    fprintf(out, "(%d aggregates)\n", agg_sizes[i][1]);
 
-  // print to stdout number of unspecified molecules if '-m' option was used //{{{
-  if (specific_moltype_for_size != -1 && !silent) {
-    for (int i = 0; i < aggs; i++) {
-      fprintf(stdout, "%d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
-          agg_sizes[i][0], MoleculeType[specific_moltype_for_size].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
-    }
+//  if (specific_moltype_for_size != -1) {
+//    fprintf(out, "# %d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
+//        agg_sizes[i][0], MoleculeType[specific_moltype_for_size].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
+//  } else {
+//    fprintf(out, "# %d molecules in aggregate (%d aggregates)\n", agg_sizes[i][0], agg_sizes[i][1]);
+//  }
+    fclose(out);
   } //}}}
 
   // free memory - to make valgrind happy //{{{

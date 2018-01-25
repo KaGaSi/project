@@ -208,53 +208,75 @@ Usage:
 
 # DistrAgg utility {#DistrAgg}
 
-DistrAgg calculates number and weight average aggregation masses
-for each timestep (i.e. their time evolution) as well as their average over
+DistrAgg calculates number and weight average aggregation masses and
+aggregation numbers for each timestep (i.e. their time evolution) as well
+as their average over
 the whole simulation.
 \latexonly
 The number average and weight average aggregation mass, $\langle
 M\rangle_{\mathrm{n}}$ and $\langle M\rangle_{\mathrm{w}}$, are,
 respectively, defined as:
 \begin{equation}
-\langle M\rangle_{\mathrm{n}} = \frac{\sum_{A_{\mathrm{S}}} M_i N_i}{N} \mbox{ , \ \ and \ \ }
-\langle M\rangle_{\mathrm{w}} = \frac{\sum_{A_{\mathrm{S}}} M_i^2 N_i}{\sum_{A_{\mathrm{S}}} M_i N_i},
+  \langle M\rangle_{\mathrm{n}} = \frac{\sum_{A_{\mathrm{S}}} m_i N_i}{N} \mbox{ , \ \ and \ \ }
+  \langle M\rangle_{\mathrm{w}} = \frac{\sum_{A_{\mathrm{S}}} m_i^2 N_i}{\sum_{A_{\mathrm{S}}} m_i N_i},
 \end{equation}
-where the sums go over all aggregate sizes. $M_i$ is the mass of an aggregate
+where the sums go over all aggregate sizes. $m_i$ is the mass of an aggregate
 with aggregation number $A_{\mathrm{S}}=i$, $N_i$ is the number of such
 aggregates and $N$ is total number of aggregates. The equations can be
 written more conveniently (for programming purposes) as sums over
 aggregates themselves instead of their sizes:
 \begin{equation}
-\langle M\rangle_{\mathrm{n}} = \frac{\sum_{i=1}^N M_i}{N} \mbox{ , \ \ and \ \ }
-\langle M\rangle_{\mathrm{w}} = \frac{\sum_{i=1}^N M_i^2}{\sum_{i=1}^N M_i}.
+  \langle M\rangle_{\mathrm{n}} = \frac{\sum_{i=1}^N m_i}{N} \mbox{ , \ \ and \ \ }
+  \langle M\rangle_{\mathrm{w}} = \frac{\sum_{i=1}^N m_i^2}{\sum_{i=1}^N m_i}.
 \end{equation}
 
+The number and weight average aggregation numbers, $\langle
+A_{\mathrm{S}}\rangle_{\mathrm{n}}$ and $\langle
+A_{\mathrm{S}}\rangle_{\mathrm{w}}$ respectively, are calculated as:
+\begin{equation}
+  \langle A_{\mathrm{S}}\rangle_{\mathrm{n}} = \frac{\sum_{i=1}^N
+    A_{\mathrm{S}}}{N}
+  \mbox{ , \ \ and \ \ }
+  \langle A_{\mathrm{S}}\rangle_{\mathrm{w}} = \frac{\sum_{i=1}^N
+    A_{\mathrm{S}}^2}{\sum_{i=1}^N A_{\mathrm{S}}}.
+\end{equation}
 \endlatexonly
 
-It also calculates number and weight distribution function of aggregate masses.
+The utility also calculates number and weight distribution function of
+aggregate masses and aggregation numbers.
 \latexonly
-The number distribution, $F_{\mathrm{n}}(A_{\mathrm{S}})$, and weight
-distribution, $F_{\mathrm{w}}(A_{\mathrm{S}})$, are, respectively defined as:
+The number distribution, $M_{\mathrm{n}}(A_{\mathrm{S}})$, and weight
+distribution, $M_{\mathrm{w}}(A_{\mathrm{S}})$, are, respectively defined as:
 \begin{equation}
-F_{\mathrm{n}}(A_{\mathrm{S}}) = \frac{1}{\langle M\rangle_{\mathrm{n}}}
-  \frac{N_{A_\mathrm{S}} M_{A_\mathrm{S}}}{\sum_{A_{\mathrm{S}}} N_i}
-\mbox{ \ \ \ \ \ and \ \ \ \ \ }
-F_{\mathrm{w}}(A_{\mathrm{S}}) = \frac{1}{\langle M\rangle_{\mathrm{w}}}
-  \frac{N_{A_\mathrm{S}} M_{A_\mathrm{S}}^2}{\sum_{A_{\mathrm{S}}} N_i
-  M_i},
+  M_{\mathrm{n}}(A_{\mathrm{S}}) = \frac{1}{\langle M\rangle_{\mathrm{n}}}
+    \frac{N_{A_\mathrm{S}} m_{A_\mathrm{S}}}{\sum_{A_{\mathrm{S}}} N_i}
+  \mbox{ \ \ \ \ \ and \ \ \ \ \ }
+  M_{\mathrm{w}}(A_{\mathrm{S}}) = \frac{1}{\langle M\rangle_{\mathrm{w}}}
+    \frac{N_{A_\mathrm{S}} m_{A_\mathrm{S}}^2}{\sum_{A_{\mathrm{S}}} N_i
+    m_i},
 \end{equation}
-where $N_{A_{\mathrm{S}}}$ and $M_{A_{\mathrm{S}}}$ stand for the number
+where $N_{A_{\mathrm{S}}}$ and $m_{A_{\mathrm{S}}}$ stand for the number
 and mass, respectively, of aggregates with aggregation number
 $A_{\mathrm{S}}$. The averages $\langle M\rangle_{\mathrm{n}}$ and $\langle
 M\rangle_{\mathrm{w}}$ are normalisation constants. These equations can
 again be transformed to contain sums over aggregates, not their sizes.
 Putting the averages in then results in the following equations:
 \begin{equation}
-F_{\mathrm{n}}(A_{\mathrm{S}}) = \frac{N_{A_{\mathrm{S}}}
-  M_{A_\mathrm{S}}}{\sum_{i=1}^N M_i}
-\mbox{ \ \ \ \ \ and \ \ \ \ \ }
-F_{\mathrm{w}}(A_{\mathrm{S}}) = \frac{N_{A_{\mathrm{S}}}
-  M_{A_\mathrm{S}}^2}{\sum_{i=1}^N M_i^2},
+  M_{\mathrm{n}}(A_{\mathrm{S}}) = \frac{N_{A_{\mathrm{S}}}
+    m_{A_\mathrm{S}}}{\sum_{i=1}^N m_i}
+  \mbox{ \ \ \ \ \ and \ \ \ \ \ }
+  M_{\mathrm{w}}(A_{\mathrm{S}}) = \frac{N_{A_{\mathrm{S}}}
+    m_{A_\mathrm{S}}^2}{\sum_{i=1}^N m_i^2},
+\end{equation}
+
+The number and weight distribution functions of aggregation numbers,
+$F_{\mathrm{n}}(A_{\mathrm{S}})$ and $F_{\mathrm{w}}(A_{\mathrm{S}})$
+respectively, are calculated as
+\begin{equation}
+  F_{\mathrm{n}}(A_{\mathrm{S}}) = \frac{N_{A_{\mathrm{S}}}}{N}
+  \mbox{ \ \ \ \ \ and \ \ \ \ \ }
+  F_{\mathrm{w}}(A_{\mathrm{S}}) = \frac{N_{A_{\mathrm{S}}}
+    A_{\mathrm{S}}}{\sum_{i=1}^N A_{\mathrm{S},i}}.
 \end{equation}
 \endlatexonly
 
@@ -265,28 +287,33 @@ is essential in dissipative particle dynamics simulation method.
 Since in DPD the volumes of all beads are identical, volume fraction of an
 aggregate with aggregation number $A_{\mathrm{s}}$ is calculated as:
 \begin{equation}
-\phi(A_{\mathrm{s}}) = \frac{N_{A_{\mathrm{s}}}
-  n_{A_{\mathrm{s}}}}{\sum_{i=1}^N N_i n_i},
+\phi(A_{\mathrm{S}}) = \frac{N_{A_{\mathrm{S}}}
+  n_{A_{\mathrm{S}}}}{\sum_{i=1}^N n_i},
 \end{equation}
-
 where $n_i$ is the number of beads in an aggregate with $A_{\mathrm{s}}=i$.
 \endlatexonly
 
-The definition of aggregation number\latexonly, $A_{\mathrm{s}}$,\endlatexonly
-is somewhat flexible. The `-m <name>` option can be used to specify that the
-aggregation number is not the number of all molecules in an aggregate, but
-rather only the number molecules of the specified type in the aggregate. The
-mass of the aggregate is than taken to be its true mass, that is the mass of
-all molecules in the aggregate.  For example, let's assume an aggregate with 1
-`A` molecule of mass 2 and 3 `B` molecules each with mass 4. Using `-m A` will
-count the aggregate size as 1 and its mass as
-\latexonly$1\cdot2+3\cdot4=$\endlatexonly14, while not using `-m` option will
-count the aggregate size as \latexonly$1+3=$\endlatexonly4, but its mass
-still as 14.
+The definition of aggregation number\latexonly,
+$A_{\mathrm{S}}$,\endlatexonly is somewhat flexible. The `-m <name>` option
+can be used to specify that the aggregation number is not the number of all
+molecules in an aggregate, but rather only the number molecules of the
+specified type(s). Two values are then taken as the mass and aggregation
+number for calculations of distributions and averages -- the 'true' value
+(noted as `whole agg mass/As` in output files) and the '`-m` option value'
+(noted as `options mass/As`). For example, let's assume an aggregate
+contains `A` and `B` molecules. Using `-m A` will count the aggregate size
+as the number of `A`s, but its mass as both the mass of `A` and `B`
+molecules and as the mass of only `A` molecules (the same goes for
+aggregation number). The resulting distributions will therefore be the
+functions of aggregation number specified by the `-m` option, but for every
+distribution function, there will be two data columns in the output file.
 
 Also using the `--only <name>` uses only aggregates composed exclusively of a
 specified molecule type. On the contrary, `-x <name(s)>` option discounts
 aggregates containing only the specified molecules.
+
+Lastly, the calculations can be made only for a given range of aggregation
+numbers (specified by the `-m` option if present) if `-n` option is used.
 
 The utility reads information about aggregate from input file with
 [Aggregate format](\ref AggregateFile). This file can be generated using
@@ -294,23 +321,23 @@ The utility reads information about aggregate from input file with
 
 Usage:
 
-`DistrAgg <input> <output distr file> <output avg file> <options>`
+`DistrAgg <input> <distr file> <avg file> <options>`
 
 > `<input>`
 > > input filename with information about aggregates
-> `<output distr file>`
+> `<distr file>`
 > > output filename with weight and number distribution functions
-> `<output avg file>`
+> `<avg file>`
 > > output filename with weight and number average aggregation number in
 > > each timestep
 > `<options>`
 > > `-st <int>`
 > > > starting timestep for calculation (does not affect calculation of
 > > > time evolution)
-> > `--no-unimers`
-> > > free chains shouldn't be used to calcalute average aggregation
-> > > numbers
-> > `-m <molecule type name>`
+> > `-n <int> <int>`
+> > > range of aggregation numbers to calculate distributions and averages
+> > > for
+> > `-m <name(s)>`
 > > > instead of aggregate size, use number of molecules of specified molecule
 > > > types
 > > `--only <molecule type name>`
@@ -356,13 +383,13 @@ $\mathcal{O}$ is defined as:
 \end{equation}
 where $N$ is the total number of aggregates. The weight average is:
 \begin{equation}
-  \langle\mathcal{O}\rangle_{\mathrm{w}} = \frac{\sum_i M_i
-    \mathcal{O}_i}{\sum_i M_i},
+  \langle\mathcal{O}\rangle_{\mathrm{w}} = \frac{\sum_i m_i
+    \mathcal{O}_i}{\sum_i m_i},
 \end{equation}
-where $M_i$ is mass of an aggregate $i$.  Lastly, the z-average is:
+where $m_i$ is mass of an aggregate $i$.  Lastly, the z-average is:
 \begin{equation}
-  \langle\mathcal{O}\rangle_{\mathrm{z}} = \frac{\sum_i M^2_i
-    \mathcal{O}_i}{\sum_i M^2_i}.
+  \langle\mathcal{O}\rangle_{\mathrm{z}} = \frac{\sum_i m^2_i
+    \mathcal{O}_i}{\sum_i m^2_i}.
 \end{equation}
 All the sums go over individual aggregates.  Both number and weight average
 according to these equations were already used in the DistrAgg utility.
