@@ -1502,8 +1502,9 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
  */
 Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) {
   // gyration tensor (3x3 array) //{{{
+  // use long double to ensure precision -- previous problem with truncation in short chains
   struct Tensor {
-    Vector x, y, z;
+    LongVector x, y, z;
   } GyrationTensor;
 
   GyrationTensor.x.x = 0;
@@ -1553,15 +1554,15 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
 //fprintf(stderr, "        (%lf, %lf, %lf)\n", GyrationTensor.x.z, GyrationTensor.y.z, GyrationTensor.z.z);
 
   // char polynomial: a_cube * x^3 + b_cube * x^2 + c_cube * x + d_cube = 0 //{{{
-  double a_cube = -1;
-  double b_cube = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z;
-  double c_cube = - GyrationTensor.x.x * GyrationTensor.y.y
+  long double a_cube = -1;
+  long double b_cube = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z;
+  long double c_cube = - GyrationTensor.x.x * GyrationTensor.y.y
                   - GyrationTensor.x.x * GyrationTensor.z.z
                   - GyrationTensor.y.y * GyrationTensor.z.z
                   + SQR(GyrationTensor.y.z)
                   + SQR(GyrationTensor.x.y)
                   + SQR(GyrationTensor.x.z);
-  double d_cube = + GyrationTensor.x.x * GyrationTensor.y.y * GyrationTensor.z.z
+  long double d_cube = + GyrationTensor.x.x * GyrationTensor.y.y * GyrationTensor.z.z
                   + 2 * GyrationTensor.x.y * GyrationTensor.y.z * GyrationTensor.x.z
                   - SQR(GyrationTensor.x.z) * GyrationTensor.y.y
                   - SQR(GyrationTensor.x.y) * GyrationTensor.z.z
@@ -1569,22 +1570,22 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
 //fprintf(stderr, "character: %lfx^3 + %lfx^2 + %lfx^1 + %lfx^0;\n", a_cube, b_cube, c_cube, d_cube);
 
   // first root: either 0 or Newton's iterative method to get it //{{{
-  double root0 = 0;
-  if (fabs(d_cube) > 0.0000001) {
+  long double root0 = 0;
+  if (fabs(d_cube) > 0.0000000001L) {
     // derivative of char. polynomial: a_deriv * x^2 + b_deriv * x + c_deriv
-    double a_deriv = 3 * a_cube;
-    double b_deriv = 2 * b_cube;
-    double c_deriv = c_cube;
+    long double a_deriv = 3 * a_cube;
+    long double b_deriv = 2 * b_cube;
+    long double c_deriv = c_cube;
 
-    double root1 = 1;
+    long double root1 = 1;
 
-    while (fabs(root0-root1) > 0.0000001) {
-      double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) + c_cube * root0 + d_cube);
-      double f_deriv_root0 = (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
+    while (fabs(root0-root1) > 0.0000000001L) {
+      long double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) + c_cube * root0 + d_cube);
+      long double f_deriv_root0 = (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
       root1 = root0 - f_root0 / f_deriv_root0;
 
       // swap root0 and root1 for the next iteration
-      double tmp = root0;
+      long double tmp = root0;
       root0 = root1;
       root1 = tmp;
     }
@@ -1593,22 +1594,26 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
 
   // determine paremeters of quadratic equation a_quad * x^2 + b_quad * x + c_quad = 0 //{{{
   // derived by division: (x^3 + (b_cube/a_cube) * x^2 + (c_cube/a_cube) * x + (d_cube/a_cube)):(x - root0)
-  double a_quad = 1;
-  double b_quad = b_cube / a_cube + root0;
-  double c_quad = SQR(root0) + b_cube / a_cube * root0 + c_cube/a_cube; //}}}
+  long double a_quad = 1;
+  long double b_quad = b_cube / a_cube + root0;
+  long double c_quad = SQR(root0) + b_cube / a_cube * root0 + c_cube/a_cube; //}}}
 //fprintf(stderr, "quad: %lfx^2 + %lfx + %lf; ", a_quad, b_quad, c_quad);
 
   // calculate & sort eigenvalues //{{{
-  Vector eigen;
+  LongVector eigen;
   eigen.x = root0; // found out by Newton's method
   // roots of the quadratic equation
   eigen.y = (-b_quad + sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
   eigen.z = (-b_quad - sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
 
-  eigen = Sort3(eigen); //}}}
+  Vector eigen2;
+  eigen2.x = eigen.x;
+  eigen2.y = eigen.y;
+  eigen2.z = eigen.z;
+  eigen2 = Sort3(eigen2); //}}}
 //fprintf(stderr, "eigen=(%lf, %lf, %lf)\n", eigen.x, eigen.y, eigen.z);
 
-  return (eigen);
+  return (eigen2);
 } //}}}
 
 // Min3() //{{{
