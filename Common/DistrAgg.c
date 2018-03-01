@@ -290,9 +290,9 @@ the system.\n\n");
   // main loop //{{{
   int test; // sum_mass = 0;
   count = 0;
-  // [0][] = simple sum, [1][] = sum of squares
+  // [0][] = simple sum, [1][] = sum of squares, [2][] = sume of cubes
   // [][0] = mass of mols in agg from options, [][1] = mass of the whole aggregate
-  double mass_sum[2][2] = {0};
+  double mass_sum[3][2] = {0};
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
@@ -438,6 +438,8 @@ the system.\n\n");
         mass_sum[0][1] += Aggregate[i].Mass;
         mass_sum[1][0] += SQR(agg_mass);
         mass_sum[1][1] += SQR(Aggregate[i].Mass);
+        mass_sum[2][0] += CUBE(agg_mass);
+        mass_sum[2][1] += CUBE(Aggregate[i].Mass);
 
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
           int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
@@ -572,12 +574,10 @@ the system.\n\n");
   fprintf(out, "2:<M>_n (whole agg mass) ");
   fprintf(out, "3:<M>_w (options' mass) ");
   fprintf(out, "4:<M>_w (whole agg mass)");
-//fprintf(out, "5:<As>_n (options' As) ");
-//fprintf(out, "6:<As>_w (options' As) ");
-//fprintf(out, "7:<As>_n (whole agg As) ");
-//fprintf(out, "8:<As>_w (whole agg As)");
+  fprintf(out, "5:<M>_z (options' mass) ");
+  fprintf(out, "6:<M>_z (whole agg mass)");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, " %d:<%s>_n", i+5, MoleculeType[i].Name);
+    fprintf(out, " %d:<%s>_n", i+7, MoleculeType[i].Name);
   }
   putc('\n', out); //}}}
 
@@ -587,6 +587,8 @@ the system.\n\n");
   fprintf(out, "%10.3f ", mass_sum[0][1]/count_agg[0]); // <M>_n (whole agg mass)
   fprintf(out, "%10.3f ", mass_sum[1][0]/mass_sum[0][0]); // <M>_w (options' mass)
   fprintf(out, "%10.3f ", mass_sum[1][1]/mass_sum[0][1]); // <M>_w (whole agg mass)
+  fprintf(out, "%10.3f ", mass_sum[2][0]/mass_sum[1][0]); // <M>_z (options' mass)
+  fprintf(out, "%10.3f ", mass_sum[2][1]/mass_sum[1][1]); // <M>_z (whole agg mass)
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     fprintf(out, "%7.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
   }
