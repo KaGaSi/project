@@ -25,10 +25,21 @@ int main ( int argc, char** argv ) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       fprintf(stdout, "\
-Average using binning method to analyse data stored in a supplied file. It \
+Average uses binning method to analyse data stored in a supplied file. It \
 prints average, statistical error and estimate of integrated \
-autocorrelation time. Empty lines and lines beginning with '#' are skipped. \
-\n\n");
+autocorrelation time (tau). Empty lines and lines beginning with '#' are \
+skipped. The program prints to standart output 4 values: <n_blocks> \
+<simple average> <statistical error> <estimate of tau>.\n\n");
+
+      fprintf(stdout, "\
+A way to estimate \
+the 'real' value of tau is to use a wide range of <n_blocks> and then plot \
+<tau> as a function of <n_blocks>. Since the number of data points in a \
+block has to be larger than tau (say, 10 times larger), plotting \
+<number of data lines>/10/<n_blocks> vs. <n_blocks> will produce an \
+exponential function that will intersect the plotted <tau>. A value of tau \
+near the intersection (but to the left where the exponential is above <tau>) \
+can be considered a good estimate for tau.\n\n");
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input> <column> <discard> <n_blocks>\n\n", argv[0]);
@@ -110,10 +121,10 @@ autocorrelation time. Empty lines and lines beginning with '#' are skipped. \
     exit(1);
   }
 
-  printf("input=\"%s\", ", input);
-  printf("column=%d, ", column);
-  printf("discard=%d, ", discard);
-  printf("n_blocks=%d\n", n_blocks);
+//fprintf(stdout, "input=\"%s\", ", input);
+//fprintf(stdout, "column=%d, ", column);
+//fprintf(stdout, "discard=%d, ", discard);
+//fprintf(stdout, "n_blocks=%d\n", n_blocks);
 
   int test, lines = 0, all_lines = 0;
   while ((test = getc(fr)) != EOF) {
@@ -188,17 +199,16 @@ autocorrelation time. Empty lines and lines beginning with '#' are skipped. \
   // overall averages
   long double avg_all[2] = {0}; // [0] for avg, [1] for avg of squares //}}}
 
-  printf("all_lines=%d\n", all_lines);
-  printf("lines-discard=%d\n", lines-discard);
-  printf("remainder=%d\n", remainder);
-  printf("count=%d\n", count);
-  printf("data_per_block=%d\n", data_per_block);
+//fprintf(stdout, )"all_lines=%d\n", all_lines);
+//fprintf(stdout, )"lines-discard=%d\n", lines-discard);
+//fprintf(stdout, )"remainder=%d\n", remainder);
+//fprintf(stdout, )"count=%d\n", count);
+//fprintf(stdout, )"data_per_block=%d\n", data_per_block);
 
   // calculate averages //{{{
   int k = remainder; // first datapoint to consider
   for (int i = 0; i < n_blocks; i++) {
     for (int j = 0; j < data_per_block; j++) {
-      printf("data[%d]=%lf; block %d\n", k, data[k], i);
       avg_all[0] += data[k];
       avg_all[1] += SQR(data[k]);
       avg_block[i] += data[k++];
@@ -222,14 +232,8 @@ autocorrelation time. Empty lines and lines beginning with '#' are skipped. \
   // approximate integrated autocorrelation time
   double tau_int = 0.5 * data_per_block * block_stdev / (avg_all[1] - SQR(avg_all[0]));
 
-  // print averages
-  printf("avg_all[0]=%Lf; avg_all[1]=%Lf\n", avg_all[0], avg_all[1]);
-  for (int i = 0; i < n_blocks; i++) {
-    printf("block_avg[%d]=%Lf\n", i, avg_block[i]);
-  }
-  printf("block_stdev=%lf\n", block_stdev);
-  printf("error=%lf\n", error);
-  printf("tau_int=%lf\n", tau_int);
+  // print number of blocks, average, statistical error, and estimate of tau
+  fprintf(stdout, "%4d %Lf %lf %lf\n", n_blocks, avg_all[0], error, tau_int);
 
   free(data);
   free(avg_block);
