@@ -19,6 +19,14 @@ typedef struct Vector {
   double x, y, z;
 } Vector; //}}}
 
+// struct LongVector //{{{
+/**
+ * \brief 3D vector of floats.
+ */
+typedef struct LongVector {
+  long double x, y, z;
+} LongVector; //}}}
+
 // struct IntVector //{{{
 /**
  * \brief 3D vector of integers.
