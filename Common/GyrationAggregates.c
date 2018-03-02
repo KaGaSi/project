@@ -18,7 +18,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -bt            specify bead types to be used for calculation (default is all)\n");
   fprintf(stderr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
-  fprintf(stderr, "      --no-unimers   do not count unimers into averages\n");
+  fprintf(stderr, "TODO: -n <int> <int> calculate for aggregate sizes in given range\n");
   CommonHelp(1);
 } //}}}
 
@@ -51,7 +51,7 @@ system.\n\n");
       fprintf(stdout, "      -bt            specify bead types to be used for calculation (default is all)\n");
       fprintf(stdout, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
       fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
-      fprintf(stdout, "      --no-unimers   do not count unimers into averages\n");
+      fprintf(stderr, "TODO: -n <int> <int> calculate for aggregate sizes in given range\n");
       CommonHelp(0);
       exit(0);
     }
@@ -73,7 +73,7 @@ system.\n\n");
         strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-ps") != 0 &&
-        strcmp(argv[i], "--no-unimers") != 0) {
+        strcmp(argv[i], "-n") != 0) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
