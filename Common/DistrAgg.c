@@ -213,7 +213,10 @@ the system.\n\n");
   int only_specific_moltype_aggregates = -1;
   if (MoleculeTypeOption(argc, argv, "--only", &only_specific_moltype_aggregates, Counts, &MoleculeType)) {
     exit(1);
-  } //}}}
+  }
+
+  // to calculate fraction of chains not in contact with other moltypes
+  long int only_count_chains = 0; //}}}
 
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
@@ -445,6 +448,11 @@ the system.\n\n");
           int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
           molecules_sum[size-1][mol_type]++;
         } //}}}
+
+        // count chains if `--only` is used //{{{
+        if (only_specific_moltype_aggregates != -1) {
+          only_count_chains += Aggregate[i].nMolecules;
+        } //}}}
       }
     }
 
@@ -570,27 +578,44 @@ the system.\n\n");
 
   // print legend (with column numbers) //{{{
   fprintf(out, "# ");
-  fprintf(out, "1:<M>_n (options' mass) ");
-  fprintf(out, "2:<M>_n (whole agg mass) ");
-  fprintf(out, "3:<M>_w (options' mass) ");
-  fprintf(out, "4:<M>_w (whole agg mass)");
-  fprintf(out, "5:<M>_z (options' mass) ");
-  fprintf(out, "6:<M>_z (whole agg mass)");
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, " %d:<%s>_n", i+7, MoleculeType[i].Name);
+  if (only_specific_moltype_aggregates != -1) {
+    fprintf(out, "1:<M>_n ");
+    fprintf(out, "2:<M>_w ");
+    fprintf(out, "3:<M>_z ");
+    fprintf(out, "4:<%s>_n ", MoleculeType[only_specific_moltype_aggregates].Name);
+    fprintf(out, "5:<fraction of %s chains not in contact with other moltypes>", MoleculeType[only_specific_moltype_aggregates].Name);
+  } else {
+    fprintf(out, "1:<M>_n (options' mass) ");
+    fprintf(out, "2:<M>_n (whole agg mass) ");
+    fprintf(out, "3:<M>_w (options' mass) ");
+    fprintf(out, "4:<M>_w (whole agg mass) ");
+    fprintf(out, "5:<M>_z (options' mass) ");
+    fprintf(out, "6:<M>_z (whole agg mass)");
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(out, " %d:<%s>_n", i+7, MoleculeType[i].Name);
+    }
   }
   putc('\n', out); //}}}
 
   // print the averages //{{{
   fprintf(out, "# ");
-  fprintf(out, "%10.3f ", mass_sum[0][0]/count_agg[0]); // <M>_n (options' mass)
-  fprintf(out, "%10.3f ", mass_sum[0][1]/count_agg[0]); // <M>_n (whole agg mass)
-  fprintf(out, "%10.3f ", mass_sum[1][0]/mass_sum[0][0]); // <M>_w (options' mass)
-  fprintf(out, "%10.3f ", mass_sum[1][1]/mass_sum[0][1]); // <M>_w (whole agg mass)
-  fprintf(out, "%10.3f ", mass_sum[2][0]/mass_sum[1][0]); // <M>_z (options' mass)
-  fprintf(out, "%10.3f ", mass_sum[2][1]/mass_sum[1][1]); // <M>_z (whole agg mass)
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, "%7.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
+  if (only_specific_moltype_aggregates != -1) {
+    // --only option doesn't distinguish between options's stuff and whole agg stuff
+    fprintf(out, "%10.3f ", mass_sum[0][0]/count_agg[0]); // <M>_n
+    fprintf(out, "%10.3f ", mass_sum[1][0]/mass_sum[0][0]); // <M>_w
+    fprintf(out, "%10.3f ", mass_sum[2][0]/mass_sum[1][0]); // <M>_z
+    fprintf(out, "%10.3f", (double)(molecules_sum[0][only_specific_moltype_aggregates])/count_agg[0]); // <species>_n
+    fprintf(out, " %10.3f", (double)(only_count_chains)/(count*MoleculeType[only_specific_moltype_aggregates].Number));
+  } else {
+    fprintf(out, "%10.3f ", mass_sum[0][0]/count_agg[0]); // <M>_n (options' mass)
+    fprintf(out, "%10.3f ", mass_sum[0][1]/count_agg[0]); // <M>_n (whole agg mass)
+    fprintf(out, "%10.3f ", mass_sum[1][0]/mass_sum[0][0]); // <M>_w (options' mass)
+    fprintf(out, "%10.3f ", mass_sum[1][1]/mass_sum[0][1]); // <M>_w (whole agg mass)
+    fprintf(out, "%10.3f ", mass_sum[2][0]/mass_sum[1][0]); // <M>_z (options' mass)
+    fprintf(out, "%10.3f ", mass_sum[2][1]/mass_sum[1][1]); // <M>_z (whole agg mass)
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(out, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
+    }
   }
   putc('\n', out);
   fclose(out); //}}}
