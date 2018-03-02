@@ -199,12 +199,6 @@ can be considered a good estimate for tau.\n\n");
   // overall averages
   long double avg_all[2] = {0}; // [0] for avg, [1] for avg of squares //}}}
 
-//fprintf(stdout, )"all_lines=%d\n", all_lines);
-//fprintf(stdout, )"lines-discard=%d\n", lines-discard);
-//fprintf(stdout, )"remainder=%d\n", remainder);
-//fprintf(stdout, )"count=%d\n", count);
-//fprintf(stdout, )"data_per_block=%d\n", data_per_block);
-
   // calculate averages //{{{
   int k = remainder; // first datapoint to consider
   for (int i = 0; i < n_blocks; i++) {
