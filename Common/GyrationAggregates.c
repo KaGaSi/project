@@ -16,7 +16,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -bt            specify bead types to be used for calculation (default is all)\n");
-  fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
   fprintf(stderr, "      --no-unimers   do not count unimers into averages\n");
   CommonHelp(1);
@@ -49,7 +49,7 @@ system.\n\n");
       fprintf(stdout, "   <options>\n");
       fprintf(stdout, "      --joined       specify that aggregates with joined coordinates are used\n");
       fprintf(stdout, "      -bt            specify bead types to be used for calculation (default is all)\n");
-      fprintf(stdout, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
       fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
       fprintf(stdout, "      --no-unimers   do not count unimers into averages\n");
       CommonHelp(0);
