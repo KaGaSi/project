@@ -410,8 +410,8 @@ Usage:
 > > > instead of the number of all molecules
 > > `-ps <name>`
 > > > output filename with per-size (or per-aggregation-number) averages
-> > `--no-unimers`
-> > > free chains shouldn't be used for calculation
+> > `-n <int> <int>`
+> > > range of aggregation numbers to calculate distributions and averages
 
 # GyrationMolecules utility {#GyrationMolecules}
 

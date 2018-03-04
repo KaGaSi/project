@@ -1729,17 +1729,3 @@ void FreeAggregate(Counts Counts, Aggregate **Aggregate) {
   }
   free(*Aggregate);
 } //}}}
-
-// Date(){{{
-/**
- * Get time in the format Year-Month-Day.
- */
-void Date(char *date) {
-  time_t timer;
-  struct tm* tm_info;
-
-  time(&timer);
-  tm_info = localtime(&timer);
-
-  strftime(date, 26, "%Y-%m-%d", tm_info);
-} //}}}
