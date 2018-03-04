@@ -3,7 +3,6 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
-#include <time.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
 
@@ -278,10 +277,6 @@ the system.\n\n");
   for (int i = 0; i < argc; i++){
     fprintf(out, " %s", argv[i]);
   }
-  // add date
-  char date[26];
-  Date(date);
-  fprintf(out, " on %s\n", date);
 
   fprintf(out, "# 1:step ");
   fprintf(out, "2:<M>_n (options' mass) ");
@@ -498,8 +493,6 @@ the system.\n\n");
   for (int i = 0; i < argc; i++){
     fprintf(out, " %s", argv[i]);
   }
-  // add date
-  fprintf(out, " on %s\n", date);
 
   fprintf(out, "# ");
   fprintf(out, "1:A_s ");
