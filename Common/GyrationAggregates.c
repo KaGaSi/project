@@ -437,7 +437,8 @@ system.\n\n");
         }
       } //}}}
 
-      if (size > range_As[0] && size > range_As[1]) {
+      if (size >= range_As[0] && size <= range_As[1]) {
+//    if (true) {
         if (correct_size != -1) {
           // copy bead ids to a separate array //{{{
           int *list = malloc(Aggregate[i].nBeads*sizeof(int));
