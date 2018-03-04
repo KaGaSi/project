@@ -367,7 +367,7 @@ the system.\n\n");
         }
       }
       // make calculations only if agg size is well defined and within given range
-      if (size == 0 || size < range_As[0] || size > range_As[1]) {
+      if (size == 0 || size <= range_As[0] || size >= range_As[1]) {
         continue;
       } //}}}
 
