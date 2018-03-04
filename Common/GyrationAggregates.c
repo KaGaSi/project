@@ -18,7 +18,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -bt            specify bead types to be used for calculation (default is all)\n");
   fprintf(stderr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
-  fprintf(stderr, "TODO: -n <int> <int> calculate for aggregate sizes in given range\n");
+  fprintf(stderr, "      -n <int> <int> calculate for aggregate sizes in given range\n");
   CommonHelp(1);
 } //}}}
 
@@ -51,7 +51,7 @@ system.\n\n");
       fprintf(stdout, "      -bt            specify bead types to be used for calculation (default is all)\n");
       fprintf(stdout, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
       fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
-      fprintf(stderr, "TODO: -n <int> <int> calculate for aggregate sizes in given range\n");
+      fprintf(stderr, "      -n <int> <int> calculate for aggregate sizes in given range\n");
       CommonHelp(0);
       exit(0);
     }
@@ -117,9 +117,6 @@ system.\n\n");
   // are provided coordinates joined? //{{{
   bool joined = BoolOption(argc, argv, "--joined"); //}}}
 
-  // do not count unimers towards averages //{{{
-  bool no_uni = BoolOption(argc, argv, "--no-unimers"); //}}}
-
   // write per-agg averages to a file? //{{{
   char *per_size_file = calloc(32,sizeof(char *));
   per_size_file[0] = '\0';
@@ -164,11 +161,26 @@ system.\n\n");
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information
+  // read system information //{{{
   bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file);
+  free(vsf_file); //}}}
+
+  // '-n' option - range of aggregation numbers //{{{
+  int range_As[2];
+  range_As[0] = 1;
+  range_As[1] = Counts.Molecules;
+  if (TwoIntegerOption(argc, argv, "-n", range_As)) {
+    exit(1);
+  }
+
+  // make sure first number is larger
+  if (range_As[0] > range_As[1]) {
+    int tmp = range_As[0];
+    range_As[0] = range_As[1];
+    range_As[1] = tmp;
+  } //}}}
 
   // '-m' option //{{{
   int *specific_moltype_for_size;
@@ -198,10 +210,6 @@ system.\n\n");
   for (int i = 0; i < argc; i++) {
     fprintf(out, " %s", argv[i]);
   }
-  // add date
-  char date[26];
-  Date(date);
-  fprintf(out, " on %s\n", date);
 
   // print legend line to output file
   fprintf(out, "# 1:dt 2:<Rg>_n 3:<Rg>_w 4:<Rg>_z");
@@ -410,36 +418,26 @@ system.\n\n");
     // calculate shape descriptors //{{{
     double mass_step[2] = {0}; // total mass of aggregates in a step: [0] normal, [1] sum of squares
     for (int i = 0; i < Counts.Aggregates; i++) {
-      if (!no_uni || Aggregate[i].nMolecules != 1) {
 
-        // test if aggregate 'i' should be used //{{{
-        int size = 0;
-        // agg size = number of molecules of type 'specific_moltype_for_size'
-        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
-          if (specific_moltype_for_size[mol_type] == 1) {
-            size++;
-          }
+      // test if aggregate 'i' should be used //{{{
+      int size = 0;
+      // agg size = number of molecules of type 'specific_moltype_for_size'
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
+        if (specific_moltype_for_size[mol_type] == 1) {
+          size++;
         }
-//      int size = 0; // agg size
-//      if (specific_moltype_for_size != -1) { // agg size = number of molecules of type 'specific_moltype_for_size'
-//        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-//          int id = Aggregate[i].Molecule[j];
-//          if (specific_moltype_for_size == Molecule[id].Type) {
-//            size++;
-//          }
-//        }
-//      } else { // agg size = total number of all molecules
-//        size = Aggregate[i].nMolecules;
-//      }
-        // is 'size' agg size in provided list?
-        int correct_size = -1;
-        for (int j = 0; j < Counts.Molecules; j++) {
-          if ((j+1) == size) {
-            correct_size = j;
-          }
-        } //}}}
+      }
+      // IS THIS STILL NEEDED? I DON'T THINKS SO!
+      // is 'size' agg size in provided list?
+      int correct_size = -1;
+      for (int j = 0; j < Counts.Molecules; j++) {
+        if ((j+1) == size) {
+          correct_size = j;
+        }
+      } //}}}
 
+      if (size > range_As[0] && size > range_As[1]) {
         if (correct_size != -1) {
           // copy bead ids to a separate array //{{{
           int *list = malloc(Aggregate[i].nBeads*sizeof(int));
@@ -454,7 +452,6 @@ system.\n\n");
             }
           } //}}}
 
-//        Vector com = CentreOfMass(n, list, Bead, BeadType);
           Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
 
 //        // calcule Rg the 'usual way' -- for testing purposes //{{{
@@ -477,13 +474,6 @@ system.\n\n");
 
           double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
 
-//        fprintf(stderr, "eigen=(%lf,%lf,%lf); ", eigen.x, eigen.y, eigen.z);
-//        fprintf(stderr, "R_G^2 %lf; ", Rgi);
-//        fprintf(stderr, "step %d; ", count);
-//        fprintf(stderr, "size %d; ", correct_size+1);
-//        fprintf(stderr, "1st chain %d \n", Aggregate[i].Molecule[0]+1);
-
-//        fprintf(stderr, "agg %2d; size %2d; eigen=(%lf, %lf, %lf)\n", i, correct_size, eigen.x, eigen.y, eigen.z);
           if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
             fprintf(stderr, "Negative eigenvalues! (%lf, %lf, %lf)\n", eigen.x, eigen.y, eigen.z);
           }
@@ -515,8 +505,6 @@ system.\n\n");
           agg_counts_step[correct_size]++;
           agg_counts_sum[correct_size]++;
 
-          // count number of Diblocks and Surfacts in aggrate
-          // TODO: generalise
           for (int j = 0; j < Aggregate[i].nMolecules; j++) {
             int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
             molecules_sum[correct_size][mol_type]++;
@@ -625,15 +613,11 @@ system.\n\n");
       exit(1);
     } //}}}
 
-    // print command and date to output file //{{{
+    // print command to output file //{{{
     putc('#', out);
     for (int i = 0; i < argc; i++) {
       fprintf(out, " %s", argv[i]);
-    }
-
-    char date[26];
-    Date(date);
-    fprintf(out, " on %s\n", date); //}}}
+    } //}}}
 
     fprintf(out, "# 1:As");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
