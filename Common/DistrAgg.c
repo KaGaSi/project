@@ -534,24 +534,26 @@ the system.\n\n");
   }
 
   for (int i = 0; i < Counts.Molecules; i++) {
-    fprintf(out, "%4d %lf %lf %lf %lf %lf %lf %lf %6d", i+1, // A_s
-                (double)(ndistr[i])/ndistr_norm, // number As distr
-                (double)(wdistr[i][0])/wdistr_norm[0], // weight distr (options mass)
-                (double)(wdistr[i][1])/wdistr_norm[1], // weight distr (whole mass)
-                (double)(zdistr[i][0])/zdistr_norm[0], // z distr (options mass)
-                (double)(zdistr[i][1])/zdistr_norm[1], // z distr (whole agg mass)
-                (double)(voldistr[i][0])/voldistr_norm[0], // volume distribution (options agg)
-                (double)(voldistr[i][1])/voldistr_norm[1], // volume distribution (whole agg)
-                count_agg[i]);
-    // print average number of molecule types in aggregates
-    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (count_agg[i] == 0) {
-        fprintf(out, "%8s", "?");
-      } else {
-        fprintf(out, " %7.3f", (double)(molecules_sum[i][j])/count_agg[i]);
+    if (count_agg[i] > 0) {
+      fprintf(out, "%4d %lf %lf %lf %lf %lf %lf %lf %6d", i+1, // A_s
+                  (double)(ndistr[i])/ndistr_norm, // number As distr
+                  (double)(wdistr[i][0])/wdistr_norm[0], // weight distr (options mass)
+                  (double)(wdistr[i][1])/wdistr_norm[1], // weight distr (whole mass)
+                  (double)(zdistr[i][0])/zdistr_norm[0], // z distr (options mass)
+                  (double)(zdistr[i][1])/zdistr_norm[1], // z distr (whole agg mass)
+                  (double)(voldistr[i][0])/voldistr_norm[0], // volume distribution (options agg)
+                  (double)(voldistr[i][1])/voldistr_norm[1], // volume distribution (whole agg)
+                  count_agg[i]);
+      // print average number of molecule types in aggregates
+      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+        if (count_agg[i] == 0) {
+          fprintf(out, "%8s", "?");
+        } else {
+          fprintf(out, " %7.3f", (double)(molecules_sum[i][j])/count_agg[i]);
+        }
       }
+      putc('\n', out);
     }
-    putc('\n', out);
   }
   fclose(out); //}}}
 
