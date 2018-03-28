@@ -11,11 +11,11 @@
  * Function reading information about all bead types (name, mass, charge) from
  * 'species' lines in FIELD. Information about molecule types from 'molecule'
  * lines are read: number of molecule types, their names, number of molecules
- * of every type, number and type of beads in every molecule type and
+ * of every type, number and type of beads in every molecule type, and
  * information about bonds in every molecule type. Total number of beads as
- * well as that of molecules is determined. Only information about bead
- * types contained in a .vcf file (coordinate file to be used in
- * calculations in any analysis utility) are read.
+ * well as that of molecules is determined. Only information about bead types
+ * contained in a .vcf file (coordinate file to be used in calculations in any
+ * analysis utility) are read.
  */
 bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
                BeadType **BeadType, MoleculeType **MoleculeType) {
@@ -774,12 +774,12 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * Function reading information about beads and molecules from DL_MESO `FIELD`
  * file and a `.vsf` structure file.  Name, mass and charge of every bead type is
  * read from `species` lines in `FIELD`. The number of molecule types are read
- * from `molecule` section.  For each molecule type its name, the number of
- * molecules, the number of beads and bonds in each molecule and the bonds
+ * from `molecule` section.  For each molecule type, its name, the number of
+ * molecules, and the number of beads and bonds in each molecule and the bonds
  * themselves are read. Input structure file provides information about what
- * bead is of which type. Optional file with bond declarations provides
- * an alternative for bonds of any molecule type in `FIELD`. If optional
- * bond file is not used, an empty string is passed to this function.
+ * bead is of which type. Optional file with bond declarations provides an
+ * alternative for bonds of any molecule type in `FIELD`. If optional bond file
+ * is not used, an empty string is passed to this function.
  */
 bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Counts,
                    BeadType **BeadType, Bead **Bead,
