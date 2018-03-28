@@ -210,6 +210,7 @@ system.\n\n");
   for (int i = 0; i < argc; i++) {
     fprintf(out, " %s", argv[i]);
   }
+  putc('\n', out);
 
   // print legend line to output file
   fprintf(out, "# 1:dt 2:<Rg>_n 3:<Rg>_w 4:<Rg>_z");
@@ -618,7 +619,8 @@ system.\n\n");
     putc('#', out);
     for (int i = 0; i < argc; i++) {
       fprintf(out, " %s", argv[i]);
-    } //}}}
+    }
+    putc('\n', out); //}}}
 
     fprintf(out, "# 1:As");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {

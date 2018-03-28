@@ -173,6 +173,7 @@ the system.\n\n");
   if (TwoIntegerOption(argc, argv, "-n", range_As)) {
     exit(1);
   }
+  range_As[0]--;
 
   // make sure first number is larger
   if (range_As[0] > range_As[1]) {
@@ -277,6 +278,7 @@ the system.\n\n");
   for (int i = 0; i < argc; i++){
     fprintf(out, " %s", argv[i]);
   }
+  putc('\n', out);
 
   fprintf(out, "# 1:step ");
   fprintf(out, "2:<M>_n (options' mass) ");
