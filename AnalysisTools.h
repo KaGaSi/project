@@ -87,7 +87,7 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); /
  * \param [out] stuff      first line of a timestep
  * \return 1 if premature end of file or 0 for no error
  */
-int SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
+bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
 
 // ReadAggregates() //{{{
 /**
@@ -98,8 +98,9 @@ int SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
  * \param [out] Aggregate     information about aggregates
  * \param [in]  MoleculeType  information about molecule types
  * \param [in]  Molecule      information about individual molecules
+ * \return 1 if 'Last Step' detected or 0 for no error
  */
-void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
+bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
                     MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 
 // WriteCoorIndexed //{{{

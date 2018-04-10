@@ -204,7 +204,7 @@ system.\n\n");
     pos_old = pos;
     fgetpos(vcf, &pos);
 
-    if (SkipCoor(vcf, Counts, &stuff) == 1) {
+    if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\nPremature end of %s file!\n", input_vcf);
       pos = pos_old;
       count--;

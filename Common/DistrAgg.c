@@ -144,11 +144,11 @@ the system.\n\n");
     ; //}}}
 
   // <output distr file> - filename with weight and number distributions //{{{
-  char output_distr[32];
+  char output_distr[123];
   strcpy(output_distr, argv[++count]); //}}}
 
   // <output avg file> - filename with weight and number average aggregation numbers //{{{
-  char output_avg[32];
+  char output_avg[123];
   strcpy(output_avg, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -191,12 +191,7 @@ the system.\n\n");
   }
   if (MoleculeTypeOption2(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
     exit(1);
-  }
-
-//// testing output
-//for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//  printf("%d %s\n", specific_moltype_for_size[i], MoleculeType[i].Name);
-//} //}}}
+  } //}}}
 
   // '-x' option //{{{
   if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
@@ -362,7 +357,7 @@ the system.\n\n");
       double agg_mass = 0, agg_vol = 0; // mass and volume according to options
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
-        if (specific_moltype_for_size[mol_type] == 1) {
+        if (specific_moltype_for_size[mol_type]) {
           size++;
           agg_mass += MoleculeType[mol_type].Mass;
           agg_vol += MoleculeType[mol_type].nBeads; // all DPD beads have same volume
@@ -495,6 +490,7 @@ the system.\n\n");
   for (int i = 0; i < argc; i++){
     fprintf(out, " %s", argv[i]);
   }
+  putc('\n', out);
 
   fprintf(out, "# ");
   fprintf(out, "1:A_s ");

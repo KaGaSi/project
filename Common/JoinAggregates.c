@@ -298,6 +298,16 @@ system.\n\n");
       }
     }
 
+    // read aggregates //{{{
+    if (ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule)) {
+      if (!script) { // end of line if \r is used for printing step number
+        putchar('\n');
+      }
+      count--; // because last step isn't processed
+      fprintf(stderr, "Err: premature end of %s file (%d. step)\n", input_agg, count);
+      break;
+    } //}}}
+
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
       if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
@@ -319,8 +329,6 @@ system.\n\n");
         exit(1);
       }
     } //}}}
-
-    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
 
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
