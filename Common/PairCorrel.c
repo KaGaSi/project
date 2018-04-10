@@ -285,7 +285,7 @@ the system.\n\n");
       }
     } //}}}
 
-    if (SkipCoor(vcf, Counts, &stuff) == 1) {
+    if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "Premature end of %s file!\n", input_vcf);
       exit(1);
     }

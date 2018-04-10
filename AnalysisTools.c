@@ -59,27 +59,65 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
   // allocate BeadType structure
   *BeadType = calloc(types,sizeof(**BeadType));
 
-  // open vcf file (if exists) //{{{
+  // is .vcf file present? //{{{
   bool no_vcf = false;
   FILE *vcf;
-  if (vcf_file[0] != '\0') {
+  if (vcf_file[0] == '\0') {
+   no_vcf = true;
+  } //}}}
+
+  // find if .vcf is indexed/ordered & count lines per step //{{{
+  bool indexed = false;
+  int lines = -1; // -1, because it also counts the first non-numeric line
+
+  if (!no_vcf) {
+    // open vcf file //{{{
     if ((vcf = fopen(vcf_file, "r")) == NULL) {
       fprintf(stderr, "Cannot open %s for reading!\n", vcf_file);
       exit(1);
-    }
-  } else {
-   no_vcf = true;
-// vcf = fopen(NULL, "r");
+    } //}}}
+
+    // search for i(ndexed)/o(rdered) keyword in vcf file //{{{
+    char *split;
+    while (true) {
+      char line[1024];
+      fgets(line, 1024, vcf); // get first line - max 1000 chars
+      split = strtok (line," \t"); // first string of line
+
+      // break loop if keyword detected
+      if (strncmp("indexed", split, 1) == 0) {
+        indexed = true;
+        break;
+      } else if (strncmp("ordered", split, 1) == 0) {
+        indexed = false;
+        break;
+      }
+    } //}}}
+
+    // count lines beginning with a number //{{{
+    do {
+      char line[1024];
+      fgets(line, 1024, vcf); // get line - max 1000 chars
+      split = strtok (line," \t"); // first string of line
+      lines++;
+    } while (split[0] >= '0' && split[0] <= '9');
+    fclose(vcf);
+  } //}}}
+  //}}}
+
+  // reopen vcf file (if exists) //{{{
+  if (!no_vcf && (vcf = fopen(vcf_file, "r")) == NULL) {
+    fprintf(stderr, "Cannot open %s for reading!\n", vcf_file);
+    exit(1);
   } //}}}
 
+// instead of next section, go through vsf file to find stuff & already know Counts.(Bonded+Unbonded)
+// combine vsf and first vcf step to circumvent FIELD counting of Counts.TypesOfBeads and stuff
   // if first character in vcf file is '#' => read info for indexed timesteps //{{{
-  bool indexed = false;
   int test;
   while (!no_vcf && (test = getc(vcf)) == '#') {
-    indexed = true;
 
     // read bead type name from vcf //{{{
-    char str[16];
     if (fscanf(vcf, "%s", str) != 1) {
       fprintf(stderr, "Cannot read bead type name from %s!\n", vcf_file);
       exit(1);
@@ -430,7 +468,7 @@ bool ReadFIELD(char *bonds_file, char *vcf_file, Counts *Counts,
 
   fclose(field);
 
-  return (indexed);
+  return indexed;
 } //}}}
 
 // ReadVsf() - auxiliary for ReadStructure() //{{{
@@ -450,16 +488,10 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
     exit(1);
   } //}}}
 
-  // read first line -- 'a(tom) default' //{{{
-  if (fscanf(vsf, "%s %s", str, str) != 2) {
-    fprintf(stderr, "Cannot read strings from %s file!\n", vsf_file);
-    exit(1);
-  } //}}}
-
-  // skip in line till 'n(ame)' keyword //{{{
-  while (strncmp(str, "name", 1) != 0) {
+  // skip in line till 'name' keyword (default atom line) //{{{
+  while (strncmp(str, "name", 4) != 0) {
     if (fscanf(vsf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read 'n(ame)' keywoerd from %s file!\n", vsf_file);
+      fprintf(stderr, "Cannot read 'name' keywoerd from %s file!\n", vsf_file);
       exit(1);
     }
   } //}}}
@@ -492,10 +524,10 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
       exit(1);
     } //}}}
 
-    // skip in line till 'n(ame)' keyword //{{{
-    while (strncmp(str, "name", 1) != 0) {
+    // skip in line till 'name' keyword //{{{
+    while (strncmp(str, "name", 4) != 0) {
       if (fscanf(vsf, "%s", str) != 1) {
-        fprintf(stderr, "Cannot read 'n(ame)' keyword from %s file!\n", vsf_file);
+        fprintf(stderr, "Cannot read 'name' keyword from %s file!\n", vsf_file);
         exit(1);
       }
     } //}}}
@@ -506,7 +538,7 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
       exit(1);
     } //}}}
 
-    // if default bead type in vcf, assign it to beads between 'id_old' and 'id_new' //{{{
+    // if default bead type is present in vcf, assign it to beads between 'id_old' and 'id_new' //{{{
     for (int i = (id_old+1); type_def != -1 && i < id_new; i++) {
       (*Bead)[id].Type = type_def;
 
@@ -669,7 +701,7 @@ bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
     }
   } //}}}
 
-  return (error);
+  return error;
 } //}}}
 
 // VerboseOutput() //{{{
@@ -905,7 +937,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
     (*MoleculeType)[i].Use = false;
   } //}}}
 
-  return (indexed);
+  return indexed;
 } //}}}
 
 // MoveCOMMolecules() - auxiliary //{{{
@@ -989,7 +1021,7 @@ int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
     if (fscanf(vcf_file, "%lf %lf %lf\n", &(*Bead)[i].Position.x,
                                           &(*Bead)[i].Position.y,
                                           &(*Bead)[i].Position.z) != 3) {
-      return (i+1); // don't want to return 0, since that generally means no error
+      return i+1; // don't want to return 0, since that generally means no error
     }
   }
 
@@ -1024,14 +1056,14 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
     // bead index
     int index;
     if (fscanf(vcf_file, "%d", &index) != 1) {
-      return (i+1); // don't want to return 0, since that generally means no error
+      return i+1; // don't want to return 0, since that generally means no error
     }
 
     // bead coordinates
     if (fscanf(vcf_file, "%lf %lf %lf\n", &pos[index].x,
                                           &pos[index].y,
                                           &pos[index].z) != 3) {
-      return (i+1); // don't want to return 0, since that generally means no error
+      return i+1; // don't want to return 0, since that generally means no error
     }
   } //}}}
 
@@ -1060,7 +1092,9 @@ int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
  * Function to skip one timestep in coordinates file. It works with both
  * indexed and ordered vcf files.
  */
-int SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
+bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
+
+  bool error = false;
 
   // save the first line containing '# <number>' //{{{
   int i = 0;
@@ -1077,86 +1111,98 @@ int SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
       ;
 
     // premature end of file
-    if (test == EOF)
-      return(1);
+    if (test == EOF) {
+      error = true;
+      break;
+    }
   }
 
-  getc(vcf_file);
+  if (!error) {
+    getc(vcf_file);
+  }
 
-  return(0);
+  return error;
 } //}}}
 
 // ReadAggregates() //{{{
 /**
  * Function reading information about aggregates from `.agg` file (\ref AggregateFile) generated by Aggregates utility.
  */
-void ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
+bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
                     MoleculeType *MoleculeType, Molecule *Molecule) {
 
-  // skip 'Step: #' line //{{{
-  while (getc(agg_file) != '\n')
-    ; //}}}
+  bool error = false;
 
-  fscanf(agg_file, "%d", &(*Counts).Aggregates);
-
-  // skip rest of the line and blank line //{{{
-  while (getc(agg_file) != '\n')
-    ;
-  while (getc(agg_file) != '\n')
-    ; //}}}
-
-  // go through all aggregates
-  for (int i = 0; i < (*Counts).Aggregates; i++) {
-    // read molecules in Aggregate 'i' //{{{
-    fscanf(agg_file, "%d :", &(*Aggregate)[i].nMolecules);
-    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
-      fscanf(agg_file, "%d", &(*Aggregate)[i].Molecule[j]);
-
-      (*Aggregate)[i].Molecule[j]--; // in agg file the numbers correspond to vmd
-    }
-
+  // is there a Step? I.e., isn't this the line 'Last Step'?
+  if (getc(agg_file) == 'L') {
+    error = true;
+  } else {
+    // skip 'Step: #' line //{{{
     while (getc(agg_file) != '\n')
-     ; //}}}
+      ; //}}}
 
-    // read monomeric beads in Aggregate 'i' //{{{
-    fscanf(agg_file, "%d :", &(*Aggregate)[i].nMonomers);
-    for (int j = 0; j < (*Aggregate)[i].nMonomers; j++) {
-      fscanf(agg_file, "%d", &(*Aggregate)[i].Monomer[j]);
-    }
+    fscanf(agg_file, "%d", &(*Counts).Aggregates);
 
+    // skip rest of the line and blank line //{{{
     while (getc(agg_file) != '\n')
-     ; //}}}
-  }
+      ;
+    while (getc(agg_file) != '\n')
+      ; //}}}
 
-  // skip blank line at the end of every entry //{{{
-  while (getc(agg_file) != '\n')
-    ; //}}}
+    // go through all aggregates
+    for (int i = 0; i < (*Counts).Aggregates; i++) {
+      // read molecules in Aggregate 'i' //{{{
+      fscanf(agg_file, "%d :", &(*Aggregate)[i].nMolecules);
+      for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+        fscanf(agg_file, "%d", &(*Aggregate)[i].Molecule[j]);
 
-  // fill Aggregate[].Bead arrays //{{{
-  for (int i = 0; i < (*Counts).Aggregates; i++) {
-    (*Aggregate)[i].nBeads = 0;
-
-    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
-      int mol = (*Aggregate)[i].Molecule[j];
-      for (int k = 0; k < MoleculeType[Molecule[mol].Type].nBeads; k++) {
-        (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads+k] = Molecule[mol].Bead[k];
+        (*Aggregate)[i].Molecule[j]--; // in agg file the numbers correspond to vmd
       }
 
-      // increment number of beads in aggregate 'i'
-      (*Aggregate)[i].nBeads += MoleculeType[Molecule[mol].Type].nBeads;
+      while (getc(agg_file) != '\n')
+       ; //}}}
+
+      // read monomeric beads in Aggregate 'i' //{{{
+      fscanf(agg_file, "%d :", &(*Aggregate)[i].nMonomers);
+      for (int j = 0; j < (*Aggregate)[i].nMonomers; j++) {
+        fscanf(agg_file, "%d", &(*Aggregate)[i].Monomer[j]);
+      }
+
+      while (getc(agg_file) != '\n')
+       ; //}}}
     }
-  } //}}}
 
-  // calculate aggregates' masses //{{{
-  for (int i = 0; i < (*Counts).Aggregates; i++) {
-    (*Aggregate)[i].Mass = 0;
+    // skip blank line at the end of every entry //{{{
+    while (getc(agg_file) != '\n')
+      ; //}}}
 
-    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
-      int type = Molecule[(*Aggregate)[i].Molecule[j]].Type;
+    // fill Aggregate[].Bead arrays //{{{
+    for (int i = 0; i < (*Counts).Aggregates; i++) {
+      (*Aggregate)[i].nBeads = 0;
 
-      (*Aggregate)[i].Mass += MoleculeType[type].Mass;
-    }
-  } //}}}
+      for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+        int mol = (*Aggregate)[i].Molecule[j];
+        for (int k = 0; k < MoleculeType[Molecule[mol].Type].nBeads; k++) {
+          (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads+k] = Molecule[mol].Bead[k];
+        }
+
+        // increment number of beads in aggregate 'i'
+        (*Aggregate)[i].nBeads += MoleculeType[Molecule[mol].Type].nBeads;
+      }
+    } //}}}
+
+    // calculate aggregates' masses //{{{
+    for (int i = 0; i < (*Counts).Aggregates; i++) {
+      (*Aggregate)[i].Mass = 0;
+
+      for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+        int type = Molecule[(*Aggregate)[i].Molecule[j]].Type;
+
+        (*Aggregate)[i].Mass += MoleculeType[type].Mass;
+      }
+    } //}}}
+  }
+  return error;
 } //}}}
 
 // WriteCoorIndexed() //{{{
@@ -1204,12 +1250,12 @@ int FindBeadType(char *name, Counts Counts, BeadType *BeadType) {
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     if (strcmp(name, BeadType[i].Name) == 0) {
       type = i;
-      return (type);
+      return type;
     }
   }
 
   // name isn't in BeadType struct
-  return (-1);
+  return(-1);
 } //}}}
 
 // FindMoleculeType() //{{{
@@ -1220,12 +1266,12 @@ int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (strcmp(name, MoleculeType[i].Name) == 0) {
       type = i;
-      return (type);
+      return type;
     }
   }
 
   // name isn't in MoleculeType struct
-  return (-1);
+  return(-1);
 } //}}}
 
 // Distance() //{{{
@@ -1259,7 +1305,7 @@ Vector Distance(Vector id1, Vector id2, Vector BoxLength) {
   while (rij.z < -(BoxLength.z/2))
     rij.z = rij.z + BoxLength.z;
 
-  return (rij);
+  return rij;
 } //}}}
 
 // RemovePBCMolecules() //{{{
@@ -1493,7 +1539,7 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
   com.y /= n;
   com.z /= n;
 
-  return (com);
+  return com;
 } //}}}
 
 // Gyration() //{{{
@@ -1613,7 +1659,7 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   eigen2 = Sort3(eigen2); //}}}
 //fprintf(stderr, "eigen=(%lf, %lf, %lf)\n", eigen.x, eigen.y, eigen.z);
 
-  return (eigen2);
+  return eigen2;
 } //}}}
 
 // Min3() //{{{
@@ -1622,17 +1668,20 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
  */
 double Min3(double x, double y, double z) {
 
+  double min;
   if (x > y) {
     if (y > z) {
-      return (z);
+      min = z;
     } else {
-      return (y);
+      min = y;
     }
   } else if (x > z) {
-    return (z);
+    min = z;
   } else {
-    return (x);
+    min = x;
   }
+
+  return min;
 } //}}}
 
 // Sort3() //{{{
@@ -1673,7 +1722,7 @@ Vector Sort3(Vector in) {
     }
   }
 
-  return (out);
+  return out;
 } //}}}
 
 // FreeBead() //{{{

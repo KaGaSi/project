@@ -373,6 +373,16 @@ system.\n\n");
       }
     }
 
+    // read aggregates //{{{
+    if (ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule)) {
+      if (!silent && !script) { // end of line if \r is used for printing step number
+        putchar('\n');
+      }
+      count--; // because last step isn't processed
+      fprintf(stderr, "Error: premature end of %s file (after %d. step)\n", input_agg, count);
+      break;
+    } //}}}
+
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
       if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
@@ -394,8 +404,6 @@ system.\n\n");
         exit(1);
       }
     } //}}}
-
-    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
 
     // join agggregates if un-joined coordinates provided //{{{
     if (!joined) {
@@ -425,7 +433,7 @@ system.\n\n");
       // agg size = number of molecules of type 'specific_moltype_for_size'
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
-        if (specific_moltype_for_size[mol_type] == 1) {
+        if (specific_moltype_for_size[mol_type]) {
           size++;
         }
       }
