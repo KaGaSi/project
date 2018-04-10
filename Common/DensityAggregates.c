@@ -225,16 +225,11 @@ system.\n\n");
     sprintf(str, "%s", output_rho);
 
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (specific_moltype_for_size[i] == 1) {
+      if (specific_moltype_for_size[i]) {
         sprintf(str, "%s%s", str, MoleculeType[i].Name);
       }
     }
     sprintf(str, "%s%d.rho", str, agg_sizes[aggs][0]);
-//  if (specific_moltype_for_size == -1) {
-//    sprintf(str, "%s%d.rho", output_rho, agg_sizes[aggs][0]);
-//  } else {
-//    sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_moltype_for_size].Name, agg_sizes[aggs][0]);
-//  }
     if ((out = fopen(str, "w")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -408,11 +403,22 @@ system.\n\n");
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
-    if (SkipCoor(vcf, Counts, &stuff) == 1) {
-      fprintf(stderr, "Premature end of %s file!\n", input_vcf);
+    if (ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule)) {
+      if (!silent && !script) { // end of line if \r is used for printing step number
+        putchar('\n');
+      }
+      count--; // because last step isn't processed
+      fprintf(stderr, "Error: premature end of %s file (after %d. step)\n", input_agg, count);
+      test = '\0';
+      break;
+    }
+    if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "Error: premature end of %s file (%d. step)\n", input_vcf, --count);
       exit(1);
     }
+  }
+  if (test == '\0') {
+    exit(1);
   }
   // print number of discarded steps? //{{{
   if (!silent) {
@@ -442,6 +448,17 @@ system.\n\n");
       }
     } //}}}
 
+    // read aggregates //{{{
+    if (ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule)) {
+      if (!silent && !script) { // end of line if \r is used for printing step number
+        putchar('\n');
+      }
+      count--; // because last step isn't processed
+      test = start - 1 + count; // total number of processed steps in agg file
+      fprintf(stderr, "Error: premature end of %s file (after %d. step)!\n", input_agg, test);
+      break;
+    } //}}}
+
     // read indexed timestep from input .vcf file //{{{
     if (indexed) {
       if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
@@ -464,8 +481,6 @@ system.\n\n");
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
-
     // join agggregates if un-joined coordinates provided //{{{
     if (!joined) {
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
@@ -480,20 +495,10 @@ system.\n\n");
       // agg size = number of molecules of type 'specific_moltype_for_size'
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
-        if (specific_moltype_for_size[mol_type] == 1) {
+        if (specific_moltype_for_size[mol_type]) {
           size++;
         }
       }
-//    if (specific_moltype_for_size != -1) {
-//      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-//        int id = Aggregate[i].Molecule[j];
-//        if (specific_moltype_for_size == Molecule[id].Type) {
-//          size++;
-//        }
-//      }
-//    } else { // agg size = total number of all molecules
-//      size = Aggregate[i].nMolecules;
-//    }
       // is 'size' in provided list?
       int correct_size = -1;
       for (int j = 0; j < aggs; j++) {
@@ -567,16 +572,11 @@ system.\n\n");
     char str[64];
     sprintf(str, "%s", output_rho);
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (specific_moltype_for_size[j] == 1) {
+      if (specific_moltype_for_size[j]) {
         sprintf(str, "%s%s", str, MoleculeType[j].Name);
       }
     }
     sprintf(str, "%s%d.rho", str, agg_sizes[i][0]);
-//  if (specific_moltype_for_size == -1) {
-//    sprintf(str, "%s%d.rho", output_rho, agg_sizes[i][0]);
-//  } else {
-//    sprintf(str, "%s%s%d.rho", output_rho, MoleculeType[specific_moltype_for_size].Name, agg_sizes[i][0]);
-//  }
     if ((out = fopen(str, "a")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -610,7 +610,7 @@ system.\n\n");
     fprintf(out, "# %d molecules in aggregate (sum of", agg_sizes[i][0]);
     int types = 0;
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (specific_moltype_for_size[j] == 1) {
+      if (specific_moltype_for_size[j]) {
         if (++types == 1) { // first mol type
           fprintf(out, " %s", MoleculeType[j].Name);
         } else { // second and higher mol type
@@ -621,12 +621,6 @@ system.\n\n");
     fprintf(out, ") and %.2f other molecules", (double)(other_mols[i])/agg_sizes[i][1]);
     fprintf(out, "(%d aggregates)\n", agg_sizes[i][1]);
 
-//  if (specific_moltype_for_size != -1) {
-//    fprintf(out, "# %d %s molecules in aggregate and %.2f other molecules (%d aggregates)\n",
-//        agg_sizes[i][0], MoleculeType[specific_moltype_for_size].Name, (double)(other_mols[i])/agg_sizes[i][1], agg_sizes[i][1]);
-//  } else {
-//    fprintf(out, "# %d molecules in aggregate (%d aggregates)\n", agg_sizes[i][0], agg_sizes[i][1]);
-//  }
     fclose(out);
   } //}}}
 
