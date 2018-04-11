@@ -279,8 +279,9 @@ PROGRAM traject
           IF ((ltp (i)/=imxspe .OR. i==last) .AND. ltm(i)==0) THEN
             WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8)') i-first, bbb (ltp (i)), namspe (ltp (i))
           ELSE IF (ltm (i)/=0) THEN
-            WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8," resid ",I8)') i-first, bbb (ltp (i)), &
-                  &namspe (ltp (i)), mole (i)
+            WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8," segid ",A8," resid ",I8)')&
+                  &i-first, bbb (ltp (i)), &
+                  &namspe (ltp (i)), nammol (ltm (i)), mole (i)
           END IF
         END DO
       END IF
