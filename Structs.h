@@ -46,6 +46,7 @@ typedef struct Counts {
       Unbonded, ///< total number of monomeric beads
       BeadsInVsf, ///< total number of all beads in .vsf file (not necessarily in .vcf)
       Molecules, ///< total number of molecules
+      MoleculesInVsf, ///< total number of all molecules in .vsf file (not necessarily in .vcf)
       Aggregates; ///< total number of aggregates
 } Counts; //}}}
 
@@ -58,7 +59,8 @@ typedef struct BeadType {
 
   int Number; ///< number of beads of given type
 
-  bool Use, ///< should bead type in .vcf file be used for calculation?
+  bool InVcf, ///< is bead type in vcf file?
+       Use, ///< should bead type in .vcf file be used for calculation?
        Write; ///< should bead type in .vcf file be written to output .vcf?
 
   double Charge, ///< charge of every bead of given type
@@ -82,7 +84,8 @@ typedef struct MoleculeType {
 
   double Mass; ///< total mass of every molecule of given type
 
-  bool Use, ///< should molecule type be used for calculation?
+  bool InVcf, ///< is molecule type in vcf file?
+       Use, ///< should molecule type be used for calculation?
        Write; ///< should molecule type be used for calculation?
 } MoleculeType; //}}}
 

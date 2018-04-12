@@ -149,7 +149,7 @@ can be considered a good estimate for tau.\n\n");
     } //}}}
 
     // if not empty line or comment continue //{{{
-    char *split = strtok (line," \t");
+    char *split = strtok(line," \t");
     if (split[0] != '#' &&
         split[0] != '\n') {
 
@@ -160,7 +160,7 @@ can be considered a good estimate for tau.\n\n");
       int col = 1; // number of columns in the line - first is already loaded in split
       for (col = 1; col < column; col++) {
         // load another 'split'
-        split = strtok (NULL, " \t");
+        split = strtok(NULL, " \t");
 
         // error - insufficient number of columns //{{{
         if (split == NULL) {
