@@ -464,6 +464,10 @@ the system.\n\n");
     fprintf(out, " %8.3f", (double)(avg_mass_n_step[1])/aggs_step); // <M>_n (whole agg mass)
     fprintf(out, " %8.3f", (double)(avg_mass_w_step[0])/avg_mass_n_step[0]); // <M>_w (options' mass)
     fprintf(out, " %8.3f", (double)(avg_mass_w_step[1])/avg_mass_n_step[1]); // <M>_w (whole agg mass)
+    fprintf(out, " %8.3f", (double)(avg_As_n_step[0])/aggs_step); // <A_s>_n (options' mass)
+    fprintf(out, " %8.3f", (double)(avg_As_n_step[1])/aggs_step); // <A_s>_n (whole agg mass)
+    fprintf(out, " %8.3f", (double)(avg_As_w_step[0])/avg_As_n_step[0]); // <A_s>_w (options' mass)
+    fprintf(out, " %8.3f", (double)(avg_As_w_step[1])/avg_As_n_step[1]); // <A_s>_w (whole agg mass)
 
     putc('\n', out);
     fclose(out); //}}}
