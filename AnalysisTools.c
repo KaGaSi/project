@@ -34,7 +34,7 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
   do {
     // get whole line - max 1000 chars
     char line[1024];
-    fgets(line, 1024, fr);
+    fgets(line, 1024, field);
 
     // first string of the line
     split = strtok(line, " \t");
@@ -58,7 +58,7 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
 
     // get whole line - max 1000 chars //{{{
     char line[1024];
-    fgets(line, 1024, fr); //}}}
+    fgets(line, 1024, field); //}}}
 
     // read bead type name and test if it is in vsf //{{{
     split = strtok(line, " \t");
@@ -101,7 +101,8 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
       exit(1);
     }
     if (test != (*Counts).TypesOfMolecules) {
-      fprintf(stderr, "Error: inconsistent number of molecule types - %d in FIELD, %d in vsf");
+      fprintf(stderr, "Error: inconsistent number of molecule types - %d in FIELD, %d in vsf",
+              test, (*Counts).TypesOfMolecules);
       exit(1);
     } //}}}
 
@@ -124,9 +125,9 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
         fprintf(stderr, "Error: FIELD - cannot read number of %s molecules\n", (*MoleculeType)[i].Name);
         exit(1);
       }
-      if (test != (*Counts)[mol_type].Number) {
+      if (test != (*MoleculeType)[mol_type].Number) {
         fprintf(stderr, "Error: inconsistent number of '%s' molecules - %d in FIELD, %d in vsf\n",
-                (*Counts)[mol_type].Name, test, (*Counts)[mol_type].Number);
+                (*MoleculeType)[mol_type].Name, test, (*MoleculeType)[mol_type].Number);
         exit(1);
       } //}}}
 
@@ -135,9 +136,9 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
         fprintf(stderr, "Error: FIELD - cannot read number of beads in '%s' molecule\n", (*MoleculeType)[i].Name);
         exit(1);
       }
-      if (test != (*Counts)[mol_type].nBeads) {
+      if (test != (*MoleculeType)[mol_type].nBeads) {
         fprintf(stderr, "Error: inconsistent number of '%s' molecules - %d in FIELD, %d in vsf\n",
-                (*Counts)[mol_type].Name, test, (*Counts)[mol_type].nBeads);
+                (*MoleculeType)[mol_type].Name, test, (*MoleculeType)[mol_type].nBeads);
         exit(1);
       } //}}}
 
@@ -345,13 +346,10 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
  * 3) resid <molecule id>
  * 4) if a(tom) default used, it's on the first line
  */
-void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
-
-  char str[20];
+void ReadVsf(char *vsf_file, Counts *Counts, BeadType **BeadType, Bead **Bead,
+             MoleculeType **MoleculeType, Molecule **Molecule) {
 
   FILE *vsf;
-
-  char *split; // to go through a line via strtok()
 
   // zeroize stuff //{{{
   (*Counts).TypesOfBeads = 0;
@@ -362,7 +360,7 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
   *BeadType = calloc(1,sizeof(**BeadType));
   *MoleculeType = calloc(1,sizeof(**MoleculeType));
 
-  // first read through - find highest bead id, all bead/molecule types, molecule numbers //{{{
+  // first, read through vsf to find highest bead id, all bead/molecule types, molecule numbers //{{{
   // open vsf structure file //{{{
   if ((vsf = fopen(vsf_file, "r")) == NULL) {
     fprintf(stderr, "Error: cannot open %s structure file\n", vsf_file);
@@ -371,129 +369,150 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
 
   int max_bead = 0; // highest bead id detected
   int max_mol = 0; // highest molecule id detected
+  int type_default = -1; // default bead type
   do {
-    bool cont = false;
+//  cont = false;
 
     // get whole line - max 1000 chars //{{{
     char line[1024];
-    fgets(line, 1024, fr); //}}}
+    fgets(line, 1024, vsf); //}}}
 
     // trim trailing whitespace in line //{{{
     int length = strlen(line);
-    // last string character is '\n' (at [length-1]), so check the previous one(s) - if there are any
+    // last string character needs to be '\0'
     while (length > 1 &&
-           (line[length-2] == ' ' ||
-           line[length-2] == '\t')) {
-      line[length-2] = line[length-1]; // move newline char
-      line[length-1] = '\0'; // add string ending char
+           (line[length-1] == ' ' ||
+            line[length-1] == '\n' ||
+            line[length-1] == '\t')) {
+      line[length-1] = '\0';
       length--;
     } //}}}
 
-    // first string of the line
-    split = strtok(line, " \t");
+    // split the line into array //{{{
+    char *split[30];
+    split[0] = strtok(line, " \t");
+    int i = 0;
+    while (split[i] != NULL && i < 29) {
+      split[++i] = strtok(NULL, " \t");
+    }
+    int strings = i; //}}}
 
-    if (split[0] != 'a') { // read stuff if line starts with 'a(tom)' //{{{
-      cont = true;
+    // continue only if the line is 'a(tom)', comment, or blank
+    if (split[0][0] != 'a' && split[0][0] != '#' && split[0][0] != '\n') {
+      printf("%s\n", split[0]);
+  printf("%d\n", strings);
+      break;
+    }
 
-      // load second 'split' - bead id //{{{
-      split = strtok(NULL, " \t");
+//  if (split1[0] == 'a') { // read stuff if line starts with 'a(tom)' //{{{
+//    cont = true;
 
-      int id = atoi(split);
-      if (id > max_bead) {
-        max_bead = id;
-      } //}}}
+//    // load second 'split' - bead id or default
+//    split2 = strtok(NULL, " \t");
 
-      // go through the rest of the line to find bead/molecule name
-      while ((split = strtok(NULL, " \t")) != NULL) {
-        if (strncmp(split, "name", 1) == 0) { // bead name //{{{
+//    if (strcmp("default", split2) == 0) { // 'default' type? //{{{
+//      type_default = (*Counts).TypesOfBeads;
 
-          // read the name
-          split = strtok(NULL, " \t");
+//      // increment number of bead types
+//      (*Counts).TypesOfBeads++;
 
-          // if the name doesn't exist, add it
-          int type;
-          if ((type = FindBeadType(split, *Counts, *BeadType)) == -1) {
+//      // realloc BeadType array
+//      *BeadType = realloc(*BeadType, (*Counts).TypesOfBeads*sizeof(**BeadType));
 
-            // increment number of bead types
-            (*Counts).TypesOfBeads++;
+//      int id = (*Counts).TypesOfBeads-1;
+//      (*BeadType)[id].Number = 0;
 
-            // realloc BeadType array
-            *BeadType = realloc(*BeadType, (*Counts).TypesOfBeads*sizeof(**BeadType));
+//      // search the line for bead name
+//      char copy2[1024];
+//      strcpy(copy2, line); // first copy the origina line
+//      char *keyword = strtok(copy2, " \t"); // a(tom) keyword
+//      char *value = strtok(NULL, " \t"); // <int> or 'default' value
+//      while ((keyword = strtok(NULL, " \t")) != NULL ||
+//             (value = strtok(NULL, " \t")) != NULL) {
+//        if (strncmp(keyword, "name", 1) == 0) {
+//          // copy new name to BeadType[].Name
+//          strcpy((*BeadType)[id].Name, value);
+//          break;
+//        }
+//      }
+//    //}}}
+//    } else { // not default type //{{{
+//      int id = atoi(split2);
+//      if (id > max_bead) {
+//        max_bead = id;
+//      }
+//    } //}}}
 
-            (*BeadType)[(*Counts.TypesOfBeads-1)].Number = 0;
+//    // go through the rest of the line to find bead/molecule name
+//    while ((split = strtok(NULL, " \t")) != NULL) {
+//      if (strncmp(split, "name", 1) == 0) { // bead name //{{{
 
-            // copy new name to BeadType[].Name
-            int id = (*Counts).TypesOfBeads-1;
-            strcpy((*BeadType)[id].Name, split);
-          }
+//        // read the name
+//        split = strtok(NULL, " \t");
 
-          // increment number of these beads
-          (*BeadType)[type].Number++;
-        //}}}
-        } else if (strncmp(split, "segid", 1) == 0) { // molecule name //{{{
+//        int type;
+//        if ((type = FindBeadType(split, *Counts, *BeadType)) == -1) { // doesn't the name exist?
+//          // increment number of bead types
+//          (*Counts).TypesOfBeads++;
 
-          split = strtok(NULL, " \t"); // read the name
+//          // realloc BeadType array
+//          *BeadType = realloc(*BeadType, (*Counts).TypesOfBeads*sizeof(**BeadType));
 
-          // if the name doesn't exist, add it
-          if ((type = FindMoleculeType(split, *Counts, *MoleculeType)) == -1) {
+//          int id = (*Counts).TypesOfBeads-1;
+//          (*BeadType)[id].Number = 0;
 
-            // increment number of molecule types
-            type = (*Counts).TypesOfMolecules++;
-
-            // realloc MoleculeType array
-            *MoleculeType = realloc(*MoleculeType, (*Counts).TypesOfMolecules*sizeof(**MoleculeType));
-
-            // copy new name to MoleculeType[].Name
-            strcpy((*MoleculeType)[type].Name, split);
-
-            // first molecule of the new type
-            (*MoleculeType)[type].Number = 1;
-
-            // first bead of the new molecule
-            (*MoleculeType)[type].nBeads = 1;
-          } else {
-            // increment number of existing molecules
-            (*MoleculeType)[type].Number++;
-            // increment number of beads in an existing molecule
-            (*MoleculeType)[type].Number++;
-          }
-        //}}}
-        } else if (strcmp(split, "resid") == 0) { // molecule id //{{{
-          split = strtok(NULL, " \t"); // read the id
-          if (atoi(split) > max_mol) {
-            max_mol = atoi(split);
-          }
-        } //}}}
-      } //}}}
-    } else if (split[0] == '#' || split[0] = '\n') { // continue on empty/comment line //{{{
-      cont = true;
-    } //}}}
-  } while (cont);
+//          // copy new name to BeadType[].Name
+//          strcpy((*BeadType)[id].Name, split);
+//        }
+//        //}}}
+//      } else if (strncmp(split, "segid", 1) == 0) { // molecule name //{{{
+//        // read molecule name
+//        split = strtok(NULL, " \t");
+//        // if the name doesn't exist, add it to structures
+//        int type;
+//        if ((type = FindMoleculeType(split, *Counts, *MoleculeType)) == -1) {
+//          // increment number of molecule types
+//          type = (*Counts).TypesOfMolecules++;
+//          // realloc MoleculeType array
+//          *MoleculeType = realloc(*MoleculeType, (*Counts).TypesOfMolecules*sizeof(**MoleculeType));
+//          // copy new name to MoleculeType[].Name
+//          strcpy((*MoleculeType)[type].Name, split);
+//        }
+//        // search for 'resid' (necessary on line with 'segid')
+//        char copy2[1024];
+//        strcpy(copy2, line); // first copy the origina line
+//        char *mol_id = strtok(copy2, " \t");
+//        // go through the string untill 'resid'
+//        while ((mol_id = strtok(NULL, " \t")) != NULL && strcmp(mol_id, "resid") != 0)
+//          ;
+//        // error - missing 'resid' //{{{
+//        if (mol_id == NULL) {
+//          fprintf(stderr, "Error: vsf - missing 'resid' in line with 'segid'\n");
+//          exit(1);
+//        } //}}}
+//        // read the molecule id (error if missing) //{{{
+//        if ((mol_id = strtok(NULL, " \t")) == NULL) {
+//          fprintf(stderr, "Error: vsf - missing <int> after 'resid'\n");
+//          exit(1);
+//        } //}}}
+//        // test if it is the highest mol_id yet
+//        if (atoi(mol_id) > max_mol) {
+//          max_mol = atoi(mol_id);
+//        }
+//      } //}}}
+//    } //}}}
+//  } else if (split[0] == '#' || split[0] == '\n') { // continue on empty/comment line //{{{
+//    cont = true;
+//  } //}}}
+  } while (true);
   fclose (vsf); //}}}
 
-  // calculalte bead number per molecule types //{{{
-  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-    // test if number of beads per molecule is integer
-    if (((*MoleculeType)[i].nBeads%(*MoleculeType)[i]) != 0) {
-      fprintf(stderr, "Error: non-integer number of beads in molecule '%s' (%d beads in %d molecules)\n",
-              (*MoleculeType)[i].Name, (*MoleculeType)[i].nBeads, (*MoleculeType)[i].Number);
-      exit(1);
-    }
-    (*MoleculeType)[i].nBeads /= (*MoleculeType)[i].Number;
-  } //}}}
+  // second, read through vsf for every molecule type to find number of beads in a molecule //{{{
+  // doesn't test if all molecules of the given type have the same number of beads
+  //}}}
 
   (*Counts).BeadsInVsf = max_bead + 1; // vsf bead ids start with 0
   (*Counts).MoleculesInVsf = max_mol; // vsf molecule (resid) ids start with 1
-
-  // test consistency of bead numbers //{{{
-  int test_count = 0;
-  for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-    test_count += (*BeadType)[i].Number;
-  }
-  if (test_count != (*Counts).TypesOfBeads) {
-    fprintf(stderr, "Error: inconsistent counting of beads in vsf - %d in Counts struct; %d in sum of BeadType[].Number\n");
-    exit(1);
-  } //}}}
 
   // allocate memory for individual beads and molecules //{{{
   *Bead = calloc((*Counts).BeadsInVsf,sizeof(**Bead));
@@ -511,112 +530,14 @@ void ReadVsf(char *vsf_file, Counts *Counts, BeadType *BeadType, Bead **Bead) {
     exit(1);
   } //}}}
 
-  int type_default = -1;
-  do {
-    bool cont = false;
-
-    // get whole line - max 1000 chars //{{{
-    char line[1024];
-    fgets(line, 1024, fr); //}}}
-
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character is '\n' (at [length-1]), so check the previous one(s) - if there are any
-    while (length > 1 &&
-           (line[length-2] == ' ' ||
-           line[length-2] == '\t')) {
-      line[length-2] = line[length-1]; // move newline char
-      line[length-1] = '\0'; // add string ending char
-      length--;
-    } //}}}
-
-    // if line starts with a(tom), continue //{{{
-    split = strtok (line," \t");
-    int id = 0; // 0 for default line
-    if (split[0] != 'a') {
-      cont = true;
-
-      // load second 'split' - bead id or 'default' keyword //{{{
-      split = strtok (NULL, " \t");
-      if (strcmp(split, "default") == 0) {
-        if ((type_default = FindBeadType(str, *Counts, *BeadType)) == -1) {
-          fprintf(stderr, "Error: default bead type (%s) does not exist\n", split);
-          exit(1);
-        }
-      } else {
-        id = atoi(split);
-      } //}}}
-
-      // assign index to bead
-      (*Bead)[id].Index = id;
-
-      while ((split = strtok(NULL, " \t")) != NULL) {
-        if (strncmp(split, "name", 1) == 0) { // bead name //{{{
-          // read the bead type name //{{{
-          if ((split = strtok(NULL, " \t")) == NULL) {
-            fprintf(stderr, "Error: missing bead type name after 'n(ame)' in 'a(tom) %d line'\n", id);
-          } //}}}
-
-          // assign bead type to the bead 'id' //{{{
-          if (((*Bead)[id].Type = FindBeadType(str, *Counts, *BeadType)) == -1) {
-            fprintf(stderr, "Error: bead type %s does not exist\n", split);
-            exit(1);
-          } //}}}
-        //}}}
-        } else if (strncmp("segid", split, 1) == 0) { // molecule name //{{{
-          // read the molecule type name //{{{
-          if ((split = strtok(NULL, " \t")) == NULL) {
-            fprintf(stderr, "Error: missing molecule name after 'segid' in 'a(tom) %d line'\n", id);
-            exit(1);
-          } //}}}
-
-          // find molecule id ('resid <int>') //{{{
-          char *resid = strtok (line," \t"); // search from the line beginning
-          while ((resid = strtok(NULL, " \n")) != NULL && strcmp(resid, "resid") != 0)
-            ;
-
-          // error - missing 'resid'
-          if (resid == NULL) {
-            fprintf(stderr, "Error: missing 'resid' keyword in 'a(tom) %d' line containing 'segid'\n", id);
-            exit(1);
-          } //}}}
-
-          // read molecule id //{{{
-          if ((resid = strtok(NULL, " \n")) == NULL) {
-            fprintf(stderr, "Error: missing <int> after 'resid' keyword in 'a(tom) %d'\n", id);
-            exit(1);
-          } //}}}
-
-          // assign molecule id to the bead 'id'
-          int mol_id = atoi(resid) - 1; // because 'resid <int>' start with 1
-          (*Bead)[id].Molecule = mol_id;
-
-          // assign molecule type to mol molecule 'mol_id' //{{{
-          if (((*Molecule)[mol_id].Type = FindMoleculeType(split, *Counts, *MoleculeType)) == -1) {
-            fprintf(stderr, "Error: molecule type %s does not exist ('a(tom) %d' line)\n", split, id);
-            exit(1);
-          } //}}}
-
-          if (((*Bead)[id].Molecule = FindBeadType(str, *Counts, *BeadType)) == -1) {
-            fprintf(stderr, "Error: bead type %s does not exist ('a(tom) %d' line)\n", split, id);
-            exit(1);
-          }
-        } //}}}
-      }
-
-    //}}}
-    } else if (split[0] == '#' || split[0] = '\n') { // continue on empty/comment line //{{{
-      cont = true;
-    } //}}}
-  } while (cont);
   fclose (vsf); //}}}
 
   // assign default bead type to beads without type //{{{
-  if (type_def != -1) {
-    for (int i = 0; i < (*Counts).BeadsInVsf) {
+  if (type_default != -1) {
+    for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
       if ((*Bead)[i].Index == -1) {
         (*Bead)[i].Index = i;
-        (*Bead)[i].Type = type_def;
+        (*Bead)[i].Type = type_default;
       }
     }
   } //}}}
@@ -953,7 +874,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
 
   // Counts is pointer, so *Counts to pass by value
   // Bead is in reality **Bead, so no &Bead
-  ReadVsf(vsf_file, Counts, *BeadType, Bead);
+  ReadVsf(vsf_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
   ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
 
@@ -975,8 +896,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
   } //}}}
 
   // fill array of Molecule structs //{{{
-  int count = 0,
-      bead = (*Counts).Unbonded; // because Counts.whatever shouldn't change
+  int count = 0;
 
   // go through all types of molecules
   for (int i = 0; i < (*Counts).Molecules; i++) {
@@ -1066,6 +986,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     (*MoleculeType)[i].Use = false;
   } //}}}
+
+  bool indexed = true;
 
   return indexed;
 } //}}}
