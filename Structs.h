@@ -42,8 +42,9 @@ typedef struct IntVector {
 typedef struct Counts {
   int TypesOfBeads, ///< number of bead types
       TypesOfMolecules, ///< number of molecule types
-      Bonded, ///< total number of beads in all molecules
-      Unbonded, ///< total number of monomeric beads
+      Beads, ///< total number of beads in all molecules
+      Bonded, ///< total number of beads in all molecules (TO BE REMOVED)
+      Unbonded, ///< total number of monomeric beads (TO BE REMOVED)
       BeadsInVsf, ///< total number of all beads in .vsf file (not necessarily in .vcf)
       Molecules, ///< total number of molecules
       MoleculesInVsf, ///< total number of all molecules in .vsf file (not necessarily in .vcf)
@@ -59,8 +60,7 @@ typedef struct BeadType {
 
   int Number; ///< number of beads of given type
 
-  bool InVcf, ///< is bead type in vcf file?
-       Use, ///< should bead type in .vcf file be used for calculation?
+  bool Use, ///< should bead type in .vcf file be used for calculation?
        Write; ///< should bead type in .vcf file be written to output .vcf?
 
   double Charge, ///< charge of every bead of given type
