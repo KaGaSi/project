@@ -112,7 +112,7 @@ bool BoolOption(int argc, char **argv, char *opt); //}}}
 
 // IntegerOption() //{{{
 /**
- * \breif Function for any option with integer argument.
+ * \brief Function for any option with integer argument.
  *
  * \param [in]  argc  number of program's arguments
  * \param [in]  argv  program's arguments
@@ -125,7 +125,7 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value);
 
 // TwoIntegerOption() //{{{
 /**
- * \breif Function for any option with two integer arguments.
+ * \brief Function for any option with two integer arguments.
  *
  * \param [in]  argc   number of program's arguments
  * \param [in]  argv   program's arguments
