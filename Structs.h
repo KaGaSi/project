@@ -47,7 +47,6 @@ typedef struct Counts {
       Unbonded, ///< total number of monomeric beads (TO BE REMOVED)
       BeadsInVsf, ///< total number of all beads in .vsf file (not necessarily in .vcf)
       Molecules, ///< total number of molecules
-      MoleculesInVsf, ///< total number of all molecules in .vsf file (not necessarily in .vcf)
       Aggregates; ///< total number of aggregates
 } Counts; //}}}
 
