@@ -42,8 +42,9 @@ typedef struct IntVector {
 typedef struct Counts {
   int TypesOfBeads, ///< number of bead types
       TypesOfMolecules, ///< number of molecule types
-      Bonded, ///< total number of beads in all molecules
-      Unbonded, ///< total number of monomeric beads
+      Beads, ///< total number of beads in all molecules
+      Bonded, ///< total number of beads in all molecules (TO BE REMOVED)
+      Unbonded, ///< total number of monomeric beads (TO BE REMOVED)
       BeadsInVsf, ///< total number of all beads in .vsf file (not necessarily in .vcf)
       Molecules, ///< total number of molecules
       Aggregates; ///< total number of aggregates
@@ -82,7 +83,8 @@ typedef struct MoleculeType {
 
   double Mass; ///< total mass of every molecule of given type
 
-  bool Use, ///< should molecule type be used for calculation?
+  bool InVcf, ///< is molecule type in vcf file?
+       Use, ///< should molecule type be used for calculation?
        Write; ///< should molecule type be used for calculation?
 } MoleculeType; //}}}
 

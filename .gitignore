@@ -2,3 +2,5 @@ test
 build
 doc
 cscope.out
+tags
+DoxyErrors.txt
