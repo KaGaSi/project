@@ -174,7 +174,7 @@ system.\n\n");
   // write initial stuff to output file //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
-      char str[32];
+      char str[128];
       sprintf(str, "%s-%s.txt", output, MoleculeType[i].Name);
 
       FILE *out;
@@ -206,7 +206,7 @@ system.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[32];
+  char str[128];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -359,7 +359,6 @@ system.\n\n");
     // print shape descriptors to output file(s) //{{{
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {
-        char str[32];
         sprintf(str, "%s-%s.txt", output, MoleculeType[i].Name);
 
         FILE *out;

@@ -192,7 +192,7 @@ system.\n\n");
 
     // write initial stuff to output density file //{{{
     FILE *out;
-    char str[32];
+    char str[128];
 
     sprintf(str, "%s%s.rho", output_rho, argv[count]);
     if ((out = fopen(str, "w")) == NULL) {
@@ -272,7 +272,7 @@ system.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[32];
+  char str[128];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -507,7 +507,6 @@ system.\n\n");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       FILE *out;
-      char str[32];
 
       sprintf(str, "%s%s.rho", output_rho, MoleculeType[i].Name);
       if ((out = fopen(str, "a")) == NULL) {

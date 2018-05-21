@@ -16,7 +16,9 @@ PROGRAM traject
 
       CHARACTER(80) :: text
       CHARACTER(8), ALLOCATABLE :: namspe (:)
-      CHARACTER(8) :: name1, nammol
+      ! ks
+      CHARACTER(8), ALLOCATABLE :: nammol (:)
+      CHARACTER(8) :: name1
       CHARACTER(6) :: chan
 
       INTEGER, ALLOCATABLE :: ltp (:), ltm (:), mole (:), bndtbl (:,:), beads (:), bonds (:), nspe (:)
@@ -73,6 +75,7 @@ PROGRAM traject
       READ (ntraj) keytrj, srfx, srfy, srfz
 
       ALLOCATE (namspe (numspe))
+      ALLOCATE (nammol (nmoldef))
       ALLOCATE (bbb (numspe))
 
       DO i = 1, numspe
@@ -80,7 +83,7 @@ PROGRAM traject
       END DO
 
       DO i = 1, nmoldef
-        READ (ntraj) nammol
+        READ (ntraj) nammol (i)
       END DO
 
       READ (ntraj) text
@@ -202,8 +205,9 @@ PROGRAM traject
             IF ((ltp (i)/=imxspe .OR. i==nubeads) .AND. ltm(i)==0) THEN
               WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8)') i-1, bbb (ltp (i)), namspe (ltp (i))
             ELSE IF (ltm (i)/=0) THEN
-              WRITE (nrtout+1, '("atom ",I8,"    radius ",F10.6," name ",A8," resid ",I8)') i-nubeads-1, bbb (ltp (i)), &
-                    &namspe (ltp (i)), mole (i)
+              WRITE (nrtout+1, '("atom ",I8,"    radius ",F10.6," name ",A8," segid ", A8," resid ",I8)')&
+                    &i-nubeads-1, bbb (ltp (i)), &
+                    &namspe (ltp (i)), nammol (ltm (i)), mole (i)
             END IF
 
           END DO
@@ -212,8 +216,9 @@ PROGRAM traject
             IF ((ltp (i)/=imxspe .OR. i==numbeads) .AND. ltm(i)==0) THEN
               WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8)') i-1, bbb (ltp (i)), namspe (ltp (i))
             ELSE IF (ltm (i)/=0) THEN
-              WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8," resid ",I8)') i-1, bbb (ltp (i)), &
-                    &namspe (ltp (i)), mole (i)
+              WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8," segid ", A8," resid ",I8)')&
+                    &i-1, bbb (ltp (i)), &
+                    &namspe (ltp (i)), nammol (ltm(i)), mole (i)
             END IF
           END DO
         END IF
