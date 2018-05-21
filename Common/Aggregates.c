@@ -39,7 +39,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     (*Aggregate)[i].nMonomers = 0;
   }
 
-  for (int i = 0; i < ((*Counts).Bonded+(*Counts).Unbonded); i++) {
+  for (int i = 0; i < (*Counts).Beads; i++) {
     (*Bead)[i].nAggregates = 0;
   } //}}}
 
@@ -69,7 +69,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
   // allocate memory for arrays for cell linked list
   int *Head = malloc((n_cells.x*n_cells.y*n_cells.z)*sizeof(int));
-  int *Link = malloc(((*Counts).Unbonded+(*Counts).Bonded)*sizeof(int));
+  int *Link = malloc((*Counts).Beads*sizeof(int));
 
   // initialize Head array //{{{
   for (int i = 0; i < (n_cells.x*n_cells.y*n_cells.z); i++) {
@@ -77,7 +77,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   } //}}}
 
   // sort beads into cells //{{{
-  for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
+  for (int i = 0; i < (*Counts).Beads; i++) {
     int cell = (int)((*Bead)[i].Position.x / cell_size)
              + (int)((*Bead)[i].Position.y / cell_size) * n_cells.x
              + (int)((*Bead)[i].Position.z / cell_size) * n_cells.x * n_cells.y;
@@ -314,18 +314,22 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   // assign bonded beads to Aggregate struct //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
 
+//  printf("i=%d\n", i);
     // go through all molecules in aggregate 'i'
     for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+//  printf("j=%d\n", j);
       int mol = (*Aggregate)[i].Molecule[j];
 
       // copy all bead in molecule 'mol' to Aggregate struct
       for (int k = 0; k < MoleculeType[(*Molecule)[mol].Type].nBeads; k++) {
+//      printf("k=%d\n", k);
         (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads] = (*Molecule)[mol].Bead[k];
         (*Aggregate)[i].nBeads++;
 
-        // every bead from molecule is only in one aggregate
-        (*Bead)[(*Molecule)[mol].Bead[k]].nAggregates = 1;
-        (*Bead)[(*Molecule)[mol].Bead[k]].Aggregate[0] = i;
+        // every bead from molecule 'mol' is only in one aggregate
+        int id = (*Molecule)[mol].Bead[k];
+        (*Bead)[id].nAggregates = 1;
+        (*Bead)[id].Aggregate[0] = i;
       }
     }
   } //}}}
@@ -786,7 +790,8 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "Error: %s - cannot read coordinates (bead %d; step %d, '%s')\n",
+                input_vcf, count, test, stuff);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
