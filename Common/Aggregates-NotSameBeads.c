@@ -776,7 +776,8 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "Error: %s - cannot read coordinates (bead %d; step %d, '%s')\n",
+                input_vcf, count, test, stuff);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{

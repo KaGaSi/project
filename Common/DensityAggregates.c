@@ -221,15 +221,19 @@ system.\n\n");
 
     // write initial stuff to output density file //{{{
     FILE *out;
-    char str[64];
+    char str[128];
     sprintf(str, "%s", output_rho);
 
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (specific_moltype_for_size[i]) {
-        sprintf(str, "%s%s", str, MoleculeType[i].Name);
+        char str2[256];
+        sprintf(str2, "%s%s", str, MoleculeType[i].Name);
+        strcpy(str2, str);
       }
     }
-    sprintf(str, "%s%d.rho", str, agg_sizes[aggs][0]);
+    char str2[256];
+    sprintf(str2, "%s%d.rho", str, agg_sizes[aggs][0]);
+    strcpy(str2, str);
     if ((out = fopen(str, "w")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -312,7 +316,7 @@ system.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[32];
+  char str[128];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -569,14 +573,17 @@ system.\n\n");
   for (int i = 0; i < aggs; i++) {
     FILE *out;
     // assemble correct name
-    char str[64];
     sprintf(str, "%s", output_rho);
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (specific_moltype_for_size[j]) {
-        sprintf(str, "%s%s", str, MoleculeType[j].Name);
+        char str2[256];
+        sprintf(str2, "%s%s", str, MoleculeType[j].Name);
+        strcpy(str2, str);
       }
     }
-    sprintf(str, "%s%d.rho", str, agg_sizes[i][0]);
+    char str2[256];
+    sprintf(str2, "%s%d.rho", str, agg_sizes[i][0]);
+    strcpy(str2, str);
     if ((out = fopen(str, "a")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
