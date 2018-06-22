@@ -104,10 +104,11 @@ TransformVsf reads information from FIELD and dl_meso.vsf files and creates \
 .vsf structure file used for visualisation of trajectory (.vcf files) via VMD \
 visualisation tool.\n\n");
 
-      fprintf(stdout, "\
+/*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
+*/
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <output.vsf>\n\n", argv[0]);

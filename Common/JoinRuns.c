@@ -73,7 +73,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-        strcmp(argv[i], "-b") != 0 &&
+//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&

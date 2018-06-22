@@ -479,10 +479,11 @@ int main(int argc, char *argv[]) {
 Aggregates-NotSameBeads utility works in the same way as Aggregates utility, \
 but does not calculate contacts between beads of the same type.\n\n");
 
-      fprintf(stdout, "\
+/*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
+*/
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <distance> <contacts> ", argv[0]);
@@ -507,7 +508,7 @@ system.\n\n");
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-        strcmp(argv[i], "-b") != 0 &&
+//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&

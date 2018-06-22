@@ -31,10 +31,11 @@ SelectedVcf creates new <output.vcf> file from <input.vcf> containing only \
 selected bead types. Also <start> timesteps can be omitted and every <skip> \
 timestep can be left out.\n\n");
 
-      fprintf(stdout, "\
+/*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about \
 the system.\n\n");
+*/
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> ", argv[0]);
@@ -71,7 +72,7 @@ the system.\n\n");
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-        strcmp(argv[i], "-b") != 0 &&
+//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
@@ -273,7 +274,7 @@ the system.\n\n");
 
   fclose(out); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{ //{{{
+  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
   stuff = calloc(128,sizeof(int)); //}}}
 
@@ -309,7 +310,15 @@ the system.\n\n");
       fprintf(stdout, "\rDiscarded steps: %6d\n", count);
     }
   } //}}}
-  //}}} //}}}
+
+  // is the vcf file continuing? //{{{
+  if ((test = getc(vcf)) == EOF) {
+    fprintf(stderr, "Error: %s - Number of discard steps is lower (or equal) to the total number of steps\n", input_vcf);
+    exit(1);
+  } else {
+    ungetc(test,vcf);
+  } //}}}
+  //}}}
 
   // main loop //{{{
   while ((test = getc(vcf)) != EOF) {
