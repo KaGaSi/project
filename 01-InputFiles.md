@@ -5,9 +5,8 @@ All the utilities read information about studied system from [vsf/vcf
 files](https://github.com/olenz/vtfplugin/wiki/VTF-format) (formatted as
 described below) and `FIELD` file (input file for [DL_MESO simulation
 package](http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx)).
-Coordinates are read from a `vcf` file (with either
-[ordered timesteps](\ref OrderedCoorFile) or
-[indexed timesteps](\ref IndexedCoorFile)). Structure of the system (names
+Coordinates are read from a `vcf` file with either
+[indexed timesteps](\ref IndexedCoorFile). Structure of the system (names
 and numbers of beads and molecules, etc.) is read from `FIELD` file and
 `vsf` files, but only bead types that are in the above mentioned `vcf`
 file are considered.
@@ -33,32 +32,35 @@ is not present, the number of atom lines must be the same as the total number
 of beads.
 
 All atom lines in a `vsf` must specify bead index number as `atom <int>`
-(starting with 0) and name as `name <char[8]>`.  If an atom is in a
+(starting from 0) and name as `name <char[8]>`.  If an atom is in a
 molecule, the name of the molecule type is specified as `segid <char[8]>`
 and its molecule number (starting from 1) is specified as `resid <int>`. The
 following is an example of atom lines:
-> `atom default radius 1.000000 name <char[8]>`
+
+> `atom default 1.0 name <char[8]>`
 >
 > `...`
 >
-> `atom <int> radius 1.000000 name <char[8]> segid <char[8]> resid <int>`
+> `atom <int> name <char[8]> segid <char[8]> resid <int>`
 >
 > `...`
 
 While `atom` keyword (or its short version, `a`) must be at the beginning
-of the line, the order of other keywords do not matter. The highest bead
-index corresponds to the total number of beads.
+of the line, the order of other keywords do not matter; `radius 1.0` The
+bead indices must go from the lowest to the highest and the highest index
+number corresponds to the total number of beads in the systems.
 
 Bond lines follow after atom lines. Only simple bond lines are allowed, i.e. one
 bond per line in the form: `bond <int>:<int>`.
 
-All molecule with the same name (and different index number) have to
-be the same, i.e. consist of the same number of beads of the same types and
-have the same structure (the same bonds).
+All molecules with the same name (and different index number) have to be
+the same, that is, consist of the same number of beads of the same types
+and have the same structure (i.e., the same bonds).
 
 Blank lines and commented lines (beginning with `#`) are allowed in the
 `vsf` file.
 
+<!--
 Optional bond file - TO BE RE-IMPLEMENTED {#BondFile}
 =====
 
@@ -152,22 +154,22 @@ Example of ordered coordinate file:
 > `<float> <float> <float>`
 >
 > `...`
+-->
 
 Indexed coordinate file {#IndexedCoorFile}
 =====
 
-Unlike a `vcf` file with ordered timesteps, a `vcf` file with indexed
-timestep does not contain coordinates for every bead. Only beads of
-selected bead types are present (the `traject` utilities put the bead type
-names at the beginning of the file). Coordinates of every bead are
-prepended by its index number according to the `vsf` structure file.
-Keyword `indexed` (or its short version, `i`) or `timestep indexed` is at
-the beginning of each coordinate block. The beads does not have to be
-ordered in any way, but the same number of beads must be in every timestep
-and every bead of given types must be present. Otherwise the file has the
-same format as a `vcf` file with ordered timesteps.
-
-Example of indexed coordinate file:
+First line of a `vcf` file that is read is a box size line, that is, it
+contains `pbc <double> <double> <double>` (the three numbers correspond to
+the side lengths of a cuboid simulation box). Everything up to the `pbc`
+keywoard is ignored. Each timestep starts with a comment line (i.e., line
+starting with `#`), the second line contains `timestep indexed` (or the
+short version, `t i`), `c`(`oordinate`) `i`(`ndexed`), or just
+`i`(`ndexed`)  and each following line contains index and coordinates of a
+single bead. Not all beads from the `vsf` file must be present in the
+`vcf`, instead only selected bead types can be present (although all beads
+of the selected type(s) must be in all timesteps). Example of indexed
+coordinate file:
 
 > `pbc <float> <float> <float>`
 >
@@ -201,6 +203,8 @@ aggregate followed by their ids (according to a corresponding `vsf`
 structure file) and the second line contains the number of monomeric beads
 in the aggregate followed by its ids (again, the ids correspond to the
 `vsf` file). The line with monomeric beads is indented for easier reading.
+The file ends with `Last step: <number of timesteps>`; the `L` marks the
+end of `agg` file for any utility using it.
 
 Example of an aggregate file:
 
@@ -220,7 +224,7 @@ Example of an aggregate file:
 >
 > `<number of molecules in the second aggregate> : <molecule ids>`
 >
-> `   <number of monomeric beads in the aggregate : <bead ids>`
+> `   <number of monomeric beads near the aggregate : <bead ids>`
 >
 > `<blank line>`
 >

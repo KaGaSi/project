@@ -35,10 +35,10 @@ size(s) from \
 their centre of mass. Beside unbonded beads it takes into account only beads \
 from the current aggregate, not from any other aggregate.\n\n");
 
-      fprintf(stdout, "\
+/*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
-system.\n\n");
+system.\n\n"); */
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
@@ -77,7 +77,7 @@ system.\n\n");
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-        strcmp(argv[i], "-b") != 0 &&
+//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
@@ -222,18 +222,19 @@ system.\n\n");
     // write initial stuff to output density file //{{{
     FILE *out;
     char str[128];
-    sprintf(str, "%s", output_rho);
+    strcpy(str, output_rho);
+    printf("%s %s\n", str, output_rho);
 
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (specific_moltype_for_size[i]) {
         char str2[256];
         sprintf(str2, "%s%s", str, MoleculeType[i].Name);
-        strcpy(str2, str);
+        strcpy(str, str2);
       }
     }
-    char str2[256];
+    char str2[133];
     sprintf(str2, "%s%d.rho", str, agg_sizes[aggs][0]);
-    strcpy(str2, str);
+    strcpy(str, str2);
     if ((out = fopen(str, "w")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -246,9 +247,10 @@ system.\n\n");
     putc('\n', out); //}}}
 
     // print bead type names to output file //{{{
+    fprintf(out, "# rdp | stderr | number | stderr\n");
     putc('#', out);
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      fprintf(out, " %s", BeadType[i].Name);
+      fprintf(out, " %d: %s",4*i+2 , BeadType[i].Name);
     }
     putc('\n', out); //}}}
 
@@ -349,10 +351,13 @@ system.\n\n");
 
   // allocate memory for density arrays //{{{
   double ***rho = malloc(Counts.TypesOfBeads*sizeof(double **));
+  double ***rho_2 = malloc(Counts.TypesOfBeads*sizeof(double **));
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     rho[i] = malloc(aggs*sizeof(double *));
+    rho_2[i] = malloc(aggs*sizeof(double *));
     for (int j = 0; j < aggs; j++) {
       rho[i][j] = calloc(bins,sizeof(double));
+      rho_2[i][j] = calloc(bins,sizeof(double));
     }
   } //}}}
 
@@ -491,6 +496,15 @@ system.\n\n");
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
 
+    // allocate memory for temporary density arrays //{{{
+    double ***temp_rho = malloc(Counts.TypesOfBeads*sizeof(double **));
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      temp_rho[i] = malloc(aggs*sizeof(double *));
+      for (int j = 0; j < aggs; j++) {
+        temp_rho[i][j] = calloc(bins,sizeof(double));
+      }
+    } //}}}
+
     // calculate densities //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
 
@@ -516,6 +530,15 @@ system.\n\n");
 
         Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
+        // free temporary density array //{{{
+        for (int j = 0; j < Counts.TypesOfBeads; j++) {
+          for (int k = 0; k < aggs; k++) {
+            for (int l = 0; l < bins; l++) {
+              temp_rho[j][k][l] = 0;
+            }
+          }
+        } //}}}
+
         // aggregate beads //{{{
         for (int j = 0; j < Aggregate[i].nBeads; j++) {
           int bead = Aggregate[i].Bead[j];
@@ -531,7 +554,7 @@ system.\n\n");
             if (dist.x < max_dist) {
               int k = dist.x / width;
 
-              rho[Bead[Aggregate[i].Bead[j]].Type][correct_size][k]++;
+              temp_rho[Bead[Aggregate[i].Bead[j]].Type][correct_size][k]++;
             }
           }
         } //}}}
@@ -544,13 +567,30 @@ system.\n\n");
           if (dist.x < max_dist) {
             int k = dist.x / width;
 
-            rho[Bead[j].Type][correct_size][k]++;
+            temp_rho[Bead[j].Type][correct_size][k]++;
           }
         } //}}}
 
         agg_sizes[correct_size][1]++;
+
+        // add from temporary density array to global density arrays //{{{
+        for (int j = 0; j < Counts.TypesOfBeads; j++) {
+          for (int k = 0; k < bins; k++) {
+            rho[j][correct_size][k] += temp_rho[j][correct_size][k];
+            rho_2[j][correct_size][k] += SQR(temp_rho[j][correct_size][k]);
+          }
+        } //}}}
       }
     } //}}}
+
+    // free temporary density array //{{{
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      for (int j = 0; j < aggs; j++) {
+        free(temp_rho[i][j]);
+      }
+      free(temp_rho[i]);
+    }
+    free(temp_rho); //}}}
 
     // print comment at the beginning of a timestep - detailed verbose output //{{{
     if (verbose2) {
@@ -578,12 +618,13 @@ system.\n\n");
       if (specific_moltype_for_size[j]) {
         char str2[256];
         sprintf(str2, "%s%s", str, MoleculeType[j].Name);
-        strcpy(str2, str);
+        strcpy(str, str2);
       }
     }
     char str2[256];
     sprintf(str2, "%s%d.rho", str, agg_sizes[i][0]);
-    strcpy(str2, str);
+    strcpy(str, str2);
+    printf("%s\t%s\n", str, str2);
     if ((out = fopen(str, "a")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
@@ -601,15 +642,24 @@ system.\n\n");
       fprintf(out, "%.2f", width*(j+0.5*avg));
 
       for (int k = 0; k < Counts.TypesOfBeads; k++) {
-        double temp = 0;
+        double temp_rdp = 0, temp_number = 0,
+               temp_rdp_err = 0, temp_number_err = 0;
 
         // sum up rdfs from all shells to be averaged
         for (int l = 0; l < avg; l++) {
-          temp += rho[k][i][j+l] / (shell[l] * agg_sizes[i][1]);
+          temp_rdp += rho[k][i][j+l] / (shell[l] * agg_sizes[i][1]);
+          temp_rdp_err += rho_2[k][i][j+l] / (shell[l] * agg_sizes[i][1]);
+          temp_number += rho[k][i][j+l] / agg_sizes[i][1];
+          temp_number_err += rho_2[k][i][j+l] / agg_sizes[i][1];
         }
 
+        temp_rdp_err = sqrt(temp_rdp_err - temp_rdp);
+        temp_number_err = sqrt(temp_number_err - temp_number);
+
         // print average value to output file
-        fprintf(out, " %10f", temp/avg);
+//      fprintf(out, " %10f", temp_rdp/avg);
+        fprintf(out, " %10f %10f", temp_rdp/avg, temp_rdp_err/avg);
+        fprintf(out, " %10f %10f", temp_number/avg, temp_number_err/avg);
       }
       putc('\n',out);
     }
@@ -646,10 +696,13 @@ system.\n\n");
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     for (int j = 0; j < aggs; j++) {
       free(rho[i][j]);
+      free(rho_2[i][j]);
     }
     free(rho[i]);
+    free(rho_2[i]);
   }
-  free(rho); //}}}
+  free(rho);
+  free(rho_2); //}}}
 
   return 0;
 }

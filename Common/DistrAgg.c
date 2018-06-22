@@ -32,10 +32,11 @@ DistrAgg calculates weight and number average aggregation numbers during the \
 simulation run as well as overall weight and number distributions and volume \
 fractions of aggregates.\n\n");
 
-      fprintf(stdout, "\
+/*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD \
 (along with optional bond file) files to determine all information about \
 the system.\n\n");
+*/
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);

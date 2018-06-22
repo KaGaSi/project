@@ -26,10 +26,11 @@ given timestep is larger than the number of steps the coordinate file, the \
 last step is used. Coordinate file needs to contain all beads in the \
 simulation for it to work with dl_meso (no such check is made).\n\n");
 
-      fprintf(stdout, "\
+/*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
+*/
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <options>\n\n", argv[0]);
@@ -60,7 +61,6 @@ system.\n\n");
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-        strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
