@@ -17,7 +17,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -bt            specify bead types to be used for calculation (default is all)\n");
   fprintf(stderr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
-  fprintf(stdout, "      -ps <file>     save per-size averages to a file\n");
+  fprintf(stderr, "      -ps <file>     save per-size averages to a file\n");
   fprintf(stderr, "      -n <int> <int> calculate for aggregate sizes in given range\n");
   CommonHelp(1);
 } //}}}
@@ -33,12 +33,14 @@ asphericities and relative shape anisotropies during the simulation for all \
 aggregates izes. The shape descriptors are calculated from eigenvalues of \
 gyration tensor. It also prints averages to the stdout. Instead of aggregate \
 size, a number of specified molecular species in an aggregate can be used and \
-only specified bead types can be used for all calculations.\n\n");
+only specified bead types can be used for all calculations. Data can also be \
+saved in the per-size files (for analysis of autocorrelation).\n\n");
 
-      fprintf(stdout, "\
+/*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
+*/
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <input.agg> <output> <options>\n\n", argv[0]);
@@ -63,7 +65,7 @@ system.\n\n");
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-        strcmp(argv[i], "-b") != 0 &&
+//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&

@@ -15,10 +15,10 @@ Specified molecule(s) can be excluded from aggregate calculation (both from
 aggregate calculation and the output `.agg` file).
 
 While the Aggregates utility uses all possible pairs of given bead types,
-Aggregates-NotSameBeads does not use same-type pairs. That is, if bead types
-`A` and `B` are given, Aggregates utility will use all three bead type pairs,
-that is `A-A`, `A-B` and `B-B` (for bead pair from different molecules), but
-Aggregates-NotSameBeads will not use `A-A` or `B-B`. Therefore at least two
+Aggregates-NotSameBeads does not use same-type pairs. For example, if bead types
+`A` and `B` are given, Aggregates will use all three bead type pairs,
+that is `A-A`, `A-B` and `B-B` (provided the beads are not in the same molecules), but
+Aggregates-NotSameBeads will not use `A-A` or `B-B`. Therefore, at least two
 bead types must be provided in Aggregates-NotSameBeads argument.
 
 Usage:
@@ -47,10 +47,20 @@ Usage:
 
 # Average utility {#Average}
 
-Utility calculating average values with standard deviation and
-autocorrelation time from values contained in a text file. The first line
-of the file has to contain the number of data lines and no comments are
-allowed.
+Average uses binning method to analyse data stored in a supplied file. It
+prints average, statistical error and estimate of integrated
+autocorrelation time (tau). Empty lines and lines beginning with '#' are
+skipped. The program prints to the screen four numbers: `<n_blocks>
+<simple average> <statistical error> <estimate of tau>`.
+
+A way to estimate
+a 'real' value of tau is to use a wide range of `<n_blocks>` and then plot
+`<tau>` as a function of `<n_blocks>`. Since the number of data points in a
+block has to be larger than tau (say, 10 times larger), plotting
+`<number of data lines>/10/<n_blocks>` vs. `<n_blocks>` will produce an
+exponential function that will intersect the plotted `<tau>`. A value of tau
+near the intersection (but to the left where the exponential is above `<tau>`)
+can be considered a good estimate for tau.
 
 Usage:
 
@@ -65,10 +75,7 @@ Usage:
 > `<n_blocks>`
 > > number of blocks for binning analysis
 
-\todo Average: completely rewrite - especially remove requirement for number of
-lines on the first line of input file
-
-# BondLength utility {#BondLength}
+# BondLength utility — not extensively used or tested {#BondLength}
 
 BondLength utility calculates normalised distribution of bond length for
 specified molecule types.
@@ -89,13 +96,14 @@ Usage:
 
 # Config utility {#Config}
 
-This utility takes `.vcf` file containing either
-[ordered timesteps](\ref OrderedCoorFile) (such as `All.vcf` created by
-DL_MESO `traject` utility which was modified by me) or
-[indexed timesteps](\ref IndexedCoorFile)
+This utility takes `.vcf` file containing all beads (such as `All.vcf` created by
+DL_MESO `traject` utility which was modified by me)
 and creates `CONFIG` file (file containing initial coordinates for a
 simulation via [DL_MESO simulation
 package](http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx)).
+If a `vcf` file that does not contain all beads, Config will still run, but
+the generated file will not contain coordinates for all beads and thus will
+not be able to be used to start a simulation rune using DL\_MESO software.
 
 Usage:
 
@@ -106,7 +114,10 @@ Usage:
 > > ordered or indexed timesteps
 > `<options>`
 > > `-st <int>`
-> > > timestep for creating the CONFIG file
+> > > timestep for creating the CONFIG file (if the number is higher than the
+> > > number of steps, the last step is used)
+
+xxx
 
 # DensityAggregates {#AggDensity}
 
