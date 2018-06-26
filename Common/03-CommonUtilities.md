@@ -26,8 +26,7 @@ Usage:
 `Aggregates` (or `Aggregates-NotSameBeads`) ` <input.vcf> <distance> <contacts> <output.agg> <type names> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<distance>`
 > > minimum distance for two beads to be in contact (constituting one
 > > contact pair)
@@ -85,8 +84,7 @@ Usage:
 `BondLength <input.vcf> <width> <output file> <molecule names> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<width>`
 > > width of each bin for the distribution
 > `<output file>`
@@ -110,14 +108,11 @@ Usage:
 `Config <input.vcf> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<options>`
 > > `-st <int>`
 > > > timestep for creating the CONFIG file (if the number is higher than the
 > > > number of steps, the last step is used)
-
-xxx
 
 # DensityAggregates {#AggDensity}
 
@@ -127,6 +122,11 @@ aggregate is taken into account, so there is no possibility of getting
 'false' densities from adjacent aggregates. Therefore if some bead type is
 never present in an aggregate of specified size (but is in the `.vcf` file),
 its density will always be 0.
+
+Care must be taken with beadtype names in various molecules types, because
+if one beadtype appears in more molecule types, the resulting density for
+that beadtype will be averaged without regard for the various types of
+molecule it appears in.
 
 Instead of true aggregate size, a number of molecules of specified name can
 be used, i.e. an aggregate with 1 `A` molecule and 2 `B` molecules can be
@@ -145,8 +145,7 @@ Usage:
 `DensityAggregates <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<input.agg>`
 > > input filename (must end with `.agg`) containing information about
 > > aggregates
@@ -176,22 +175,18 @@ anomalies in VanDerBurgh/AddedPol/
 # DensityMolecules {#DensityMolecules}
 
 DensityMolecules works in similar way as the DensityAggregates, only instead of
-aggregates, the densities are calculated for specified molecule types.  Care
-must be taken with beadtype names in various molecules types, because if one
-beadtype appears in more molecule types, the resulting density for that
-beadtype will be averaged without regard for the various types of molecule it
-appears in.
+aggregates, the densities are calculated for specified molecule types.
 
 It is possible to use specified bead instead of the centre of mass for the
 coordinates to calculate densities from. Care must be taken, because the order
-of molecule types is taken from `FIELD` rather then from `DensityMolcules`
+of molecule types is taken from `vsf` rather than from `DensityMolcules`
 arguments. For example: whether bead 1 will be connected with `NameA` or
 `NameB` in `DensityMolecules ... NameA NameB -c 1 2` depends on molecules'
-order in `FIELD` file; that is if `NameA` is first in `FIELD`, 1 will be
+order in `vsf` file; that is if `NameA` is first in `vsf`, 1 will be
 associated  with `NameA` and 2 with `NameB`, but if `NameB` is first, the
 associations are reverse, regardless of the order of names in the command's
 arguments. If the centre of mass should be used, `x` is given as argument. In
-the above example (assuming `NameA` is first in `FIELD`) if bead 1 is intended
+the above example (assuming `NameA` is first in `vsf`) if bead 1 is intended
 to be used for `NameB`, but centre of mass for `NameA`, then an argument of the
 form `-c x 1` must be used.
 
@@ -200,8 +195,7 @@ Usage:
 `DensityMolecules <input.vcf> <width> <output.rho> <mol name(s)> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<width>`
 > > width of each bin for the distribution
 > `<output.rho>`
@@ -400,8 +394,7 @@ Usage:
 `GyrationAggregates <input.vcf> <input.agg> <output> <agg sizes> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<input.agg>`
 > > input filename (must end with `.agg`) containing information about
 > > aggregates
@@ -436,8 +429,7 @@ Usage:
 `GyrationMolecules <input.vcf> <input.agg> <output> <molecule names> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<input.agg>`
 > > input filename (must end with `.agg`) containing information about
 > > aggregates
@@ -465,8 +457,7 @@ Usage:
 `Aggregates <input.vcf> <input.agg> <output.vcf> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<input.agg>`
 > > input filename (must end with `.agg`) containing information about
 > > aggregates
@@ -495,8 +486,7 @@ Usage:
 `JoinRuns <1st input.vcf> <2nd input.vcf> <2nd input.vsf> <output.vcf> <type names> <options>`
 
 >  `<1st input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps for the first simulation
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps for the first simulation
 >  `<2nd input.vcf>`
 > > input coordinate filename for the second sumation in the same format as
 > > the first coordinate file
@@ -528,20 +518,21 @@ change this - either implement `-x` option or remove function
 
 This utility calculates pair correlation function (pcf) between specified bead types.
 All pairs of bead types (including same pair) are calculated - given `A` and `B`
-types, pcf between `A-A`, `A-B` and `B-B` are calculated.
+types, pcf between `A-A`, `A-B` and `B-B` are calculated. The pcfs are not
+normalised.
 
 Currently, the utility cannot recognise between beads of the same type that
 are in different molecule types - i.e. if bead type `A` is both in molecule
 type `1` and molecule type `2`, only one pcf will be calculated regardless
-of the molecule type `A` is in.
+of the molecule type `A` is in. Use `SelectedVcf` with `-x` option to
+resolve the problem.
 
 Usage:
 
 `PairCorrel <input.vcf> <width> <output.pcf> <bead type(s)> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<width>`
 > > width of each bin for the distribution
 > `<output.pcf>`
@@ -554,6 +545,7 @@ Usage:
 > >  `-st <int>`
 > > > starting timestep for calculation
 
+<!--
 # PairCorrelPerAgg utility {#PairCorrelPerAgg}
 
 DO NOT USE.
@@ -574,8 +566,7 @@ Usage:
 `PairCorrelPerAgg <input.vcf> <input.agg> <width> <output.pcf> <bead type(s)> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<input.agg>`
 > > input filename (must end with `.agg`) containing information about
 > `<width>`
@@ -589,11 +580,11 @@ Usage:
 > > > number of bins to average
 > >  `-st <int>`
 > > > starting timestep for calculation
+-->
 
 # SelectedVcf utility {#SelectedVcf}
 
 This utility takes `.vcf` file containing either
-[ordered timesteps](\ref OrderedCoorFile) or
 [indexed timesteps](\ref IndexedCoorFile) and creates a new `.vcf`
 coordinate file containing only beads of selected types with an option of
 removing periodic boundary condition and thus joining molecules.  The otput
@@ -610,8 +601,7 @@ Usage:
 `SelectedVcf <input.vcf> <output.vcf> <type names> <options>`
 
 > `<input.vcf>`
-> > input coordinate filename (must end with `.vcf`) containing either
-> > ordered or indexed timesteps
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
 > `<output.vcf>`
 > > output filename with indexed coordinates (must end with `.vcf`)
 > `<type names>`
@@ -632,7 +622,7 @@ This utility is from the
 [DL_MESO simulation package](http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx).
 While originally it creates a `.vtf` file containing both structure and
 coordinates, I have changed it to create a separate `dl_meso.vsf` structure
-file and `All.vcf` coordinate file containing ordered timesteps.
+file and `All.vcf` coordinate file containing indexed timesteps.
 
 There are two versions from two versions of the
 [DL_MESO simulation package](http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx),

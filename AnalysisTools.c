@@ -311,6 +311,9 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * and mass of beads is read from `FIELD` file, but all other information
  * is read from `vsf` structure file. If `vcf` coordinate is passed to
  * `ReadStructure()`, bead types not present in the `vcf` file get ignored.
+ *
+ * Overly complicated, some things done more than once, needs complete
+ * overhaul. Thankfully, it works.
  */
 bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     *Counts, BeadType **BeadType, Bead **Bead, MoleculeType **MoleculeType,
@@ -489,6 +492,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   // assign type -1 to all beads to later identify 'default' beads //{{{
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     (*Bead)[i].Type = -1;
+  }
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    (*Molecule)[i].Type = -1;
   } //}}}
 
   // second, read through vsf to find stuff about beads and mols //{{{
@@ -918,6 +924,11 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       while (split[0][0] >= '0' && split[0][0] <= '9') {
         int type = (*Bead)[atoi(split[0])].Type;
         (*BeadType)[type].Use = true;
+        char test;
+        if ((test = getc(vcf)) == EOF) {
+          break;
+        }
+        ungetc(test, vcf);
         // read line
         fgets(line, sizeof(line), vcf);
         // trim trailing whitespace in line //{{{
@@ -1109,7 +1120,10 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   } //}}}
 
   int *index;
-  index = calloc((*Counts).BeadsInVsf, sizeof(int));
+  index = malloc((*Counts).BeadsInVsf*sizeof(int));
+  for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
+    index[i] = -1;
+  }
 
   // remove unused beads from Bead struct //{{{
   count = 0;
@@ -1143,19 +1157,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     strcpy(name[i], (*BeadType)[i].Name);
   } //}}}
 
-/*
-for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-  printf("%s:", (*MoleculeType)[i].Name);
-  for (int j = 0; j < (*MoleculeType)[i].nBTypes; j++) {
-    printf(" %s", (*BeadType)[(*MoleculeType)[i].BType[j]].Name);
-  }
-  putchar('\n');
-}
-for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-  printf("%s %d Use: %d\n", (*BeadType)[i].Name, i, (*BeadType)[i].Use);
-}
-*/
-
   // remove unused bead types from BeadType struct and molecule bonds //{{{
   count = 0;
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
@@ -1171,28 +1172,17 @@ for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
             }
           }
         }
+        for (int j = 0; j < (*Counts).Beads; j++) {
+          if ((*Bead)[j].Type == i) {
+            (*Bead)[j].Type = count;
+          }
+        }
       }
       count++;
     }
   } //}}}
 
-/*
-for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-  printf("x %s:", (*MoleculeType)[i].Name);
-  for (int j = 0; j < (*MoleculeType)[i].nBTypes; j++) {
-    printf(" %s", (*BeadType)[(*MoleculeType)[i].BType[j]].Name);
-  }
-  putchar('\n');
-}
-*/
-
   (*Counts).TypesOfBeads = count;
-
-/*
-for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-  printf("x %s %d Use: %d\n", (*BeadType)[i].Name, i, (*BeadType)[i].Use);
-}
-*/
 
   // read bonds - again, unfortunately //{{{
   // open vsf structure file //{{{
@@ -1229,19 +1219,6 @@ for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
       // find ids of both beads
       int bead1 = index[atoi(split[1])];
       int bead2 = index[atoi(split[2])];
-
-//    for (int i = 0; i < (*Counts).Beads; i++) { //{{{
-//      if ((*Bead)[i].Index == atoi(split[1])) {
-//        bead1 = i;
-//        if (bead1 != index[bead1])
-//          printf("bead1: %5d; index[%5d]: %5d\n", bead1, bead1, index[bead1]);
-//      }
-//      if ((*Bead)[i].Index == atoi(split[2])) {
-//        bead2 = i;
-//        if (bead2 != index[bead2])
-//          printf("bead2: %5d; index[%5d]: %5d\n", bead2, bead2, index[bead2]);
-//      }
-//    } //}}}
 
       // are both beads in a vcf? //{{{
       if (bead1 == -1 || bead2 == -1) {
@@ -1286,18 +1263,8 @@ for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
       int bead1 = index[atoi(split[1])];
       int bead2 = index[atoi(split[2])];
 
-//    for (int i = 0; i < (*Counts).Beads; i++) { //{{{
-//      if ((*Bead)[i].Index == atoi(split[1])) {
-//        bead1 = i;
-//      }
-//      if ((*Bead)[i].Index == atoi(split[2])) {
-//        bead2 = i;
-//      }
-//    } //}}}
-
       // are both beads in a vcf? //{{{
       if (bead1 == -1 || bead2 == -1) {
-//      printf("%d:%d %d %d\n", atoi(split[1]), atoi(split[2]), bead1, bead2);
         continue;
       } //}}}
 
@@ -1432,6 +1399,16 @@ for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
     (*Bead)[i].Aggregate = calloc(20, sizeof(int));
   } //}}}
 
+  // set all molecule & bead types to be unused //{{{
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].Use = false;
+    (*MoleculeType)[i].Write = false;
+  }
+  for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+    (*BeadType)[i].Use = false;
+    (*BeadType)[i].Write = false;
+  } //}}}
+
 //// prints for debugging //{{{
 //// number of a(tom) lines (including comments and blanks) in vsf
 //printf("atom_lines=%d\n", atom_lines);
@@ -1510,14 +1487,6 @@ for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
 //  printf(" Index = %d}\n", (*Bead)[i].Index);
 //} //}}}
 
-  // set all molecule & bead types to be unused //{{{
-  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-    (*MoleculeType)[i].Use = false;
-  }
-  for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-    (*BeadType)[i].Use = false;
-  } //}}}
-
   free(index);
 
   return indexed;
@@ -1588,7 +1557,8 @@ void MoveCOMMolecules(Counts Counts, Vector BoxLength,
 
 // ReadCoorOrdered() //{{{
 /**
- * Function reading coordinates from .vcf file with ordered timesteps (\ref OrderedCoorFile).
+ * Function reading coordinates from .vcf file with ordered timesteps. Not used
+ * anymore!
  */
 int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
 

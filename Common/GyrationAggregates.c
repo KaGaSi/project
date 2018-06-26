@@ -348,7 +348,7 @@ system.\n\n");
   // asphericity: only normal sum
   double *Aspher_sum = calloc(Counts.Molecules,sizeof(double));
   // gyration tensor eigenvalues
-  struct Vector *eigen_sum = malloc(Counts.Molecules*sizeof(struct Vector));
+  struct Vector *eigen_sum = calloc(Counts.Molecules,sizeof(struct Vector));
   // total mass of aggregates: [size][0] normal sum, [size][1] sum of squares
   long int **mass_sum = malloc(Counts.Molecules*sizeof(int *));
   // number of molecule types in aggregates: [size][mol type] only normal sum
@@ -601,7 +601,8 @@ system.\n\n");
     free(sqrRg_step);
     free(Anis_step);
     free(Acyl_step);
-    free(Aspher_step); //}}}
+    free(Aspher_step);
+    free(eigen_step); //}}}
   }
   fclose(vcf);
   fclose(agg);
@@ -758,7 +759,10 @@ system.\n\n");
   free(Anis_sum);
   free(Acyl_sum);
   free(Aspher_sum);
-  free(stuff); //}}}
+  free(eigen_sum);
+  free(stuff);
+  free(per_size_file);
+  free(specific_moltype_for_size); //}}}
 
   return 0;
 }

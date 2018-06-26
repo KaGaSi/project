@@ -25,10 +25,10 @@ bool VsfFileOption(int argc, char **argv, char **vsf_file) {
         return(true);
       } //}}}
 
-      // check if .vsf ending is present (required by VMD) //{{{
+      // check if .vsf (or .vcf) ending is present (required by VMD) //{{{
       char *vsf = strrchr(argv[i+1], '.');
-      if (!vsf || strcmp(vsf, ".vsf")) {
-        fprintf(stderr, "'-i' argument does not have .vsf ending!\n");
+      if (!vsf || (strcmp(vsf, ".vsf") && strcmp(vsf, ".vcf"))) {
+        fprintf(stderr, "'-i' argument does not have .vsf or .vcf ending!\n");
 
         return (true);
       } //}}}

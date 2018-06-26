@@ -625,6 +625,7 @@ the system.\n\n");
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
+  free(specific_moltype_for_size);
   for (int i = 0; i < Counts.Molecules; i++) {
     free(molecules_sum[i]);
   }

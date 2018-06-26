@@ -15,7 +15,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
   fprintf(stderr, "   <molecule(s)>     molecule names to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
+  fprintf(stderr, "      --joined       specify that molecules with joined coordinates are used\n");
   fprintf(stderr, "      -n <int>       number of bins to average\n");
   fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
   fprintf(stderr, "      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
@@ -31,10 +31,7 @@ int main(int argc, char *argv[]) {
 DensityMolecules utility calculates number \
 density for all bead types from the \
 centre of mass (or specified bead number in a molecule) of specified molecules. \
-Care must be taken with beadtype names in molecule types, because if \
-one beadtype appears in more molecule types, the resulting density for that \
-beadtype will be averaged without regard for the various types of molecule it \
-appears in.\n\n");
+\n\n");
 
 /*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
@@ -50,7 +47,7 @@ system.\n\n");
       fprintf(stdout, "   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
       fprintf(stdout, "   <molecule(s)>     molecule names to calculate density for\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined       specify that aggregates with joined coordinates are used\n");
+      fprintf(stdout, "      --joined       specify that molecules with joined coordinates are used\n");
       fprintf(stdout, "      -n <int>       number of bins to average\n");
       fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
       fprintf(stdout, "      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
@@ -230,7 +227,7 @@ system.\n\n");
     if (strcmp(argv[i], "-c") == 0) {
       int j = 0;
       while ((++j+i) < argc && argv[i+j][0] != '-') {
-        fprintf(stdout, "%s\n", argv[i+j]);
+//      fprintf(stdout, "%s\n", argv[i+j]);
 
         // Error - non-numeric or non-"x" argument //{{{
         if ((argv[i+j][0] < '0' || argv[i+j][0] > '9') && argv[i+j][0] != 'x') {
@@ -249,7 +246,7 @@ system.\n\n");
               used_mols++;
             }
           }
-          fprintf(stdout, "k = %d; used_mols = %d\n", k, used_mols);
+//        fprintf(stdout, "k = %d; used_mols = %d\n", k, used_mols);
 
           centre[used_mols-1] = atoi(argv[i+j]) - 1;
 
@@ -454,26 +451,6 @@ system.\n\n");
           }
         } //}}}
 
-        // beads from other molecules //{{{
-        for (int j = 0; j < Counts.Molecules; j++) {
-          int mol_type_j = Molecule[j].Type;
-
-          if (strcmp(MoleculeType[mol_type_i].Name, MoleculeType[mol_type_j].Name) != 0) {
-            for (int k = 0; k < MoleculeType[mol_type_j].nBeads; k++) {
-              int bead_k = Molecule[j].Bead[k];
-
-              Vector dist = Distance(Bead[bead_k].Position, com, BoxLength);
-              dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
-
-              if (dist.x < max_dist) {
-                int l = dist.x / width;
-
-                rho[Bead[bead_k].Type][mol_type_i][l]++;
-              }
-            }
-          }
-        } //}}}
-
         // monomeric beads //{{{
         for (int j = 0; j < Counts.Unbonded; j++) {
           Vector dist = Distance(Bead[j].Position, com, BoxLength);
@@ -516,7 +493,7 @@ system.\n\n");
       }
 
       // calculate rdf
-      for (int j = 0; j < bins; j++) {
+      for (int j = 0; j < (bins-avg); j++) {
 
         // calculate volume of every shell that will be averaged
         double shell[avg];
