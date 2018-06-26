@@ -314,15 +314,12 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   // assign bonded beads to Aggregate struct //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
 
-//  printf("i=%d\n", i);
     // go through all molecules in aggregate 'i'
     for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
-//  printf("j=%d\n", j);
       int mol = (*Aggregate)[i].Molecule[j];
 
       // copy all bead in molecule 'mol' to Aggregate struct
       for (int k = 0; k < MoleculeType[(*Molecule)[mol].Type].nBeads; k++) {
-//      printf("k=%d\n", k);
         (*Aggregate)[i].Bead[(*Aggregate)[i].nBeads] = (*Molecule)[mol].Bead[k];
         (*Aggregate)[i].nBeads++;
 
@@ -709,7 +706,6 @@ system.\n\n");
 
   // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {
-    fprintf(stdout, "%s\n", joined_vcf);
 
     // bead types are to be written in joined.vcf -- probably will never change,
     // since the beadtypes should correspond to those in .agg file

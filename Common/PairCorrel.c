@@ -414,7 +414,7 @@ the system.\n\n");
   }
 
   // calculate pcf
-  for (int j = 1; j < bins; j++) {
+  for (int j = 1; j < (bins-avg); j++) {
 
     // calculate volume of every shell that will be averaged
     double shell[avg];
@@ -429,7 +429,7 @@ the system.\n\n");
       for (int l = k; l < Counts.TypesOfBeads; l++) {
         if (BeadType[k].Use && BeadType[l].Use) {
 
-          double temp = 0;
+          double temp = 0; // for normalisation
 
           // sump pcfs from all shells to be averaged
           for (int m = 0; m < avg; m++) {
@@ -439,6 +439,7 @@ the system.\n\n");
             } else {
               pairs = BeadType[k].Number * BeadType[l].Number;
             }
+            // for normalisation - WRONG
             double pair_den = volume / pairs;
             double norm_factor = pair_den / shell[m];
             temp += pcf[k][l][j+m] * norm_factor;
