@@ -33,15 +33,13 @@ set(COMMON Aggregates
            PairCorrel
 #          PairCorrelPerAgg
            SelectedVcf
-           test
            TransformVsf)
          foreach(utility ${COMMON})
   add_executable(${utility} Common/${utility}.c)
   target_link_libraries(${utility} m ${LIBRARIES})
 endforeach(utility)
 
-set(LINEAR EndToEnd
-           PersistenceLength)
+set(LINEAR EndToEnd)
          foreach(utility ${LINEAR})
   add_executable(${utility} Linear/${utility}.c)
   target_link_libraries(${utility} m ${LIBRARIES})
