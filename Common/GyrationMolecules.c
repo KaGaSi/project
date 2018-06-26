@@ -330,7 +330,6 @@ system.\n\n");
         } //}}}
 
         Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
-        fprintf(stderr, "eigen=(%lf,%lf,%lf)\n", eigen.x, eigen.y, eigen.z);
 
         free(list); // free array of bead ids for gyration calculation
 
@@ -403,10 +402,10 @@ system.\n\n");
     }
   } //}}}
 
-  // calculate simple averages //{{{
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(stdout, "%10s %lf\n", MoleculeType[i].Name, Rg_sum[i][0]/(count*MoleculeType[i].Number));
-  } //}}}
+//// calculate simple averages //{{{
+//for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+//  fprintf(stdout, "%10s %lf\n", MoleculeType[i].Name, Rg_sum[i][0]/(count*MoleculeType[i].Number));
+//} //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);

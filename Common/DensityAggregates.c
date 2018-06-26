@@ -33,7 +33,11 @@ int main(int argc, char *argv[]) {
 DensityAggregates utility calculates bead density for aggregates of given \
 size(s) from \
 their centre of mass. Beside unbonded beads it takes into account only beads \
-from the current aggregate, not from any other aggregate.\n\n");
+from the current aggregate, not from any other aggregate. \
+Care must be taken with beadtype names in molecule types, because if \
+one beadtype appears in more molecule types, the resulting density for that \
+beadtype will be averaged without regard for the various types of molecule it \
+comes from (in that case, use -x option with SelectedVcf utility).\n\n");
 
 /*      fprintf(stdout, "\
 The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
@@ -223,7 +227,6 @@ system.\n\n"); */
     FILE *out;
     char str[128];
     strcpy(str, output_rho);
-    printf("%s %s\n", str, output_rho);
 
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (specific_moltype_for_size[i]) {
@@ -624,14 +627,13 @@ system.\n\n"); */
     char str2[256];
     sprintf(str2, "%s%d.rho", str, agg_sizes[i][0]);
     strcpy(str, str2);
-    printf("%s\t%s\n", str, str2);
     if ((out = fopen(str, "a")) == NULL) {
       fprintf(stderr, "Cannot open file %s!\n", str);
       exit(1);
     }
 
     // calculate rdf
-    for (int j = 0; j < bins; j++) {
+    for (int j = 0; j < (bins-avg); j++) {
 
       // calculate volume of every shell that will be averaged
       double shell[avg];
@@ -702,7 +704,8 @@ system.\n\n"); */
     free(rho_2[i]);
   }
   free(rho);
-  free(rho_2); //}}}
+  free(rho_2);
+  free(specific_moltype_for_size); //}}}
 
   return 0;
 }
