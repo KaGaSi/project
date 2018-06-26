@@ -140,6 +140,11 @@ which molecule(s) it occurs. The density from the bead type in different
 molecule types will therefore be the sum of the densities from those
 molecules.
 
+Besides densities, the output files also contain radial number profiles
+(i.e., the numbers of beads in a thin spherical shell as a function of
+distance from aggregate centre of mass) and one-sigma errors for both the
+density and the radial number profiles.
+
 Usage:
 
 `DensityAggregates <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>`
