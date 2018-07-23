@@ -301,8 +301,25 @@ Also using the `--only <name>` uses only aggregates composed exclusively of a
 specified molecule type. On the contrary, `-x <name(s)>` option discounts
 aggregates containing only the specified molecules.
 
-Lastly, the calculations can be made only for a given range of aggregation
+Next, the calculations can be made only for a given range of aggregation
 numbers (specified by the `-m` option if present) if `-n` option is used.
+
+Lastly, it can calculate composition distribution, that is, if an
+aggregate of specified size can be composed of two molecule
+types `A` and `B` (or two types specified by `-m` option), the aggregate
+can contain various `A/B` molecule ratios\latexonly (or ratios
+$\xi=N_{\mathrm{A}}/N_{\mathrm{B}}$)\endlatexonly. The option `-c <int(s)>
+<name>` calculates number distribution of these ratios for every given size
+(or `<int(s)>`) and the distribution is written to file `<name>`.\latexonly
+This number distribution is defined as
+\begin{equation}
+  F_{\mathrm{n}}(\xi) = \frac{N_{\xi,A_{\mathrm{S}}}}{N_{A_{\mathrm{S}}}},
+\end{equation}
+where $N_{\xi,A_{\mathrm{S}}}$ is the number of aggregates with size
+$A_{\mathrm{S}}$ (possibly specified by the -m option) and ratio
+$\xi$ and $N_{A_{\mathrm{S}}}$ is the total
+number of aggregates with the given $A_{\mathrm{S}}$.
+\endlatexonly
 
 The utility reads information about aggregate from input file with
 [Aggregate format](\ref AggregateFile). This file can be generated using
@@ -329,10 +346,13 @@ Usage:
 > > `-m <name(s)>`
 > > > instead of aggregate size, use number of molecules of specified molecule
 > > > types
-> > `--only <molecule type name>`
-> > > use only aggregates composed of specified molecule type
 > > `-x <name(s)>`
 > > > exclude aggregates containing only specified molecule(s)
+> > `--only <molecule type name>`
+> > > use only aggregates composed of specified molecule type
+> > `-c <name> <int(s)>`
+> > > calculate composition distribution for specified aggregate size(s)
+> > > and write it to file `<name>`
 
 # GyrationAggregates utility {#GyrationAggregates}
 

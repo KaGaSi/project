@@ -136,6 +136,20 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value);
 bool TwoIntegerOption(int argc, char **argv, char *opt, int *values);
 // }}}
 
+// HundredIntegerOption() //{{{
+/**
+ * \brief Function for any option with two integer arguments.
+ *
+ * \param [in]  argc   number of program's arguments
+ * \param [in]  argv   program's arguments
+ * \param [in]  opt    option switch (e.g. array containing `-c`)
+ * \param [out] values array of two integer values of given option
+ * \param [out] n      number of numeric arguments
+ * \return `true` or `false` for error
+ */
+bool HundredIntegerOption(int argc, char **argv, char *opt, int *values, int *count, char *file);
+ //}}}
+
 // FileOption() //{{{
 /**
  * \brief Function for any option with filename.

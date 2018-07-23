@@ -301,6 +301,54 @@ bool TwoIntegerOption(int argc, char **argv, char *opt, int *values) {
   return(false);
 } //}}}
 
+// HundredIntOptions() //{{{
+/**
+ * Function for any option with up to 100 integer arguments. The option is an
+ * argument of this function.
+ */
+bool HundredIntegerOption(int argc, char **argv, char *opt, int *values, int *count, char *file) {
+
+  int n = 0;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], opt) == 0) {
+
+      // Error - no output file name //{{{
+      if ((i+1) >= argc || argv[i+1][0] == '-' ||
+          (argv[i+1][0] >= '0' && argv[i+1][0] <= '9')) {
+        fprintf(stderr, "Error: option '%s' - missing output file name", opt);
+        fprintf(stderr, " (or the file name begins with '-' or a number)\n");
+        return false;
+      } //}}}
+      strcpy(file, argv[i+1+n]);
+
+      // read integers
+      while ((i+2+n) < argc && argv[i+2+n][0] != '-') {
+
+        // Error - non-numeric or missing argument //{{{
+        if ((i+2+n) >= argc || argv[i+2+n][0] < '0' || argv[i+2+n][0] > '9') {
+          fprintf(stderr, "Error: option '%s' - non-numeric argement(s)\n", opt);
+          return true;
+        } //}}}
+
+        values[n] = atoi(argv[i+2+n]);
+
+        n++;
+        // warning - too many numeric arguments //{{{
+        if (n == 100) {
+          fprintf(stderr, "Warning: Option '%s' - too many numberic arguments; ", opt);
+          fprintf(stderr, "only first 100 used\n");
+          *count = n;
+          return(false);
+        } //}}}
+      }
+    }
+  }
+
+  *count = n;
+
+  return false;
+} //}}}
+
 // FileOption() //{{{
 /**
  * Generic option for file name. The option is an argument of this function.
