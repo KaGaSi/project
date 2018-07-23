@@ -10,15 +10,16 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input> <output distr file> <output avg file> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input>           input filename (agg format)\n");
-  fprintf(stderr, "   <distr file>      filename with weight and number distributions\n");
-  fprintf(stderr, "   <avg file>        filename with weight and number averages throughout simulation\n");
+  fprintf(stderr, "   <input>                input filename (agg format)\n");
+  fprintf(stderr, "   <distr file>           filename with weight and number distributions\n");
+  fprintf(stderr, "   <avg file>             filename with weight and number averages throughout simulation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -st <int>      start distribution calculation with <int>-th step\n");
-  fprintf(stderr, "      -n <int> <int> calculate for aggregate sizes in given range\n");
-  fprintf(stderr, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
-  fprintf(stderr, "      -x <name(s)>   exclude aggregates containing only specified molecule(s)\n");
-  fprintf(stderr, "      --only <name>  use just aggregates composed of a specified molecule\n");
+  fprintf(stderr, "      -st <int>           start distribution calculation with <int>-th step\n");
+  fprintf(stderr, "      -n <int> <int>      calculate for aggregate sizes in given range\n");
+  fprintf(stderr, "      -m <name>           agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
+  fprintf(stderr, "      --only <name>       use just aggregates composed of a specified molecule\n");
+  fprintf(stderr, "      -c <name> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
   CommonHelp(1);
 } //}}}
 
@@ -41,15 +42,16 @@ the system.\n\n");
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input>           input filename (agg format)\n");
-      fprintf(stdout, "   <distr file>      filename with weight and number distributions\n");
-      fprintf(stdout, "   <avg file>        filename with weight and number averages throughout simulation\n");
+      fprintf(stdout, "   <input>                input filename (agg format)\n");
+      fprintf(stdout, "   <distr file>           filename with weight and number distributions\n");
+      fprintf(stdout, "   <avg file>             filename with weight and number averages throughout simulation\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -st <int>      start distribution calculation with <int>-th step\n");
-      fprintf(stdout, "      -n <int> <int> calculate for aggregate sizes in given range\n");
-      fprintf(stdout, "      -m <name>      agg size means number of <name> molecule types in an aggregate\n");
-      fprintf(stdout, "      -x <name(s)>   exclude aggregates containing only specified molecule(s)\n");
-      fprintf(stdout, "      --only <name>  use just aggregates composed of a specified molecule\n");
+      fprintf(stdout, "      -st <int>           start distribution calculation with <int>-th step\n");
+      fprintf(stdout, "      -n <int> <int>      calculate for aggregate sizes in given range\n");
+      fprintf(stdout, "      -m <name>           agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
+      fprintf(stdout, "      --only <name>       use just aggregates composed of a specified molecule\n");
+      fprintf(stdout, "      -c <nama> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
       CommonHelp(0);
       exit(0);
     }
@@ -71,7 +73,8 @@ the system.\n\n");
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
-        strcmp(argv[i], "--only") != 0 ) {
+        strcmp(argv[i], "--only") != 0 &&
+        strcmp(argv[i], "-c") != 0 ) {
 
       fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
@@ -205,6 +208,31 @@ the system.\n\n");
   }
   //}}}
 
+  // '-c' option - aggregate sizes //{{{
+  int composition[100] = {0}, comp_number_of_sizes = 0,
+      types[2][2] = {{-1},{-1}}; // [x][0]: mol type; [x][1]: number of mols
+  char output_comp[32];
+  if (HundredIntegerOption(argc, argv, "-c", composition, &comp_number_of_sizes, output_comp)) {
+    exit(1);
+  }
+  if (comp_number_of_sizes > 0) {
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      if (specific_moltype_for_size[i] && types[0][0] == -1) {
+        types[0][0] = i;
+      } else if (specific_moltype_for_size[i] && types[0][0] != -1 && types[1][0] == -1) {
+        types[1][0] = i;
+      } else if (specific_moltype_for_size[i]) {
+        fprintf(stderr, "Error: '-c' option - more than two molecule types for composition distribution\n");
+        exit(1);
+      }
+    }
+    if (types[0][0] == -1 || types[1][0] == -1) {
+      fprintf(stderr, "Error: '-c' option - less than two molecule types for composition distribution\n");
+      exit(1);
+    }
+  }
+  //}}}
+
   // '--only' option //{{{
   int only_specific_moltype_aggregates = -1;
   if (MoleculeTypeOption(argc, argv, "--only", &only_specific_moltype_aggregates, Counts, &MoleculeType)) {
@@ -242,6 +270,11 @@ the system.\n\n");
   // volume distribution - probably works, but not really needed, so not sure
   // [][0] = volume of mols according to options; [][1] = volume of whole agg
   long int voldistr[Counts.Molecules][2];
+  // number distribution of agg composition
+  long int *ndistr_comp[Counts.Molecules];
+  for (int i = 0; i < Counts.Molecules; i++) {
+    ndistr_comp[i] = calloc(Counts.Molecules*100,sizeof(long int));
+  }
   // number of aggregates throughout simulation
   int count_agg[Counts.Molecules];
   // molecule typs in aggregates: [agg size][mol type][number or SQR(number)]
@@ -265,7 +298,7 @@ the system.\n\n");
   // print the first two lines to output file with per-step averages //{{{
   FILE *out;
   if ((out = fopen(output_avg, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_avg);
+    fprintf(stderr, "Error: cannot open file %s for writing\n", output_avg);
     exit(1);
   }
 
@@ -409,6 +442,35 @@ the system.\n\n");
         continue;
       } //}}}
 
+      // if '-c' is used calculate composition distribution //{{{
+      if (comp_number_of_sizes > 0) {
+        // use the size?
+        bool use_size_comp = false;
+        for (int j = 0; j < comp_number_of_sizes; j++) {
+          if (size == composition[j]) {
+            use_size_comp = true;
+            break;
+          }
+        }
+
+        if (use_size_comp) {
+          // count numbers of the two mol types in aggregate 'i'
+          types[0][1] = 0;
+          types[1][1] = 0;
+          for (int j = 1; j < Aggregate[i].nMolecules; j++) {
+            // molecule type
+            int id = Molecule[Aggregate[i].Molecule[j]].Type;
+            if (types[0][0] == id) {
+              types[0][1]++;
+            } else if (types[1][0] == id) {
+              types[1][1]++;
+            }
+          }
+          double ratio = (double)(types[0][1]) / types[1][1];
+          ndistr_comp[size][(int)(100*ratio)]++;
+        }
+      } //}}}
+
       // number of eligible aggregate for a step
       aggs_step++;
 
@@ -456,7 +518,7 @@ the system.\n\n");
       if (!script && !silent) {
         putchar('\n');
       }
-      fprintf(stderr, "Cannot open file %s!\n", output_avg);
+      fprintf(stderr, "Error: cannot open file %s for appending\n", output_avg);
       exit(1);
     }
 
@@ -486,7 +548,7 @@ the system.\n\n");
 
   // print the first two lines to output file with distributions //{{{
   if ((out = fopen(output_distr, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_distr);
+    fprintf(stderr, "Error: cannot open file %s for writing\n", output_distr);
     exit(1);
   }
 
@@ -515,7 +577,7 @@ the system.\n\n");
 
   // print distributions to output file //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_distr);
+    fprintf(stderr, "Error: cannot open file %s for appending\n", output_distr);
     exit(1);
   }
 
@@ -570,7 +632,7 @@ the system.\n\n");
 
   // open file with distribution //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_avg);
+    fprintf(stderr, "Error: cannot open file %s for appending\n", output_distr);
     exit(1);
   } //}}}
 
@@ -619,6 +681,54 @@ the system.\n\n");
   fclose(out); //}}}
   //}}}
 
+  // print composition distribution //{{{
+  // open file with composition distribution //{{{
+  if ((out = fopen(output_comp, "w")) == NULL) {
+    fprintf(stderr, "Error: cannot open file %s for writing\n", output_comp);
+    exit(1);
+  } //}}}
+
+  // print command //{{{
+  putc('#', out);
+  for (int i = 0; i < argc; i++){
+    fprintf(out, " %s", argv[i]);
+  }
+  putc('\n', out); //}}}
+
+  // print header line //{{{
+  fprintf(out, "# 1: ");
+  count = 0;
+  // molecule names
+  fprintf(out, "%s/%s; sizes - ", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
+  // aggregate sizes
+  for (int i = 0; i < comp_number_of_sizes; i++) {
+    fprintf(out, " %d: %d;", i+2, composition[i]);
+  }
+  putc('\n', out); //}}}
+
+  // normalization factor (simple sum)
+  long int sum = 0;
+  for (int i = 0; i < (100*Counts.Molecules); i++) {
+    for (int j = 0; j < comp_number_of_sizes; j++) {
+      sum += ndistr_comp[composition[j]][i];
+    }
+  }
+
+  // print data
+  for (int i = 0; i < (100*Counts.Molecules); i++) {
+    fprintf(out, "%5.2f", (double)(i)/100);
+    for (int j = 0; j < comp_number_of_sizes; j++) {
+      if (ndistr_comp[composition[j]][i] != 0) {
+        fprintf(out, " %6.3f", (double)(ndistr_comp[composition[j]][i])/sum);
+      } else {
+        fprintf(out, "       ?");
+      }
+    }
+    putc('\n', out);
+  }
+
+  fclose(out); //}}}
+
   // free memory - to make valgrind happy //{{{
   free(BeadType);
   FreeAggregate(Counts, &Aggregate);
@@ -629,7 +739,10 @@ the system.\n\n");
   for (int i = 0; i < Counts.Molecules; i++) {
     free(molecules_sum[i]);
   }
-  free(molecules_sum); //}}}
+  free(molecules_sum);
+  for (int i = 0; i < (Counts.Molecules); i++) {
+    free(ndistr_comp[i]);
+  } //}}}
 
   return 0;
 }
