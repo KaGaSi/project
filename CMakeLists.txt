@@ -32,6 +32,7 @@ set(COMMON Aggregates
 #          JoinRuns
            PairCorrel
 #          PairCorrelPerAgg
+           PotentialAggregates
            SelectedVcf
            TransformVsf)
          foreach(utility ${COMMON})

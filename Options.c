@@ -355,6 +355,8 @@ bool HundredIntegerOption(int argc, char **argv, char *opt, int *values, int *co
  */
 bool FileOption(int argc, char **argv, char *opt, char **name) {
 
+  name[0] = '\0';
+
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
 
