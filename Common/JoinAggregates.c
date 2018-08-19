@@ -300,7 +300,7 @@ system.\n\n");
     }
 
     // read aggregates //{{{
-    if (ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule)) {
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
       if (!script) { // end of line if \r is used for printing step number
         putchar('\n');
       }

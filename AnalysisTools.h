@@ -95,13 +95,16 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
  *
  * \param [in]  agg_file      name of input aggregate file
  * \param [in]  Counts        numbers of beads, molecules, etc.
+ * \param [in]  BeadType      information about bead types
+ * \param [out] Bead          information about individual beads
  * \param [out] Aggregate     information about aggregates
  * \param [in]  MoleculeType  information about molecule types
- * \param [in]  Molecule      information about individual molecules
+ * \param [out] Molecule      information about individual molecules
  * \return 1 if 'Last Step' detected or 0 for no error
  */
 bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
-                    MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+                    BeadType *BeadType, Bead **Bead,
+                    MoleculeType *MoleculeType, Molecule **Molecule); //}}}
 
 // WriteCoorIndexed //{{{
 /**

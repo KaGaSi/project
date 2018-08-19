@@ -356,7 +356,7 @@ the system.\n\n");
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule);
+    ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule);
 
     // print info about aggregates if '-V' is used //{{{
     if (verbose2) {

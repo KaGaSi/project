@@ -109,7 +109,7 @@ system.\n\n"); */
   // use bonds file? //{{{
   char *bonds_file = calloc(32,sizeof(char *));
   if (BondsFileOption(argc, argv, &bonds_file)) {
-    exit(0);
+    exit(1);
   } //}}}
 
   // output verbosity //{{{
@@ -415,7 +415,7 @@ system.\n\n"); */
       }
     } //}}}
 
-    if (ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule)) {
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
@@ -461,7 +461,7 @@ system.\n\n"); */
     } //}}}
 
     // read aggregates //{{{
-    if (ReadAggregates(agg, &Counts, &Aggregate, MoleculeType, Molecule)) {
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
@@ -638,7 +638,7 @@ system.\n\n"); */
       // calculate volume of every shell that will be averaged
       double shell[avg];
       for (int k = 0; k < avg; k++) {
-        shell[k] = 4 * PI * CUBE(width) *(CUBE(j+k+1) - CUBE(j+k)) / 3;
+        shell[k] = 4 * PI * CUBE(width) * (CUBE(j+k+1) - CUBE(j+k)) / 3;
       }
 
       fprintf(out, "%.2f", width*(j+0.5*avg));
