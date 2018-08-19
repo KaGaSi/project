@@ -66,7 +66,7 @@ Usage:
 `Average <filename> <column> <discard> <n_blocks>`
 
 > `<filename>`
-> > name of data filel
+> > name of data file
 > `<column>`
 > > column number in the file containing the data to analyze
 > `<discard>`
@@ -569,6 +569,71 @@ Usage:
 > > > number of bins to average
 > >  `-st <int>`
 > > > starting timestep for calculation
+
+# PotentialAggregates utility {#PotentialAggregates}
+
+This utility calculates electrostatic potential as a function of distance
+from the centre of mass of specified aggregate size(s). It calculates the
+electrostatic potential at every charged bead in the aggregate (both
+molecular beads and monomer beads). It then sums up all calculated
+potentials in the bins of specified widths at specified distance from the
+aggregate centre of mass.
+
+At long range, the potential is calculated using Coulomb potential.
+\latexonly
+That is,
+\begin{equation}
+  U^{\mathrm{long}}_{ij} = \frac{l_{\mathrm{B}} q_i q_j}{r_{ij}},
+\end{equation}
+where $l_{\mathrm{B}}$ is the Bjerrum length, $q_i$ and $q_j$ are charges
+of particles $i$ and $j$, and $r_{ij}$ is interparticle distance.
+\endlatexonly
+At short range, the potential is calculated using potential between two
+charges smeared with exponentially decreasing charge density.
+\latexonly
+That is,
+\begin{equation}
+  U^{\mathrm{short}}_{ij} = U^{\mathrm{long}}_{ij} \left[1 - \left(1 + \beta r_{ij}\right)\exp\left(-2 \beta r_{ij}\right)\right],
+\end{equation}
+where $\beta=\frac{5 r_{\mathrm{c}}}{8 \lambda}$ ($r_{\mathrm{c}}$ is
+cut-off distance and $\lambda$ is smearing constant).
+\endlatexonly
+It also calculates contributions from periodic images of the simulation box.
+Parameters of the potential are (for now) hard-coded in the sourcode:
+Bjerrum length `bjerrum=1.1` (aqueous conditions), cut-off distance
+`r_c=3`, charge smearing constant `lambda=0.2`, and number of periodic
+images of the simulation box `images=5`.
+
+The size of aggregate can be modified using `-m` and `-x` options similarly
+to [DensityAggregates](\ref DensityAggregates).
+
+Usage:
+
+`PotentialAggregates <input.vcf> <input.agg> <width> <output.txt> <agg size(s)> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
+> `<input.agg>`
+> > input filename (must end with `.agg`) containing information about
+> > aggregates
+> `<width>`
+> > width of each bin for the distribution
+> `<output.txt>`
+> > output file with electrostatic potential (automatic ending `agg#.txt`
+> > added)
+> `<agg size(s)>`
+> > aggregate sizes for calculation of electrostatic potential
+> `<options>`
+> > `--joined`
+> > > specify that the `<input.vcf>` contains aggregates with joined
+> > > coordinates
+> > `-st <int>`
+> > > starting timestep for calculation
+> > `-m <molecule type name>`
+> > > instead of aggregate size, use number of molecules of specified molecule
+> > > types
+> > `-x <name(s)>`
+> > > exclude specified molecule(s)
 
 <!--
 # PairCorrelPerAgg utility {#PairCorrelPerAgg}
