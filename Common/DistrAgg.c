@@ -209,6 +209,7 @@ the system.\n\n");
   //}}}
 
   // '-c' option - aggregate sizes //{{{
+  int multiply = 1000;
   int composition[100] = {0}, comp_number_of_sizes = 0,
       types[2][2] = {{-1},{-1}}; // [x][0]: mol type; [x][1]: number of mols
   char output_comp[32];
@@ -230,8 +231,11 @@ the system.\n\n");
       fprintf(stderr, "Error: '-c' option - less than two molecule types for composition distribution\n");
       exit(1);
     }
-  }
-  //}}}
+    for (int i = 0; i < comp_number_of_sizes; i++) {
+      composition[i]+=0;
+      printf("%d\n", composition[i]);
+    }
+  } //}}}
 
   // '--only' option //{{{
   int only_specific_moltype_aggregates = -1;
@@ -273,7 +277,7 @@ the system.\n\n");
   // number distribution of agg composition
   long int *ndistr_comp[Counts.Molecules];
   for (int i = 0; i < Counts.Molecules; i++) {
-    ndistr_comp[i] = calloc(Counts.Molecules*100,sizeof(long int));
+    ndistr_comp[i] = malloc((multiply*Counts.Molecules)*sizeof(long int));
   }
   // number of aggregates throughout simulation
   int count_agg[Counts.Molecules];
@@ -442,6 +446,12 @@ the system.\n\n");
         continue;
       } //}}}
 
+//    printf("%d:", size);
+//    for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+//      printf(" %d", Aggregate[i].Molecule[j]);
+//    }
+//    printf("\n");
+
       // if '-c' is used calculate composition distribution //{{{
       if (comp_number_of_sizes > 0) {
         // use the size?
@@ -454,10 +464,15 @@ the system.\n\n");
         }
 
         if (use_size_comp) {
+printf("xx %d:", size);
+for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+  printf(" %d", Aggregate[i].Molecule[j]);
+}
+printf("\n");
           // count numbers of the two mol types in aggregate 'i'
           types[0][1] = 0;
           types[1][1] = 0;
-          for (int j = 1; j < Aggregate[i].nMolecules; j++) {
+          for (int j = 0; j < Aggregate[i].nMolecules; j++) {
             // molecule type
             int id = Molecule[Aggregate[i].Molecule[j]].Type;
             if (types[0][0] == id) {
@@ -466,8 +481,9 @@ the system.\n\n");
               types[1][1]++;
             }
           }
+printf("%d: %d + %d\n", size, types[0][1], types[1][1]);
           double ratio = (double)(types[0][1]) / types[1][1];
-          ndistr_comp[size][(int)(100*ratio)]++;
+          ndistr_comp[size-1][(int)(ratio*multiply)]++;
         }
       } //}}}
 
@@ -707,24 +723,35 @@ the system.\n\n");
   putc('\n', out); //}}}
 
   // normalization factor (simple sum)
-  long int sum = 0;
-  for (int i = 0; i < (100*Counts.Molecules); i++) {
+  long int *sum = calloc(Counts.Molecules,sizeof(long int));
+  int low = multiply * Counts.Molecules;
+  bool *include = calloc((multiply*Counts.Molecules),sizeof(bool));
+  for (int i = 0; i < (multiply*Counts.Molecules); i++) {
     for (int j = 0; j < comp_number_of_sizes; j++) {
-      sum += ndistr_comp[composition[j]][i];
+      if (ndistr_comp[composition[j]-1][i] > 0 && low == (multiply*Counts.Molecules)) {
+        low = i;
+      }
+      if (ndistr_comp[composition[j]-1][i] > 0) {
+        include[i] = true;
+      }
+      sum[composition[j]-1] += ndistr_comp[composition[j]-1][i];
     }
   }
+printf("low=%lf\n", (double)(low)/multiply);
 
   // print data
-  for (int i = 0; i < (100*Counts.Molecules); i++) {
-    fprintf(out, "%5.2f", (double)(i)/100);
-    for (int j = 0; j < comp_number_of_sizes; j++) {
-      if (ndistr_comp[composition[j]][i] != 0) {
-        fprintf(out, " %6.3f", (double)(ndistr_comp[composition[j]][i])/sum);
-      } else {
-        fprintf(out, "       ?");
+  for (int i = low; i < (multiply*Counts.Molecules); i++) {
+    if (include[i]) {
+      fprintf(out, "%10.5f", (double)(i)/multiply);
+      for (int j = 0; j < comp_number_of_sizes; j++) {
+        if (ndistr_comp[composition[j]-1][i] != 0) {
+          fprintf(out, " %7.5f", (double)(ndistr_comp[composition[j]-1][i])/sum[composition[j]-1]);
+        } else {
+          fprintf(out, "       ?");
+        }
       }
+      putc('\n', out);
     }
-    putc('\n', out);
   }
 
   fclose(out); //}}}
@@ -742,7 +769,9 @@ the system.\n\n");
   free(molecules_sum);
   for (int i = 0; i < (Counts.Molecules); i++) {
     free(ndistr_comp[i]);
-  } //}}}
+  }
+  free(sum);
+  free(include); //}}}
 
   return 0;
 }
