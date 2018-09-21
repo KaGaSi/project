@@ -167,18 +167,18 @@ keywoard is ignored. Therefore, a `vcf` file with structure part can be
 used (as long as no atom named `pbc` is present and the box size line is
 after the structure part).
 
-Each timestep starts with a comment line (i.e., line
-starting with `#`), the second line contains `timestep indexed` (or the
-short version, `t i`), `c`(`oordinate`) `i`(`ndexed`), or just
-`i`(`ndexed`)  and each following line contains index and coordinates of a
-single bead. Not all beads from the `vsf` file must be present in the
-`vcf`, instead only selected bead types can be present (although all beads
-of the selected type(s) must be in all timesteps). Example of indexed
-coordinate file:
+Each timestep starts with a comment line (i.e., line starting with `#`),
+the second line contains `timestep indexed` (or the short version, `t i`),
+`c`(`oordinate`) `i`(`ndexed`), or just `i`(`ndexed`)  and each following
+line contains index and coordinates of a single bead. Not all beads from
+the `vsf` file must be present in the `vcf`, instead only selected bead
+types can be present (although all beads of the selected type(s) must be in
+all timesteps). The file cannot contain a tailing blank line (no check is
+made in any utility). Example of an indexed coordinate file:
 
 > `pbc <float> <float> <float>`
 >
-> `<blank line>`
+> `<blank line - necessary>`
 >
 > `# 1`
 >

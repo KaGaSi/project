@@ -1375,6 +1375,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
 
   // calculate molecule mass //{{{
+  count = 0; // to store id of the first molecule id of the given type
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     (*MoleculeType)[i].Mass = 0;
     for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
@@ -1382,6 +1383,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       int type = (*Bead)[id].Type;
       (*MoleculeType)[i].Mass += (*BeadType)[type].Mass;
     }
+    count += (*MoleculeType)[i].Number;
   } //}}}
 
   // calculate number of (un)bonded beads //{{{
