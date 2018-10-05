@@ -361,6 +361,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       continue;
     } //}}}
 
+//printf("%s\n", line);
+
     // split the line into array //{{{
     char *split[30];
     split[0] = strtok(line, " \t");
@@ -567,6 +569,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       (*Bead)[i].Type = type_default;
       (*Bead)[i].Index = i;
       (*Bead)[i].Molecule = -1; // default beads aren't in molecules
+      count++;
+    } else if ((*Bead)[i].Type == type_default) { // default type beads explicitly specified by 'atom' line
       count++;
     }
   }

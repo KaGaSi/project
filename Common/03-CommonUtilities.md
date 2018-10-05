@@ -216,6 +216,37 @@ Usage:
 > > `-c x/<int>`
 > > > use specified molecule bead instead of centre of mass
 
+# DihedralMoelcules {#DihedralMoelcules}
+
+DihedralMoelcules calculated angles between specified planes in a molecule
+for given molecule type(s). It prints the angles for all molecules for each
+timestep into the output file.
+
+For each molecule type, a multiple of four bead ids must be specified
+(according to the order of molecule's bead ids in an input file). If `1 2 3
+4` is given, the angle between planes specified by `1 2 3` and `2 3 4`. The
+utility does not check bonds in the molecule, so angle between any two
+planes in the molecules can be specified.
+
+Starting timestep can also be specified.
+
+Usage:
+
+`DihedralMolecules <input.vcf> <molecule(s)> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
+> `<mol name(s)>`
+> > names of molecule types to calculate density for
+> `<options>`
+> > `--joined`
+> > > specify that the `<input.vcf>` contains aggregates with joined
+> > > coordinates
+> > `-a <name> <ints>`
+> > > output filename and a series of four bead ids for angle calculation
+> > `-st <int>`
+> > > starting timestep for the calculation
+
 # DistrAgg utility {#DistrAgg}
 
 DistrAgg calculates number and weight average aggregation masses for each

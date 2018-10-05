@@ -338,7 +338,7 @@ bool HundredIntegerOption(int argc, char **argv, char *opt, int *values, int *co
           fprintf(stderr, "Warning: Option '%s' - too many numberic arguments; ", opt);
           fprintf(stderr, "only first 100 used\n");
           *count = n;
-          return(false);
+          return true;
         } //}}}
       }
     }

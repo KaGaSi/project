@@ -25,6 +25,7 @@ set(COMMON Aggregates
            Config
            DensityAggregates
            DensityMolecules
+           DihedralMolecules
            DistrAgg
            GyrationAggregates
            GyrationMolecules
