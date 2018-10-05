@@ -59,7 +59,7 @@ the system.\n\n");
   }
 
   if (count < mandatory) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, mandatory);
+    fprintf(stderr, "Error: too little mandatory arguments (%d instead of at least %d)\n\n", count, mandatory);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -77,7 +77,7 @@ the system.\n\n");
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "Error: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -126,14 +126,14 @@ the system.\n\n");
 
   count = 0; // count mandatory arguments
 
-  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
+  // <input.vcf> - filename of input vcf file //{{{
   char input_vcf[32];
   strcpy(input_vcf, argv[++count]);
 
-  // test if <input.vcf> filename ends with '.vsf' (required by VMD)
+  // test if <input.vcf> filename ends with '.vcf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "Error: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -141,7 +141,7 @@ the system.\n\n");
   // <width> - width of single bin //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <width>!\n");
+    fprintf(stderr, "Error: non-numeric argement for <width>\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -170,7 +170,7 @@ the system.\n\n");
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", argv[count], input_vcf);
+      fprintf(stderr, "Error: bead type '%s' not present in %s file\n\n", argv[count], input_vcf);
       exit(1);
     }
 
@@ -180,7 +180,7 @@ the system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "Error: cannot open file %s\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -189,7 +189,7 @@ the system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "Error: cannot read a string from '%s' file\n\n", input_vcf);
     }
   } while (strcmp(str, "pbc") != 0);
 
@@ -215,7 +215,7 @@ the system.\n\n");
   // write initial stuff to output pcf file //{{{
   FILE *out;
   if ((out = fopen(output_pcf, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_pcf);
+    fprintf(stderr, "Error: cannot open file %s for writing\n\n", output_pcf);
     exit(1);
   }
 
@@ -288,7 +288,7 @@ the system.\n\n");
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Premature end of %s file!\n", input_vcf);
+      fprintf(stderr, "Error: premature end of %s file\n\n", input_vcf);
       exit(1);
     }
   }
@@ -327,7 +327,7 @@ the system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -337,7 +337,7 @@ the system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "Error: cannot read coordinates from %s! (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -400,7 +400,7 @@ the system.\n\n");
 
   // write data to output file(s) //{{{
   if ((out = fopen(output_pcf, "a")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", str);
+    fprintf(stderr, "Error: cannot open file %s for appending\n\n", str);
     exit(1);
   }
 
