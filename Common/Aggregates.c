@@ -523,7 +523,7 @@ system.\n\n");
         strcmp(argv[i], "-x") != 0 &&
         strcmp(argv[i], "-j") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "Error: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -536,7 +536,7 @@ system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
+    fprintf(stderr, "Error: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -585,7 +585,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "Error: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -593,7 +593,7 @@ system.\n\n");
   // <distance> - number of starting timestep //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <distance>!\n");
+    fprintf(stderr, "Error: non-numeric argument for <distance>\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -602,7 +602,7 @@ system.\n\n");
   // <contacts> - number of steps to skip per one used //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <contacts>!\n");
+    fprintf(stderr, "Error: non-numeric argument for <contacts>\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -615,7 +615,7 @@ system.\n\n");
   // test if <output.agg> filename ends with '.agg' (required by VMD)
   dot = strrchr(output_agg, '.');
   if (!dot || strcmp(dot, ".agg")) {
-    fprintf(stderr, "<output.agg> '%s' does not have .agg ending!\n", output_agg);
+    fprintf(stderr, "Error: <output.agg> '%s' does not have .agg ending\n\n", output_agg);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -639,7 +639,7 @@ system.\n\n");
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", argv[count], input_vcf);
+      fprintf(stderr, "Error: bead type '%s' is not in %s file\n\n", argv[count], input_vcf);
       exit(1);
     }
 
@@ -658,7 +658,7 @@ system.\n\n");
   // print command to output .agg file //{{{
   FILE *out;
   if ((out = fopen(output_agg, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_agg);
+    fprintf(stderr, "Error: cannot open file %s for writing\n\n", output_agg);
     exit(1);
   }
 
@@ -672,7 +672,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "Error: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -681,7 +681,7 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "Error: cannot read a string from '%s' file\n\n", input_vcf);
     }
   } while (strcmp(str, "pbc") != 0);
 
@@ -716,7 +716,7 @@ system.\n\n");
     // open <joined.vcf>
     FILE *joined;
     if ((joined = fopen(joined_vcf, "w")) == NULL) {
-      fprintf(stderr, "Cannot open output %s vcf file!\n", joined_vcf);
+      fprintf(stderr, "Error: cannot open %s file for writing\n\n", joined_vcf);
       exit(1);
     }
 
@@ -787,8 +787,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Error: %s - cannot read coordinates (bead %d; step %d, '%s')\n",
-                input_vcf, count, test, stuff);
+        fprintf(stderr, "Error: %s - cannot read coordinates (bead %d; step %d - '%s')\n\n", input_vcf, count, test, stuff);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -798,7 +797,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "Error: %s - cannot read coordinates (bead %d; step %d - '%s')\n\n", input_vcf, count, test, stuff);
         exit(1);
       }
     } //}}}
@@ -815,7 +814,7 @@ system.\n\n");
       // open <joined.vcf> file //{{{
       FILE *joined;
       if ((joined = fopen(joined_vcf, "a")) == NULL) {
-        fprintf(stderr, "Cannot open output %s vcf file!\n", joined_vcf);
+        fprintf(stderr, "Error: cannot open %s file for appending\n\n", joined_vcf);
         exit(1);
       } //}}}
 
@@ -826,7 +825,7 @@ system.\n\n");
 
     // open output .agg file for appending //{{{
     if ((out = fopen(output_agg, "a")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", output_agg);
+      fprintf(stderr, "Error: cannot open file %s for appending\n\n", output_agg);
       exit(1);
     } //}}}
 
@@ -852,8 +851,8 @@ system.\n\n");
 
     // are all molecules accounted for? //{{{
     if (test_count != Counts.Molecules) {
-      fprintf(stderr, "Not all molecules were assigned to aggregates!\n");
-      fprintf(stderr, "Counts.Molecules = %5d; Molecules in aggregates: %d\n", Counts.Molecules, test_count);
+      fprintf(stderr, "Error: not all molecules were assigned to aggregates!\n");
+      fprintf(stderr, "       Counts.Molecules = %5d; Molecules in aggregates: %d\n\n", Counts.Molecules, test_count);
       exit(1);
     } //}}}
 
@@ -903,7 +902,7 @@ system.\n\n");
   // print last step number to <output.agg> //{{{
   // open output .agg file for appending
   if ((out = fopen(output_agg, "a")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_agg);
+    fprintf(stderr, "Error: cannot open file %s for appending\n\n", output_agg);
     exit(1);
   }
 

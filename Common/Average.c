@@ -61,7 +61,7 @@ can be considered a good estimate for tau.\n\n");
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-h") != 0 ) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "Error: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -74,7 +74,7 @@ can be considered a good estimate for tau.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of %d)!\n\n", count, options);
+    fprintf(stderr, "Error: too few mandatory arguments (%d instead of %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -88,7 +88,7 @@ can be considered a good estimate for tau.\n\n");
   // <column> - column number to analyze //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <column>!\n");
+    fprintf(stderr, "Error: non-numeric argument for <column>\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -97,7 +97,7 @@ can be considered a good estimate for tau.\n\n");
   // <discard> - number of lines to discard from the file beginning //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <discard>!\n");
+    fprintf(stderr, "Error: non-numeric argument for <discard>\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -106,7 +106,7 @@ can be considered a good estimate for tau.\n\n");
   // <n_blocks> - number of blocks for binning //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <n_block>!\n");
+    fprintf(stderr, "Error: non-numeric argument for <n_block>\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -117,7 +117,7 @@ can be considered a good estimate for tau.\n\n");
   // read data from <input> file //{{{
   FILE *fr;
   if ((fr = fopen(input, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input);
+    fprintf(stderr, "Error: cannot open file %s for reading\n\n", input);
     exit(1);
   }
 
@@ -181,8 +181,8 @@ can be considered a good estimate for tau.\n\n");
 
   // error - <discard> is too large //{{{
   if (discard >= lines) {
-    fprintf(stderr, "<discard> parameter is too large (%d) - ", discard);
-    fprintf(stderr, "there are only %d data lines in %s!\n", lines, input);
+    fprintf(stderr, "Error: <discard> parameter is too large (%d) - ", discard);
+    fprintf(stderr, "there are only %d data lines in %s\n\n", lines, input);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}

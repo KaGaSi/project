@@ -27,7 +27,7 @@ void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
   // opten structure file //{{{
   FILE *fw;
   if ((fw = fopen(vsf_file, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file input.vsf for writing!\n");
+    fprintf(stderr, "\nError: cannot open file input.vsf for writing\n\n");
     exit(1);
   } //}}}
 
@@ -131,7 +131,7 @@ system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -148,7 +148,7 @@ system.\n\n");
         strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -181,7 +181,7 @@ system.\n\n");
   // test if <output.vsf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(output, '.');
   if (!dot || strcmp(dot, ".vsf")) {
-    fprintf(stderr, "<output.vsf> %s does not have .vsf ending!\n", output);
+    fprintf(stderr, "\nError: <output.vsf> %s does not have .vsf ending\n\n", output);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}

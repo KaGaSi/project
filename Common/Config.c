@@ -52,7 +52,7 @@ system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -68,7 +68,7 @@ system.\n\n");
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -118,7 +118,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -144,7 +144,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   }
 
@@ -156,7 +156,7 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
     }
   } while (strcmp(str, "pbc") != 0);
 
@@ -205,7 +205,7 @@ system.\n\n");
     fgetpos(vcf, &pos);
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\nPremature end of %s file!\n", input_vcf);
+      fprintf(stderr, "\n\nError: premature end of %s file\n\n", input_vcf);
       pos = pos_old;
       count--;
     }
@@ -221,13 +221,13 @@ system.\n\n");
   // read indexed timestep from input .vcf file //{{{
   if (indexed) {
     if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
-      fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
       exit(1);
     } //}}}
   // or read ordered timestep from input .vcf file //{{{
   } else {
     if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-      fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
       exit(1);
     }
   } //}}}
@@ -247,7 +247,7 @@ system.\n\n");
   // open output CONFIG file for writing //{{{
   FILE *out;
   if ((out = fopen("CONFIG", "w")) == NULL) {
-    fprintf(stderr, "Cannot open file CONFIG!\n");
+    fprintf(stderr, "\n\nError: cannot open file CONFIG for writing\n\n");
     exit(1);
   } //}}}
 

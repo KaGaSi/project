@@ -63,7 +63,7 @@ the system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Error: too little mandatory arguments (%d instead of %d)\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -83,7 +83,7 @@ the system.\n\n");
         strcmp(argv[i], "-sk") != 0 &&
         strcmp(argv[i], "-x") != 0) {
 
-      fprintf(stderr, "Error: non-existent option '%s'\n\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -142,7 +142,7 @@ the system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "Error: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -154,7 +154,7 @@ the system.\n\n");
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
   dot = strrchr(output_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "Error: <output.vcf> '%s' does not have .vcf ending\n\n", output_vcf);
+    fprintf(stderr, "\nError: <output.vcf> '%s' does not have .vcf ending\n\n", output_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -177,7 +177,7 @@ the system.\n\n");
     int type = FindBeadType(argv[count], Counts, BeadType);
 
     if (type == -1) {
-      fprintf(stderr, "Error: bead type '%s' is not in %s file\n\n", argv[count], input_vcf);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n", argv[count], input_vcf);
       exit(1);
     }
 
@@ -206,7 +206,7 @@ the system.\n\n");
   // print selected bead type names to output .vcf file //{{{
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for writing\n\n", output_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_vcf);
     exit(1);
   }
 
@@ -232,7 +232,7 @@ the system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for reading\n\n", input_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -241,14 +241,15 @@ the system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Error: cannot read a string from '%s' file\n\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
     exit(1);
   }
 
@@ -266,7 +267,7 @@ the system.\n\n");
 
   // print pbc to output .vcf file //{{{
   if ((out = fopen(output_vcf, "a")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for appending\n\n", output_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_vcf);
     exit(1);
   }
 
@@ -297,7 +298,7 @@ the system.\n\n");
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Error: premature end of %s file\n\n", input_vcf);
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
       exit(1);
     }
   }
@@ -313,7 +314,7 @@ the system.\n\n");
 
   // is the vcf file continuing? //{{{
   if ((test = getc(vcf)) == EOF) {
-    fprintf(stderr, "Error: %s - Number of discard steps is lower (or equal) to the total number of steps\n", input_vcf);
+    fprintf(stderr, "\nError: %s - number of discard steps is lower (or equal) to the total number of steps\n\n", input_vcf);
     exit(1);
   } else {
     ungetc(test,vcf);
@@ -331,7 +332,7 @@ the system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -341,7 +342,7 @@ the system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -390,7 +391,7 @@ the system.\n\n");
       if (!script && !silent) {
         putchar('\n');
       }
-      fprintf(stderr, "Error: cannot open file %s for appending\n\n", output_vcf);
+      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_vcf);
       exit(1);
     } //}}}
 
@@ -422,7 +423,7 @@ the system.\n\n");
           if (!script && !silent) {
             putchar('\n');
           }
-          fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
+          fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
           exit(1);
         } //}}}
       // or read ordered timestep from input .vcf file //{{{
@@ -432,7 +433,7 @@ the system.\n\n");
           if (!script && !silent) {
             putchar('\n');
           }
-          fprintf(stderr, "Cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
+          fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
           exit(1);
         }
       } //}}}
