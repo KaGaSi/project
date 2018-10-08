@@ -77,7 +77,7 @@ system.\n\n");
         strcmp(argv[i], "-ps") != 0 &&
         strcmp(argv[i], "-n") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -90,7 +90,7 @@ system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -143,7 +143,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -203,7 +203,7 @@ system.\n\n");
   // write initial stuff to output file //{{{
   FILE *out;
   if ((out = fopen(output, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output);
+    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output);
     exit(1);
   }
 
@@ -226,7 +226,7 @@ system.\n\n");
   // open input aggregate file and read info from first line (Aggregates command) //{{{
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_agg);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_agg);
     exit(1);
   }
 
@@ -261,7 +261,7 @@ system.\n\n");
 
   // open again for production run - to ensure the pointer position in file is correct (at first 'Step')
   if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_agg);
+    fprintf(stderr, "Error: cannot open file %s for reading\n\n", input_agg);
     exit(1);
   }
 
@@ -273,7 +273,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -282,14 +282,15 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
+    fprintf(stderr, "Error: cannot read pbc from %s\n\n", input_vcf);
     exit(1);
   }
 
@@ -381,7 +382,7 @@ system.\n\n");
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "Error: premature end of %s file (after %d. step)\n", input_agg, count);
+      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, count, stuff);
       break;
     } //}}}
 
@@ -392,7 +393,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -402,7 +403,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -487,7 +488,7 @@ system.\n\n");
           double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
 
           if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
-            fprintf(stderr, "Negative eigenvalues! (%lf, %lf, %lf)\n", eigen.x, eigen.y, eigen.z);
+            fprintf(stderr, "Error: negative eigenvalues (%lf, %lf, %lf)\n\n", eigen.x, eigen.y, eigen.z);
           }
           // agg masses
           mass_step[0] += agg_mass; // for this timestep
@@ -548,7 +549,7 @@ system.\n\n");
       if (!script && !silent) {
         putchar('\n');
       }
-      fprintf(stderr, "Cannot open file %s!\n", output);
+      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output);
       exit(1);
     } //}}}
 
@@ -622,7 +623,7 @@ system.\n\n");
     // open file //{{{
     FILE *out;
     if ((out = fopen(per_size_file, "w")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", per_size_file);
+      fprintf(stderr, "\nError: cannot open file %s for writing\n\n", per_size_file);
       exit(1);
     } //}}}
 
@@ -696,7 +697,7 @@ system.\n\n");
 
   // print to output file
   if ((out = fopen(output, "a")) == NULL) { //{{{
-    fprintf(stderr, "Cannot open file %s!\n", output);
+    fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output);
     exit(1);
   } //}}}
 

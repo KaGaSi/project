@@ -72,7 +72,7 @@ system.\n\n"); */
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -93,7 +93,7 @@ system.\n\n"); */
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 ) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -152,7 +152,7 @@ system.\n\n"); */
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -164,7 +164,7 @@ system.\n\n"); */
   // <width> - width of single bin //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <width>!\n");
+    fprintf(stderr, "\nError: non-numeric argement for <width>\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -217,7 +217,7 @@ system.\n\n"); */
 
     // Error - non-numeric argument //{{{
     if (argv[count][0] < '1' || argv[count][0] > '9') {
-      fprintf(stderr, "Non-numeric option in <agg sizes>!\n");
+      fprintf(stderr, "\nError: non-numeric option in <agg sizes>\n\n");
       exit(1);
     } //}}}
 
@@ -239,7 +239,7 @@ system.\n\n"); */
     sprintf(str2, "%s%d.rho", str, agg_sizes[aggs][0]);
     strcpy(str, str2);
     if ((out = fopen(str, "w")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", str);
+      fprintf(stderr, "\nError: cannot open file %s for writing\n\n", str);
       exit(1);
     }
 
@@ -266,7 +266,7 @@ system.\n\n"); */
   FILE *agg;
   // open for the first time to read the distance and type names
   if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_agg);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_agg);
     exit(1);
   }
 
@@ -316,7 +316,7 @@ system.\n\n"); */
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -325,14 +325,15 @@ system.\n\n"); */
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
     exit(1);
   }
 
@@ -420,12 +421,12 @@ system.\n\n"); */
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "Error: premature end of %s file (after %d. step)\n", input_agg, count);
+      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
       test = '\0';
       break;
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Error: premature end of %s file (%d. step)\n", input_vcf, --count);
+      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
       exit(1);
     }
   }
@@ -467,7 +468,7 @@ system.\n\n"); */
       }
       count--; // because last step isn't processed
       test = start - 1 + count; // total number of processed steps in agg file
-      fprintf(stderr, "Error: premature end of %s file (after %d. step)!\n", input_agg, test);
+      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, test, stuff);
       break;
     } //}}}
 
@@ -478,7 +479,7 @@ system.\n\n"); */
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -488,7 +489,7 @@ system.\n\n"); */
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -628,7 +629,7 @@ system.\n\n"); */
     sprintf(str2, "%s%d.rho", str, agg_sizes[i][0]);
     strcpy(str, str2);
     if ((out = fopen(str, "a")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", str);
+      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", str);
       exit(1);
     }
 

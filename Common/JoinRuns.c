@@ -64,7 +64,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -85,7 +85,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
         strcmp(argv[i], "-sk1") != 0 &&
         strcmp(argv[i], "-sk2") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -164,7 +164,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // test if <1st input.vcf> filename ends with '.vcf' (required by VMD)
   char *dot = strrchr(input_vcf_1, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf_1);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf_1);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -176,7 +176,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // test if <1st input.vcf> filename ends with '.vcf' (required by VMD)
   dot = strrchr(input_vcf_2, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf_2);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf_2);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -188,7 +188,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // test if <1st input.vcf> filename ends with '.vcf' (required by VMD)
   dot = strrchr(vsf_file_2, '.');
   if (!dot || strcmp(dot, ".vsf")) {
-    fprintf(stderr, "<2nd input.vsf> '%s' does not have .vsf ending!\n", vsf_file_2);
+    fprintf(stderr, "\nError: <2nd input.vsf> '%s' does not have .vsf ending\n\n", vsf_file_2);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -200,7 +200,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
   dot = strrchr(output_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<output.vcf> '%s' does not have .vcf ending!\n", output_vcf);
+    fprintf(stderr, "\nError: <output.vcf> '%s' does not have .vcf ending\n\n", output_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -232,7 +232,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     int type = FindBeadType(argv[count], Counts, BeadType1);
 
     if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s or %s coordinate file!\n", argv[count], input_vcf_1, input_vcf_2);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s or %s coordinate file\n\n", argv[count], input_vcf_1, input_vcf_2);
       exit(1);
     }
 
@@ -242,7 +242,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // print selected bead type names to output .vcf file //{{{
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_vcf);
     exit(1);
   }
 
@@ -268,11 +268,11 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // open input coordinate files //{{{
   FILE *vcf_1, *vcf_2;
   if ((vcf_1 = fopen(input_vcf_1, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf_1);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf_1);
     exit(1);
   }
   if ((vcf_2 = fopen(input_vcf_2, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf_2);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf_2);
     exit(1);
   } //}}}
 
@@ -281,14 +281,14 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // 1st vcf file - skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf_1, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf_1);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf_1);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf_1, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf_1);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf_1);
     exit(1);
   }
   // skip remainder of pbc line
@@ -301,7 +301,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // 2nd vcf file - skip till 'pbc' keword //{{{
   do {
     if (fscanf(vcf_2, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf_2);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf_2);
     }
   } while (strcmp(str, "pbc") != 0);
   // skip remainder of pbc line
@@ -319,7 +319,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
   // print pbc to output .vcf file //{{{
   if ((out = fopen(output_vcf, "a")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_vcf);
     exit(1);
   }
 
@@ -363,7 +363,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_1, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -373,7 +373,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_1, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -422,7 +422,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
       if (!script && !silent) {
         putchar('\n');
       }
-      fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_vcf);
       exit(1);
     } //}}}
 
@@ -448,7 +448,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
           if (!script && !silent) {
             putchar('\n');
           }
-          fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_1, count, test);
+          fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf_1, count, stuff, test);
           exit(1);
         } //}}}
       // or read ordered timestep from input .vcf file //{{{
@@ -458,7 +458,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
           if (!script && !silent) {
             putchar('\n');
           }
-          fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_1, count, test);
+          fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf_1, count, stuff, test);
           exit(1);
         }
       } //}}}
@@ -504,7 +504,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_2, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf_2, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -514,7 +514,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_2, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf_2, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -563,7 +563,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
       if (!script && !silent) {
         putchar('\n');
       }
-      fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_vcf);
       exit(1);
     } //}}}
 
@@ -625,7 +625,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
           if (!script && !silent) {
             putchar('\n');
           }
-          fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_2, count, test);
+          fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf_2, count, stuff, test);
           exit(1);
         } //}}}
       // or read ordered timestep from input .vcf file //{{{
@@ -635,7 +635,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
           if (!script && !silent) {
             putchar('\n');
           }
-          fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf_2, count, test);
+          fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf_2, count, stuff, test);
           exit(1);
         }
       } //}}}

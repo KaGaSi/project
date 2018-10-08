@@ -12,8 +12,8 @@ set(CMAKE_C_FLAGS "-std=c11 -Wall -Werror") # always stop on errors
 set(CMAKE_C_FLAGS_DEBUG "-ggdb -g") # for -DCMAKE_BUILD_TYPE=Debug
 set(CMAKE_C_FLAGS_RELEASE "-O3") # for -DCMAKE_BUILD_TYPE=Release
 
-set(LIBRARIES AnalysisTools
-              Options)
+set(LIBRARIES Options
+              AnalysisTools)
 foreach(library ${LIBRARIES})
   add_library(${library} ${library}.c)
 endforeach(library)
@@ -23,6 +23,7 @@ set(COMMON Aggregates
            Average
            BondLength
            Config
+           Config_from_xyz
            DensityAggregates
            DensityMolecules
            DihedralMolecules
@@ -32,7 +33,6 @@ set(COMMON Aggregates
            JoinAggregates
 #          JoinRuns
            PairCorrel
-#          PairCorrelPerAgg
            PotentialAggregates
            SelectedVcf
            TransformVsf)

@@ -74,7 +74,7 @@ Usage:
 > `<n_blocks>`
 > > number of blocks for binning analysis
 
-# BondLength utility — not extensively used or tested {#BondLength}
+# BondLength utility {#BondLength}
 
 BondLength utility calculates normalised distribution of bond length for
 specified molecule types.
@@ -106,6 +106,33 @@ not be able to be used to start a simulation rune using DL\_MESO software.
 Usage:
 
 `Config <input.vcf> <options>`
+
+> `<input.vcf>`
+> > input coordinate filename (must end with `.vcf`) containing indexed timesteps
+> `<options>`
+> > `-st <int>`
+> > > timestep for creating the CONFIG file (if the number is higher than the
+> > > number of steps, the last step is used)
+
+# Config_from_xyz utility {#Configfromxyz}
+
+This utility takes `.xyz` file containing all beads
+and creates `CONFIG` file (file containing initial coordinates for a
+simulation via [DL_MESO simulation
+package](http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx)).
+
+The `.xyz` must have the following format (no blank lines are allowed with
+the possible exception of a comment line at the beginning of each step):
+
+`<int(number of beads in a timestep, or the lines of coordinates per step)>`
+
+`Comment line`
+
+`<bead name> <float> <float> <float>`
+
+Usage:
+
+`Config_from_xyz <input.vcf> <options>`
 
 > `<input.vcf>`
 > > input coordinate filename (must end with `.vcf`) containing indexed timesteps
