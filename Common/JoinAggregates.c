@@ -53,7 +53,7 @@ system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)!\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -69,7 +69,7 @@ system.\n\n");
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -113,7 +113,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -129,7 +129,7 @@ system.\n\n");
   // test if <output.agg> filename ends with '.vcf' (required by VMD)
   dot = strrchr(output_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<output.vcf> '%s' does not have .agg ending!\n", output_vcf);
+    fprintf(stderr, "\nError: <output.vcf> '%s' does not have .agg ending\n\n", output_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -155,7 +155,7 @@ system.\n\n");
   // open input aggregate file and read info from first line (Aggregates command) //{{{
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_agg);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_agg);
     exit(1);
   }
 
@@ -177,7 +177,7 @@ system.\n\n");
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", name, input_vcf);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n", name, input_vcf);
       exit(1);
     }
 
@@ -198,7 +198,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -207,14 +207,15 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
     exit(1);
   }
 
@@ -238,7 +239,7 @@ system.\n\n");
   // open <joined.vcf>
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
-    fprintf(stderr, "Cannot open output %s vcf file!\n", output_vcf);
+    fprintf(stderr, "\nError: cannot open %s file for writing\n\n", output_vcf);
     exit(1);
   }
 
@@ -305,7 +306,7 @@ system.\n\n");
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "Err: premature end of %s file (%d. step)\n", input_agg, count);
+      fprintf(stderr, "\nError: premature end of %s file (%d. step - '%s')\n\n", input_agg, count, stuff);
       break;
     } //}}}
 
@@ -316,7 +317,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -326,7 +327,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -340,7 +341,7 @@ system.\n\n");
       if (!script && !silent) {
         putchar('\n');
       }
-      fprintf(stderr, "Cannot open file %s!\n", output_vcf);
+      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_vcf);
       exit(1);
     } //}}}
 

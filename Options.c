@@ -3,8 +3,8 @@
 #include <string.h>
 #include <math.h>
 #include <stdbool.h>
-#include "AnalysisTools.h"
 #include "Options.h"
+#include "AnalysisTools.h"
 
 // VsfFileOption() //{{{
 /**
@@ -142,12 +142,12 @@ bool ExcludeOption(int argc, char **argv, Counts Counts,
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
 
         if (type == -1) { // is it in FIELD?
-          fprintf(stderr, "Non-existent molecule name (%s)!\n", argv[i+1+j]);
+          fprintf(stderr, "Error: non-existent molecule name (%s)\n", argv[i+1+j]);
           fprintf(stderr, "Molecule names in FIELD:\n");
           for (int k = 0; k < Counts.TypesOfMolecules; k++) {
             fprintf(stderr, "%3d %s\n", k, (*MoleculeType)[k].Name);
           }
-
+          putc('\n', stderr);
           return(true);
         } else {
           // exclude that molecule

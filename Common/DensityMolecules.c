@@ -73,7 +73,7 @@ system.\n\n");
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-c") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -86,7 +86,7 @@ system.\n\n");
   }
 
   if (count < 4) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -144,7 +144,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -152,7 +152,7 @@ system.\n\n");
   // <width> - number of starting timestep //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Non-numeric argement for <width>!\n");
+    fprintf(stderr, "Error: non-numeric argument for <width>\n\n");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -182,7 +182,7 @@ system.\n\n");
     fprintf(stdout, "%s\n", argv[count]);
 
     if (mol_type == -1) {
-      fprintf(stderr, "Molecule '%s' does not exist in FIELD!\n", argv[count]);
+      fprintf(stderr, "\nError: molecule '%s' does not exist in FIELD\n\n", argv[count]);
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -231,7 +231,7 @@ system.\n\n");
 
         // Error - non-numeric or non-"x" argument //{{{
         if ((argv[i+j][0] < '0' || argv[i+j][0] > '9') && argv[i+j][0] != 'x') {
-          fprintf(stderr, "Wrong argement for '-c' option!\n");
+          fprintf(stderr, "Error: wrong argement for '-c' option\n\n");
           ErrorHelp(argv[0]);
           exit(1);
         } //}}}
@@ -252,7 +252,7 @@ system.\n\n");
 
           // Error - too high bead number //{{{
           if (centre[used_mols-1] > MoleculeType[j-1].nBeads) {
-            fprintf(stderr, "Incorrect number in '-c' option (%dth bead in molecule"
+            fprintf(stderr, "Error: incorrect number in '-c' option (%dth bead in molecule"
               "%s containing only %d beads)\n", centre[j-1]+1, MoleculeType[j-1].Name,
               MoleculeType[j-1].nBeads);
             exit(1);
@@ -265,7 +265,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -274,7 +274,7 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
     }
   } while (strcmp(str, "pbc") != 0);
 
@@ -365,7 +365,7 @@ system.\n\n");
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Premature end of %s file!\n", input_vcf);
+      fprintf(stderr, "Error: premature end of %s file\n\n", input_vcf);
       exit(1);
     }
   }
@@ -402,7 +402,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -412,7 +412,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -488,7 +488,7 @@ system.\n\n");
 
       sprintf(str, "%s%s.rho", output_rho, MoleculeType[i].Name);
       if ((out = fopen(str, "a")) == NULL) {
-        fprintf(stderr, "Cannot open file %s!\n", str);
+        fprintf(stderr, "\nError: cannot open file %s for appending\n\n", str);
         exit(1);
       }
 

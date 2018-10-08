@@ -86,13 +86,13 @@ void CommonHelp(bool error) {
     fprintf(stderr, "      -h             print this help and exit\n");
     fprintf(stderr, "      --script       do not reprint line (useful when output goes to file)\n");
   } else {
-    printf("      -i <name>      use input .vsf file different from dl_meso.vsf\n");
-//  printf("      -b <name>      file containing bond alternatives to FIELD\n");
-    printf("      -v             verbose output\n");
-    printf("      -V             more verbose output\n");
-    printf("      -s             no output (overrides verbose options)\n");
-    printf("      -h             print this help and exit\n");
-    printf("      --script       do not reprint line (useful when output goes to file)\n");
+    fprintf(stdout, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
+//  fprintf(stdout, "      -b <name>      file containing bond alternatives to FIELD\n");
+    fprintf(stdout, "      -v             verbose output\n");
+    fprintf(stdout, "      -V             more verbose output\n");
+    fprintf(stdout, "      -s             no output (overrides verbose options)\n");
+    fprintf(stdout, "      -h             print this help and exit\n");
+    fprintf(stdout, "      --script       do not reprint line (useful when output goes to file)\n");
   }
 } //}}}
 

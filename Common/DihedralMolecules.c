@@ -68,7 +68,7 @@ system.\n\n");
         strcmp(argv[i], "-a") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -81,7 +81,7 @@ system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -133,7 +133,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "Error: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -158,7 +158,7 @@ system.\n\n");
     fprintf(stdout, "%s\n", argv[count]);
 
     if (mol_type == -1) {
-      fprintf(stderr, "Molecule '%s' does not exist in FIELD!\n", argv[count]);
+      fprintf(stderr, "Error: molecule '%s' does not exist in FIELD\n\n", argv[count]);
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -174,7 +174,7 @@ system.\n\n");
   }
   // Error: wrong number of integers //{{{
   if ((number_of_beads%4) != 0) {
-    fprintf(stderr, "Error: '-a' option - Number of bead ids must be dividable by four.\n");
+    fprintf(stderr, "\nError: '-a' option - number of bead ids must be dividable by four.\n");
     exit(1);
   } //}}}
   for (int i = 0; i < number_of_beads; i++) {
@@ -191,7 +191,7 @@ system.\n\n");
   // open output file and write initial stuff //{{{
   FILE *out;
   if ((out = fopen(output, "w")) == NULL) {
-    fprintf(stderr, "Error - cannot open file %s for writing.\n", output);
+    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output);
     exit(1);
   }
 
@@ -224,7 +224,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "Error: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -233,14 +233,14 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
     exit(1);
   }
 
@@ -311,7 +311,7 @@ system.\n\n");
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Premature end of %s file!\n", input_vcf);
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
       exit(1);
     }
   }
@@ -348,7 +348,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -358,7 +358,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -424,7 +424,7 @@ system.\n\n");
 
     // write angles to output file //{{{
     if ((out = fopen(output, "a")) == NULL) {
-      fprintf(stderr, "Error: cannot open file %s for appending\n", output);
+      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output);
       exit(1);
     }
 

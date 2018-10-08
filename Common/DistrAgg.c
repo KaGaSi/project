@@ -76,7 +76,7 @@ the system.\n\n");
         strcmp(argv[i], "--only") != 0 &&
         strcmp(argv[i], "-c") != 0 ) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'!\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -89,7 +89,7 @@ the system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -138,7 +138,7 @@ the system.\n\n");
   // open input file and skip the first two lines //{{{
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_agg);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_agg);
     exit(1);
   }
 
@@ -223,7 +223,7 @@ the system.\n\n");
       } else if (specific_moltype_for_size[i] && types[0][0] != -1 && types[1][0] == -1) {
         types[1][0] = i;
       } else if (specific_moltype_for_size[i]) {
-        fprintf(stderr, "Error: '-c' option - more than two molecule types for composition distribution\n");
+        fprintf(stderr, "\nError: '-c' option - more than two molecule types for composition distribution\n\n");
         exit(1);
       }
     }
@@ -302,7 +302,7 @@ the system.\n\n");
   // print the first two lines to output file with per-step averages //{{{
   FILE *out;
   if ((out = fopen(output_avg, "w")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for writing\n", output_avg);
+    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_avg);
     exit(1);
   }
 
@@ -325,7 +325,7 @@ the system.\n\n");
   count = 0;
   // [0][] = simple sum, [1][] = sum of squares, [2][] = sume of cubes
   // [][0] = mass of mols in agg from options, [][1] = mass of the whole aggregate
-  double mass_sum[3][2] = {0};
+  double mass_sum[3][2] = {{0}};
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
@@ -534,7 +534,7 @@ printf("%d: %d + %d\n", size, types[0][1], types[1][1]);
       if (!script && !silent) {
         putchar('\n');
       }
-      fprintf(stderr, "Error: cannot open file %s for appending\n", output_avg);
+      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_avg);
       exit(1);
     }
 
@@ -564,7 +564,7 @@ printf("%d: %d + %d\n", size, types[0][1], types[1][1]);
 
   // print the first two lines to output file with distributions //{{{
   if ((out = fopen(output_distr, "w")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for writing\n", output_distr);
+    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_distr);
     exit(1);
   }
 
@@ -593,7 +593,7 @@ printf("%d: %d + %d\n", size, types[0][1], types[1][1]);
 
   // print distributions to output file //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for appending\n", output_distr);
+    fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_distr);
     exit(1);
   }
 
@@ -648,7 +648,7 @@ printf("%d: %d + %d\n", size, types[0][1], types[1][1]);
 
   // open file with distribution //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for appending\n", output_distr);
+    fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_distr);
     exit(1);
   } //}}}
 
@@ -700,7 +700,7 @@ printf("%d: %d + %d\n", size, types[0][1], types[1][1]);
   // print composition distribution //{{{
   // open file with composition distribution //{{{
   if ((out = fopen(output_comp, "w")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for writing\n", output_comp);
+    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_comp);
     exit(1);
   } //}}}
 

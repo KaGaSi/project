@@ -65,7 +65,7 @@ system.\n\n");
         strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "--joined") != 0) {
 
-      fprintf(stderr, "Non-existent option '%s'!\n", argv[i]);
+      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -78,7 +78,7 @@ system.\n\n");
   }
 
   if (count < options) {
-    fprintf(stderr, "Too little mandatory arguments (%d instead of at least %d)!\n\n", count, options);
+    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -124,7 +124,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "<input.vcf> '%s' does not have .vcf ending!\n", input_vcf);
+    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -162,7 +162,7 @@ system.\n\n");
 
     // wrong molecule name //{{{
     if (!test) {
-      fprintf(stderr, "Non-existent molecule name: %s!\n", argv[count]);
+      fprintf(stderr, "\nError: non-existent molecule name: %s\n\n", argv[count]);
       exit(1);
     } //}}}
   } //}}}
@@ -180,7 +180,7 @@ system.\n\n");
 
       FILE *out;
       if ((out = fopen(str, "w")) == NULL) {
-        fprintf(stderr, "Cannot open file %s!\n", str);
+        fprintf(stderr, "\nError: cannot open file %s for writing\n\n", str);
         exit(1);
       }
 
@@ -202,7 +202,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "Cannot open file %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
     exit(1);
   } //}}}
 
@@ -211,14 +211,15 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Cannot read string from '%s' file!\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
     exit(1);
   }
 
@@ -283,7 +284,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       } //}}}
     // or read ordered timestep from input .vcf file //{{{
@@ -293,7 +294,7 @@ system.\n\n");
         if (!script && !silent) {
           putchar('\n');
         }
-        fprintf(stderr, "Cannot read coordinates from %s! (%d. step; %d. bead)\n", input_vcf, count, test);
+        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
         exit(1);
       }
     } //}}}
@@ -363,7 +364,7 @@ system.\n\n");
 
         FILE *out;
         if ((out = fopen(str, "a")) == NULL) {
-          fprintf(stderr, "Cannot open file %s!\n", str);
+          fprintf(stderr, "\nError: cannot open file %s for appending\n\n", str);
           exit(1);
         }
 
