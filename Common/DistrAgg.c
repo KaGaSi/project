@@ -402,7 +402,7 @@ the system.\n\n");
         }
       }
       // make calculations only if agg size is well defined and within given range
-      if (size == 0 || size <= range_As[0] || size >= range_As[1]) {
+      if (size == 0 || size < range_As[0] || size > range_As[1]) {
         continue;
       } //}}}
 
@@ -446,12 +446,6 @@ the system.\n\n");
         continue;
       } //}}}
 
-//    printf("%d:", size);
-//    for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-//      printf(" %d", Aggregate[i].Molecule[j]);
-//    }
-//    printf("\n");
-
       // if '-c' is used calculate composition distribution //{{{
       if (comp_number_of_sizes > 0) {
         // use the size?
@@ -464,11 +458,6 @@ the system.\n\n");
         }
 
         if (use_size_comp) {
-printf("xx %d:", size);
-for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-  printf(" %d", Aggregate[i].Molecule[j]);
-}
-printf("\n");
           // count numbers of the two mol types in aggregate 'i'
           types[0][1] = 0;
           types[1][1] = 0;
@@ -481,7 +470,6 @@ printf("\n");
               types[1][1]++;
             }
           }
-printf("%d: %d + %d\n", size, types[0][1], types[1][1]);
           double ratio = (double)(types[0][1]) / types[1][1];
           ndistr_comp[size-1][(int)(ratio*multiply)]++;
         }
@@ -698,63 +686,67 @@ printf("%d: %d + %d\n", size, types[0][1], types[1][1]);
   //}}}
 
   // print composition distribution //{{{
-  // open file with composition distribution //{{{
-  if ((out = fopen(output_comp, "w")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_comp);
-    exit(1);
-  } //}}}
+  if (comp_number_of_sizes > 0) {
+    // open file with composition distribution //{{{
+    if ((out = fopen(output_comp, "w")) == NULL) {
+      fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_comp);
+      exit(1);
+    } //}}}
 
-  // print command //{{{
-  putc('#', out);
-  for (int i = 0; i < argc; i++){
-    fprintf(out, " %s", argv[i]);
-  }
-  putc('\n', out); //}}}
-
-  // print header line //{{{
-  fprintf(out, "# 1: ");
-  count = 0;
-  // molecule names
-  fprintf(out, "%s/%s; sizes - ", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
-  // aggregate sizes
-  for (int i = 0; i < comp_number_of_sizes; i++) {
-    fprintf(out, " %d: %d;", i+2, composition[i]);
-  }
-  putc('\n', out); //}}}
-
-  // normalization factor (simple sum)
-  long int *sum = calloc(Counts.Molecules,sizeof(long int));
-  int low = multiply * Counts.Molecules;
-  bool *include = calloc((multiply*Counts.Molecules),sizeof(bool));
-  for (int i = 0; i < (multiply*Counts.Molecules); i++) {
-    for (int j = 0; j < comp_number_of_sizes; j++) {
-      if (ndistr_comp[composition[j]-1][i] > 0 && low == (multiply*Counts.Molecules)) {
-        low = i;
-      }
-      if (ndistr_comp[composition[j]-1][i] > 0) {
-        include[i] = true;
-      }
-      sum[composition[j]-1] += ndistr_comp[composition[j]-1][i];
+    // print command //{{{
+    putc('#', out);
+    for (int i = 0; i < argc; i++){
+      fprintf(out, " %s", argv[i]);
     }
-  }
-printf("low=%lf\n", (double)(low)/multiply);
+    putc('\n', out); //}}}
 
-  // print data
-  for (int i = low; i < (multiply*Counts.Molecules); i++) {
-    if (include[i]) {
-      fprintf(out, "%10.5f", (double)(i)/multiply);
+    // print header line //{{{
+    fprintf(out, "# 1: ");
+    count = 0;
+    // molecule names
+    fprintf(out, "%s/%s; sizes - ", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
+    // aggregate sizes
+    for (int i = 0; i < comp_number_of_sizes; i++) {
+      fprintf(out, " %d: %d;", i+2, composition[i]);
+    }
+    putc('\n', out); //}}}
+
+    // normalization factor (simple sum)
+    long int *sum = calloc(Counts.Molecules,sizeof(long int));
+    int low = multiply * Counts.Molecules;
+    bool *include = calloc((multiply*Counts.Molecules),sizeof(bool));
+    for (int i = 0; i < (multiply*Counts.Molecules); i++) {
       for (int j = 0; j < comp_number_of_sizes; j++) {
-        if (ndistr_comp[composition[j]-1][i] != 0) {
-          fprintf(out, " %7.5f", (double)(ndistr_comp[composition[j]-1][i])/sum[composition[j]-1]);
-        } else {
-          fprintf(out, "       ?");
+        if (ndistr_comp[composition[j]-1][i] > 0 && low == (multiply*Counts.Molecules)) {
+          low = i;
         }
+        if (ndistr_comp[composition[j]-1][i] > 0) {
+          include[i] = true;
+        }
+        sum[composition[j]-1] += ndistr_comp[composition[j]-1][i];
       }
-      putc('\n', out);
     }
-  }
+//printf("low=%lf\n", (double)(low)/multiply);
 
-  fclose(out); //}}}
+    // print data
+    for (int i = low; i < (multiply*Counts.Molecules); i++) {
+      if (include[i]) {
+        fprintf(out, "%10.5f", (double)(i)/multiply);
+        for (int j = 0; j < comp_number_of_sizes; j++) {
+          if (ndistr_comp[composition[j]-1][i] != 0) {
+            fprintf(out, " %7.5f", (double)(ndistr_comp[composition[j]-1][i])/sum[composition[j]-1]);
+          } else {
+            fprintf(out, "       ?");
+          }
+        }
+        putc('\n', out);
+      }
+    }
+    fclose(out);
+
+    free(sum);
+    free(include);
+  } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
@@ -769,9 +761,7 @@ printf("low=%lf\n", (double)(low)/multiply);
   free(molecules_sum);
   for (int i = 0; i < (Counts.Molecules); i++) {
     free(ndistr_comp[i]);
-  }
-  free(sum);
-  free(include); //}}}
+  } //}}}
 
   return 0;
 }
