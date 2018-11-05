@@ -20,6 +20,7 @@ endforeach(library)
 
 set(COMMON Aggregates
            Aggregates-NotSameBeads
+           AngleMolecules
            Average
            BondLength
            Config
@@ -44,6 +45,12 @@ endforeach(utility)
 set(LINEAR EndToEnd)
          foreach(utility ${LINEAR})
   add_executable(${utility} Linear/${utility}.c)
+  target_link_libraries(${utility} m ${LIBRARIES})
+endforeach(utility)
+
+set(ONETIME PlaceSquares)
+        foreach(utility ${ONETIME})
+  add_executable(${utility} OneTime/${utility}.c)
   target_link_libraries(${utility} m ${LIBRARIES})
 endforeach(utility)
 
