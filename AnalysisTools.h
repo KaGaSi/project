@@ -22,7 +22,7 @@ void CommonHelp(bool error); //}}}
  * option is provided
  *
  * \param [in] Verbose2      print extra information if 'true'
- * \param [in] input_vcf     .vcf structure file
+ * \param [in] input_vcf     .vcf coordinate file
  * \param [in] bonds_file    filename with bonds
  * \param [in] Counts        numbers of beads, molecules, etc.
  * \param [in] BeadType      information about bead types
@@ -54,29 +54,18 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
                    BeadType **BeadType, Bead **Bead,
                    MoleculeType **MoleculeType, Molecule **Molecule); //}}}
 
-// ReadCoorOrdered() //{{{
+// ReadCoordinates() //{{{
 /**
  * \brief Function reading ordered coordinates from .vcf coordinate file.
  *
+ * \param [in]  indexed    is the vcf indexed?
  * \param [in]  vcf_file   name of input .vcf coordinate file
  * \param [in]  Counts     numbers of beads, molecules, etc.
  * \param [out] Bead       coordinates of individual beads
  * \param [out] stuff      first line of a timestep
  * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
  */
-int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
-
-// ReadCoorIndexed() //{{{
-/**
- * \brief Function reading ordered coordinates from .vcf coordinate file.
- *
- * \param [in]  vcf_file   name of input .vcf coordinate file
- * \param [in]  Counts     numbers of beads, molecules, etc.
- * \param [out] Bead       coordinates of individual beads
- * \param [out] stuff      first line of a timestep
- * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
- */
-int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
+int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
 
 // SkipCoor() //{{{
 /**

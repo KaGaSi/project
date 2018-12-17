@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include "Options.h"
 #include "AnalysisTools.h"
+#include "Errors.h"
 
 // VsfFileOption() //{{{
 /**

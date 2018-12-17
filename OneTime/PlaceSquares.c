@@ -5,6 +5,7 @@
 #include <math.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -89,8 +90,8 @@ should be the first molecule type).\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than dl_meso.vsf? //{{{
-  char *vsf_file = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &vsf_file)) {
+  char *input_vsf = calloc(32,sizeof(char *));
+  if (VsfFileOption(argc, argv, &input_vsf)) {
     exit(1);
   } //}}}
 
@@ -153,10 +154,10 @@ should be the first molecule type).\n\n");
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file);
+  free(input_vsf);
 
   // <molecule names> - types of molecules for squares to avoid //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -267,7 +268,7 @@ should be the first molecule type).\n\n");
   //}}}
 
   // Square definition //{{{
-  double bond = 0.7;
+//double bond = 0.7;
   // }}}
 
   // main loop //{{{
@@ -285,32 +286,71 @@ should be the first molecule type).\n\n");
       }
     }
 
-    // read indexed timestep from input .vcf file //{{{
-    if (indexed) {
-      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        if (!script && !silent) {
-          putchar('\n');
-        }
-        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
-        exit(1);
-      } //}}}
-    // or read ordered timestep from input .vcf file //{{{
-    } else {
-      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        if (!script && !silent) {
-          putchar('\n');
-        }
-        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
-        exit(1);
-      }
+    // read coordinates //{{{
+    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+      // print newline to stdout if Step... doesn't end with one
+      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      exit(1);
     } //}}}
+
 
     // place squares
     for (int i = 0; i < number_of_squares; i++) {
       double closest;
-      Vector position[4];
+      Vector position[16], distance[16];
+      position[0].x = 13.692; //{{{
+      position[0].y = 0.628;
+      position[0].z = 1.270;
+      position[1].x = 13.680;
+      position[1].y = 0.831;
+      position[1].z = 1.850;
+      position[2].x = 14.356;
+      position[2].y = 1.034;
+      position[2].z = 1.947;
+      position[3].x = 14.383;
+      position[3].y = 0.810;
+      position[3].z = 1.338;
+      position[4].x = 13.257;
+      position[4].y = 0.484;
+      position[4].z = 0.710;
+      position[5].x = 13.176;
+      position[5].y = 0.907;
+      position[5].z = 2.220;
+      position[6].x = 14.955;
+      position[6].y = 1.316;
+      position[6].z = 2.265;
+      position[7].x = 14.862;
+      position[7].y = 0.885;
+      position[7].z = 0.839;
+      position[8].x = 14.423;
+      position[8].y = 1.070;
+      position[8].z = 1.386;
+      position[9].x = 13.824;
+      position[9].y = 1.235;
+      position[9].z = 1.806;
+      position[10].x = 13.502;
+      position[10].y = 0.765;
+      position[10].z = 1.562;
+      position[11].x = 13.991;
+      position[11].y = 0.578;
+      position[11].z = 1.171;
+      position[12].x = 15.014;
+      position[12].y = 1.350;
+      position[12].z = 1.072;
+      position[13].x = 13.675;
+      position[13].y = 1.807;
+      position[13].z = 2.241;
+      position[14].x = 12.994;
+      position[14].y = 0.498;
+      position[14].z = 1.628;
+      position[15].x = 14.210;
+      position[15].y = 0.060;
+      position[15].z = 0.783; //}}}
+      for (int j = 0; j < 16; j++) {
+        distance[j].x = position[j].x - position[0].x;
+        distance[j].y = position[j].y - position[0].y;
+        distance[j].z = position[j].z - position[0].z;
+      }
       do {
         closest = 1000;
         // generate random coordinate in a box
@@ -318,20 +358,25 @@ should be the first molecule type).\n\n");
         random.x = (double)rand() / (double)RAND_MAX * BoxLength.x;
         random.y = (double)rand() / (double)RAND_MAX * BoxLength.y;
         random.z = (double)rand() / (double)RAND_MAX * BoxLength.z;
-        position[0].x = random.x;
-        position[0].y = random.y;
-        position[0].z = random.z;
-        position[1].x = position[0].x + bond;
-        position[1].y = position[0].y;
-        position[1].z = position[0].z;
-        position[2].x = position[0].x + bond;
-        position[2].y = position[0].y + bond;
-        position[2].z = position[0].z;
-        position[3].x = position[0].x;
-        position[3].y = position[0].y + bond;
-        position[3].z = position[0].z;
+        for (int j = 0; j < 16; j++) {
+          position[j].x = random.x + distance[j].x;
+          position[j].y = random.y + distance[j].y;
+          position[j].z = random.z + distance[j].z;
+        }
+//      position[0].x = random.x;
+//      position[0].y = random.y;
+//      position[0].z = random.z;
+//      position[1].x = position[0].x + bond;
+//      position[1].y = position[0].y;
+//      position[1].z = position[0].z;
+//      position[2].x = position[0].x + bond;
+//      position[2].y = position[0].y + bond;
+//      position[2].z = position[0].z;
+//      position[3].x = position[0].x;
+//      position[3].y = position[0].y + bond;
+//      position[3].z = position[0].z;
         // find if it is close to a specified molecule
-        for (int j = 0; j < 4; j++) {
+        for (int j = 0; j < 16; j++) {
         printf("\nx%d %lf\n", i, closest);
           for (int k = 0; k < Counts.Molecules; k++) {
             int mol_type = Molecule[k].Type;
@@ -346,11 +391,11 @@ should be the first molecule type).\n\n");
             }
           }
         }
-      } while (closest < 1);
+      } while (closest < 0.1);
       printf("closest=%lf\n", closest);
 
       int l = 0;
-      for (int j = (Counts.Unbonded-1-4*i); j > (Counts.Unbonded-1-(4*i+4)); j--) {
+      for (int j = (Counts.Unbonded-1-16*i); j > (Counts.Unbonded-1-(16*i+16)); j--) {
         // change j's bead type to uncharged and change one uncharged unbonded bead into charged
         if (BeadType[Bead[j].Type].Charge != 0) {
           for (int k = 0; k < Counts.Unbonded; k++) {
@@ -360,10 +405,15 @@ should be the first molecule type).\n\n");
             }
           }
         }
-        Bead[j].Type = 100; // some random high number to later recognise the bead as an unkown type
-        Bead[j].Position.x = position[l].x;
-        Bead[j].Position.y = position[l].y;
-        Bead[j].Position.z = position[l].z;
+        if (((j-(Counts.Unbonded-1-16*i))%8) <= 3) {
+          Bead[j].Type = 99; // some random high number to later recognise the bead as an unkown type
+        } else {
+          Bead[j].Type = 100; // some random high number to later recognise the bead as an unkown type
+
+        }
+        Bead[j].Position.x = position[15-l].x;
+        Bead[j].Position.y = position[15-l].y;
+        Bead[j].Position.z = position[15-l].z;
         l++;
         printf("%d %d %d\n", i, j, l);
       }
@@ -397,10 +447,12 @@ should be the first molecule type).\n\n");
   fprintf(vcf, "0 0 %lf\n", BoxLength.z);
 
   for (int i = 0; i < Counts.Beads; i++) {
-    if (Bead[i].Type != 100) {
+    if (Bead[i].Type < 99) {
       fprintf(vcf, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
-    } else {
+    } else if (Bead[i].Type == 99) {
       fprintf(vcf, "P %d\n", i+1);
+    } else {
+      fprintf(vcf, "Pq %d\n", i+1);
     }
     fprintf(vcf, "%7.3f %7.3f %7.3f\n", Bead[i].Position.x, Bead[i].Position.y, Bead[i].Position.z);
   }

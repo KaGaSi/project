@@ -5,18 +5,19 @@
 #include <math.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <output distr file> <output avg file> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input.agg> <output distr file> <output avg file> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input>                input filename (agg format)\n");
+  fprintf(stderr, "   <input.agg>            input filename (agg format)\n");
   fprintf(stderr, "   <distr file>           filename with weight and number distributions\n");
   fprintf(stderr, "   <avg file>             filename with weight and number averages throughout simulation\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -st <int>           start distribution calculation with <int>-th step\n");
   fprintf(stderr, "      -n <int> <int>      calculate for aggregate sizes in given range\n");
-  fprintf(stderr, "      -m <name>           agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(stderr, "      -m <name(s)>        agg size means number of <name> molecule types in an aggregate\n");
   fprintf(stderr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
   fprintf(stderr, "      --only <name>       use just aggregates composed of a specified molecule\n");
   fprintf(stderr, "      -c <name> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
@@ -40,15 +41,15 @@ the system.\n\n");
 */
 
       fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input> <output distr file> <output avg file> <options>\n\n", argv[0]);
+      fprintf(stdout, "   %s <input.agg> <output distr file> <output avg file> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input>                input filename (agg format)\n");
+      fprintf(stdout, "   <input.agg>            input filename (agg format)\n");
       fprintf(stdout, "   <distr file>           filename with weight and number distributions\n");
       fprintf(stdout, "   <avg file>             filename with weight and number averages throughout simulation\n");
       fprintf(stdout, "   <options>\n");
       fprintf(stdout, "      -st <int>           start distribution calculation with <int>-th step\n");
       fprintf(stdout, "      -n <int> <int>      calculate for aggregate sizes in given range\n");
-      fprintf(stdout, "      -m <name>           agg size means number of <name> molecule types in an aggregate\n");
+      fprintf(stdout, "      -m <name(s)>        agg size means number of <name> molecule types in an aggregate\n");
       fprintf(stdout, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
       fprintf(stdout, "      --only <name>       use just aggregates composed of a specified molecule\n");
       fprintf(stdout, "      -c <nama> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
@@ -57,7 +58,19 @@ the system.\n\n");
     }
   }
 
-  int options = 3; //}}}
+  int req_args = 3; //}}}
+
+  // check if correct number of arguments //{{{
+  int count = 0;
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+    count++;
+  }
+
+  if (count < req_args) {
+    ErrorArgNumber(count, req_args);
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
 
   // test if options are given correctly //{{{
   for (int i = 1; i < argc; i++) {
@@ -76,28 +89,16 @@ the system.\n\n");
         strcmp(argv[i], "--only") != 0 &&
         strcmp(argv[i], "-c") != 0 ) {
 
-      fprintf(stderr, "\nError: non-existent option '%s'!\n", argv[i]);
+      ErrorOption(argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
   } //}}}
 
-  // check if correct number of arguments //{{{
-  int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
-    count++;
-  }
-
-  if (count < options) {
-    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)\n\n", count, options);
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
-
   // options before reading system data //{{{
   // use .vsf file other than dl_meso.vsf? //{{{
-  char *vsf_file = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &vsf_file)) {
+  char *input_vsf = calloc(32,sizeof(char *));
+  if (VsfFileOption(argc, argv, &input_vsf)) {
     exit(1);
   } //}}}
 
@@ -131,14 +132,22 @@ the system.\n\n");
 
   count = 0; // count mandatory arguments
 
-  // <input> - filename of input agg file //{{{
+  // <input.agg> - filename of input agg file //{{{
   char input_agg[32];
-  strcpy(input_agg, argv[++count]); //}}}
+  strcpy(input_agg, argv[++count]);
+
+  // test if <output.agg> filename ends with '.agg' (required by VMD)
+  char *dot = strrchr(input_agg, '.');
+  if (!dot || strcmp(dot, ".agg")) {
+    ErrorExtension(input_agg, ".agg");
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
 
   // open input file and skip the first two lines //{{{
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_agg);
+    ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
 
@@ -165,10 +174,10 @@ the system.\n\n");
   // read system information //{{{
   char vcf[1];
   vcf[0] = '\0';
-  ReadStructure(vsf_file, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  ReadStructure(input_vsf, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file); //}}}
+  free(input_vsf); //}}}
 
   // '-n' option - range of aggregation numbers //{{{
   int range_As[2];
@@ -302,7 +311,7 @@ the system.\n\n");
   // print the first two lines to output file with per-step averages //{{{
   FILE *out;
   if ((out = fopen(output_avg, "w")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_avg);
+    ErrorFileOpen(output_avg, 'w');
     exit(1);
   }
 
@@ -314,10 +323,14 @@ the system.\n\n");
   putc('\n', out);
 
   fprintf(out, "# 1:step ");
-  fprintf(out, "2:<M>_n (options' mass) ");
-  fprintf(out, "3:<M>_n (whole agg mass) ");
-  fprintf(out, "4:<M>_w (options' mass) ");
-  fprintf(out, "5:<M>_w (whole agg mass)\n");
+  fprintf(out, "2:<mass>_n (options' mass) ");
+  fprintf(out, "3:<mass>_n (whole agg mass) ");
+  fprintf(out, "4:<mass>_w (options' mass) ");
+  fprintf(out, "5:<mass>_w (whole agg mass) ");
+  fprintf(out, "6:<A_S>_n (options' A_S) ");
+  fprintf(out, "7:<A_S>_n (whole agg A_S) ");
+  fprintf(out, "8:<A_S>_w (options' A_S) ");
+  fprintf(out, "9:<A_S>_w (whole agg A_S)\n");
   fclose(out); //}}}
 
   // main loop //{{{
@@ -516,21 +529,17 @@ the system.\n\n");
     }
 
     // print averages to output file //{{{
-    // REDO CORRECTLY
+    // REDO CORRECTLY -- SORRY? WHAT'S THAT ABOUT?
     if ((out = fopen(output_avg, "a")) == NULL) {
-      // print newline to stdout if Step... doesn't end with one
-      if (!script && !silent) {
-        putchar('\n');
-      }
-      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_avg);
+      ErrorFileOpen(output_avg, 'a');
       exit(1);
     }
 
     fprintf(out, "%5d", count); // step
-    fprintf(out, " %8.3f", (double)(avg_mass_n_step[0])/aggs_step); // <M>_n (options' mass)
-    fprintf(out, " %8.3f", (double)(avg_mass_n_step[1])/aggs_step); // <M>_n (whole agg mass)
-    fprintf(out, " %8.3f", (double)(avg_mass_w_step[0])/avg_mass_n_step[0]); // <M>_w (options' mass)
-    fprintf(out, " %8.3f", (double)(avg_mass_w_step[1])/avg_mass_n_step[1]); // <M>_w (whole agg mass)
+    fprintf(out, " %8.3f", (double)(avg_mass_n_step[0])/aggs_step); // <mass>_n (options' mass)
+    fprintf(out, " %8.3f", (double)(avg_mass_n_step[1])/aggs_step); // <mass>_n (whole agg mass)
+    fprintf(out, " %8.3f", (double)(avg_mass_w_step[0])/avg_mass_n_step[0]); // <mass>_w (options' mass)
+    fprintf(out, " %8.3f", (double)(avg_mass_w_step[1])/avg_mass_n_step[1]); // <mass>_w (whole agg mass)
     fprintf(out, " %8.3f", (double)(avg_As_n_step[0])/aggs_step); // <A_s>_n (options' mass)
     fprintf(out, " %8.3f", (double)(avg_As_n_step[1])/aggs_step); // <A_s>_n (whole agg mass)
     fprintf(out, " %8.3f", (double)(avg_As_w_step[0])/avg_As_n_step[0]); // <A_s>_w (options' mass)
@@ -552,7 +561,7 @@ the system.\n\n");
 
   // print the first two lines to output file with distributions //{{{
   if ((out = fopen(output_distr, "w")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_distr);
+    ErrorFileOpen(output_distr, 'w');
     exit(1);
   }
 
@@ -581,7 +590,7 @@ the system.\n\n");
 
   // print distributions to output file //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_distr);
+    ErrorFileOpen(output_distr, 'a');
     exit(1);
   }
 
@@ -636,7 +645,7 @@ the system.\n\n");
 
   // open file with distribution //{{{
   if ((out = fopen(output_distr, "a")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_distr);
+    ErrorFileOpen(output_distr, 'a');
     exit(1);
   } //}}}
 
@@ -689,7 +698,7 @@ the system.\n\n");
   if (comp_number_of_sizes > 0) {
     // open file with composition distribution //{{{
     if ((out = fopen(output_comp, "w")) == NULL) {
-      fprintf(stderr, "\nError: cannot open file %s for writing\n\n", output_comp);
+      ErrorFileOpen(output_comp, 'w');
       exit(1);
     } //}}}
 

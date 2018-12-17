@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -21,13 +22,13 @@ void ErrorHelp(char cmd[50]) { //{{{
  * Function creating `.vsf` structure file for use in conjunction with
  * `.vcf` coordinate file for better visualisation via VMD program.
  */
-void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
+void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
               MoleculeType *MoleculeType, Molecule *Molecule) {
 
   // opten structure file //{{{
   FILE *fw;
-  if ((fw = fopen(vsf_file, "w")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file input.vsf for writing\n\n");
+  if ((fw = fopen(input_vsf, "w")) == NULL) {
+    ErrorFileOpen(input_vsf, 'w');
     exit(1);
   } //}}}
 
@@ -40,11 +41,12 @@ void WriteVsf(char *vsf_file, Counts Counts, BeadType *BeadType, Bead *Bead,
     }
   } //}}}
 
-  // print default bead type //{{{
-  fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
-  fprintf(fw, "mass %4.2f ", BeadType[type_def].Mass);
-  fprintf(fw, "charge %5.2f\n", BeadType[type_def].Charge); //}}}
+//// print default bead type //{{{
+//fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
+//fprintf(fw, "mass %4.2f ", BeadType[type_def].Mass);
+//fprintf(fw, "charge %5.2f\n", BeadType[type_def].Charge); //}}}
 
+type_def=-1;
   // print unbonded beads //{{{
   for (int i = 0; i < Counts.Unbonded; i++) {
 
@@ -122,7 +124,7 @@ system.\n\n");
     }
   }
 
-  int options = 1; //}}}
+  int req_args = 1; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -130,16 +132,11 @@ system.\n\n");
     count++;
   }
 
-  if (count < options) {
-    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)\n\n", count, options);
+  if (count < req_args) {
+    ErrorArgNumber(count, req_args);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
-
-  // print command to stdout //{{{
-  for (int i = 0; i < argc; i++)
-    fprintf(stdout, " %s", argv[i]);
-  putchar('\n'); //}}}
 
   // test if options are given correctly //{{{
   for (int i = 1; i < argc; i++) {
@@ -148,16 +145,21 @@ system.\n\n");
         strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0) {
 
-      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
+      ErrorOption(argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
   } //}}}
 
+  // print command to stdout //{{{
+  for (int i = 0; i < argc; i++)
+    fprintf(stdout, " %s", argv[i]);
+  putchar('\n'); //}}}
+
   // options before reading system data //{{{
   // use .vsf file other than dl_meso.vsf? //{{{
-  char *vsf_file = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &vsf_file)) {
+  char *input_vsf = calloc(32,sizeof(char *));
+  if (VsfFileOption(argc, argv, &input_vsf)) {
     exit(1);
   } //}}}
 
@@ -181,7 +183,7 @@ system.\n\n");
   // test if <output.vsf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(output, '.');
   if (!dot || strcmp(dot, ".vsf")) {
-    fprintf(stderr, "\nError: <output.vsf> %s does not have .vsf ending\n\n", output);
+    ErrorExtension(output, ".vsf");
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -196,10 +198,10 @@ system.\n\n");
   // read system information{{{
   char vcf[1];
   vcf[0] = '\0';
-  ReadStructure(vsf_file, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  ReadStructure(input_vsf, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file); //}}}
+  free(input_vsf); //}}}
 
   // print information - verbose option //{{{
   if (verbose) {

@@ -5,6 +5,7 @@
 #include <math.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -44,7 +45,7 @@ system.\n\n"); \
     }
   }
 
-  int options = 3; //}}}
+  int req_args = 3; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -52,16 +53,33 @@ system.\n\n"); \
     count++;
   }
 
-  if (argc < options) {
-    fprintf(stderr, "Error: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
+  if (argc < req_args) {
+    ErrorArgNumber(count, req_args);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
 
+  // test if options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-i") != 0 &&
+//      strcmp(argv[i], "-b") != 0 &&
+        strcmp(argv[i], "-v") != 0 &&
+        strcmp(argv[i], "-V") != 0 &&
+        strcmp(argv[i], "-s") != 0 &&
+        strcmp(argv[i], "-h") != 0 &&
+        strcmp(argv[i], "--script") != 0) {
+
+      ErrorOption(argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+  } //}}}
+
   // options before reading system data //{{{
   // use .vsf file other than dl_meso.vsf? //{{{
-  char *vsf_file = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &vsf_file)) {
+  char *input_vsf = calloc(32,sizeof(char *));
+  if (VsfFileOption(argc, argv, &input_vsf)) {
     exit(1);
   } //}}}
 
@@ -96,7 +114,7 @@ system.\n\n"); \
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
+    ErrorExtension(input_vcf, ".vcf");
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -113,10 +131,10 @@ system.\n\n"); \
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file);
+  free(input_vsf);
 
   // <molecule names> - names of molecule types to use //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -208,18 +226,11 @@ system.\n\n"); \
       }
     }
 
-    // read indexed timestep from input .vcf file //{{{
-    if (indexed) {
-      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
-        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
-        exit(1);
-      } //}}}
-    // or read ordered timestep from input .vcf file //{{{
-    } else {
-      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
-        exit(1);
-      }
+    // read coordinates //{{{
+    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+      // print newline to stdout if Step... doesn't end with one
+      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      exit(1);
     } //}}}
 
     // join all molecules

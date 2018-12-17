@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -40,7 +41,7 @@ the last step is used.\n\n");
     }
   }
 
-  int options = 1; //}}}
+  int req_args = 1; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -48,8 +49,8 @@ the last step is used.\n\n");
     count++;
   }
 
-  if (count < options) {
-    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)\n\n", count, options);
+  if (count < req_args) {
+    ErrorArgNumber(count, req_args);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -62,7 +63,7 @@ the last step is used.\n\n");
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
-      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
+      ErrorOption(argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -94,7 +95,7 @@ the last step is used.\n\n");
   // test if <input.xyz> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_xyz, '.');
   if (!dot || strcmp(dot, ".xyz")) {
-    fprintf(stderr, "\nError: <input.xyz> '%s' does not have .xyz ending\n\n", input_xyz);
+    ErrorExtension(input_xyz, ".xyz");
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -103,7 +104,7 @@ the last step is used.\n\n");
   // open input coordinate file
   FILE *xyz;
   if ((xyz = fopen(input_xyz, "r")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_xyz);
+    ErrorFileOpen(input_xyz, 'r');
     exit(1);
   }
 
@@ -117,7 +118,7 @@ the last step is used.\n\n");
   // main loop - read timesteps till the chosen one //{{{
   // open input coordinate file //{{{
   if ((xyz = fopen(input_xyz, "r")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_xyz);
+    ErrorFileOpen(input_xyz, 'r');
     exit(1);
   } //}}}
 
@@ -162,7 +163,7 @@ the last step is used.\n\n");
   // open CONFIG //{{{
   FILE *config;
   if ((config = fopen("CONFIG", "w")) == NULL) {
-    fprintf(stderr, "\nError: cannot open CONFIG for reading\n\n");
+    ErrorFileOpen("CONFIG", 'w');
     exit(1);
   } //}}}
 
