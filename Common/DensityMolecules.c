@@ -5,6 +5,7 @@
 #include <math.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -56,7 +57,19 @@ system.\n\n");
     }
   }
 
-  int options = 4; //}}}
+  int req_args = 4; //}}}
+
+  // check if correct number of arguments //{{{
+  int count = 0;
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+    count++;
+  }
+
+  if (count < req_args) {
+    ErrorArgNumber(count, req_args);
+    ErrorHelp(argv[0]);
+    exit(1);
+  } //}}}
 
   // test if options are given correctly //{{{
   for (int i = 1; i < argc; i++) {
@@ -73,28 +86,16 @@ system.\n\n");
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-c") != 0) {
 
-      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
+      ErrorOption(argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
   } //}}}
 
-  // check if correct number of arguments //{{{
-  int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
-    count++;
-  }
-
-  if (count < 4) {
-    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of at least %d)\n\n", count, options);
-    ErrorHelp(argv[0]);
-    exit(1);
-  } //}}}
-
   // options before reading system data //{{{
   // use .vsf file other than dl_meso.vsf? //{{{
-  char *vsf_file = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &vsf_file)) {
+  char *input_vsf = calloc(32,sizeof(char *));
+  if (VsfFileOption(argc, argv, &input_vsf)) {
     exit(1);
   } //}}}
 
@@ -144,7 +145,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
+    ErrorExtension(input_vcf, ".vcf");
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -152,7 +153,7 @@ system.\n\n");
   // <width> - number of starting timestep //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Error: non-numeric argument for <width>\n\n");
+    ErrorNaN("<width>");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -170,10 +171,10 @@ system.\n\n");
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file);
+  free(input_vsf);
 
   // <molecule names> - types of molecules for calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -194,7 +195,7 @@ system.\n\n");
 
     sprintf(str, "%s%s.rho", output_rho, argv[count]);
     if ((out = fopen(str, "w")) == NULL) {
-      fprintf(stderr, "Cannot open file %s!\n", str);
+      ErrorFileOpen(str, 'w');
       exit(1);
     }
 
@@ -231,7 +232,7 @@ system.\n\n");
 
         // Error - non-numeric or non-"x" argument //{{{
         if ((argv[i+j][0] < '0' || argv[i+j][0] > '9') && argv[i+j][0] != 'x') {
-          fprintf(stderr, "Error: wrong argement for '-c' option\n\n");
+          ErrorNaN("-c");
           ErrorHelp(argv[0]);
           exit(1);
         } //}}}
@@ -265,7 +266,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
+    ErrorFileOpen(input_vcf, 'r');
     exit(1);
   } //}}}
 
@@ -286,9 +287,6 @@ system.\n\n");
   }
 
   // skip remainder of pbc line
-  while (getc(vcf) != '\n')
-    ;
-  // skip blank line
   while (getc(vcf) != '\n')
     ;
 
@@ -395,26 +393,11 @@ system.\n\n");
       }
     }
 
-    // read indexed timestep from input .vcf file //{{{
-    if (indexed) {
-      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        if (!script && !silent) {
-          putchar('\n');
-        }
-        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
-        exit(1);
-      } //}}}
-    // or read ordered timestep from input .vcf file //{{{
-    } else {
-      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        if (!script && !silent) {
-          putchar('\n');
-        }
-        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
-        exit(1);
-      }
+    // read coordinates //{{{
+    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+      // print newline to stdout if Step... doesn't end with one
+      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      exit(1);
     } //}}}
 
     // join molecules if un-joined coordinates provided //{{{
@@ -488,7 +471,7 @@ system.\n\n");
 
       sprintf(str, "%s%s.rho", output_rho, MoleculeType[i].Name);
       if ((out = fopen(str, "a")) == NULL) {
-        fprintf(stderr, "\nError: cannot open file %s for appending\n\n", str);
+        ErrorFileOpen(str, 'a');
         exit(1);
       }
 

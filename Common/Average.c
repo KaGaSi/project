@@ -6,6 +6,7 @@
 #include <time.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -54,18 +55,7 @@ can be considered a good estimate for tau.\n\n");
     }
   }
 
-  int options = 4; //}}}
-
-  // test if options are given correctly //{{{
-  for (int i = 1; i < argc; i++) {
-    if (argv[i][0] == '-' &&
-        strcmp(argv[i], "-h") != 0 ) {
-
-      fprintf(stderr, "Error: non-existent option '%s'\n\n", argv[i]);
-      ErrorHelp(argv[0]);
-      exit(1);
-    }
-  } //}}}
+  int req_args = 4; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -73,10 +63,21 @@ can be considered a good estimate for tau.\n\n");
     count++;
   }
 
-  if (count < options) {
-    fprintf(stderr, "Error: too few mandatory arguments (%d instead of %d)\n\n", count, options);
+  if (count < req_args) {
+    ErrorArgNumber(count, req_args);
     ErrorHelp(argv[0]);
     exit(1);
+  } //}}}
+
+  // test if options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-h") != 0 ) {
+
+      ErrorOption(argv[i]);
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -88,7 +89,7 @@ can be considered a good estimate for tau.\n\n");
   // <column> - column number to analyze //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Error: non-numeric argument for <column>\n\n");
+    ErrorNaN("<column>");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -97,7 +98,7 @@ can be considered a good estimate for tau.\n\n");
   // <discard> - number of lines to discard from the file beginning //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Error: non-numeric argument for <discard>\n\n");
+    ErrorNaN("<discard>");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -106,7 +107,7 @@ can be considered a good estimate for tau.\n\n");
   // <n_blocks> - number of blocks for binning //{{{
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    fprintf(stderr, "Error: non-numeric argument for <n_block>\n\n");
+    ErrorNaN("<n_blocks>");
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -117,7 +118,7 @@ can be considered a good estimate for tau.\n\n");
   // read data from <input> file //{{{
   FILE *fr;
   if ((fr = fopen(input, "r")) == NULL) {
-    fprintf(stderr, "Error: cannot open file %s for reading\n\n", input);
+    ErrorFileOpen(input, 'r');
     exit(1);
   }
 

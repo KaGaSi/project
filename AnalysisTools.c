@@ -5,6 +5,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include "AnalysisTools.h"
+#include "Errors.h"
 
 // ReadFIELD() - auxiliary for ReadStructure() //{{{
 /*
@@ -18,7 +19,7 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
   // open FIELD file //{{{
   FILE *field;
   if ((field = fopen("FIELD", "r")) == NULL) {
-    fprintf(stderr, "Cannot open FIELD!\n");
+    ErrorFileOpen("FIELD", 'r');
     exit(1);
   } //}}}
 
@@ -251,7 +252,7 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
       // go through bond file to find out if molecule type 'i' is there
       FILE *bond;
       if ((bond = fopen(bonds_file, "r")) == NULL) {
-        fprintf(stderr, "Cannot open file %s with '-v' option!\n", bonds_file);
+        ErrorFileOpen(bonds_file, 'r');
         exit(1);
       }
 
@@ -332,10 +333,10 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   *BeadType = calloc(1,sizeof(struct BeadType));
   *MoleculeType = calloc(1,sizeof(struct MoleculeType));
 
-  // first, read through vsf to find highest bead/mol id and all bead/mol types //{{{
+  // first, read through vsf to find highest bead/mol id and all bead/mol types and identify default bead type (if exist) //{{{
   // open vsf structure file //{{{
   if ((vsf = fopen(vsf_file, "r")) == NULL) {
-    fprintf(stderr, "Error: cannot open %s structure file\n", vsf_file);
+    ErrorFileOpen(vsf_file, 'r');
     exit(1);
   } //}}}
 
@@ -360,8 +361,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       atom_lines++;
       continue;
     } //}}}
-
-//printf("%s\n", line);
 
     // split the line into array //{{{
     char *split[30];
@@ -504,7 +503,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   // second, read through vsf to find stuff about beads and mols //{{{
   // open vsf structure file //{{{
   if ((vsf = fopen(vsf_file, "r")) == NULL) {
-    fprintf(stderr, "Error: cannot open %s structure file\n", vsf_file);
+    ErrorFileOpen(vsf_file, 'r');
     exit(1);
   } //}}}
 
@@ -577,12 +576,14 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   (*BeadType)[type_default].Number = count; //}}}
 
   // calculate number of molecules/beads in each molecule type //{{{
-  int max = 0; // the highest number of beads in a molecule
-  int *mols; // helper array
+  int max = 0; // the highest number of beads in a molecule - for memory allocation later
+  // count number of molecules for each molecule type
+  int *mols;
   mols = calloc((*Counts).TypesOfMolecules, sizeof(int));
   for (int i = 0; i < (*Counts).Molecules; i++) {
     mols[(*Molecule)[i].Type]++;
   }
+  // assign info to MoleculeType
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     (*MoleculeType)[i].Number = mols[i];
     (*MoleculeType)[i].nBeads /= (*MoleculeType)[i].Number;
@@ -593,7 +594,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   free(mols); //}}}
 
   // allocate memory for Molecule[].Bead array //{{{
-  // (use maximum number of beads in any molecule)
+  // use maximum number of beads in any molecule - no molecule can have more
   for (int i = 0; i < mol_alloced; i++) {
     (*Molecule)[i].Bead = calloc(max, sizeof(int));
   } //}}}
@@ -608,17 +609,19 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     bonds[i] = -1;
   } //}}}
   while (fgets(line, sizeof(line), vsf)) {
-    // split the line into array //{{{
+    // split the line into array - no need to trim trailing white space (the number of columns is known) //{{{
     char *split[30];
     split[0] = strtok(line, " \t:");
     int i = 0;
     while (split[i] != NULL && i < 29) {
       split[++i] = strtok(NULL, " \t:");
     } //}}}
-    if (split[0][0] == 'b') { // b(ond) lines
+
+    // b(ond) lines in the form 'bond <int>: <int>'
+    if (split[0][0] == 'b') {
       int mol_id = (*Bead)[atoi(split[1])].Molecule;
       int mol_type = (*Molecule)[mol_id].Type;
-      // is this mol_type already in use?
+      // is this mol_type already in use in bond numbers calculation?
       if (bonds[mol_type] == -1) {
         bonds[mol_type] = mol_id;
       }
@@ -745,7 +748,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   // fifth, go through vsf and assign bead ids to molecules //{{{
   // open vsf structure file //{{{
   if ((vsf = fopen(vsf_file, "r")) == NULL) {
-    fprintf(stderr, "Error: cannot open %s structure file\n", vsf_file);
+    ErrorFileOpen(vsf_file, 'r');
     exit(1);
   } //}}}
 
@@ -852,11 +855,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     // open vcf coordinate file //{{{
     FILE *vcf;
     if ((vcf = fopen(vcf_file, "r")) == NULL) {
-      fprintf(stderr, "Error: cannot open %s coordinate file\n", vcf_file);
+      ErrorFileOpen(vcf_file, 'r');
       exit(1);
     } //}}}
 
-    // skip to the beginning of coordinate block //{{{
+    // skip initial stuff //{{{
+    // skip to the pbc line //{{{
     char str[32];
     do {
       if (fscanf(vcf, "%s", str) != 1) {
@@ -864,35 +868,50 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         exit(1);
       }
     } while(strcmp("pbc", str) != 0);
-    // ignore the rest of the 'pbc' line, blank line, and comment line
-    for (int i = 0; i < 3; i++) {
-      while(getc(vcf) != '\n')
-        ;
+    // ignore the rest of the 'pbc' line
+    while(getc(vcf) != '\n')
+      ;
+    // skip blank line if present
+    int test;
+    if ((test = getc(vcf)) != '\n') {
+//    printf("|%c|\n", test);
+      ungetc(test, vcf);
     } //}}}
 
-    // read next string (two, if the first is t(imestep) or c(oordinate)) //{{{
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Error: %s - cannot read a string from the beginning of coordinate block\n", vcf_file);
-      exit(1);
-    }
-    if (str[0] == 't' || str[0] == 'c') {
-      if (fscanf(vcf, "%s", str) != 1) {
-        fprintf(stderr, "Error: %s - cannot read a string from the beginning of coordinate block\n", vcf_file);
-        exit(1);
-      }
+    // skip lines till the beginning of the first coordinate block (blanks or comments) //{{{
+    char line[1024];
+    do {
+      fgets(line, sizeof(line), vcf);
+    } while (line[0] != 't' && line[0] != 'T' &&
+             line[0] != 'i' && line[0] != 'I' &&
+             line[0] != 'o' && line[0] != 'O'); //}}}
+
+    // split the line containing 'i(ndexed)' or 'o(rdered)' //{{{
+    char *split[30];
+    split[0] = strtok(line, " \t");
+    int i = 0;
+    while (split[i] != NULL && i < 29) {
+      split[++i] = strtok(NULL, " \t");
     } //}}}
 
-    if (str[0] == 'o') { // ordered timesteps //{{{
-      fprintf(stderr, "Error: Ordered timesteps are not supported\n");
-      exit(1);
-//    indexed = false;
-//    // set all bead types to 'use'
-//    for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-//      (*BeadType)[i].Use = true;
-//    }
-//    (*Counts).Beads = (*Counts).BeadsInVsf;
+    // if the fist split is 't(imestep)', use the second split for indexed/ordered decision //{{{
+    if (split[0][0] == 't' || split[0][0] == 'T') {
+      str[0] = split[1][0];
+    } else {
+      str[0] = split[0][0];
+    } //}}}
     //}}}
-    } else if (str[0] == 'i') { // indexed timesteps //{{{
+
+    if (str[0] == 'o' || str[0] == 'O') { // ordered timesteps //{{{
+      indexed = false;
+
+      // set all bead types to 'use'
+      for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+        (*BeadType)[i].Use = true;
+      }
+      (*Counts).Beads = (*Counts).BeadsInVsf;
+      //}}}
+    } else if (str[0] == 'i' || str[0] == 'I') { // indexed timesteps //{{{
       indexed = true;
       // set all bead types to 'do not use' //{{{
       for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
@@ -902,7 +921,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       // ignore the rest of the line //{{{
       while(getc(vcf) != '\n')
         ; //}}}
-      // read coordinate line
+
+      // read data //{{{
+      // the first coordinate line
       fgets(line, sizeof(line), vcf);
       // trim trailing whitespace in line //{{{
       int length = strlen(line);
@@ -926,7 +947,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       while (split[i] != NULL && i < 29) {
         split[++i] = strtok(NULL, " \t");
       } //}}}
-      // first split is bead index
+
+      // first split is bead index; read data till there is <int> at the beginning of the line //{{{
       while (split[0][0] >= '0' && split[0][0] <= '9') {
         int type = (*Bead)[atoi(split[0])].Type;
         (*BeadType)[type].Use = true;
@@ -953,17 +975,19 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         while (split[i] != NULL && i < 29) {
           split[++i] = strtok(NULL, " \t");
         } //}}}
-      }
-      // count the number of beads in vcf
+      } //}}}
+
+      // count the number of beads in vcf //{{{
       (*Counts).Beads = 0;
       for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
         if ((*BeadType)[i].Use) {
           (*Counts).Beads += (*BeadType)[i].Number;
         }
-      }
+      } //}}}
+    //}}}
     //}}}
     } else { // error //{{{
-      fprintf(stderr, "Error: %s - missing 'i(ndexed)' keyword\n", vcf_file);
+      fprintf(stderr, "Error: %s - missing 'i(ndexed)' or 'o(rdered)' keyword\n", vcf_file);
       exit(1);
     } //}}}
     fclose(vcf);
@@ -1193,7 +1217,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   // read bonds - again, unfortunately //{{{
   // open vsf structure file //{{{
   if ((vsf = fopen(vsf_file, "r")) == NULL) {
-    fprintf(stderr, "Error: cannot open %s structure file\n", vsf_file);
+    ErrorFileOpen(vsf_file, 'r');
     exit(1);
   } //}}}
 
@@ -1563,201 +1587,167 @@ void MoveCOMMolecules(Counts Counts, Vector BoxLength,
   }
 } //}}}
 
-// ReadCoorOrdered() //{{{
-/**
- * Function reading coordinates from .vcf file with ordered timesteps. Not used
- * anymore!
- */
-int ReadCoorOrdered(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
-
-  // save the first (comment) line //{{{
-  char line[1024];
-  fgets(line, sizeof(line), vcf_file);
-  // trim trailing whitespace in line //{{{
-  int length = strlen(line);
-  // last string character needs to be '\0'
-  while (length > 1 &&
-         (line[length-1] == ' ' ||
-          line[length-1] == '\n' ||
-          line[length-1] == '\t')) {
-    line[length-1] = '\0';
-    length--;
-  } //}}}
-  strcpy(*stuff, line); //}}}
-
-  // skip line containing 'i(ndexed)' keyword
-  fgets(line, sizeof(line), vcf_file);
-
-  // read data //{{{
-  for (int i = 0; i < Counts.Beads; i++) {
-
-    fgets(line, sizeof(line), vcf_file);
-
-    // split the line into array //{{{
-    char *split[4];
-    split[0] = strtok(line, " \t");
-    int j = 0;
-    while (split[j] != NULL && j < 3) {
-      split[++j] = strtok(NULL, " \t");
-    } //}}}
-
-    // error - less than 3 whitespace-separated strings //{{{
-    if (j < 3) {
-      return i+1;
-    } //}}}
-
-    // test if split[0-2] are doubles //{{{
-    for (int j = 0; j < 3; j++) {
-      // first character can be '-' (but must be longer) or a number
-      if ((split[j][0] < '0' || split[j][0] > '9') &&
-          split[j][0] != '-') {
-        return i+1;
-      } else if (split[j][0] == '-' && strlen(split[j]) == 1) {
-        return i+1;
-      }
-      // other characters can be numbers or decimal point or newline (last character of 4th split)
-      for (int k = 1; k < strlen(split[j]); k++) {
-        if ((split[j][k] < '0' || split[j][k] > '9') &&
-            split[j][k] != '.' &&
-            split[j][k] != '\n') { // last split ends with newline
-          return i+1;
-        }
-      }
-    } //}}}
-
-    // bead coordinates
-    (*Bead)[i].Position.x = atof(split[1]);
-    (*Bead)[i].Position.y = atof(split[2]);
-    (*Bead)[i].Position.z = atof(split[3]);
-  } //}}}
-
-  // test for presence of blank line(s) at the end of the coordinate block //{{{
-  fpos_t position;
-  do {
-    // save pointer position in the vcf file
-    fgetpos(vcf_file, &position);
-    // get line
-    fgets(line, sizeof(line), vcf_file);
-    // trim trailing whitespace in line
-    length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
-  } while (length == 1);
-  // restore pointer position in vsf file
-  fsetpos(vcf_file, &position); //}}}
-
-  return 0;
-} //}}}
-
-// ReadCoorIndexed() //{{{
+//TODO: test non-blank non-comment before timestep
+// ReadCoordinates() //{{{
 /**
  * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
  */
-int ReadCoorIndexed(FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
+int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
 
-  // save the first (comment) line //{{{
+  // initial stuff //{{{
+  (*stuff)[0] = '\n'; // no comment line
   char line[1024];
-  fgets(line, sizeof(line), vcf_file);
-  // trim trailing whitespace in line //{{{
-  int length = strlen(line);
-  // last string character needs to be '\0'
-  while (length > 1 &&
-         (line[length-1] == ' ' ||
-          line[length-1] == '\n' ||
-          line[length-1] == '\t')) {
-    line[length-1] = '\0';
-    length--;
-  } //}}}
-  strcpy(*stuff, line); //}}}
-
-  // skip line containing 'i(ndexed)' keyword
-  fgets(line, sizeof(line), vcf_file);
-
-  // allocate helper array of coordinates //{{{
-  double imp = 1000000; // a value impossible for bead's coordinate
-  Vector *pos = malloc(Counts.BeadsInVsf*sizeof(Vector));
-  for (int i = 0; i < Counts.BeadsInVsf; i++) {
-    pos[i].x = imp;
-  } //}}}
-
-  // read data //{{{
-  for (int i = 0; i < Counts.Beads; i++) {
-
+  do {
     fgets(line, sizeof(line), vcf_file);
 
-    // split the line into array //{{{
-    char *split[5];
-    split[0] = strtok(line, " \t");
-    int j = 0;
-    while (split[j] != NULL && j < 4) {
-      split[++j] = strtok(NULL, " \t");
-    } //}}}
-
-    // error - less then four whitespace-separated strings //{{{
-    if (j < 4) {
-      return i+1;
-    } //}}}
-
-    // test if split[0] is integer //{{{
-    for (int j = 0; j < strlen(split[0]); j++) {
-      if (split[0][j] < '0' || split[0][j] > '9') {
-        return i+1;
+    while (line[0] == '\t' || line[0] == ' ') {
+      int i;
+      for (i = 1; line[i] != '\n'; i++) {
+        line[i-1] = line[i];
       }
-    } //}}}
-    int index = atoi(split[0]);
+      line[i-1] = '\n';
+      line[i] = '\0';
+    }
 
-    // test if split[1-3] are doubles //{{{
-    // first two coordinates
-    for (int j = 1; j < 4; j++) {
-      // first character can be '-' (but must be longer) or a number
-      if ((split[j][0] < '0' || split[j][0] > '9') &&
-          split[j][0] != '-') {
+    if (line[0] == '#') {
+      strcpy(*stuff, line);
+    // TODO: cannot be anything else then indexed or comment
+    } else if ( line[0] != '\n' &&
+           line[0] != 't' && line[0] != 'T' &&
+           line[0] != 'i' && line[0] != 'I' &&
+           line[0] != 'o' && line[0] != 'O') {
+      fprintf(stderr, "\nWarning: non-blank, non-comment line '%s' present in the input vcf file right before a timestep\n", line); 
+      fprintf(stderr, "           this utility should work fine, but vmd may not load the file correctly\n\n");
+    }
+  } while (line[0] != 't' && line[0] != 'T' &&
+           line[0] != 'i' && line[0] != 'I' &&
+           line[0] != 'o' && line[0] != 'O'); //}}}
+
+  if (indexed) {
+    // allocate helper array of coordinates //{{{
+    double imp = 1000000; // a value impossible for bead's coordinate
+    Vector *pos = malloc(Counts.BeadsInVsf*sizeof(Vector));
+    for (int i = 0; i < Counts.BeadsInVsf; i++) {
+      pos[i].x = imp;
+    } //}}}
+
+    // read data //{{{
+    for (int i = 0; i < Counts.Beads; i++) {
+
+      fgets(line, sizeof(line), vcf_file);
+
+      // split the line into array //{{{
+      char *split[5];
+      split[0] = strtok(line, " \t");
+      int j = 0;
+      while (split[j] != NULL && j < 4) {
+        split[++j] = strtok(NULL, " \t");
+      } //}}}
+
+      // error - less then four whitespace-separated strings //{{{
+      if (j < 4) {
         return i+1;
-      } else if (split[j][0] == '-' && strlen(split[j]) == 1) {
-        return i+1;
-      }
-      // other characters can be numbers or decimal point or newline (last character of 4th split)
-      // they can also be 'e' or '-' in case of number format 1.0e-1
-      for (int k = 1; k < strlen(split[j]); k++) {
-        if ((split[j][k] < '0' || split[j][k] > '9') &&
-            split[j][k] != '.' &&
-            split[j][k] != '\n' &&
-            split[j][k] != 'e' &&
-            split[j][k] != '-' ) {
-          putc('\n', stderr);
+      } //}}}
+
+      // test if split[0] is integer //{{{
+      for (int j = 0; j < strlen(split[0]); j++) {
+        if (split[0][j] < '0' || split[0][j] > '9') {
           return i+1;
+        }
+      } //}}}
+      int index = atoi(split[0]);
+
+      // test if split[1-3] are doubles //{{{
+      // first two coordinates
+      for (int j = 1; j < 4; j++) {
+        // first character can be '-' (but must be longer) or a number
+        if ((split[j][0] < '0' || split[j][0] > '9') &&
+            split[j][0] != '-') {
+          return i+1;
+        } else if (split[j][0] == '-' && strlen(split[j]) == 1) {
+          return i+1;
+        }
+        // other characters can be numbers or decimal point or newline (last character of 4th split)
+        // they can also be 'e' or '-' in case of number format 1.0e-1
+        for (int k = 1; k < strlen(split[j]); k++) {
+          if ((split[j][k] < '0' || split[j][k] > '9') &&
+              split[j][k] != '.' &&
+              split[j][k] != '\n' &&
+              split[j][k] != 'e' &&
+              split[j][k] != '-' ) {
+            putc('\n', stderr);
+            return i+1;
+          }
+        }
+      } //}}}
+
+      // bead coordinates
+      pos[index].x = atof(split[1]);
+      pos[index].y = atof(split[2]);
+      pos[index].z = atof(split[3]);
+    } //}}}
+
+    // copy coordinates to Bead struct //{{{
+    int count = 0;
+    for (int i = 0; i < Counts.BeadsInVsf; i++) {
+      if (pos[i].x != imp) { // i.e., if bead i is present in the timestep
+        (*Bead)[count].Position.x = pos[i].x;
+        (*Bead)[count].Position.y = pos[i].y;
+        (*Bead)[count].Position.z = pos[i].z;
+        if ((++count) == Counts.Beads) {
+          break;
         }
       }
     } //}}}
+    free(pos);
+  } else {
+  // read data //{{{
+    for (int i = 0; i < Counts.Beads; i++) {
 
-    // bead coordinates
-    pos[index].x = atof(split[1]);
-    pos[index].y = atof(split[2]);
-    pos[index].z = atof(split[3]);
-  } //}}}
+      fgets(line, sizeof(line), vcf_file);
 
-  // copy coordinates to Bead struct //{{{
-  int count = 0;
-  for (int i = 0; i < Counts.BeadsInVsf; i++) {
-    if (pos[i].x != imp) { // i.e., if bead i is present in the timestep
-      (*Bead)[count].Position.x = pos[i].x;
-      (*Bead)[count].Position.y = pos[i].y;
-      (*Bead)[count].Position.z = pos[i].z;
-      if ((++count) == Counts.Beads) {
-        break;
-      }
-    }
-  } //}}}
-  free(pos);
+      // split the line into array //{{{
+      char *split[4];
+      split[0] = strtok(line, " \t");
+      int j = 0;
+      while (split[j] != NULL && j < 3) {
+        split[++j] = strtok(NULL, " \t");
+      } //}}}
+
+      // error - less than 3 whitespace-separated strings //{{{
+      if (j < 3) {
+        return i+1;
+      } //}}}
+
+      // test if split[0-2] are doubles //{{{
+      for (int j = 0; j < 3; j++) {
+        // first character can be '-' (but must be longer) or a number
+        if ((split[j][0] < '0' || split[j][0] > '9') &&
+            split[j][0] != '-') {
+          return i+1;
+        } else if (split[j][0] == '-' && strlen(split[j]) == 1) {
+          return i+1;
+        }
+        // other characters can be numbers or decimal point or newline (last character of 4th split)
+        for (int k = 1; k < strlen(split[j]); k++) {
+          if ((split[j][k] < '0' || split[j][k] > '9') &&
+              split[j][k] != '.' &&
+              split[j][k] != '\n') { // last split ends with newline
+            return i+1;
+          }
+        }
+      } //}}}
+
+      // bead coordinates
+      (*Bead)[i].Position.x = atof(split[0]);
+      (*Bead)[i].Position.y = atof(split[1]);
+      (*Bead)[i].Position.z = atof(split[2]);
+    } //}}}
+  }
 
   // test for presence of blank line(s) at the end of the coordinate block //{{{
   fpos_t position;
+  int length;
   do {
     // save pointer position in the vcf file
     fgetpos(vcf_file, &position);
@@ -1919,8 +1909,14 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
                       MoleculeType *MoleculeType, Molecule *Molecule,
                       char *stuff) {
 
-  // print comment at the beginning of a timestep and 'indexed' on second line
-  fprintf(vcf_file, "\n%s\nindexed\n", stuff);
+  // print blank line
+  putc('\n', vcf_file);
+  // print comment at the beginning of a timestep if present in initial vcf file
+  if (stuff[0] != '\n') {
+    fprintf(vcf_file, "%s", stuff);
+  }
+  // print 'indexed' on the next
+  fprintf(vcf_file, "indexed\n");
 
   for (int i = 0; i < Counts.Beads; i++) {
     int type_b = Bead[i].Type;

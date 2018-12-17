@@ -5,6 +5,7 @@
 #include <math.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -44,7 +45,7 @@ system.\n\n");
     }
   }
 
-  int options = 3; //}}}
+  int req_args = 3; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -52,8 +53,8 @@ system.\n\n");
     count++;
   }
 
-  if (count < options) {
-    fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)!\n\n", count, options);
+  if (count < req_args) {
+    ErrorArgNumber(count, req_args);
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -69,7 +70,7 @@ system.\n\n");
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0) {
 
-      fprintf(stderr, "\nError: non-existent option '%s'\n\n", argv[i]);
+      ErrorOption(argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
     }
@@ -77,8 +78,8 @@ system.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than dl_meso.vsf? //{{{
-  char *vsf_file = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &vsf_file)) {
+  char *input_vsf = calloc(32,sizeof(char *));
+  if (VsfFileOption(argc, argv, &input_vsf)) {
     exit(1);
   } //}}}
 
@@ -113,7 +114,7 @@ system.\n\n");
   // test if <input.vcf> filename ends with '.vsf' (required by VMD)
   char *dot = strrchr(input_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "\nError: <input.vcf> '%s' does not have .vcf ending\n\n", input_vcf);
+    ErrorExtension(input_vcf, ".vcf");
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -122,14 +123,14 @@ system.\n\n");
   char input_agg[32];
   strcpy(input_agg, argv[++count]); //}}}
 
-  // <output.vcf> - filename of output agg file (must end with .agg) //{{{
+  // <output.vcf> - filename of output vcf file //{{{
   char output_vcf[32];
   strcpy(output_vcf, argv[++count]);
 
   // test if <output.agg> filename ends with '.vcf' (required by VMD)
   dot = strrchr(output_vcf, '.');
   if (!dot || strcmp(dot, ".vcf")) {
-    fprintf(stderr, "\nError: <output.vcf> '%s' does not have .agg ending\n\n", output_vcf);
+    ErrorExtension(output_vcf, ".vcf");
     ErrorHelp(argv[0]);
     exit(1);
   } //}}}
@@ -142,10 +143,10 @@ system.\n\n");
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(vsf_file, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(vsf_file);
+  free(input_vsf);
 
   // write all molecules{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -155,7 +156,7 @@ system.\n\n");
   // open input aggregate file and read info from first line (Aggregates command) //{{{
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_agg);
+    ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
 
@@ -198,7 +199,7 @@ system.\n\n");
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    fprintf(stderr, "\nError: cannot open file %s for reading\n\n", input_vcf);
+    ErrorFileOpen(input_vcf, 'r');
     exit(1);
   } //}}}
 
@@ -222,9 +223,6 @@ system.\n\n");
   // skip remainder of pbc line
   while (getc(vcf) != '\n')
     ;
-  // skip blank line
-  while (getc(vcf) != '\n')
-    ;
 
   // print pbc if verbose output
   if (verbose) {
@@ -239,7 +237,7 @@ system.\n\n");
   // open <joined.vcf>
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
-    fprintf(stderr, "\nError: cannot open %s file for writing\n\n", output_vcf);
+    ErrorFileOpen(output_vcf, 'w');
     exit(1);
   }
 
@@ -310,26 +308,11 @@ system.\n\n");
       break;
     } //}}}
 
-    // read indexed timestep from input .vcf file //{{{
-    if (indexed) {
-      if ((test = ReadCoorIndexed(vcf, Counts, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        if (!script && !silent) {
-          putchar('\n');
-        }
-        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
-        exit(1);
-      } //}}}
-    // or read ordered timestep from input .vcf file //{{{
-    } else {
-      if ((test = ReadCoorOrdered(vcf, Counts, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        if (!script && !silent) {
-          putchar('\n');
-        }
-        fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
-        exit(1);
-      }
+    // read coordinates //{{{
+    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+      // print newline to stdout if Step... doesn't end with one
+      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      exit(1);
     } //}}}
 
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
@@ -337,11 +320,7 @@ system.\n\n");
 
     // open output .vcf file for appending //{{{
     if ((out = fopen(output_vcf, "a")) == NULL) {
-      // print newline to stdout if Step... doesn't end with one
-      if (!script && !silent) {
-        putchar('\n');
-      }
-      fprintf(stderr, "\nError: cannot open file %s for appending\n\n", output_vcf);
+      ErrorFileOpen(output_vcf, 'a');
       exit(1);
     } //}}}
 
