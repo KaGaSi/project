@@ -129,7 +129,7 @@ but will not work correctly (and may crash with segmentation fault).
 Bond information about molecule types not present in the bond file will be read
 from `FIELD`.
 
-Ordered coordinate file - NOT IMPLEMENTED NOW {#OrderedCoorFile}
+Ordered coordinate file {#OrderedCoorFile}
 =====
 
 First line of a `vcf` file with ordered timestep(s) contains box size (or to
@@ -146,9 +146,9 @@ Example of ordered coordinate file:
 
 > `pbc <float> <float> <float>`
 >
-> `<blank line>`
+> `<optional blank line - but really blank>`
 >
-> `# 1`
+> `# optional comment`
 >
 > `timestep`
 >
@@ -159,6 +159,9 @@ Example of ordered coordinate file:
 
 Indexed coordinate file {#IndexedCoorFile}
 =====
+
+BOTH COOR FILES (SOON): UNLIMITED COMMENTS, BLANK LINES, pbc KEYWORDS
+BETWEEN TIMESTEPS; STILL NO BLANK LINE AT THE END
 
 First line of a `vcf` file that is read is a box size line, that is, it
 contains `pbc <double> <double> <double>` (the three numbers correspond to
@@ -173,14 +176,14 @@ the second line contains `timestep indexed` (or the short version, `t i`),
 line contains index and coordinates of a single bead. Not all beads from
 the `vsf` file must be present in the `vcf`, instead only selected bead
 types can be present (although all beads of the selected type(s) must be in
-all timesteps). The file cannot contain a tailing blank line (no check is
+all timesteps). The file cannot contain a trailing blank line (no check is
 made in any utility). Example of an indexed coordinate file:
 
 > `pbc <float> <float> <float>`
 >
-> `<blank line - necessary>`
+> `<optional blank line>`
 >
-> `# 1`
+> `# optional comment`
 >
 > `indexed`
 >

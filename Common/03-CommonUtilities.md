@@ -342,10 +342,10 @@ where $n_i$ is the number of beads in an aggregate with $A_{\mathrm{s}}=i$.
 \endlatexonly
 
 The definition of aggregation number\latexonly, $A_{\mathrm{S}}$,\endlatexonly
-is somewhat flexible. The `-m <name>` option can be used to specify that the
+is somewhat flexible. The `-m <name(s)>` option can be used to specify that the
 aggregation number is not the number of all molecules in an aggregate, but
 rather only the number molecules of the specified type(s). Two values are then
-taken as the mass and aggregation number for calculations of distributions and
+taken as the aggregate mass for calculations of distributions and
 averages -- the 'true' value (noted as `whole agg mass` in output files) and
 the '`-m` option value' (noted as `options mass`). For example, let's assume
 an aggregate contains `A` and `B` molecules. Using `-m A` will count the
