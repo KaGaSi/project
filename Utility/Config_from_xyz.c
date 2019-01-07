@@ -92,13 +92,20 @@ the last step is used.\n\n");
   char input_xyz[32];
   strcpy(input_xyz, argv[++count]);
 
-  // test if <input.xyz> filename ends with '.vsf' (required by VMD)
-  char *dot = strrchr(input_xyz, '.');
-  if (!dot || strcmp(dot, ".xyz")) {
-    ErrorExtension(input_xyz, ".xyz");
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 1;
+  char **extension;
+  extension = malloc(ext*sizeof(char *));
+  extension[0] = malloc(5*sizeof(char));
+  strcpy(extension[0], ".xyz");
+  if (!ErrorExtension(input_xyz, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // get number of beads from xyz file //{{{
   // open input coordinate file

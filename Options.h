@@ -8,29 +8,6 @@
 
 #include "Structs.h"
 
-// VsfFileOption() //{{{
-/**
- * \brief Option whether to use `.vsf` file different from `dl_meso.vsf` (`-i
- * <name.vsf>`).
- *
- * \param [in]  argc         number of utility's arguments
- * \param [in]  argv         utility's arguments
- * \param [out] vsf_file     filename with structure information
- * \return `true` or `false` error or not error
- */
-bool VsfFileOption(int argc, char **argv, char **vsf_file); //}}}
-
-// BondsFileOption() //{{{
-/**
- * \brief Option whether to use bonds file (`-b <name>`).
- *
- * \param [in]  argc         number of program's arguments
- * \param [in]  argv         program's arguments
- * \param [out] bonds_file   filename with bonds
- * \return `true` or `false` error or not error
- */
-bool BondsFileOption(int argc, char **argv, char **bonds_file); //}}}
-
 // VerboseLongOption() //{{{
 /**
  * \brief Option whether to use long verbose output (overrides
@@ -136,9 +113,10 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value);
 bool TwoIntegerOption(int argc, char **argv, char *opt, int *values);
 // }}}
 
-// HundredIntegerOption() //{{{
+// FileIntsOption() //{{{
 /**
- * \brief Function for any option with two integer arguments.
+ * \brief Function for any option with filename and up to a hundred
+ * integer arguments.
  *
  * \param [in]  argc   number of program's arguments
  * \param [in]  argv   program's arguments
@@ -147,7 +125,7 @@ bool TwoIntegerOption(int argc, char **argv, char *opt, int *values);
  * \param [out] n      number of numeric arguments
  * \return `true` or `false` for error
  */
-bool HundredIntegerOption(int argc, char **argv, char *opt, int *values, int *count, char *file);
+bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, char *file);
  //}}}
 
 // FileOption() //{{{

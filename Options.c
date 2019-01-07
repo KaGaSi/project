@@ -7,70 +7,6 @@
 #include "AnalysisTools.h"
 #include "Errors.h"
 
-// VsfFileOption() //{{{
-/**
- * Option whether to use `.vsf` file different from the default
- * `dl_meso.vsf`.
- */
-bool VsfFileOption(int argc, char **argv, char **vsf_file) {
-
-  (*vsf_file)[0] = '\0'; // check if -i option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-i") == 0) {
-
-      // wrong argument to -i option{{{
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-i' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
-
-        return(true);
-      } //}}}
-
-      // check if .vsf (or .vcf) ending is present (required by VMD) //{{{
-      char *vsf = strrchr(argv[i+1], '.');
-      if (!vsf || (strcmp(vsf, ".vsf") && strcmp(vsf, ".vcf"))) {
-        fprintf(stderr, "'-i' argument does not have .vsf or .vcf ending!\n");
-
-        return (true);
-      } //}}}
-
-      strcpy(*vsf_file, argv[i+1]);
-    }
-  }
-
-  // -i option is not used{{{
-  if ((*vsf_file)[0] == '\0') {
-    strcpy(*vsf_file, "dl_meso.vsf");
-  } //}}}
-
-  return (false);
-} //}}}
-
-// BondsFileOption() //{{{
-/**
- * Option whether to use bonds file with alternative bond definitions.
- */
-bool BondsFileOption(int argc, char **argv, char **bonds_file) {
-  (*bonds_file)[0] = '\0'; // check if -b option is used
-
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-b") == 0) {
-
-      // wrong argument to -b option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-b' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-
-        return(true);
-      }
-
-      strcpy(*bonds_file, argv[i+1]);
-    }
-  }
-
-  return(false);
-} //}}}
-
 // VerboseLongOption() //{{{
 /**
  * Option whether to print detailed data to stdout. Data are printed via
@@ -142,9 +78,9 @@ bool ExcludeOption(int argc, char **argv, Counts Counts,
 
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
 
-        if (type == -1) { // is it in FIELD?
+        if (type == -1) { // is it in vsf?
           fprintf(stderr, "Error: non-existent molecule name (%s)\n", argv[i+1+j]);
-          fprintf(stderr, "Molecule names in FIELD:\n");
+          fprintf(stderr, "Molecule names in structure fule:\n");
           for (int k = 0; k < Counts.TypesOfMolecules; k++) {
             fprintf(stderr, "%3d %s\n", k, (*MoleculeType)[k].Name);
           }
@@ -186,8 +122,8 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
 
       // test if <joined.vcf> filename ends with '.vcf' (required by VMD) //{{{
       char *dot = strrchr(joined_vcf, '.');
-      if (!dot || strcmp(dot, ".vcf")) {
-        fprintf(stderr, "<joined.vcf> '%s' does not have .vcf ending!\n", joined_vcf);
+      if (!dot || (strcmp(dot, ".vcf") && strcmp(dot, ".vtf"))) {
+        fprintf(stderr, "\nError: '%s' does not have .vcf ending!\n", joined_vcf);
 
         return(true);
       } //}}}
@@ -215,7 +151,7 @@ bool BeadTypeOption(int argc, char **argv, Counts Counts,
       while (++types < argc && argv[types][0] != '-') {
         int type = FindBeadType(argv[types], Counts, *BeadType);
         if (type == -1) {
-          fprintf(stderr, "Bead type '%s' does not exist in FIELD ('-bt' option)!\n", argv[types]);
+          fprintf(stderr, "Bead type '%s' does not exist in structure fule ('-bt' option)!\n", argv[types]);
           return(true);
         }
 
@@ -302,12 +238,12 @@ bool TwoIntegerOption(int argc, char **argv, char *opt, int *values) {
   return(false);
 } //}}}
 
-// HundredIntOptions() //{{{
+// FileIntsOptions() //{{{
 /**
- * Function for any option with up to 100 integer arguments. The option is an
- * argument of this function.
+ * Function for any option with a file name and up to 100 integer
+ * arguments. The option is an argument of this function.
  */
-bool HundredIntegerOption(int argc, char **argv, char *opt, int *values, int *count, char *file) {
+bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, char *file) {
 
   int n = 0;
   for (int i = 1; i < argc; i++) {
@@ -356,7 +292,7 @@ bool HundredIntegerOption(int argc, char **argv, char *opt, int *values, int *co
  */
 bool FileOption(int argc, char **argv, char *opt, char **name) {
 
-  name[0] = '\0';
+  (*name)[0] = '\0';
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
@@ -378,7 +314,7 @@ bool FileOption(int argc, char **argv, char *opt, char **name) {
 
 // MoleculeTypeOption() //{{{
 /**
- * Generic option for molecule type that can take more than one
+ * Generic option for molecule type that can take one
  * argument. The option is an argument of this function.
  */
 bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts
@@ -396,7 +332,7 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts
 
       *moltype = FindMoleculeType(argv[i+1], Counts, *MoleculeType);
       if (*moltype == -1) {
-        fprintf(stderr, "Molecule '%s' does not exist in FIELD ('%s' option)!\n", argv[i+1], opt);
+        fprintf(stderr, "Molecule '%s' does not exist in structure file ('%s' option)!\n", argv[i+1], opt);
         return(true);
       }
     }
@@ -432,8 +368,8 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts
       while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
 
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
-        if (type == -1) { // is argv[i+1+j] in FIELD?
-          fprintf(stderr, "Molecule '%s' does not exist in FIELD ('%s' option)!\n", argv[i+1+j], opt);
+        if (type == -1) { // is argv[i+1+j] in vsf?
+          fprintf(stderr, "Molecule '%s' does not exist in structure file ('%s' option)!\n", argv[i+1+j], opt);
           return(true);
         }
         (*moltype)[type] = 1;

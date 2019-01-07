@@ -43,9 +43,10 @@ void ErrorNaN(char *option); //}}}
 /** \brief Wrong file extension
  *
  * \param [in] file       filename
- * \param [in] extension  correct extension
+ * \param [in] number     number of correct extension(s)
+ * \param [in] extension  correct extension(s)
  */
-void ErrorExtension(char *file, char *extension); //}}}
+bool ErrorExtension(char *file, int number, char **extension); //}}}
 
 // ErrorFileOpen() //{{{
 /** \brief Cannot open file

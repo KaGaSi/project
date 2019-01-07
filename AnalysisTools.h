@@ -109,6 +109,18 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
  */
 void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, MoleculeType *MoleculeType, Molecule *Molecule, char *stuff); //}}}
 
+//WriteCoorXYZ() //{{{
+/**
+ * \brief Function for writing xyz coordinates
+ *
+ * \param [in] xyz_file      output .xyz coordinate file
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BeadType      information about bead types
+ * \param [in] Bead          coordinates of individual beads
+ */
+void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
+                  BeadType *BeadType, Bead *Bead); //}}}
+
 // FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name
  *
