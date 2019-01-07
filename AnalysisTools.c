@@ -79,7 +79,7 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
  */
 void CommonHelp(bool error) {
   if (error) {
-    fprintf(stderr, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
+    fprintf(stderr, "      -i <name>      use input .vsf file different from traject.vsf\n");
 //  fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
     fprintf(stderr, "      -v             verbose output\n");
     fprintf(stderr, "      -V             more verbose output\n");
@@ -87,7 +87,7 @@ void CommonHelp(bool error) {
     fprintf(stderr, "      -h             print this help and exit\n");
     fprintf(stderr, "      --script       do not reprint line (useful when output goes to file)\n");
   } else {
-    fprintf(stdout, "      -i <name>      use input .vsf file different from dl_meso.vsf\n");
+    fprintf(stdout, "      -i <name>      use input .vsf file different from traject.vsf\n");
 //  fprintf(stdout, "      -b <name>      file containing bond alternatives to FIELD\n");
     fprintf(stdout, "      -v             verbose output\n");
     fprintf(stdout, "      -V             more verbose output\n");
@@ -133,7 +133,7 @@ bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
 
   // -i option is not used
   if ((*vsf_file)[0] == '\0') {
-    strcpy(*vsf_file, "dl_meso.vsf");
+    strcpy(*vsf_file, "traject.vsf");
   } //}}}
 
   // -b <name> option - filename of input bond file //{{{
@@ -282,7 +282,8 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
 
       fclose(bond);
     }
-    printf(" Use = %3s}\n", MoleculeType[i].Use? "Yes":"No");
+    printf(" Use = %3s,", MoleculeType[i].Use? "Yes":"No");
+    printf(" Write = %3s}\n", MoleculeType[i].Write? "Yes":"No");
   }
 
   printf("Bonds:\n");
@@ -397,8 +398,14 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
           if (strncmp(split[j], "name", 1) == 0) {
             // copy new name to BeadType[].Name
             strcpy((*BeadType)[type_default].Name, split[j+1]);
+            (*BeadType)[type_default].Charge = 1000;
+            (*BeadType)[type_default].Mass = 1000;
             name = true;
             break;
+          } else if (strcmp(split[j], "charge") == 0 || strcmp(split[j], "q") == 0) {
+            (*BeadType)[type_default].Charge = atof(split[j+1]);
+          } else if (strncmp(split[j], "mass", 1) == 0) {
+            (*BeadType)[type_default].Mass = atof(split[j+1]);
           }
         }
         continue; // skip the rest of the line
@@ -406,17 +413,17 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         max_bead = atoi(split[1]);
       } //}}}
 
-      // check that line contains either both 'resid' and 'segid' or neither //{{{
+      // check that line contains either both 'resid' and 'resname' or neither //{{{
       int test = 0;
       for (int i = 2; i < strings && test < 2; i+= 2) {
-        if (strncmp("segid", split[i], 1) == 0) {
+        if (strcmp("resname", split[i]) == 0) {
           test++;
         } else if (strcmp("resid", split[i]) == 0) {
           test++;
         }
       }
       if (test == 1) {
-        fprintf(stderr, "Error: vsf - the following a(tom) line contains only one of 'resid' and 'segid' keywords:\n");
+        fprintf(stderr, "Error: vsf - the following a(tom) line contains only one of 'resid' and 'resname' keywords:\n");
         for (int i = 0; i < strings; i++) {
           fprintf(stderr, "%s ", split[i]);
         }
@@ -426,6 +433,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 
       // go through the rest of the line to find bead name
       // by twos - first is always keyword, second is always value
+      double charge = 1000, mass = 1000;
+      int type_qm = -1; // for possible mass/charge in vsf
       for (int i = 2; i < strings; i += 2) {
         if (strncmp("name", split[i], 1) == 0) { // bead type name //{{{
           name = true;
@@ -439,11 +448,15 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
             (*BeadType)[type].Number = 0;
             // copy new name to BeadType[].Name
             strcpy((*BeadType)[type].Name, split[i+1]);
+            // initialize charge and mass by 'impossible' value
+            (*BeadType)[type].Charge = 1000;
+            (*BeadType)[type].Mass = 1000;
+            type_qm = type;
           }
           // increment number of beads of given type
           (*BeadType)[type].Number++;
           //}}}
-        } else if (strncmp("segid", split[i], 1) == 0) { // molecule type name //{{{
+        } else if (strcmp("resname", split[i]) == 0) { // molecule type name //{{{
           // if the molecule name doesn't exist, add it to the structures
           int type;
           if ((type = FindMoleculeType(split[i+1], *Counts, *MoleculeType)) == -1) {
@@ -464,11 +477,25 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
           if (atoi(split[i+1]) > max_mol) {
             max_mol = atoi(split[i+1]);
           }
+        //}}}
+        } else if (strcmp("charge", split[i]) == 0 || strcmp("q", split[i]) == 0) { //{{{
+          charge = atof(split[i+1]);
+        //}}}
+        } else if (strncmp("mass", split[i], 1) == 0) { //{{{
+          mass = atof(split[i+1]);
         } //}}}
       }
+
+      if (type_qm != -1 && (*BeadType)[type_qm].Charge == 1000) {
+        (*BeadType)[type_qm].Charge = charge;
+      }
+      if (type_qm != -1 && (*BeadType)[type_qm].Mass == 1000) {
+        (*BeadType)[type_qm].Mass = mass;
+      }
+
       // error - no 'name' //{{{
       if (!name) {
-        fprintf(stderr, "Error: vsf - the following a(tom) line does not contain 'name':\n");
+        fprintf(stderr, "\nError: vsf - the following a(tom) line does not contain 'name':\n");
         for (int i = 0; i < strings; i++) {
           fprintf(stderr, "%s ", split[i]);
         }
@@ -543,7 +570,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       for (int i = 2; i < strings; i += 2) {
         if (strncmp("name", split[i], 1) == 0) { // bead name
           bead_type = FindBeadType(split[i+1], *Counts, *BeadType);
-        } else if (strncmp("segid", split[i], 1) == 0) { // molecule name
+        } else if (strcmp("resname", split[i]) == 0) { // molecule name
           mol_type = FindMoleculeType(split[i+1], *Counts, *MoleculeType);
         } else if (strcmp("resid", split[i]) == 0) { // molecule id
           mol_id = atoi(split[i+1]) - 1; // mol ids start with 1 in vsf
@@ -860,46 +887,43 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     } //}}}
 
     // skip initial stuff //{{{
-    // skip to the pbc line //{{{
-    char str[32];
-    do {
-      if (fscanf(vcf, "%s", str) != 1) {
-        fprintf(stderr, "Error: %s - cannot read a string from before 'pbc'\n", vcf_file);
-        exit(1);
-      }
-    } while(strcmp("pbc", str) != 0);
-    // ignore the rest of the 'pbc' line
-    while(getc(vcf) != '\n')
-      ;
-    // skip blank line if present
-    int test;
-    if ((test = getc(vcf)) != '\n') {
-//    printf("|%c|\n", test);
-      ungetc(test, vcf);
-    } //}}}
-
-    // skip lines till the beginning of the first coordinate block (blanks or comments) //{{{
-    char line[1024];
+    // skip lines including 't(imestep)' line //{{{
+    char line[1024], line2[1024], *split[32], str[32];
+    str[0] = '\0';
     do {
       fgets(line, sizeof(line), vcf);
-    } while (line[0] != 't' && line[0] != 'T' &&
-             line[0] != 'i' && line[0] != 'I' &&
-             line[0] != 'o' && line[0] != 'O'); //}}}
+      strcpy(line2, line);
+      split[0] = strtok(line, " \t");
 
-    // split the line containing 'i(ndexed)' or 'o(rdered)' //{{{
-    char *split[30];
-    split[0] = strtok(line, " \t");
-    int i = 0;
-    while (split[i] != NULL && i < 29) {
-      split[++i] = strtok(NULL, " \t");
-    } //}}}
+      // 't(imestep)' line
+      if (split[0][0] == 't' || split[0][0] == 'T') {
+        split[1] = strtok(NULL, " \t");
+        if (split[1][0] != 'o' && split[1][0] != 'O' &&
+            split[1][0] != 'i' && split[1][0] != 'I') {
+          fprintf(stderr, "\nError: %s - no 'i(ndexed)' or 'o(rdered)' keyword after 't(imestep)' keyword\n", vcf_file);
+          exit(1);
+        } else {
+          str[0] = split[1][0];
+          break;
+        }
 
-    // if the fist split is 't(imestep)', use the second split for indexed/ordered decision //{{{
-    if (split[0][0] == 't' || split[0][0] == 'T') {
-      str[0] = split[1][0];
-    } else {
-      str[0] = split[0][0];
-    } //}}}
+      // 'o(rdered)' or 'i(ndexed)' line
+      } else if (split[0][0] == 'o' || split[0][0] == 'O' ||
+                 split[0][0] == 'i' || split[0][0] == 'I') {
+        str[0] = split[0][0];
+        break;
+      }
+    } while (true); //}}}
+
+    // skip the rest until first coordinates //{{{
+    fpos_t pos;
+    do {
+      fgetpos(vcf, &pos); // save vcf file pointer
+
+      fgets(line, sizeof(line), vcf);
+      split[0] = strtok(line, " \t");
+    } while (split[0][0] < '0' || split[0][0] > '9');
+    fsetpos(vcf, &pos); // restore vcf file pointer to before the first coordinate line //}}}
     //}}}
 
     if (str[0] == 'o' || str[0] == 'O') { // ordered timesteps //{{{
@@ -991,7 +1015,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       exit(1);
     } //}}}
     fclose(vcf);
-  } else { // use everything if no vcf file provided
+
+  // use all beads if no vcf file provided
+  } else {
     for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
       (*BeadType)[i].Use = true;
     }
@@ -1399,8 +1425,16 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     free((*Molecule)[i].Bead);
   } //}}}
 
-  // read bead type mass and charge from FIELD file
-  ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
+  // read bead type mass and charge from FIELD file if not in vsf file //{{{
+  bool charge_mass = true;
+  for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+    if ((*BeadType)[i].Charge == 1000 || (*BeadType)[i].Mass == 1000) {
+      charge_mass = false;
+    }
+  }
+  if (!charge_mass) {
+    ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
+  } //}}}
 
   // calculate molecule mass //{{{
   count = 0; // to store id of the first molecule id of the given type
@@ -1587,7 +1621,6 @@ void MoveCOMMolecules(Counts Counts, Vector BoxLength,
   }
 } //}}}
 
-//TODO: test non-blank non-comment before timestep
 // ReadCoordinates() //{{{
 /**
  * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
@@ -1595,9 +1628,11 @@ void MoveCOMMolecules(Counts Counts, Vector BoxLength,
 int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
 
   // initial stuff //{{{
-  (*stuff)[0] = '\n'; // no comment line
+  (*stuff)[0] = '\0'; // no comment line
   char line[1024];
+  fpos_t position;
   do {
+    fgetpos(vcf_file, &position); // save pointer position
     fgets(line, sizeof(line), vcf_file);
 
     while (line[0] == '\t' || line[0] == ' ') {
@@ -1610,20 +1645,14 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, ch
     }
 
     if (line[0] == '#') {
-      strcpy(*stuff, line);
-    // TODO: cannot be anything else then indexed or comment
-    } else if ( line[0] != '\n' &&
-           line[0] != 't' && line[0] != 'T' &&
-           line[0] != 'i' && line[0] != 'I' &&
-           line[0] != 'o' && line[0] != 'O') {
-      fprintf(stderr, "\nWarning: non-blank, non-comment line '%s' present in the input vcf file right before a timestep\n", line); 
-      fprintf(stderr, "           this utility should work fine, but vmd may not load the file correctly\n\n");
+      strcat(*stuff, line);
     }
-  } while (line[0] != 't' && line[0] != 'T' &&
-           line[0] != 'i' && line[0] != 'I' &&
-           line[0] != 'o' && line[0] != 'O'); //}}}
+  } while (line[0] < '0' || line[0] > '9');
 
-  if (indexed) {
+  // return file pointer to before the first coordinate line
+  fsetpos(vcf_file, &position); //}}}
+
+  if (indexed) { // indexed timestep
     // allocate helper array of coordinates //{{{
     double imp = 1000000; // a value impossible for bead's coordinate
     Vector *pos = malloc(Counts.BeadsInVsf*sizeof(Vector));
@@ -1633,7 +1662,6 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, ch
 
     // read data //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-
       fgets(line, sizeof(line), vcf_file);
 
       // split the line into array //{{{
@@ -1700,10 +1728,9 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, ch
       }
     } //}}}
     free(pos);
-  } else {
-  // read data //{{{
+  } else { // ordered timestep
+    // read data //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-
       fgets(line, sizeof(line), vcf_file);
 
       // split the line into array //{{{
@@ -1745,28 +1772,6 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, ch
     } //}}}
   }
 
-  // test for presence of blank line(s) at the end of the coordinate block //{{{
-  fpos_t position;
-  int length;
-  do {
-    // save pointer position in the vcf file
-    fgetpos(vcf_file, &position);
-    // get line
-    fgets(line, sizeof(line), vcf_file);
-    // trim trailing whitespace in line
-    length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
-  } while (length == 1);
-  // restore pointer position in vsf file
-  fsetpos(vcf_file, &position); //}}}
-
   return 0;
 } //}}}
 
@@ -1779,14 +1784,30 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
 
   bool error = false;
 
-  // save the first line containing '# <number>' //{{{
-  int i = 0;
-  while (((*stuff)[i++] = getc(vcf_file)) != '\n')
-    ;
-  // skip the second line containing 't(imestep)'
-  while (getc(vcf_file) != '\n')
-    ;
-    //}}}
+  // initial stuff //{{{
+  (*stuff)[0] = '\0'; // no comment line
+  char line[1024];
+  fpos_t position;
+  do {
+    fgetpos(vcf_file, &position); // save pointer position
+    fgets(line, sizeof(line), vcf_file);
+
+    while (line[0] == '\t' || line[0] == ' ') {
+      int i;
+      for (i = 1; line[i] != '\n'; i++) {
+        line[i-1] = line[i];
+      }
+      line[i-1] = '\n';
+      line[i] = '\0';
+    }
+
+    if (line[0] == '#') {
+      strcat(*stuff, line);
+    }
+  } while (line[0] < '0' || line[0] > '9');
+
+  // return file pointer to before the first coordinate line
+  fsetpos(vcf_file, &position); //}}}
 
   for (int i = 0; i < Counts.Beads; i++) {
     int test;
@@ -1912,9 +1933,7 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
   // print blank line
   putc('\n', vcf_file);
   // print comment at the beginning of a timestep if present in initial vcf file
-  if (stuff[0] != '\n') {
-    fprintf(vcf_file, "%s", stuff);
-  }
+  fprintf(vcf_file, "%s", stuff);
   // print 'indexed' on the next
   fprintf(vcf_file, "indexed\n");
 
@@ -1937,6 +1956,30 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
                                                      Bead[i].Position.y,
                                                      Bead[i].Position.z);
       }
+    }
+  }
+} //}}}
+
+//WriteCoorXYZ() //{{{
+void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
+                  BeadType *BeadType, Bead *Bead) {
+
+  // count beads to write
+  int count = 0;
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    if (BeadType[i].Write) {
+      count += BeadType[i].Number;
+    }
+  }
+
+  // print number of beads to file
+  fprintf(xyz_file, "%d\n\n", count);
+
+  // print coordinates
+  for (int i = 0; i < Counts.Beads; i++) {
+    int type = Bead[i].Type;
+    if (BeadType[type].Write) {
+      fprintf(xyz_file, "%8s %7.3f %7.3f %7.3f\n", BeadType[type].Name, Bead[i].Position.x, Bead[i].Position.y, Bead[i].Position.z);
     }
   }
 } //}}}

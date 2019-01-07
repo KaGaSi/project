@@ -9,13 +9,13 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input> <input.agg> <width> <output.rho> <agg size(s)> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>       input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <width>           width of a single bin\n");
-  fprintf(stderr, "   <output.rho>      output density file (automatic ending '#.rho' added)\n");
-  fprintf(stderr, "   <agg sizes>       aggregate sizes to calculate density for\n");
+  fprintf(stderr, "   <input>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(stderr, "   <input.agg>       input agg file\n");
+  fprintf(stderr, "   <width>           width of a single bin of the distribution\n");
+  fprintf(stderr, "   <output.rho>      output density file with '#.rho' ending (# is aggregate size)\n");
+  fprintf(stderr, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(stderr, "      -n <int>       number of bins to average\n");
@@ -41,18 +41,18 @@ beadtype will be averaged without regard for the various types of molecule it \
 comes from (in that case, use -x option with SelectedVcf utility).\n\n");
 
 /*      fprintf(stdout, "\
-The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+The utility uses traject.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n"); */
 
       fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.vcf> <input.agg> <width> <output.rho> <agg sizes> <options>\n\n", argv[0]);
+      fprintf(stdout, "   %s <input> <input.agg> <width> <output.rho> <agg size(s)> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
-      fprintf(stdout, "   <input.agg>       input filename with information about aggregates (agg format)\n");
-      fprintf(stdout, "   <width>           width of a single bin\n");
-      fprintf(stdout, "   <output.rho>      output density file (automatic ending '#.rho' added)\n");
-      fprintf(stdout, "   <agg sizes>       aggregate sizes to calculate density for\n");
+      fprintf(stdout, "   <input>           input coordinate file (either vcf or vtf format)\n");
+      fprintf(stdout, "   <input.agg>       input agg file\n");
+      fprintf(stdout, "   <width>           width of a single bin of the distribution\n");
+      fprintf(stdout, "   <output.rho>      output density file with '#.rho' ending (# is aggregate size)\n");
+      fprintf(stdout, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
       fprintf(stdout, "   <options>\n");
       fprintf(stdout, "      --joined       specify that aggregates with joined coordinates are used\n");
       fprintf(stdout, "      -n <int>       number of bins to average\n");
@@ -101,15 +101,36 @@ system.\n\n"); */
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than dl_meso.vsf? //{{{
+  // use .vsf file other than traject.vsf? //{{{
   char *input_vsf = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &input_vsf)) {
+  if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
-  } //}}}
+  }
+  if (input_vsf[0] == '\0') {
+    strcpy(input_vsf, "traject.vsf");
+  }
+
+  // test if structure file ends with '.vsf'
+  int ext = 2;
+  char **extension;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vsf, ext, extension)) {
+    ErrorHelp(argv[0]);
+    exit(1);
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // use bonds file? //{{{
   char *bonds_file = calloc(32,sizeof(char *));
-  if (BondsFileOption(argc, argv, &bonds_file)) {
+  if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(1);
   } //}}}
 
@@ -146,21 +167,44 @@ system.\n\n"); */
 
   count = 0; // count mandatory arguments
 
-  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
-  char input_vcf[32];
-  strcpy(input_vcf, argv[++count]);
+  // <input> - input coordinate file //{{{
+  char input_coor[32];
+  strcpy(input_coor, argv[++count]);
 
-  // test if <input.vcf> filename ends with '.vsf' (required by VMD)
-  char *dot = strrchr(input_vcf, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(input_vcf, ".vcf");
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(8*sizeof(char));
+  }
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_coor, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
-  // <input.agg> - filename of input file with aggregate information //{{{
+  // <input.agg> - input agg file with aggregate information //{{{
   char input_agg[32];
-  strcpy(input_agg, argv[++count]); //}}}
+  strcpy(input_agg, argv[++count]);
+
+  // test if <input.gg> ends with '.agg'
+  ext = 1;
+  extension = malloc(ext*sizeof(char *));
+  extension[0] = malloc(5*sizeof(char));
+  strcpy(extension[0], ".agg");
+  if (!ErrorExtension(input_agg, ext, extension)) {
+    ErrorHelp(argv[0]);
+    exit(1);
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // <width> - width of single bin //{{{
   // Error - non-numeric argument
@@ -183,7 +227,7 @@ system.\n\n"); */
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information{{{
-  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf); //}}}
@@ -229,13 +273,6 @@ system.\n\n"); */
     char str[128];
     strcpy(str, output_rho);
 
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (specific_moltype_for_size[i]) {
-        char str2[256];
-        sprintf(str2, "%s%s", str, MoleculeType[i].Name);
-        strcpy(str, str2);
-      }
-    }
     char str2[133];
     sprintf(str2, "%s%d.rho", str, agg_sizes[aggs][0]);
     strcpy(str, str2);
@@ -254,7 +291,7 @@ system.\n\n"); */
     fprintf(out, "# for each bead type: rdp | stderr | rnp | stderr\n");
     putc('#', out);
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      fprintf(out, " %d: %s",4*i+2 , BeadType[i].Name);
+      fprintf(out, " %d: %s", 4*i+2, BeadType[i].Name);
     }
     putc('\n', out); //}}}
 
@@ -290,7 +327,7 @@ system.\n\n"); */
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", name, input_vcf);
+      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", name, input_coor);
       exit(1);
     }
 
@@ -316,8 +353,8 @@ system.\n\n"); */
 
   // open input coordinate file //{{{
   FILE *vcf;
-  if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    ErrorFileOpen(input_vcf, 'r');
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
 
@@ -326,7 +363,7 @@ system.\n\n"); */
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
       exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
@@ -334,7 +371,7 @@ system.\n\n"); */
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
     exit(1);
   }
 
@@ -385,7 +422,7 @@ system.\n\n"); */
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "Chosen aggregate sizes:");
     for (int i = 0; i < aggs; i++) {
@@ -419,12 +456,12 @@ system.\n\n"); */
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
+      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
       test = '\0';
       break;
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_vcf, count, stuff, test);
+      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
       exit(1);
     }
   }
@@ -473,7 +510,7 @@ system.\n\n"); */
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -601,14 +638,7 @@ system.\n\n"); */
     FILE *out;
     // assemble correct name
     sprintf(str, "%s", output_rho);
-    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (specific_moltype_for_size[j]) {
-        char str2[256];
-        sprintf(str2, "%s%s", str, MoleculeType[j].Name);
-        strcpy(str, str2);
-      }
-    }
-    char str2[256];
+    char str2[133];
     sprintf(str2, "%s%d.rho", str, agg_sizes[i][0]);
     strcpy(str, str2);
     if ((out = fopen(str, "a")) == NULL) {

@@ -20,6 +20,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -st <start>    number of timestep to start from\n");
   fprintf(stderr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
+  fprintf(stderr, "      -xyz <name>    output xyz file\n");
   CommonHelp(1);
 } //}}}
 
@@ -34,7 +35,7 @@ selected bead types. Also <start> timesteps can be omitted and every <skip> \
 timestep can be left out.\n\n");
 
 /*      fprintf(stdout, "\
-The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+The utility uses traject.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about \
 the system.\n\n");
 */
@@ -52,6 +53,7 @@ the system.\n\n");
       fprintf(stdout, "      -st <start>    number of timestep to start from\n");
       fprintf(stdout, "      -sk <skip>     leave out every 'skip' steps\n");
       fprintf(stdout, "      -x <name(s)>   exclude specified molecule(s)\n");
+      fprintf(stdout, "      -xyz <name>    output xyz file\n");
       CommonHelp(0);
       exit(0);
     }
@@ -90,6 +92,7 @@ the system.\n\n");
         strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-sk") != 0 &&
+        strcmp(argv[i], "-xyz") != 0 &&
         strcmp(argv[i], "-x") != 0) {
 
       ErrorOption(argv[i]);
@@ -99,15 +102,36 @@ the system.\n\n");
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than dl_meso.vsf? //{{{
+  // use .vsf file other than traject.vsf? //{{{
   char *input_vsf = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &input_vsf)) {
+  if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
-  } //}}}
+  }
+  if (input_vsf[0] == '\0') {
+    strcpy(input_vsf, "traject.vsf");
+  }
+
+  // test if structure file ends with '.vsf'
+  int ext = 2;
+  char **extension;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vsf, ext, extension)) {
+    ErrorHelp(argv[0]);
+    exit(1);
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // use bonds file? //{{{
   char *bonds_file = calloc(32,sizeof(char *));
-  if (BondsFileOption(argc, argv, &bonds_file)) {
+  if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(1);
   } //}}}
 
@@ -133,6 +157,12 @@ the system.\n\n");
   if (IntegerOption(argc, argv, "-sk", &skip)) {
     exit(1);
   } //}}}
+
+  // save into xyz file? //{{{
+  char *output_xyz = calloc(32,sizeof(char *));
+  if (FileOption(argc, argv, "-xyz", &output_xyz)) {
+    exit(1);
+  } //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -144,29 +174,44 @@ the system.\n\n");
 
   count = 0; // count mandatory arguments
 
-  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
+  // <input> - input coordinate file //{{{
   char input_vcf[32];
   strcpy(input_vcf, argv[++count]);
 
-  // test if <input.vcf> filename ends with '.vsf' (required by VMD)
-  char *dot = strrchr(input_vcf, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(input_vcf, ".vcf");
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vcf, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char output_vcf[32];
   strcpy(output_vcf, argv[++count]);
 
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
-  dot = strrchr(output_vcf, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(output_vcf, ".vcf");
+  ext = 1;
+  extension = malloc(ext*sizeof(char *));
+  extension[0] = malloc(5*sizeof(char));
+  strcpy(extension[0], ".vcf");
+  if (!ErrorExtension(output_vcf, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -258,13 +303,13 @@ the system.\n\n");
 
   // get pbc from coordinate file //{{{
   char str[32];
-  // skip till 'pbc' keyword
+  // skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf, "%s", str) != 1) {
       fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
       exit(1);
     }
-  } while (strcmp(str, "pbc") != 0);
+  } while (strcmp(str, "pbc") != 0); //}}}
 
   // read pbc //{{{
   Vector BoxLength;
@@ -279,10 +324,10 @@ the system.\n\n");
   }
   BoxLength.x = atof(split[0]);
   BoxLength.y = atof(split[1]);
-  BoxLength.z = atof(split[2]);
+  BoxLength.z = atof(split[2]); //}}}
   //}}}
 
-  // print pbc if verbose output
+  // print pbc if verbose output //{{{
   if (verbose) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
@@ -299,7 +344,7 @@ the system.\n\n");
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
-  stuff = calloc(128,sizeof(int)); //}}}
+  stuff = calloc(1024,sizeof(int)); //}}}
 
   // skip first start-1 steps //{{{
   count = 0;
@@ -402,6 +447,20 @@ the system.\n\n");
 
     fclose(out);
 
+    // save to xyz file? //{{{
+    if (output_xyz[0] != '\0') {
+
+      // open output .xyz file for appending //{{{
+      if ((out = fopen(output_xyz, "a")) == NULL) {
+        ErrorFileOpen(output_xyz, 'a');
+        exit(1);
+      } //}}}
+
+      WriteCoorXYZ(out, Counts, BeadType, Bead);
+
+      fclose(out);
+    } //}}}
+
     // skip every 'skip' steps //{{{
     for (int i = 0; i < skip; i++) {
       // test whether at vcf's eof //{{{
@@ -419,12 +478,16 @@ the system.\n\n");
         }
       }
 
-      // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+//    // read coordinates //{{{
+//    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+//      // print newline to stdout if Step... doesn't end with one
+//      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+//      exit(1);
+//    } //}}}
+      if (SkipCoor(vcf, Counts, &stuff)) {
+        fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
         exit(1);
-      } //}}}
+      }
     } //}}}
 
     // if -V option used, print comment at the beginning of a timestep

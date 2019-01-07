@@ -19,46 +19,40 @@ foreach(library ${LIBRARIES})
   add_library(${library} ${library}.c)
 endforeach(library)
 
-set(COMMON Aggregates
-           Aggregates-NotSameBeads
-           AngleMolecules
-           Average
-           BondLength
-           Config
-           Config_from_xyz
-           DensityAggregates
-           DensityMolecules
-           DihedralMolecules
-           DistrAgg
-           GyrationAggregates
-           GyrationMolecules
-           JoinAggregates
-#          JoinRuns
-           PairCorrel
-           PotentialAggregates
-           SelectedVcf
-           TransformVsf)
-         foreach(utility ${COMMON})
-  add_executable(${utility} Common/${utility}.c)
+set(UTILS Aggregates
+          Aggregates-NotSameBeads
+          AngleMolecules
+          Average
+          BondLength
+          Config
+          Config_from_xyz
+          DensityAggregates
+          DensityMolecules
+          DihedralMolecules
+          DistrAgg
+          GyrationAggregates
+          GyrationMolecules
+          JoinAggregates
+          JoinRuns
+          PairCorrel
+          PotentialAggregates
+          SelectedVcf
+          TransformVsf)
+        foreach(utility ${UTILS})
+  add_executable(${utility} Utility/${utility}.c)
   target_link_libraries(${utility} m ${LIBRARIES})
 endforeach(utility)
 
-set(LINEAR EndToEnd)
-         foreach(utility ${LINEAR})
-  add_executable(${utility} Linear/${utility}.c)
-  target_link_libraries(${utility} m ${LIBRARIES})
-endforeach(utility)
-
-set(ONETIME PlaceSquares)
-        foreach(utility ${ONETIME})
-  add_executable(${utility} OneTime/${utility}.c)
-  target_link_libraries(${utility} m ${LIBRARIES})
-endforeach(utility)
+#set(ONETIME PlaceSquares)
+#        foreach(utility ${ONETIME})
+#  add_executable(${utility} OneTime/${utility}.c)
+#  target_link_libraries(${utility} m ${LIBRARIES})
+#endforeach(utility)
 
 # this somehow specifies fortran compiler
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
-set(F_UTILITIES traject-v2_5
-                traject-v2_6)
-foreach(utility ${F_UTILITIES})
-  add_executable(${utility} Common/${utility}.f90)
+set(F_UTILS traject-v2_5
+            traject-v2_6)
+foreach(utility ${F_UTILS})
+  add_executable(${utility} Utility/${utility}.f90)
 endforeach(utility)

@@ -11,10 +11,13 @@
  */
 void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input_vsf) {
   fprintf(stderr, "\nError: %s - cannot read coordinates (bead %d; step %d - '%s')\n\n", input_vcf, bead, step, stuff);
-  fprintf(stderr, "Possibilities: error in '%s', e.g., wrong number of lines per timestep or columns per line, \
+  fprintf(stderr, "Possibilities\n");
+  fprintf(stderr, "  1) error in '%s', e.g., wrong number of lines per timestep or columns per line, \
 incorrect blank lines\n", input_vcf);
-  fprintf(stderr, "               error in '%s', e.g., wrong number of beads which can cause a complete chaos in internal bead numbering\n",
- input_vsf);
+  fprintf(stderr, "  2) error in '%s', e.g., wrong number of beads which can cause a complete chaos in \
+internal bead numbering\n", input_vsf);
+  fprintf(stderr, "  3) used '-x' option in generating %s by SelectedVcf, but reading of systems \
+configuration works only if all beads of a given type are in a vcf file \n", input_vcf);
   putchar('\n');
 } //}}}
 
@@ -45,9 +48,25 @@ void ErrorNaN(char *option) {
 // ErrorExtension() //{{{
 /** Error when missing or incorrect file extension
  */
-void ErrorExtension(char *file, char *extension) {
-    fprintf(stderr, "Error: '%s' does not have '%s' extension\n", file, extension);
-  putchar('\n');
+bool ErrorExtension(char *file, int number, char **extension) {
+
+  char *dot = strrchr(file, '.');
+
+  for (int i = 0; i < number; i++) {
+    if (dot && strcmp(dot, extension[i]) == 0) {
+      return true;
+    }
+  }
+
+  fprintf(stderr, "Error: '%s' does not have a correct extension (", file);
+  for (int i = 0; i < number; i++) {
+    if (i < (number-1)) {
+      fprintf(stderr, "'%s', ", extension[i]);
+    } else {
+      fprintf(stderr, "'%s')\n", extension[i]);
+    }
+  }
+  return false;
 } //}}}
 
 // ErrorFileOpen() //{{{
