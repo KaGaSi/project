@@ -386,6 +386,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 
       // line begins with 'a(tom) default' or 'a(tom) <int>' //{{{
       bool name = false; // 'name' is necessary
+      double charge = 1000, mass = 1000;
       if (strcmp("default", split[1]) == 0) {
         type_default = (*Counts).TypesOfBeads;
         // increment number of bead types
@@ -401,12 +402,17 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
             (*BeadType)[type_default].Charge = 1000;
             (*BeadType)[type_default].Mass = 1000;
             name = true;
-            break;
           } else if (strcmp(split[j], "charge") == 0 || strcmp(split[j], "q") == 0) {
-            (*BeadType)[type_default].Charge = atof(split[j+1]);
+            charge = atof(split[j+1]);
           } else if (strncmp(split[j], "mass", 1) == 0) {
-            (*BeadType)[type_default].Mass = atof(split[j+1]);
+            mass = atof(split[j+1]);
           }
+        }
+        if (charge != 1000) {
+          (*BeadType)[type_default].Charge = charge;
+        }
+        if (mass != 1000) {
+          (*BeadType)[type_default].Mass = mass;
         }
         continue; // skip the rest of the line
       } else if (atoi(split[1]) > max_bead) {
@@ -433,7 +439,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 
       // go through the rest of the line to find bead name
       // by twos - first is always keyword, second is always value
-      double charge = 1000, mass = 1000;
       int type_qm = -1; // for possible mass/charge in vsf
       for (int i = 2; i < strings; i += 2) {
         if (strncmp("name", split[i], 1) == 0) { // bead type name //{{{
