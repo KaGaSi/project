@@ -27,8 +27,4 @@ To compile individual C programs using `gcc`, run:
 
 `gcc -O3 -lm $PATH_TO_REPOSITORY/AnalysisTools.c $PATH_TO_REPOSITORY/Options.c $PATH_TO_PROGRAM -o $OUTPUT_NAME`
 
-Reference manual is included in the repository (refman.pdf), but the
-documentation can be generated anew simply by running `make` in the
-repository directory. Aside from refman.pdf, it also creates `doc/html`
-directory that contains html documentation. All documentation was created
-using [doxygen](http://www.stack.nl/~dimitri/doxygen/).
+Reference manual is included in the repository (refman.pdf).

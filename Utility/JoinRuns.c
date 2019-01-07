@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-h") == 0) {
       fprintf(stdout, "\
 JoinRuns joins two simulation runs with different .vsf files. The first .vsf is \
-assumed to be dl_meso.vsf (if not, use '-i' option) and the FIELD file has to \
+assumed to be traject.vsf (if not, use '-i' option) and the FIELD file has to \
 be the same for both simulation runs. Bead types in both .vcf files must be the \
 same, but only selected bead types are saved to output.vcf file.\n\n");
 
@@ -100,15 +100,36 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     exit(1);
   } //}}}
 
-  // use .vsf file other than dl_meso.vsf? //{{{
+  // use .vsf file other than traject.vsf? //{{{
   char *input_vsf_1 = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &input_vsf_1)) {
+  if (FileOption(argc, argv, "-i", &input_vsf_1)) {
     exit(1);
-  } //}}}
+  }
+  if (input_vsf_1[0] == '\0') {
+    strcpy(input_vsf_1, "traject.vsf");
+  }
+
+  // test if structure file ends with '.vsf'
+  int ext = 2;
+  char **extension;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vsf_1, ext, extension)) {
+    ErrorHelp(argv[0]);
+    exit(1);
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // use bonds file? //{{{
   char *bonds_file = calloc(32,sizeof(char *));
-  if (BondsFileOption(argc, argv, &bonds_file)) {
+  if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
 
@@ -133,7 +154,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   } //}}}
 
   // skipped timesteps per used step //{{{
-  int skip_1 = 1, skip_2 = 1;
+  int skip_1 = 0, skip_2 = 0;
   if (IntegerOption(argc, argv, "-sk1", &skip_1)) {
     exit(1);
   }
@@ -158,53 +179,88 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
   count = 0; // count mandatory arguments
 
-  // <1st input.vcf> - filename of input vcf file (must end with .vcf) //{{{
+  // <1st input> - first input coordinate file //{{{
   char input_vcf_1[32];
   strcpy(input_vcf_1, argv[++count]);
 
-  // test if <1st input.vcf> filename ends with '.vcf' (required by VMD)
-  char *dot = strrchr(input_vcf_1, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(input_vcf_1, ".vcf");
+  // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vcf_1, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
-  // <2nd input.vcf> - filename of input vcf file (must end with .vcf) //{{{
+  // <2nd input> - second input coordinate file //{{{
   char input_vcf_2[32];
   strcpy(input_vcf_2, argv[++count]);
 
-  // test if <1st input.vcf> filename ends with '.vcf' (required by VMD)
-  dot = strrchr(input_vcf_2, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(input_vcf_2, ".vcf");
+  // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vcf_2, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // <2nd input.vsf> - second structure file (must end with .vsf) //{{{
   char *input_vsf_2 = calloc(32,sizeof(char *));
   strcpy(input_vsf_2, argv[++count]);
 
-  // test if <1st input.vcf> filename ends with '.vcf' (required by VMD)
-  dot = strrchr(input_vsf_2, '.');
-  if (!dot || strcmp(dot, ".vsf")) {
-    ErrorExtension(input_vsf, ".vsf");
+  // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vsf_2, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char output_vcf[32];
   strcpy(output_vcf, argv[++count]);
 
-  // test if <output.vcf> filename ends with '.vcf' (required by VMD)
-  dot = strrchr(output_vcf, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(output_vcf, ".vcf");
+  // test if output coordinate file ends with '.vcf' (required by vmd)
+  ext = 1;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vcf");
+  if (!ErrorExtension(output_vcf, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // variables - structures //{{{
   // data from 1st run
@@ -220,13 +276,19 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   // Counts is the same for both runs
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information
+  // read system information //{{{
   bool indexed = ReadStructure(input_vsf_1, input_vcf_1, bonds_file, &Counts, &BeadType1, &Bead1, &MoleculeType1, &Molecule1);
   ReadStructure(input_vsf_2, input_vcf_2, bonds_file, &Counts, &BeadType2, &Bead2, &MoleculeType2, &Molecule2);
 
   // vsf files are not needed anymore
   free(input_vsf_1);
   free(input_vsf_2);
+
+  // set all molecule types to write to output.vcf
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType1[i].Write = true;
+    MoleculeType2[i].Write = true;
+  } //}}}
 
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -352,9 +414,9 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     ungetc(test, vcf_1);
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf_1, Counts, &Bead1, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
       exit(1);
     } //}}}
 
@@ -372,7 +434,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     if (join) {
       RemovePBCMolecules(Counts, BoxLength, BeadType1, &Bead1, MoleculeType1, Molecule1);
     } else { // if rounding leads to BoxLength, move it bead to other side of box
-      for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
+      for (int i = 0; i < Counts.Beads; i++) {
         char check[8];
         char box[8];
         // x direction
@@ -418,9 +480,9 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
       fprintf(stdout, "\rStep from 1st run: %6d", ++count);
 
       // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+      if ((test = ReadCoordinates(indexed, vcf_1, Counts, &Bead1, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+        ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
         exit(1);
       } //}}}
     } //}}}
@@ -459,9 +521,9 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     ungetc(test, vcf_2);
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf_2, Counts, &Bead2, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_vcf_2, test, count, stuff, input_vsf_2);
       exit(1);
     } //}}}
 
@@ -479,7 +541,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     if (join) {
       RemovePBCMolecules(Counts, BoxLength, BeadType2, &Bead2, MoleculeType2, Molecule2);
     } else { // if rounding leads to BoxLength, move it bead to other side of box
-      for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
+      for (int i = 0; i < Counts.Beads; i++) {
         char check[8];
         char box[8];
         // x direction
@@ -510,15 +572,16 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
     } //}}}
 
     // copy Bead2 coordinates to Bead1 //{{{
-    bool used[Counts.Unbonded];
-    for (int i = 0; i < Counts.Unbonded; i++) {
+    bool used[Counts.Beads];
+    for (int i = 0; i < Counts.Beads; i++) {
       used[i] = false;
     }
 
-    for (int i = 0; i < Counts.Unbonded; i++) {
-      for (int j = 0; j < Counts.Unbonded; j++) {
-        if (strcmp(BeadType2[Bead2[j].Type].Name, BeadType1[Bead1[i].Type].Name) == 0
-            && !used[j]) {
+    for (int i = 0; i < Counts.Beads; i++) {
+      for (int j = 0; j < Counts.Beads; j++) {
+        if (Bead1[i].Molecule == -1 && Bead2[i].Molecule == -1 &&
+            strcmp(BeadType2[Bead2[j].Type].Name, BeadType1[Bead1[i].Type].Name) == 0 &&
+            !used[j]) {
           Bead1[i].Position.x = Bead2[j].Position.x;
           Bead1[i].Position.y = Bead2[j].Position.y;
           Bead1[i].Position.z = Bead2[j].Position.z;
@@ -530,21 +593,49 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
       }
     }
 
-    for (int i = 0; i < Counts.Unbonded; i++) {
-      if (!used[i]) {
-        fprintf(stdout, "ERROR - used[%d] = false\n", i);
+    // molecule beads
+    for (int i = 0; i < Counts.Beads; i++) {
+      if (Bead2[i].Molecule != -1) {
+        for (int j = 0; j < Counts.Beads; j++) {
+          // beads & mols from run 1
+          int mol_id_1 = Bead1[i].Molecule;
+          int mol_type_1 = Molecule1[mol_id_1].Type;
+
+          // beads & mols from run 2
+          int mol_id_2 = Bead2[j].Molecule;
+          int mol_type_2 = Molecule2[mol_id_2].Type;
+
+          if (!used[j] && mol_type_1 == mol_type_2) {
+            test = -1;
+            for (int k = 0; k <= MoleculeType2[mol_type_2].nBeads; k++) {
+              if (Bead2[j].Index == Bead2[Molecule2[mol_id_2].Bead[k]].Index) {
+                test = k;
+
+                break;
+              }
+            }
+
+            test = Bead1[Molecule1[mol_id_1].Bead[test]].Index;
+            Bead1[test].Position.x = Bead2[j].Position.x;
+            Bead1[test].Position.y = Bead2[j].Position.y;
+            Bead1[test].Position.z = Bead2[j].Position.z;
+
+            used[j] = true;
+
+            break;
+          }
+        }
       }
     }
 
-    for (int i = Counts.Unbonded; i < (Counts.Unbonded+Counts.Bonded); i++) {
-      Bead1[i].Position.x = Bead2[i].Position.x;
-      Bead1[i].Position.y = Bead2[i].Position.y;
-      Bead1[i].Position.z = Bead2[i].Position.z;
+    for (int i = 0; i < Counts.Beads; i++) {
+      if (!used[i]) {
+        fprintf(stdout, "ERROR - used[%d] = false\n", i);
+      }
     } //}}}
 
     // TODO: there probably shouldn't be Molecule(Type)1, but Molecule(Type)2
     // or something different -- this program isn't used anyway
-    // TODO: implement -x or maybe the write should be hardcoded in?
     WriteCoorIndexed(out, Counts, BeadType1, Bead1, MoleculeType1, Molecule1, stuff);
 
     fclose(out);
@@ -561,9 +652,9 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
       fprintf(stdout, "\rStep from 2st run: %6d", ++count);
 
       // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+      if ((test = ReadCoordinates(indexed, vcf_2, Counts, &Bead2, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+        ErrorCoorRead(input_vcf_2, test, count, stuff, input_vsf_2);
         exit(1);
       } //}}}
     } //}}}

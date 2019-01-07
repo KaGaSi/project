@@ -10,17 +10,17 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <distance> <contacts> ", cmd);
-  fprintf(stderr, "<output.agg> <type name(s)> <options>\n\n");
+  fprintf(stderr, "   %s <input> <distance> <contacts> ", cmd);
+  fprintf(stderr, "<output.agg> <bead name(s)> <options>\n\n");
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <distance>        minimum distance for contact for aggregate check\n");
-  fprintf(stderr, "   <contacts>        minimum number of contacts for aggregate check\n");
-  fprintf(stderr, "   <output.agg>      output filename (agg format)\n");
-  fprintf(stderr, "   <type names>      names of bead types for closeness calculation\n");
+  fprintf(stderr, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(stderr, "   <distance>            minimum distance for contact for aggregate check\n");
+  fprintf(stderr, "   <contacts>            minimum number of contacts for aggregate check\n");
+  fprintf(stderr, "   <output.agg>          output filename (agg format)\n");
+  fprintf(stderr, "   <bead name(s)>        names of bead types for closeness calculation\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
-  fprintf(stderr, "      -j <out.vcf>   output vcf file with joined coordinates\n");
+  fprintf(stderr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
+  fprintf(stderr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
   CommonHelp(1);
 } //}}}
 
@@ -487,23 +487,23 @@ Coordinates of joined aggregates can be written to an output '.vcf' file (with \
 indexed timesteps).\n\n");
 
 /*      fprintf(stdout, "\
-The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+The utility uses traject.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 */
 
       fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.vcf> <distance> <contacts> ", argv[0]);
-      fprintf(stdout, "<output.agg> <type name(s)> <options>\n\n");
+      fprintf(stdout, "   %s <input> <distance> <contacts> ", argv[0]);
+      fprintf(stdout, "<output.agg> <bead name(s)> <options>\n\n");
 
-      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
-      fprintf(stdout, "   <distance>        minimum distance for contact for aggregate check\n");
-      fprintf(stdout, "   <contacts>        minimum number of contacts for aggregate check\n");
-      fprintf(stdout, "   <output.agg>      output filename (agg format)\n");
-      fprintf(stdout, "   <type names>      names of bead types for closeness calculation\n");
+      fprintf(stdout, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
+      fprintf(stdout, "   <distance>            minimum distance for contact for aggregate check\n");
+      fprintf(stdout, "   <contacts>            minimum number of contacts for aggregate check\n");
+      fprintf(stdout, "   <output.agg>          output filename (agg format)\n");
+      fprintf(stdout, "   <bead name(s)>        names of bead types for closeness calculation\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -x <name(s)>   exclude specified molecule(s)\n");
-      fprintf(stdout, "      -j <out.vcf>   output vcf file with joined coordinates\n");
+      fprintf(stdout, "      -x <mol name(s)>   exclude specified molecule(s)\n");
+      fprintf(stdout, "      -j <output.vcf>    output vcf file with joined coordinates\n");
       CommonHelp(0);
       exit(0);
     }
@@ -547,17 +547,53 @@ system.\n\n");
   char joined_vcf[32];
   if (JoinCoorOption(argc, argv, joined_vcf)) {
     exit(1);
+  }
+
+  // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
+  int ext = 1;
+  char **extension = malloc(ext*sizeof(char *));
+  if (joined_vcf[0] != '\0') {
+    extension[0] = malloc(5*sizeof(char));
+    strcpy(extension[0], ".vcf");
+    if (!ErrorExtension(joined_vcf, ext, extension)) {
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+    for (int i = 0; i < ext; i++) {
+      free(extension[i]);
+    }
+    free(extension);
   } //}}}
 
-  // use .vsf file other than dl_meso.vsf? //{{{
+  // use .vsf file other than traject.vsf? //{{{
   char *input_vsf = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &input_vsf)) {
+  if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
-  } //}}}
+  }
+  if (input_vsf[0] == '\0') {
+    strcpy(input_vsf, "traject.vsf");
+  }
+
+  // test if structure file ends with '.vsf' or '.vtf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vsf, ext, extension)) {
+    ErrorHelp(argv[0]);
+    exit(1);
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // use bonds file? //{{{
   char *bonds_file = calloc(32,sizeof(char *));
-  if (BondsFileOption(argc, argv, &bonds_file)) {
+  if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
 
@@ -579,17 +615,26 @@ system.\n\n");
 
   count = 0; // count mandatory arguments
 
-  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
+  // <input> - filename of input vcf file (must end with .vcf) //{{{
   char input_vcf[32];
   strcpy(input_vcf, argv[++count]);
 
-  // test if <input.vcf> filename ends with '.vcf' (required by VMD)
-  char *dot = strrchr(input_vcf, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(input_vcf, ".vcf");
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vcf, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // <distance> - number of starting timestep //{{{
   // Error - non-numeric argument
@@ -614,12 +659,18 @@ system.\n\n");
   strcpy(output_agg, argv[++count]);
 
   // test if <output.agg> filename ends with '.agg' (required by VMD)
-  dot = strrchr(output_agg, '.');
-  if (!dot || strcmp(dot, ".agg")) {
-    ErrorExtension(output_agg, ".agg");
+  ext = 1;
+  extension = malloc(ext*sizeof(char *));
+  extension[0] = malloc(5*sizeof(char));
+  strcpy(extension[0], ".agg");
+  if (!ErrorExtension(output_agg, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types

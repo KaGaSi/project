@@ -9,14 +9,15 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <molecule(s)> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input> <width> <mol name(s)> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>            input filename (vcf format)\n");
-  fprintf(stderr, "   <molecule(s)>          molecule names to calculate density for\n");
+  fprintf(stderr, "   <input>                input filename (either vcf or vtf format)\n");
+  fprintf(stderr, "   <width>                width of a single bin\n");
+  fprintf(stderr, "   <mol name(s)>          molecule names to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined            specify that molecules with joined coordinates are used\n");
-  fprintf(stderr, "      -a <name> <ints>    filename and bead ids (4 per molecule type) for dihedral calculation ");
-  fprintf(stderr, "(default: 1 2 3 4 for each molecule type and filename 'dihedral.txt')\n");
+  fprintf(stderr, "      --joined            specify that <input> contains joined coordinates\n");
+  fprintf(stderr, "      -a <name> <ints>    output file (default: dihedral.txt) and bead inices (4 per molecule type) ");
+  fprintf(stderr, "for dihedral calculation (default: 1 2 3 4)\n");
   fprintf(stderr, "      -st <int>           starting timestep for calculation\n");
   CommonHelp(1);
 } //}}}
@@ -33,27 +34,28 @@ type(s). \
 \n\n");
 
 /*      fprintf(stdout, "\
-The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+The utility uses traject.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 */
 
       fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.vcf> <molecule(s)> <options>\n\n", argv[0]);
+      fprintf(stdout, "   %s <input> <width> <mol name(s)> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>            input filename (vcf format)\n");
-      fprintf(stdout, "   <molecule(s)>          molecule names to calculate density for\n");
+      fprintf(stdout, "   <input>                input filename (either vcf or vtf format)\n");
+      fprintf(stdout, "   <width>                width of a single bin\n");
+      fprintf(stdout, "   <mol name(s)>          molecule names to calculate density for\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined            specify that molecules with joined coordinates are used\n");
-      fprintf(stdout, "      -a <name> <ints>    filename and bead ids (4 per molecule type) for dihedral calculation ");
-      fprintf(stdout, "(default: 1 2 3 4 for each molecule type and filename 'dihedral.txt')\n");
+      fprintf(stdout, "      --joined            specify that <input> contains joined coordinates\n");
+      fprintf(stdout, "      -a <name> <ints>    output file (default: dihedral.txt) and bead inices (4 per molecule type) ");
+      fprintf(stdout, "for dihedral calculation (default: 1 2 3 4)\n");
       fprintf(stdout, "      -st <int>           starting timestep for calculation\n");
       CommonHelp(0);
       exit(0);
     }
   }
 
-  int req_args = 2; //}}}
+  int req_args = 3; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -88,15 +90,36 @@ system.\n\n");
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than dl_meso.vsf? //{{{
+  // use .vsf file other than traject.vsf? //{{{
   char *input_vsf = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &input_vsf)) {
+  if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
-  } //}}}
+  }
+  if (input_vsf[0] == '\0') {
+    strcpy(input_vsf, "traject.vsf");
+  }
+
+  // test if structure file ends with '.vsf'
+  int ext = 2;
+  char **extension;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vsf, ext, extension)) {
+    ErrorHelp(argv[0]);
+    exit(1);
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // use bonds file? //{{{
   char *bonds_file = calloc(32,sizeof(char *));
-  if (BondsFileOption(argc, argv, &bonds_file)) {
+  if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
 
@@ -127,17 +150,35 @@ system.\n\n");
 
   count = 0; // count mandatory arguments
 
-  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
-  char input_vcf[32];
-  strcpy(input_vcf, argv[++count]);
+  // <input> - input coordinate file //{{{
+  char input_coor[32];
+  strcpy(input_coor, argv[++count]);
 
-  // test if <input.vcf> filename ends with '.vsf' (required by VMD)
-  char *dot = strrchr(input_vcf, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(input_vcf, ".vcf");
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(8*sizeof(char));
+  }
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_coor, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
+
+  // <width> - number of starting timestep //{{{
+  // Error - non-numeric argument
+  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+    ErrorNaN("<width>");
+    ErrorHelp(argv[0]);
+    exit(1);
+  }
+  double width = atof(argv[count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -147,7 +188,7 @@ system.\n\n");
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -168,18 +209,32 @@ system.\n\n");
 
   // '-a' option - specify for bead ids //{{{
   int dihedral[100] = {0}, number_of_beads = 0;
+  dihedral[0] = 1; // default planes: 1-2-3 & 2 3 4
+  dihedral[1] = 2;
+  dihedral[2] = 3;
+  dihedral[3] = 2;
+  dihedral[2] = 3;
+  dihedral[3] = 4;
+  number_of_beads = 6;
   char output[32];
+  int test;
   strcpy(output, "dihedral.txt"); // default output filename (if '-a' is missing)
-  if (HundredIntegerOption(argc, argv, "-a", dihedral, &number_of_beads, output)) {
+  if (FileIntsOption(argc, argv, "-a", dihedral, &test, output)) {
     exit(1);
   }
+  if (test != 0) { // -a is present
+    number_of_beads = test;
+  }
+
   // Error: wrong number of integers //{{{
-  if ((number_of_beads%4) != 0) {
-    fprintf(stderr, "\nError: '-a' option - number of bead ids must be dividable by four.\n");
+  if ((number_of_beads%6) != 0) {
+    fprintf(stderr, "\nError: '-a' option - number of bead ids must be dividable by six.\n");
     exit(1);
   } //}}}
+
   for (int i = 0; i < number_of_beads; i++) {
     dihedral[i]--; // ids should start with zero
+
     // Warning - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && dihedral[i] >= MoleculeType[j].nBeads) {
@@ -206,14 +261,14 @@ system.\n\n");
   count = 1;
   fprintf(out, "# (1) step;");
   for (int i = 0; i < Counts.Molecules; i++) {
-    int mol_type_i = Molecule[i].Type;
-    if (MoleculeType[mol_type_i].Use) {
+    int mol_type = Molecule[i].Type;
+    if (MoleculeType[mol_type].Use) {
       for (int j = 0; j < number_of_beads; j += 4) {
-        if (dihedral[j+0] < MoleculeType[mol_type_i].nBeads &&
-            dihedral[j+1] < MoleculeType[mol_type_i].nBeads &&
-            dihedral[j+2] < MoleculeType[mol_type_i].nBeads &&
-            dihedral[j+3] < MoleculeType[mol_type_i].nBeads) {
-          fprintf(out, " (%d) %d %s:%d-%d-%d-%d;", ++count, i+1, MoleculeType[mol_type_i].Name, dihedral[j]+1, dihedral[j+1]+1, dihedral[j+2]+1, dihedral[j+3]+1);
+        if (dihedral[j+0] < MoleculeType[mol_type].nBeads &&
+            dihedral[j+1] < MoleculeType[mol_type].nBeads &&
+            dihedral[j+2] < MoleculeType[mol_type].nBeads &&
+            dihedral[j+3] < MoleculeType[mol_type].nBeads) {
+          fprintf(out, " (%d) %d %s:%d-%d-%d-%d;", ++count, i+1, MoleculeType[mol_type].Name, dihedral[j]+1, dihedral[j+1]+1, dihedral[j+2]+1, dihedral[j+3]+1);
         }
       }
     }
@@ -224,8 +279,8 @@ system.\n\n");
 
   // open input coordinate file //{{{
   FILE *vcf;
-  if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    ErrorFileOpen(input_vcf, 'r');
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
 
@@ -234,14 +289,14 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
     exit(1);
   }
 
@@ -253,6 +308,10 @@ system.\n\n");
   if (verbose) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
+
+  // number of bins //{{{
+  double max_dist = 0.5 * Min3(BoxLength.x, BoxLength.y, BoxLength.z);
+  int bins = ceil(max_dist / width); //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
@@ -276,7 +335,7 @@ system.\n\n");
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "Chosen molecule types:");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -292,7 +351,6 @@ system.\n\n");
 
   // skip first start-1 steps //{{{
   count = 0;
-  int test;
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
 
@@ -309,7 +367,7 @@ system.\n\n");
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
       exit(1);
     }
   }
@@ -323,6 +381,13 @@ system.\n\n");
     }
   } //}}}
   //}}}
+
+  double *distr[Counts.TypesOfMolecules][number_of_beads/2];
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    for (int j = 0; j < (number_of_beads/6); j++) {
+      distr[i][j] = calloc(bins, sizeof(double));
+    }
+  }
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -342,7 +407,7 @@ system.\n\n");
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -351,55 +416,51 @@ system.\n\n");
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
 
-    // calculate angles //{{{
-    double angle[Counts.Molecules][number_of_beads/4];
+    // calculate dihedral angles //{{{
+    double angle[Counts.Molecules][number_of_beads/6];
     for (int i = 0; i < Counts.Molecules; i++) {
-      int mol_type_i = Molecule[i].Type;
-      if (MoleculeType[mol_type_i].Use) {
+      int mol_type = Molecule[i].Type;
+      if (MoleculeType[mol_type].Use) {
 
         // calculate normal vectors to specified planes
-        // given bead ids 0 1 2 3 (1 2 3 4 in the command),
         // first plane is given by 0 1 2 and second plane by 1 2 3
-        for (int j = 0; j < number_of_beads; j += 4) {
-          if (dihedral[j+0] < MoleculeType[mol_type_i].nBeads &&
-              dihedral[j+1] < MoleculeType[mol_type_i].nBeads &&
-              dihedral[j+2] < MoleculeType[mol_type_i].nBeads &&
-              dihedral[j+3] < MoleculeType[mol_type_i].nBeads) {
-//          printf("i=%d; j=%d; number_of_beads=%d; beads: %d %d %d %d\n", i, j, number_of_beads, dihedral[j]+1, dihedral[j+1]+1, dihedral[j+2]+1, dihedral[j+3]+1);
-            Vector u[2], v[2], n[2];
-            // vectors in first plane (points 0 1 2): u=1-2; v=1-2
-            u[0].x = Bead[Molecule[i].Bead[dihedral[j+1]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.x;
-            u[0].y = Bead[Molecule[i].Bead[dihedral[j+1]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.y;
-            u[0].z = Bead[Molecule[i].Bead[dihedral[j+1]]].Position.z - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.z;
-            v[0].x = Bead[Molecule[i].Bead[dihedral[j+0]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.x;
-            v[0].y = Bead[Molecule[i].Bead[dihedral[j+0]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.y;
-            v[0].z = Bead[Molecule[i].Bead[dihedral[j+0]]].Position.z - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.z;
-            // normal in first plane
-            n[0].x = u[0].y * v[0].z - u[0].z * v[0].y;
-            n[0].y = u[0].z * v[0].x - u[0].x * v[0].z;
-            n[0].z = u[0].x * v[0].y - u[0].y * v[0].x;
-            // vectors in second plane (points 1 2 3): u=2-1; v=3-1
-            u[1].x = Bead[Molecule[i].Bead[dihedral[j+2]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+1]]].Position.x;
-            u[1].y = Bead[Molecule[i].Bead[dihedral[j+2]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+1]]].Position.y;
-            u[1].z = Bead[Molecule[i].Bead[dihedral[j+2]]].Position.z - Bead[Molecule[i].Bead[dihedral[j+1]]].Position.z;
-            v[1].x = Bead[Molecule[i].Bead[dihedral[j+3]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+1]]].Position.x;
-            v[1].y = Bead[Molecule[i].Bead[dihedral[j+3]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+1]]].Position.y;
-            v[1].z = Bead[Molecule[i].Bead[dihedral[j+3]]].Position.z - Bead[Molecule[i].Bead[dihedral[j+1]]].Position.z;
-            // normal in second plane
-            n[1].x = u[1].y * v[1].z - u[1].z * v[1].y;
-            n[1].y = u[1].z * v[1].x - u[1].x * v[1].z;
-            n[1].z = u[1].x * v[1].y - u[1].y * v[1].x;
-            // calculate angle between the two normals
-            double size[2];
-            size[0] = sqrt(SQR(n[0].x) + SQR(n[0].y) + SQR(n[0].z));
-            size[1] = sqrt(SQR(n[1].x) + SQR(n[1].y) + SQR(n[1].z));
-            double scalar = n[0].x * n[1].x + n[0].y * n[1].y + n[0].z * n[1].z;
-//          printf("n[0]=( %lf %lf %lf )\n", n[0].x, n[0].y, n[0].z);
-//          printf("n[1]=( %lf %lf %lf )\n", n[1].x, n[1].y, n[1].z);
-            angle[i][j/4] = acos(scalar / (size[0] * size[1])); // in rad
-//          printf("angle=%lf rad", angle[i][j/4]);
-            angle[i][j/4] *= 180 / PI; // in degrees
-//          printf("=%lf deg\n\n", angle[i][j/4]);
+        for (int j = 0; j < number_of_beads; j += 6) {
+          // plane normals //{{{
+          Vector u[2], v[2], n[2];
+          // vectors in first plane (points 0 1 2): u=1-2; v=1-2
+          u[0].x = Bead[Molecule[i].Bead[dihedral[j+1]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.x;
+          u[0].y = Bead[Molecule[i].Bead[dihedral[j+1]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.y;
+          u[0].z = Bead[Molecule[i].Bead[dihedral[j+1]]].Position.z - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.z;
+          v[0].x = Bead[Molecule[i].Bead[dihedral[j+0]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.x;
+          v[0].y = Bead[Molecule[i].Bead[dihedral[j+0]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.y;
+          v[0].z = Bead[Molecule[i].Bead[dihedral[j+0]]].Position.z - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.z;
+          // normal in first plane
+          n[0].x = u[0].y * v[0].z - u[0].z * v[0].y;
+          n[0].y = u[0].z * v[0].x - u[0].x * v[0].z;
+          n[0].z = u[0].x * v[0].y - u[0].y * v[0].x;
+          // vectors in second plane (points 3 4 5): u=4-3; v=5-3
+          u[1].x = Bead[Molecule[i].Bead[dihedral[j+4]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+3]]].Position.x;
+          u[1].y = Bead[Molecule[i].Bead[dihedral[j+4]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+3]]].Position.y;
+          u[1].z = Bead[Molecule[i].Bead[dihedral[j+4]]].Position.z - Bead[Molecule[i].Bead[dihedral[j+3]]].Position.z;
+          v[1].x = Bead[Molecule[i].Bead[dihedral[j+5]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+3]]].Position.x;
+          v[1].y = Bead[Molecule[i].Bead[dihedral[j+5]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+3]]].Position.y;
+          v[1].z = Bead[Molecule[i].Bead[dihedral[j+5]]].Position.z - Bead[Molecule[i].Bead[dihedral[j+3]]].Position.z;
+          // normal in second plane
+          n[1].x = u[1].y * v[1].z - u[1].z * v[1].y;
+          n[1].y = u[1].z * v[1].x - u[1].x * v[1].z;
+          n[1].z = u[1].x * v[1].y - u[1].y * v[1].x; //}}}
+
+          // calculate angle between the two normals //{{{
+          double size[2];
+          size[0] = sqrt(SQR(n[0].x) + SQR(n[0].y) + SQR(n[0].z));
+          size[1] = sqrt(SQR(n[1].x) + SQR(n[1].y) + SQR(n[1].z));
+          double scalar = n[0].x * n[1].x + n[0].y * n[1].y + n[0].z * n[1].z;
+          angle[i][j/6] = acos(scalar / (size[0] * size[1])); // in rad
+          angle[i][j/6] *= 180 / PI; // in degrees //}}}
+
+          int k = angle[i][j/6] / width;
+          if (k < bins) {
+            distr[mol_type][j/6][k]++;
           }
         }
       }
@@ -413,15 +474,10 @@ system.\n\n");
 
     fprintf(out, "%6d", count);
     for (int i = 0; i < Counts.Molecules; i++) {
-      int mol_type_i = Molecule[i].Type;
-      if (MoleculeType[mol_type_i].Use) {
-        for (int j = 0; j < number_of_beads; j += 4){
-          if (dihedral[j+0] < MoleculeType[mol_type_i].nBeads &&
-              dihedral[j+1] < MoleculeType[mol_type_i].nBeads &&
-              dihedral[j+2] < MoleculeType[mol_type_i].nBeads &&
-              dihedral[j+3] < MoleculeType[mol_type_i].nBeads) {
-            fprintf(out, " %10.6f", 180-angle[i][j/4]); // write angle between planes, not normals
-          }
+      int mol_type = Molecule[i].Type;
+      if (MoleculeType[mol_type].Use) {
+        for (int j = 0; j < number_of_beads; j += 6){
+          fprintf(out, " %10.6f", 180-angle[i][j/6]); // write angle between planes, not normals
         }
       }
     }

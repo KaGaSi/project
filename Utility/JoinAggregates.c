@@ -9,11 +9,13 @@
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", cmd);
+  fprintf(stderr, "   %s <input> <input.agg> <output.vcf> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <input.agg>       input filename with information about aggregates (agg format)\n");
-  fprintf(stderr, "   <output.vcf>      output filename with joined coordinates (vcf format)\n");
+  fprintf(stderr, "   <input>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(stderr, "   <input.agg>       input agg file\n");
+  fprintf(stderr, "   <output.vcf>      output file with joined coordinates (vcf format)\n");
+  fprintf(stderr, "   <options>\n");
+  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
   CommonHelp(1);
 } //}}}
 
@@ -29,17 +31,19 @@ omitted, but later the joined coordinates are required. Distance and beadtypes \
 for aggregate check are read from input.agg file.\n\n");
 
 /*      fprintf(stdout, "\
-The utility uses dl_meso.vsf (or other input structure file) and FIELD (along \
+The utility uses traject.vsf (or other input structure file) and FIELD (along \
 with optional bond file) files to determine all information about the \
 system.\n\n");
 */
 
       fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.vcf> <input.agg> <output.vcf> <options>\n\n", argv[0]);
+      fprintf(stdout, "   %s <input> <input.agg> <output.vcf> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
-      fprintf(stdout, "   <input.agg>       input filename with information about aggregates (agg format)\n");
-      fprintf(stdout, "   <output.vcf>      output filename with joined coordinates (vcf format)\n");
+      fprintf(stdout, "   <input>           input coordinate file (either vcf or vtf format)\n");
+      fprintf(stdout, "   <input.agg>       input agg file\n");
+      fprintf(stdout, "   <output.vcf>      output file with joined coordinates (vcf format)\n");
+      fprintf(stderr, "   <options>\n");
+      fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
       CommonHelp(0);
       exit(0);
     }
@@ -68,7 +72,8 @@ system.\n\n");
         strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0) {
+        strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "-st") != 0) {
 
       ErrorOption(argv[i]);
       ErrorHelp(argv[0]);
@@ -77,15 +82,36 @@ system.\n\n");
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than dl_meso.vsf? //{{{
+  // use .vsf file other than traject.vsf? //{{{
   char *input_vsf = calloc(32,sizeof(char *));
-  if (VsfFileOption(argc, argv, &input_vsf)) {
+  if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
-  } //}}}
+  }
+  if (input_vsf[0] == '\0') {
+    strcpy(input_vsf, "traject.vsf");
+  }
+
+  // test if structure file ends with '.vsf'
+  int ext = 2;
+  char **extension;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_vsf, ext, extension)) {
+    ErrorHelp(argv[0]);
+    exit(1);
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // use bonds file? //{{{
   char *bonds_file = calloc(32,sizeof(char *));
-  if (BondsFileOption(argc, argv, &bonds_file)) {
+  if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
 
@@ -96,6 +122,12 @@ system.\n\n");
   SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
+
+  // starting timestep //{{{
+  int start = 1;
+  if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -108,16 +140,25 @@ system.\n\n");
   count = 0; // count mandatory arguments
 
   // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
-  char input_vcf[32];
-  strcpy(input_vcf, argv[++count]);
+  char input_coor[32];
+  strcpy(input_coor, argv[++count]);
 
-  // test if <input.vcf> filename ends with '.vsf' (required by VMD)
-  char *dot = strrchr(input_vcf, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(input_vcf, ".vcf");
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  extension = malloc(ext*sizeof(char *));
+  for (int i = 0; i < ext; i++) {
+    extension[i] = malloc(5*sizeof(char));
+  }
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(input_coor, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // <input.agg> - filename of input file with aggregate information //{{{
   char input_agg[32];
@@ -127,13 +168,19 @@ system.\n\n");
   char output_vcf[32];
   strcpy(output_vcf, argv[++count]);
 
-  // test if <output.agg> filename ends with '.vcf' (required by VMD)
-  dot = strrchr(output_vcf, '.');
-  if (!dot || strcmp(dot, ".vcf")) {
-    ErrorExtension(output_vcf, ".vcf");
+  // test if <output.vcf> ends with '.vcf' (required by VMD)
+  ext = 1;
+  extension = malloc(ext*sizeof(char *));
+  extension[0] = malloc(5*sizeof(char));
+  strcpy(extension[0], ".vcf");
+  if (!ErrorExtension(output_vcf, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -143,7 +190,7 @@ system.\n\n");
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -178,7 +225,7 @@ system.\n\n");
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n", name, input_vcf);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n", name, input_coor);
       exit(1);
     }
 
@@ -198,8 +245,8 @@ system.\n\n");
 
   // open input coordinate file //{{{
   FILE *vcf;
-  if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    ErrorFileOpen(input_vcf, 'r');
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
 
@@ -208,7 +255,7 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
       exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
@@ -216,7 +263,7 @@ system.\n\n");
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
     exit(1);
   }
 
@@ -275,13 +322,58 @@ system.\n\n");
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "\nDistance for closeness check:  %lf\n\n", distance);
   }
 
   // bonds file is not needed anymore
   free(bonds_file); //}}}
+
+  // skip first start-1 steps //{{{
+  count = 0;
+  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
+    ungetc(test, vcf);
+
+    count++;
+
+    // print step? //{{{
+    if (!silent) {
+      if (script) {
+        fprintf(stdout, "Discarding step: %6d\n", count);
+      } else {
+        fflush(stdout);
+        fprintf(stdout, "\rDiscarding step: %6d", count);
+      }
+    } //}}}
+
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
+      if (!silent && !script) { // end of line if \r is used for printing step number
+        putchar('\n');
+      }
+      count--; // because last step isn't processed
+      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      test = '\0';
+      break;
+    }
+    if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      exit(1);
+    }
+  }
+  if (test == '\0') {
+    exit(1);
+  }
+  // print number of discarded steps? //{{{
+  if (!silent) {
+    if (script) {
+      fprintf(stdout, "Discarded steps: %6d\n", count);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+    }
+  } //}}}
+  //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -311,7 +403,7 @@ system.\n\n");
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
       exit(1);
     } //}}}
 
