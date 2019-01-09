@@ -226,10 +226,14 @@ system.\n\n");
   free(input_vsf); //}}}
 
   // '-n' option - range of aggregation numbers //{{{
-  int range_As[2];
+  int range_As[2], test;
   range_As[0] = 1;
   range_As[1] = Counts.Molecules;
-  if (TwoIntegerOption(argc, argv, "-n", range_As)) {
+  if (MultiIntegerOption(argc, argv, "-n", &test, range_As)) {
+    exit(1);
+  }
+  if (test != 2) {
+    fprintf(stderr, "\nError: option '-n' needs to numberic arguments\n\n");
     exit(1);
   }
 
@@ -309,7 +313,6 @@ system.\n\n");
   fscanf(agg, "%*s %*s");
 
   // read <type names> from Aggregates command //{{{
-  int test;
   // reading ends if next argument (beginning with '-') or the following empty line is read
   while ((test = getc(agg)) != '-' && test != '\n') {
     ungetc(test, agg);
