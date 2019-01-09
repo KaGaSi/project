@@ -207,10 +207,14 @@ the system.\n\n");
   free(input_vsf); //}}}
 
   // '-n' option - range of aggregation numbers //{{{
-  int range_As[2];
+  int range_As[2], test;
   range_As[0] = 1;
   range_As[1] = Counts.Molecules;
-  if (TwoIntegerOption(argc, argv, "-n", range_As)) {
+  if (MultiIntegerOption(argc, argv, "-n", &test, range_As)) {
+    exit(1);
+  }
+  if (test != 2) {
+    fprintf(stderr, "\nError: option '-n' needs to numberic arguments\n\n");
     exit(1);
   }
   range_As[0]--;
@@ -377,7 +381,6 @@ the system.\n\n");
   fclose(out); //}}}
 
   // main loop //{{{
-  int test; // sum_mass = 0;
   count = 0;
   // [0][] = simple sum, [1][] = sum of squares, [2][] = sume of cubes
   // [][0] = mass of mols in agg from options, [][1] = mass of the whole aggregate

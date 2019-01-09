@@ -100,17 +100,18 @@ bool BoolOption(int argc, char **argv, char *opt); //}}}
 bool IntegerOption(int argc, char **argv, char *opt, int *value);
 // }}}
 
-// TwoIntegerOption() //{{{
+// MultiIntegerOption() //{{{
 /**
  * \brief Function for any option with two integer arguments.
  *
  * \param [in]  argc   number of program's arguments
  * \param [in]  argv   program's arguments
  * \param [in]  opt    option switch (e.g. array containing `-n`)
- * \param [out] values array of two integer values of given option
+ * \param [out] count  number of numeric arguments
+ * \param [out] values array of integer values of given option
  * \return `true` or `false` for error
  */
-bool TwoIntegerOption(int argc, char **argv, char *opt, int *values);
+bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *values);
 // }}}
 
 // FileIntsOption() //{{{
@@ -122,7 +123,8 @@ bool TwoIntegerOption(int argc, char **argv, char *opt, int *values);
  * \param [in]  argv   program's arguments
  * \param [in]  opt    option switch (e.g. array containing `-c`)
  * \param [out] values array of two integer values of given option
- * \param [out] n      number of numeric arguments
+ * \param [out] count  number of numeric arguments
+ * \param [out] file   file name (first argument of option)
  * \return `true` or `false` for error
  */
 bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, char *file);

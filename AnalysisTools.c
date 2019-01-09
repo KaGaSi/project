@@ -79,6 +79,7 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
  */
 void CommonHelp(bool error) {
   if (error) {
+    fprintf(stderr, "   <standard options>\n");
     fprintf(stderr, "      -i <name>      use input .vsf file different from traject.vsf\n");
 //  fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
     fprintf(stderr, "      -v             verbose output\n");
@@ -87,6 +88,7 @@ void CommonHelp(bool error) {
     fprintf(stderr, "      -h             print this help and exit\n");
     fprintf(stderr, "      --script       do not reprint line (useful when output goes to file)\n");
   } else {
+    fprintf(stdout, "   <standard options>\n");
     fprintf(stdout, "      -i <name>      use input .vsf file different from traject.vsf\n");
 //  fprintf(stdout, "      -b <name>      file containing bond alternatives to FIELD\n");
     fprintf(stdout, "      -v             verbose output\n");
