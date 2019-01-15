@@ -205,7 +205,7 @@ PROGRAM traject
             IF ((ltp (i)/=imxspe .OR. i==nubeads) .AND. ltm(i)==0) THEN
               WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8)') i-1, bbb (ltp (i)), namspe (ltp (i))
             ELSE IF (ltm (i)/=0) THEN
-              WRITE (nrtout+1, '("atom ",I8,"    radius ",F10.6," name ",A8," segid ", A8," resid ",I8)')&
+              WRITE (nrtout+1, '("atom ",I8,"    radius ",F10.6," name ",A8," resname ", A8," resid ",I8)')&
                     &i-nubeads-1, bbb (ltp (i)), &
                     &namspe (ltp (i)), nammol (ltm (i)), mole (i)
             END IF
@@ -216,7 +216,7 @@ PROGRAM traject
             IF ((ltp (i)/=imxspe .OR. i==numbeads) .AND. ltm(i)==0) THEN
               WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8)') i-1, bbb (ltp (i)), namspe (ltp (i))
             ELSE IF (ltm (i)/=0) THEN
-              WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8," segid ", A8," resid ",I8)')&
+              WRITE (nrtout, '("atom ",I8,"    radius ",F10.6," name ",A8," resname ", A8," resid ",I8)')&
                     &i-1, bbb (ltp (i)), &
                     &namspe (ltp (i)), nammol (ltm(i)), mole (i)
             END IF

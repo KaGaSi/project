@@ -207,14 +207,14 @@ the system.\n\n");
   free(input_vsf); //}}}
 
   // '-n' option - range of aggregation numbers //{{{
-  int range_As[2], test;
+  int range_As[2], test = 2;
   range_As[0] = 1;
   range_As[1] = Counts.Molecules;
   if (MultiIntegerOption(argc, argv, "-n", &test, range_As)) {
     exit(1);
   }
   if (test != 2) {
-    fprintf(stderr, "\nError: option '-n' needs to numberic arguments\n\n");
+    fprintf(stderr, "\nError: option '-n' requires two numeric arguments\n\n");
     exit(1);
   }
   range_As[0]--;
