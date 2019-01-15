@@ -216,10 +216,10 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
  */
 bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *values) {
 
-  int n = 0; // number of arguments
-
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
+
+      int n = 0; // number of arguments
 
       // read integers
       int arg = i+1+n;
@@ -244,10 +244,10 @@ bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *value
           return true;
         } //}}}
       }
+
+      *count = n;
     }
   }
-
-  *count = n;
 
   return false;
 } //}}}
