@@ -209,6 +209,33 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
   return(false);
 } //}}}
 
+// DoubleOption() //{{{
+/**
+ * Function for any option with integer argument. The option (e.g. `-n`)
+ * is an argument of this function.
+ */
+bool DoubleOption(int argc, char **argv, char *opt, double *value) {
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], opt) == 0) {
+
+      // Error - non-numeric or missing argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '%s' option!\n", opt);
+        return(true);
+      }
+      if ((i+1) >= argc || argv[i+1][0] < '0' || argv[i+1][0] > '9') {
+        fprintf(stderr, "Non-numeric argement for '%s' option!\n", opt);
+        return(true);
+      } //}}}
+
+      *value = atof(argv[i+1]);
+    }
+  }
+
+  return(false);
+} //}}}
+
 // MultiIntegerOption() //{{{
 /**
  * Function for any option with two integer arguments. The option (e.g. `-n`)
@@ -273,7 +300,7 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, c
       strcpy(file, argv[i+1+n]);
 
       // read integers
-      while ((i+1+n) < argc && argv[i+1+n][0] != '-') {
+      while ((i+2+n) < argc && argv[i+2+n][0] != '-') {
 
         // Error - non-numeric or missing argument //{{{
         if ((i+2+n) >= argc || argv[i+2+n][0] < '0' || argv[i+2+n][0] > '9') {
@@ -281,7 +308,7 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, c
           return true;
         } //}}}
 
-        values[n] = atoi(argv[i+1+n]);
+        values[n] = atoi(argv[i+2+n]);
 
         n++;
         // warning - too many numeric arguments //{{{

@@ -100,6 +100,19 @@ bool BoolOption(int argc, char **argv, char *opt); //}}}
 bool IntegerOption(int argc, char **argv, char *opt, int *value);
 // }}}
 
+// DoubleOption() //{{{
+/**
+ * \brief Function for any option with integer argument.
+ *
+ * \param [in]  argc  number of program's arguments
+ * \param [in]  argv  program's arguments
+ * \param [in]  opt   option switch (e.g. array containing `-n`)
+ * \param [out] value double value of given option
+ * \return `true` or `false` for error
+ */
+bool DoubleOption(int argc, char **argv, char *opt, double *value);
+// }}}
+
 // MultiIntegerOption() //{{{
 /**
  * \brief Function for any option with two integer arguments.

@@ -208,7 +208,6 @@ system.\n\n");
   while (++count < argc && argv[count][0] != '-') {
 
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
-    fprintf(stdout, "%s\n", argv[count]);
 
     if (mol_type == -1) {
       fprintf(stderr, "Error: molecule '%s' does not exist in FIELD\n\n", argv[count]);
@@ -271,9 +270,9 @@ system.\n\n");
     putc('\n', out); //}}}
 
     // print molecule names & bead ids //{{{
-    fprintf(out, "#angles between beads:");
+    fprintf(out, "# angles between beads:");
     for (int j = 0; j < number_of_beads; j += beads_per_angle) {
-      fprintf(out, " (%d) %d-%d-%d;", j/beads_per_angle+1, bead[j], bead[j+1], bead[j+2]);
+      fprintf(out, " (%d) %d-%d-%d;", j/beads_per_angle+1, bead[j]+1, bead[j+1]+1, bead[j+2]+1);
     }
     putc('\n', out);
     fprintf(out, "# columns: (1) step;");
@@ -544,7 +543,7 @@ system.\n\n");
   } //}}}
 
   // write to output average angles //{{{
-  fprintf(out, "# averages:");
+  fprintf(out, "# simple averages:");
   j = 1;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
@@ -556,7 +555,7 @@ system.\n\n");
       j += number_of_beads / beads_per_angle;
     }
   }
-  putc('\n', out);
+  fprintf(out, "\n#");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       for (int j = 0; j < (number_of_beads/beads_per_angle); j++) {
