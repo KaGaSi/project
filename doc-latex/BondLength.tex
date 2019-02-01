@@ -1,0 +1,86 @@
+\section{BondLength} \label{sec:BondLength}
+
+This utility calculates a distribution of bond lengths in specified
+molecule(s). For each of the specified molecule type(s),
+\texttt{BondLength} calculates bond lengths between all different types of
+connected bead pairs.
+
+For example, assume two linear molecule types \texttt{Mol\_1} and
+\texttt{Mol\_2} both composed of bead types \texttt{A} and \texttt{B}.
+\texttt{Mol\_1} is connected like this: \texttt{A-A-B}; \texttt{Mol\_2}
+like this: \texttt{A-B-B}. If both molecule types are used,
+\texttt{BondLength} calculates for each molecule type distribution of
+lengths for bonds \texttt{A-A}, \texttt{A-B}, and \texttt{B-B} (separate
+for each molecule even though the molecules share the same bead types).
+
+Furthermore, \texttt{BondLength} can also calculate distribution of
+distances between specified beads in each of the specified molecules. The
+\texttt{-d} option takes as arguments pairs of bead indices (according to
+the order of beads in the molecule in \texttt{vsf} -- similarly to the
+\texttt{-c} option in \texttt{DensityMolecules}, i.e.,
+Section~\ref{sec:DensityMolecules}). More than one pair can be specified.
+These indices are the same for all \texttt{<mol name(s)>}. If an index
+higher than the number of beads in the molecule is provided, the utility
+takes the last bead of the molecule (i.e., the highest index). For example,
+using \texttt{-d file.txt 1 2 1 999} would write two distributions for each
+\texttt{<mol name(s)>} into \texttt{<file.txt>}: distribution of distances
+between the first and second beads in each \texttt{<mol name(s)>} and
+between the first and last (or 999th bead).
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{BondLength <input> <width> <output> <mol name(s)> <options>}
+
+\noindent
+\begin{longtable}{p{0.22\textwidth}p{0.724\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input>} & input coordinate file (either \texttt{vcf} or
+    \texttt{vtf} format) \\
+  \texttt{<width>} & width of each bin of the distribution \\
+  \texttt{<output>} & output file with distribution of bond lengths \\
+  \texttt{<mol name(s)>} & molecule name(s) to calculcate bond lengths for \\
+  \toprule
+  \multicolumn{2}{l}{Non-standard options} \\
+  \midrule
+  \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-d <out> <ints>} & write distribution of distances
+    between specified beads in each specified molecule to \texttt{<out>}\\
+  \bottomrule
+\end{longtable}
+
+\noindent
+Format of output files:
+\begin{enumerate}[nosep,leftmargin=20pt]
+  \item \texttt{<output>} -- distribution of bond length between all bead
+    pairs
+    \begin{itemize}[nosep,leftmargin=5pt]
+      \item first line: command used to generate the file
+      \item second line: column headers
+        \begin{itemize}[nosep,leftmargin=10pt]
+          \item first is the centre of each bin (governed by
+            \texttt{<width>}); i.e., if \texttt{<width>} is 0.1,
+            then the centre of bin 0 to 0.1 is 0.05, centre of bin 0.1 to
+            0.2 is 0.15, etc.
+          \item the rest are for the calculated data: for each molecule type,
+            there is a list of column numbers corresponding to all
+            possible bead type pairs in the molecule; if no beads of the
+            given types are connected, the data column contains \texttt{nan}
+        \end{itemize}
+    \end{itemize}
+  \item \texttt{-d <output> <ints>} -- distribution of distances between
+    specified beads
+    \begin{itemize}[nosep,leftmargin=5pt]
+      \item first line: command used to generate the file
+      \item second line: column headers
+        \begin{itemize}[nosep,leftmargin=10pt]
+          \item first is again the centre of every bin
+          \item the rest are for the calculated data: for each molecule type,
+            there is a list of column numbers corresponding to the given
+            pairs of bead indices in the molecule
+        \end{itemize}
+    \end{itemize}
+\end{enumerate}
