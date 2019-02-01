@@ -1,0 +1,34 @@
+\chapter{Installation} \label{chap:Install}
+
+All programs can be compiled using \texttt{cmake} which generates
+\texttt{Makefile} and subsequently running \texttt{make}. It requires
+\texttt{C} and \texttt{FORTRAN} compilers.
+The compilation should be done in a separate directory, such as
+\texttt{build}.
+
+To create the \texttt{Makefule} and compile all utilities,
+simply run the following command (assuming \texttt{build} is a subdirectory
+of \texttt{AnalysisTools} root directory):
+
+\vspace{1em}
+\noindent
+\texttt{cmake -DCMAKE\_BUILD\_TYPE=Release -G "Unix Makefiles" ../}
+\vspace{1em}
+
+The binaries will be in `bin` subdirectory of `build`.
+
+Version for debugging can be compiled when
+\texttt{-DCMAKE\_BUILD\_TYPE=Debug} is used instead of
+\texttt{-DCMAKE\_BUILD\_TYPE=Release}.
+
+To compile individual \texttt{C} programs using \texttt{gcc}, run (assuming
+you are in a subdirectory of \texttt{AnalysisTools} root directory):
+
+\vspace{1em}
+\noindent
+\texttt{gcc -O3 -lm ../AnalysisTools.c ../Error.c ../Options.c
+PATH\_TO\_PRO}-
+
+\noindent
+\texttt{GRAM -o OUTPUT\_NAME}.
+\vspace{1em}

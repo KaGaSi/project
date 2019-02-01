@@ -1,0 +1,246 @@
+\section{DistrAgg} \label{sec:DistrAgg}
+
+This utility calculates average aggregate mass and aggregation number for
+each timestep (i.e., time evolution) and the averages over all timesteps.
+It calculates number, weight, and z averages. It also calculates
+distribution functions of aggregation sizes and volumes.
+
+For a quantity $\mathcal{O}$, the number, weight, and z averages,
+$\langle\mathcal{O}\rangle_{\mathrm{n}}$,
+$\langle\mathcal{O}\rangle_{\mathrm{w}}$, and
+$\langle\mathcal{O}\rangle_{\mathrm{z}}$, respectively, are defined as
+\begin{equation} \label{eq:Avg}
+  \langle\mathcal{O}\rangle_{\mathrm{n}} = \frac{\sum_i\mathcal{O}_i}{N}
+  \mbox{, \ \ \ }
+  \langle\mathcal{O}\rangle_{\mathrm{w}} = \frac{\sum_i m_i\mathcal{O}_i}{\sum_i m_i}
+  \mbox{, and \ \ \ }
+  \langle\mathcal{O}\rangle_{\mathrm{z}} = \frac{\sum_i m_i^2\mathcal{O}_i}{\sum_i m_i^2},
+\end{equation}
+where $N$ is the total number of measurements, e.g., the total number of
+aggregates if a utility calculates per-aggregate averages (or molecules if
+a utility calculates per-molecule averages); $m_i$ is mass of an aggregate
+$i$ (or molecule $i$).
+
+Per-timestep averages are written to the \texttt{<output avg>} and overall
+averages are appended as comments (with commented legend) to both
+\texttt{<output avg>} and \texttt{<output distr>} files.
+
+Number, weight, and z distribution functions of aggregate sizes,
+$F_{\mathrm{n}}(A_{\mathrm{S}})$, $F_{\mathrm{w}}(A_{\mathrm{S}})$, and
+$F_{\mathrm{z}}(A_{\mathrm{S}})$ respectively, are defined as
+\begin{equation} \label{eq:Fnwz}
+  \arraycolsep=1.4pt\def\arraystretch{2.5}
+  \begin{array}{>{\displaystyle}rc>{\displaystyle}l}
+    F_{\mathrm{n}} & = & \frac{N_{A_{\mathrm{S}} }}{\sum_{A_{\mathrm{S}} } N_i} =
+    \frac{N_{A_{\mathrm{S}} }}{N}
+  \mbox{,} \\
+    F_{\mathrm{w}} & = & \frac{N_{A_{\mathrm{S}} } m_{A_{\mathrm{S}} }}{\sum_{A_{\mathrm{S}} } N_i m_i} =
+    \frac{N_{A_{\mathrm{S}} } m_{A_{\mathrm{S}} }}{\sum_{i=1}^N m_i} =
+    \frac{N_{A_{\mathrm{S}} } m_{A_{\mathrm{S}} }}{M}
+  \mbox{, and} \\
+    F_{\mathrm{z}} & = & \frac{N_{A_{\mathrm{S}} } m^2_{A_{\mathrm{S}}
+    }}{\sum_{A_{\mathrm{S}} } N_i m_i^2} =
+    \frac{N_{A_{\mathrm{S}} } m^2_{A_{\mathrm{S}} }}{\sum_{i=1}^N m_i^2}, \\
+  \end{array}
+\end{equation}
+where $N_{A_{\mathrm{S}}}$ and $m_{A_{\mathrm{S}}}$ stand for the number
+and mass, respectively, of aggregates with aggregate size $A_{\mathrm{S}}$;
+$M$ is the total mass of all aggregates. The equations are normalised so
+that $\sum F_x(A_{\mathrm{S}})=1$.
+
+Distribution of volume fractions of aggregates, $\phi(A_{\mathrm{S}})$, is
+defined (assuming all beads have the same volume) as
+
+\begin{equation} \label{eq:Fvol}
+  \phi(A_{\mathrm{S}}) = \frac{N_{A_{\mathrm{S}} } m_{A_{\mathrm{S}} }}{\sum_{i=1}^N n_i} =
+  \frac{N_{A_{\mathrm{S}} } m_{A_{\mathrm{S}} }}{n},
+\end{equation}
+where $n_i$ is the number of beads in aggregate $i$ and $n$ is the total
+number of beads in all aggregates. If all beads have unit mass (as is often
+the case in dissipative particle dynamics), the volume distribution,
+$\phi(A_{\mathrm{S}})$, is the equal to the number distribution,
+$F_{\mathrm{n}}(A_{\mathrm{S}})$.
+These distribution are written into the \texttt{<output distr>} file.
+
+Lastly, \texttt{DistrAgg} can calculate number distribution of composition
+for aggregates with specified size(s) (\texttt{-c} option). This is a number
+distribution of the numbers of different molecule types in the aggregate.
+For example, if the simulation box contains molecule types \texttt{Mol\_A}
+and \texttt{Mol\_B}, aggregates with the same size can contain different
+numbers of these molecules, or different ratios of the numbers of
+\texttt{Mol\_A} to \texttt{Mol\_B} molecules,
+$\xi=N_{\mathrm{Mol\_A}}/N_{\mathrm{Mol\_B}}$. For now, \texttt{DistriAgg}
+can calculate this distribution only for aggregates containing two molecule
+types. The composition distribution is defined as
+\begin{equation} \label{eq:CompDistr}
+  F_{\mathrm{n}}(\xi) = \frac{N_{\xi,A_{\mathrm{S}} }}{N_{A_{\mathrm{S}}} },
+\end{equation}
+where $N_{\xi,A_{\mathrm{S}} }$ is the number of aggregate with aggregate
+size $A_{\mathrm{S}}$ and ratio $\xi$; $N_{A_{\mathrm{S}}}$ is the total
+number of aggregates with aggregate size $A_{\mathrm{S}}$.
+
+The definition of aggregate size is flexible. If none of \texttt{-m},
+\texttt{-x}, \texttt{--only} options is used, aggregate size is the `true'
+aggregation number, $A_{\mathrm{S}}$, i.e., the number of all molecules in
+the aggregate; if \texttt{-m} is used, aggregate size is the sum of only
+specified molecule type(s); if \texttt{-x} is used, aggregates containing
+only specified molecule type(s) are disregarded; if \texttt{--only} is
+used, only aggregates composed of the specified molecule type(s) are taken
+into account. For example, consider a system in the following table
+containing three aggregates composed of various numbers of three different
+molecule types:
+\noindent
+\begin{longtable}{l|l}
+  \toprule
+  Molecule types & Aggregate composition \\
+  \midrule
+  \texttt{Mol\_A} & \texttt{Agg\_1}: 1 \texttt{Mol\_A} $+2$ \texttt{Mol\_B} $+3$ \texttt{Mol\_C} $=6$ molecules \\
+  \texttt{Mol\_B} & \texttt{Agg\_2}: 1 \texttt{Mol\_A} $+2$ \texttt{Mol\_B} $=3$ molecules \\
+  \texttt{Mol\_C} & \texttt{Agg\_3}: 1 \texttt{Mol\_A} $=1$ molecule \\
+  \bottomrule
+\end{longtable}
+\noindent
+Here is a list of several possibilities depending on the option(s) used:
+\begin{enumerate}[nosep]
+  \item if none of \texttt{-m}, \texttt{-x}, \texttt{--only} is used, all
+    three aggregates are counted and their sizes are their aggregation
+    numbers, i.e., $A_{\mathrm{S}}=6$, 3, and 1
+  \item if \texttt{-m Mol\_A Mol\_B} is used, all three aggregates are
+    counted, but their size is the sum of only \texttt{Mol\_A} and
+    \texttt{Mol\_B} molecules: \texttt{Agg\_1} -- 3; \texttt{Agg\_2} -- 3;
+    \texttt{Agg\_3} -- 1
+  \item if \texttt{-m Mol\_B Mol\_C} is used, \texttt{Agg\_3} is not
+    counted, because its size would be zero; \texttt{DistrAgg} would detect
+    only two aggregates with sizes: \texttt{Agg\_1} -- 5; \texttt{Agg\_2} --
+    2
+  \item if \texttt{-x Mol\_A Mol\_B} is used, \texttt{Agg\_2} and
+    \texttt{Agg\_3} are not counted, because neither contains anything else
+    than \texttt{Mol\_A} and/or \texttt{Mol\_B}; \texttt{DistrAgg} would
+    detect only one aggregate with size: \texttt{Agg\_1} -- 6
+  \item if \texttt{-x Mol\_A Mol\_B} is combined with \texttt{-m Mol\_A
+    Mol\_B}, \texttt{DistrAgg} would again detect only \texttt{Agg\_1}, but
+    its size would be taken as 3
+  \item if \texttt{--only Mol\_A Mol\_B} is used, \texttt{Agg\_1} is not
+    counted, because it contains a molecule not specified by
+    \texttt{--only}; \texttt{DistrAgg} would detect only two aggregates
+    with sizes: \texttt{Agg\_2} -- 3; \texttt{Agg\_3} -- 1
+  \item if \texttt{--only Mol\_A Mol\_B} is combined with \texttt{-m
+    Mol\_A}, the two detected aggregates have sizes: \texttt{Agg\_2} -- 1;
+    \texttt{Agg\_3} -- 1
+% \item \texttt{--only} should be used on its own, as it counts only
+%   aggregates composed exclusively of the one specified type: if
+%   \texttt{--only Mol\_A} is used, only \texttt{Agg\_3} is used and its
+%   size is 1; if \texttt{--only Mol\_B} or \texttt{--only Mol\_C} is used,
+%   no aggregates at all are detected
+\end{enumerate}
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{DistrAgg <input.agg> <output distr> <output avg> <options>}
+
+\noindent
+\begin{longtable}{p{0.30\textwidth}p{0.644\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input.agg>} & input \texttt{agg} file \\
+  \texttt{<output distr>} & output file with distribution of aggregate
+    sizes \\
+  \texttt{<output avg>} & output file with per-timestep averages \\
+  \toprule
+  \multicolumn{2}{l}{Non-standard options} \\
+  \midrule
+  \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-n <int> <int>} & use aggregate sizes in given range \\
+  \texttt{-m <mol name(s)>} & use number of specified molecule type(s) as
+    aggregate size \\
+  \texttt{-x <mol name(s)>} & exclude aggregates containing only specified
+    molecule type(s) \\
+  \texttt{--only <mol name>} & use only aggregates composed of specified
+    molecule type \\
+  \texttt{-c <output> <int(s)>} & save composition distribution for
+    specified aggregate size(s) to \texttt{<output>} file \\
+  \bottomrule
+\end{longtable}
+
+\noindent
+Format of output files:
+\begin{enumerate}[nosep,leftmargin=20pt]
+  \item \texttt{<output distr>} -- distributions of aggregate sizes
+    \begin{itemize}[nosep,leftmargin=5pt]
+      \item first line: command used to generate the file
+      \item second line: column headers
+        \begin{itemize}[nosep,leftmargin=10pt]
+          \item first is the aggregate size, \texttt{As} -- either true aggregation
+            number, or the size specified by options
+          \item \texttt{F\_n(As)} is number distribution of aggregate sizes
+            -- first equation in \eqref{eq:Fnwz}
+          \item \texttt{F\_w(As)} are weight distributions of aggregate sizes
+            -- second equation in \eqref{eq:Fnwz}; \texttt{whole agg mass}
+            denotes the distribution where $m_i$ from \eqref{eq:Fnwz} is
+            the mass of whole aggregate, regardless of the options used,
+            i.e., even if some molecules are not counted towards size, they
+            are counted towards mass; the other distribution counts
+            aggregate mass as only the mass of molecules that count towards
+            the size; if no size-altering options are used, the two columns
+            are identical
+          \item \texttt{F\_z(As)} are z distribution functions of aggregate
+            sizes -- third equation in \eqref{eq:Fnwz}; again, two
+            distributions are calculated differing in aggregate mass
+          \item \texttt{<volume distribution>} are distributions according
+            to Equation \eqref{eq:Fvol}; again, the volume (i.e., the
+            number of beads) is either the volume of whole aggregate or the
+            volume of only molecules contributing towards aggregate size
+          \item next is the total number of aggregates with specified size
+          \item the remaining columns show average numbers of all molecule
+            types in an aggregate with the specified size
+        \end{itemize}
+      \item second to last line: column headers for overall averages
+        written in the last line
+        \begin{itemize}[nosep,leftmargin=10pt]
+          \item \texttt{<M>\_n}, \texttt{<M>\_w}, and \texttt{<M>\_z} are
+            number, weight, and z averages, respectively, of aggregate
+            masses (the averages are defined in Equation~\eqref{eq:Avg})
+          \item \texttt{whole agg mass} again denotes that $m_i$ (and
+            $\mathcal{O}$) in Equation~\eqref{eq:Avg} is the mass of the
+            whole aggregate, regardless of the options used
+          \item a column denoted \texttt{<mol name>\_n} shows an average number of
+            molecules named \texttt{mol name} in an aggregate
+        \end{itemize}
+    \end{itemize}
+  \item \texttt{<output avg>} -- per-timestep averages
+  \begin{itemize}[nosep,leftmargin=5pt]
+    \item first line: command used to generate the file
+    \item second lines: column headers
+      \begin{itemize}[nosep,leftmargin=10pt]
+        \item first is simulation timestep
+        \item the rest are for the calculated data: number, weight, and z
+          average aggregate mass (\texttt{<M>\_n}, \texttt{<M>\_w}, and
+          \texttt{<M>\_z}, respectively) and aggregate size
+          (\texttt{<As>\_n}, \texttt{<As>\_w}, and \texttt{<As>\_z},
+          respectively)
+        \item \texttt{whole agg mass} again denotes that $m_i$ (and
+          $\mathcal{O}$) in Equation~\eqref{eq:Avg} is the mass of the
+          whole aggregate, regardless of the options used
+        \item \texttt{whole agg As} denotes that aggregate size
+          ($\mathcal{O}$ in Equation~\eqref{eq:Avg}) is the true aggregation
+          number
+      \end{itemize}
+    \item the last two lines are the same as in \texttt{<output distr>}
+  \end{itemize}
+\item \texttt{-c <name>} -- composition distribution
+  \begin{itemize}[nosep,leftmargin=5pt]
+    \item first line: command used to generate the file
+    \item second lines: column headers
+      \begin{itemize}[nosep,leftmargin=10pt]
+        \item first is ratio of the two molecule types (i.e., 0 to 1)
+        \item the rest are aggregate sizes
+        \item in the data, only ratios that are non-zero for at least one
+          aggregate size are written; in case of more than one aggregate
+          size specified by \texttt{-a} option, if the ratio does not exist
+          for some aggregate size(s), `?' is displayed instead of zero
+      \end{itemize}
+  \end{itemize}
+\end{enumerate}

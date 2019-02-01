@@ -1,0 +1,50 @@
+\chapter{Utilities} \label{chap:Utils}
+
+All utilities have command line help with short description when
+\texttt{-h} argument is used. Besides \texttt{-h}, most of the utilities
+have several standard command line options that are the same. The standard
+options can be used with any utility unless stated otherwise.
+
+\vspace{1em}
+\noindent
+\begin{tabular}{p{0.14\textwidth}p{0.804\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Standard options} \\
+  \midrule
+  \texttt{-i <name>} & use custom \texttt{vsf} file instead of
+    \texttt{traject.vsf} \\
+  \texttt{-v}        & verbose output that provides information about all
+    bead and molecule types \\
+  \texttt{-V}        & detailed verbose output that provides
+    information about all individual molecules as well as about bead and
+    molecule types \\
+  \texttt{-s}        & run silently, i.e., without any output at all
+    (overrides \texttt{-v} and \texttt{-V} options) \\
+  \texttt{--script}  & do not rewrite terminal line (useful if output is
+    routed to a file) \\
+  \texttt{-h}        & print help and exit \\
+  \bottomrule
+\end{tabular}
+
+\input{AngleMolecules}
+\input{Aggregates}
+\input{Averages}
+\input{BondLength}
+\input{Config}
+\input{DensityAggregates}
+\input{DensityBox}
+\input{DensityMolecules}
+\input{DihedralMolecules}
+\input{DistrAgg}
+%\input{EndToEnd}
+\input{GenSystem}
+\input{GyrationAggregates}
+\input{GyrationMolecules}
+\input{JoinAggregates}
+\input{JoinRuns}
+\input{lmp_data}
+\input{PairCorrel}
+\input{PotentialAggregates}
+\input{SelectedVcf}
+\input{traject}
+\input{TransformVsf}
