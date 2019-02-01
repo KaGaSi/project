@@ -207,7 +207,6 @@ system.\n\n");
   while (++count < argc && argv[count][0] != '-') {
 
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
-    fprintf(stdout, "%s\n", argv[count]);
 
     if (mol_type == -1) {
       fprintf(stderr, "Error: molecule '%s' does not exist in FIELD\n\n", argv[count]);
@@ -218,7 +217,7 @@ system.\n\n");
   } //}}}
 
   // '-n' option - specify bead ids //{{{
-  int dihedral[100] = {0}, number_of_beads = 6, beads_per_angle = 6, test;
+  int dihedral[100] = {0}, number_of_beads = 6, beads_per_angle = 6, test = 0;
   dihedral[0] = 1; // default planes: 1-2-3 & 2 3 4
   dihedral[1] = 2;
   dihedral[2] = 3;
@@ -228,13 +227,13 @@ system.\n\n");
   if (MultiIntegerOption(argc, argv, "-n", &test, dihedral)) {
     exit(1);
   }
-  if (test != 0) { // -a is present
+  if (test != 0) { // -n is present
     number_of_beads = test;
   }
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
-    fprintf(stderr, "\nError: '-a' option - number of bead ids must be dividable by six.\n");
+    fprintf(stderr, "\nError: '-n' option - number of bead ids must be divisible by six.\n");
     exit(1);
   } //}}}
 
@@ -462,6 +461,14 @@ system.\n\n");
           size[1] = sqrt(SQR(n[1].x) + SQR(n[1].y) + SQR(n[1].z));
           double scalar = n[0].x * n[1].x + n[0].y * n[1].y + n[0].z * n[1].z;
           angle[i][j/beads_per_angle] = acos(scalar / (size[0] * size[1])); // in rad
+
+          // too close to 180 or 0 degrees to call //{{{
+          if (scalar < 0 && fabs((scalar/(size[0]*size[1])+1)) <= 0.00000001) {
+            angle[i][j/beads_per_angle] = PI - 0.00000001;
+          } else if (scalar > 0 && fabs((scalar/(size[0]*size[1])-1)) <= 0.00000001) {
+            angle[i][j/beads_per_angle] = 0;
+          } //}}}
+
           angle[i][j/beads_per_angle] *= 180 / PI; // in degrees //}}}
 
           // add to average

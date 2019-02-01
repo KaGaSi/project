@@ -277,7 +277,6 @@ the system.\n\n");
     }
     for (int i = 0; i < comp_number_of_sizes; i++) {
       composition[i]+=0;
-      printf("%d\n", composition[i]);
     }
   } //}}}
 
@@ -369,15 +368,15 @@ the system.\n\n");
   }
   putc('\n', out);
 
-  fprintf(out, "# 1:step ");
-  fprintf(out, "2:<mass>_n (options' mass) ");
-  fprintf(out, "3:<mass>_n (whole agg mass) ");
-  fprintf(out, "4:<mass>_w (options' mass) ");
-  fprintf(out, "5:<mass>_w (whole agg mass) ");
-  fprintf(out, "6:<A_S>_n (options' A_S) ");
-  fprintf(out, "7:<A_S>_n (whole agg A_S) ");
-  fprintf(out, "8:<A_S>_w (options' A_S) ");
-  fprintf(out, "9:<A_S>_w (whole agg A_S)\n");
+  fprintf(out, "# column: (1) step, ");
+  fprintf(out, "(2) <M>_n, ");
+  fprintf(out, "(3) <M>_n - whole agg mass, ");
+  fprintf(out, "(4) <M>_w, ");
+  fprintf(out, "(5) <M>_w - whole agg mass, ");
+  fprintf(out, "(6) <As>_n, ");
+  fprintf(out, "(7) <As>_n - whole agg As, ");
+  fprintf(out, "(8) <As>_w, ");
+  fprintf(out, "(9) <As>_w - whole agg As\n");
   fclose(out); //}}}
 
   // main loop //{{{
@@ -519,7 +518,12 @@ the system.\n\n");
               types[1][1]++;
             }
           }
-          double ratio = (double)(types[0][1]) / types[1][1];
+          double ratio;
+          if (types[1][1] == 0) {
+            ratio = 1;
+          } else {
+            ratio = (double)(types[0][1]) / types[1][1];
+          }
           ndistr_comp[size-1][(int)(ratio*multiply)]++;
         }
       } //}}}
@@ -589,10 +593,10 @@ the system.\n\n");
       fprintf(out, " %8.3f", (double)(avg_mass_n_step[1])/aggs_step); // <mass>_n (whole agg mass)
       fprintf(out, " %8.3f", (double)(avg_mass_w_step[0])/avg_mass_n_step[0]); // <mass>_w (options' mass)
       fprintf(out, " %8.3f", (double)(avg_mass_w_step[1])/avg_mass_n_step[1]); // <mass>_w (whole agg mass)
-      fprintf(out, " %8.3f", (double)(avg_As_n_step[0])/aggs_step); // <A_s>_n (options' mass)
-      fprintf(out, " %8.3f", (double)(avg_As_n_step[1])/aggs_step); // <A_s>_n (whole agg mass)
-      fprintf(out, " %8.3f", (double)(avg_As_w_step[0])/avg_As_n_step[0]); // <A_s>_w (options' mass)
-      fprintf(out, " %8.3f", (double)(avg_As_w_step[1])/avg_As_n_step[1]); // <A_s>_w (whole agg mass)
+      fprintf(out, " %8.3f", (double)(avg_As_n_step[0])/aggs_step); // <As>_n (options' mass)
+      fprintf(out, " %8.3f", (double)(avg_As_n_step[1])/aggs_step); // <As>_n (whole agg mass)
+      fprintf(out, " %8.3f", (double)(avg_As_w_step[0])/avg_As_n_step[0]); // <As>_w (options' mass)
+      fprintf(out, " %8.3f", (double)(avg_As_w_step[1])/avg_As_n_step[1]); // <As>_w (whole agg mass)
 
       putc('\n', out);
       fclose(out); //}}}
@@ -622,18 +626,21 @@ the system.\n\n");
   }
   putc('\n', out);
 
-  fprintf(out, "# ");
-  fprintf(out, "1:A_s ");
-  fprintf(out, "2:F_n(As) ");
-  fprintf(out, "3:F_w(As) (options' mass) ");
-  fprintf(out, "4:F_w(As) (whole agg mass) ");
-  fprintf(out, "5:F_z(As) (options' mass) ");
-  fprintf(out, "6:F_z(As) (whole agg mass) ");
-  fprintf(out, "7:<volume distribution> (options' volume) ");
-  fprintf(out, "8:<volume distribution> (whole agg volume) ");
-  fprintf(out, "9:number of aggs ");
+  fprintf(out, "# column: ");
+  fprintf(out, "(1) As, ");
+  fprintf(out, "(2) F_n(As) - whole agg mass, ");
+  fprintf(out, "(3) F_w(As), ");
+  fprintf(out, "(4) F_w(As) - whole agg mass, ");
+  fprintf(out, "(5) F_z(As), ");
+  fprintf(out, "(6) F_z(As) - whole agg mass, ");
+  fprintf(out, "(7) <volume distribution>, ");
+  fprintf(out, "(8) <volume distribution> - whole agg volume, ");
+  fprintf(out, "(9) number of aggs,");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, " %d:<%s>_n", i+10, MoleculeType[i].Name);
+    fprintf(out, " (%d) <%s>_n", i+10, MoleculeType[i].Name);
+    if (i != (Counts.TypesOfMolecules-1)) {
+      putc(',', out);
+    }
   }
   putc('\n', out);
   fclose(out); //}}}
@@ -663,7 +670,7 @@ the system.\n\n");
 
   for (int i = 0; i < Counts.Molecules; i++) {
     if (count_agg[i] > 0) {
-      fprintf(out, "%4d %lf %lf %lf %lf %lf %lf %lf %6d", i+1, // A_s
+      fprintf(out, "%4d %lf %lf %lf %lf %lf %lf %lf %6d", i+1, // As
                   (double)(ndistr[i])/ndistr_norm, // number As distr
                   (double)(wdistr[i][0])/wdistr_norm[0], // weight distr (options mass)
                   (double)(wdistr[i][1])/wdistr_norm[1], // weight distr (whole mass)
@@ -692,9 +699,6 @@ the system.\n\n");
       molecules_sum[0][j] += molecules_sum[i][j]; // total number molecules of each type
     }
   }
-//for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//  fprintf(stdout, "%s: %d\n", MoleculeType[i].Name, molecules_sum[0][i]);
-//}
 
   // open output files //{{{
   // distr file
@@ -712,34 +716,38 @@ the system.\n\n");
   // print legend (with column numbers) //{{{
   // distr file
   putc('#', out);
-  fprintf(out, " 1:<M>_n (options' mass)");
-  fprintf(out, " 2:<M>_n (whole agg mass)");
-  fprintf(out, " 3:<M>_w (options' mass)");
-  fprintf(out, " 4:<M>_w (whole agg mass)");
-  fprintf(out, " 5:<M>_z (options' mass)");
-  fprintf(out, " 6:<M>_z (whole agg mass)");
+  fprintf(out, " (1) <M>_n,");
+  fprintf(out, " (2) <M>_n - whole agg mass,");
+  fprintf(out, " (3) <M>_w,");
+  fprintf(out, " (4) <M>_w - whole agg mass,");
+  fprintf(out, " (5) <M>_z,");
+  fprintf(out, " (6) <M>_z - whole agg mass,");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, " %d:<%s>_n", i+7, MoleculeType[i].Name);
+    fprintf(out, " (%d) <%s>_n", i+7, MoleculeType[i].Name);
+    if (i != (Counts.TypesOfMolecules-1) && !only) {
+      putc(',', out);
+    }
   }
   // avg file
   putc('#', out2);
-  fprintf(out2, " 1:<M>_n (options' mass)");
-  fprintf(out2, " 2:<M>_n (whole agg mass)");
-  fprintf(out2, " 3:<M>_w (options' mass)");
-  fprintf(out2, " 4:<M>_w (whole agg mass)");
-  fprintf(out2, " 5:<M>_z (options' mass)");
-  fprintf(out2, " 6:<M>_z (whole agg mass)");
+  fprintf(out2, " (1) <M>_n,");
+  fprintf(out2, " (2) <M>_n - whole agg mass,");
+  fprintf(out2, " (3) <M>_w,");
+  fprintf(out2, " (4) <M>_w - whole agg mass,");
+  fprintf(out2, " (5) <M>_z,");
+  fprintf(out2, " (6) <M>_z - whole agg mass,");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out2, " %d:<%s>_n", i+7, MoleculeType[i].Name);
+    fprintf(out2, " (%d) <%s>_n", i+7, MoleculeType[i].Name);
+    if (i != (Counts.TypesOfMolecules-1) && !only) {
+      putc(',', out2);
+    }
   }
-
   if (only) {
     // distr file
-    fprintf(out, " %d:<fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+7);
+    fprintf(out, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+7);
     // avg file
-    fprintf(out2, " %d:<fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+7);
+    fprintf(out2, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+7);
   }
-
   putc('\n', out);
   putc('\n', out2); //}}}
 
@@ -818,13 +826,13 @@ the system.\n\n");
     putc('\n', out); //}}}
 
     // print header line //{{{
-    fprintf(out, "# 1: ");
+    fprintf(out, "# column: (1) ");
     count = 0;
     // molecule names
-    fprintf(out, "%s/%s; sizes - ", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
+    fprintf(out, "%s/%s; agg sizes - ", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
     // aggregate sizes
     for (int i = 0; i < comp_number_of_sizes; i++) {
-      fprintf(out, " %d: %d;", i+2, composition[i]);
+      fprintf(out, " (%d) %d;", i+2, composition[i]);
     }
     putc('\n', out); //}}}
 
