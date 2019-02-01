@@ -226,14 +226,14 @@ system.\n\n");
   free(input_vsf); //}}}
 
   // '-n' option - range of aggregation numbers //{{{
-  int range_As[2], test;
+  int range_As[2], test = 2;
   range_As[0] = 1;
   range_As[1] = Counts.Molecules;
   if (MultiIntegerOption(argc, argv, "-n", &test, range_As)) {
     exit(1);
   }
   if (test != 2) {
-    fprintf(stderr, "\nError: option '-n' needs to numberic arguments\n\n");
+    fprintf(stderr, "\nError: option '-n' needs two numeric arguments\n\n");
     exit(1);
   }
 
@@ -290,10 +290,10 @@ system.\n\n");
   putc('\n', out);
 
   // print legend line to output file
-  fprintf(out, "# 1:dt 2:<Rg>_n 3:<Rg>_w 4:<Rg>_z");
-  fprintf(out, " 5:<Rg^2>_n 6:<Rg^2>_w 7:<Rg^2>_z");
-  fprintf(out, " 8:<Anis>_n 9:<Acyl>_n 10:<Aspher>_n");
-  fprintf(out, " 11:<eigen.x>_n 12:<eigen.y>_n 13:<eigen.z>_n");
+  fprintf(out, "# column: (1) dt, (2) <Rg>_n, (3) <Rg>_w, (4) <Rg>_z,");
+  fprintf(out, " (5) <Rg^2>_n, (6) <Rg^2>_w (7) <Rg^2>_z,");
+  fprintf(out, " (8) <Anis>_n, (9) <Acyl>_n, (10) <Aspher>_n,");
+  fprintf(out, " (11) <eigen.x>_n (12) <eigen.y>_n, (13) <eigen.z>_n");
   putc('\n', out);
 
   fclose(out); //}}}
@@ -734,19 +734,19 @@ system.\n\n");
     }
     putc('\n', out); //}}}
 
-    fprintf(out, "# 1:As");
+    fprintf(out, "# column: (1) As");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      fprintf(out, " %d:<%s>", i+2, MoleculeType[i].Name);
+      fprintf(out, " (%d) <%s>", i+2, MoleculeType[i].Name);
     }
-    fprintf(out, " %d:<Rg>", Counts.TypesOfMolecules+2);
-    fprintf(out, " %d:<Rg^2>", Counts.TypesOfMolecules+3);
-    fprintf(out, " %d:<Anis>", Counts.TypesOfMolecules+4);
-    fprintf(out, " %d:<Acyl>", Counts.TypesOfMolecules+5);
-    fprintf(out, " %d:<Aspher>", Counts.TypesOfMolecules+6);
-    fprintf(out, " %d:<eigen.x>", Counts.TypesOfMolecules+7);
-    fprintf(out, " %d:<eigen.y>", Counts.TypesOfMolecules+8);
-    fprintf(out, " %d:<eigen.z>", Counts.TypesOfMolecules+9);
-    fprintf(out, " %d:number of aggs", Counts.TypesOfMolecules+10);
+    fprintf(out, " (%d) <Rg>, ", Counts.TypesOfMolecules+2);
+    fprintf(out, " (%d) <Rg^2>, ", Counts.TypesOfMolecules+3);
+    fprintf(out, " (%d) <Anis>, ", Counts.TypesOfMolecules+4);
+    fprintf(out, " (%d) <Acyl>, ", Counts.TypesOfMolecules+5);
+    fprintf(out, " (%d) <Aspher>, ", Counts.TypesOfMolecules+6);
+    fprintf(out, " (%d) <eigen.x>, ", Counts.TypesOfMolecules+7);
+    fprintf(out, " (%d) <eigen.y>, ", Counts.TypesOfMolecules+8);
+    fprintf(out, " (%d) <eigen.z>, ", Counts.TypesOfMolecules+9);
+    fprintf(out, " (%d) number of aggs", Counts.TypesOfMolecules+10);
     putc('\n', out);
     for (int i = 0; i < Counts.Molecules; i++) {
       if (agg_counts_sum[i] > 0) {
@@ -801,22 +801,22 @@ system.\n\n");
     exit(1);
   } //}}}
 
-  fprintf(out, "# 1:<M>_n 2:_w ");
+  fprintf(out, "# (1) <M>_n, (2) <M>_w ");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, "%d:<%s> ", i+3, MoleculeType[i].Name);
+    fprintf(out, "(%d) <%s>, ", i+3, MoleculeType[i].Name);
   }
-  fprintf(out, "%d:<Rg>_n ", Counts.TypesOfMolecules+3);
-  fprintf(out, "%d:_w ", Counts.TypesOfMolecules+4);
-  fprintf(out, "%d:_z ", Counts.TypesOfMolecules+5);
-  fprintf(out, "%d:<Rg^2>_n ", Counts.TypesOfMolecules+6);
-  fprintf(out, "%d:_w ", Counts.TypesOfMolecules+7);
-  fprintf(out, "%d:_z ", Counts.TypesOfMolecules+8);
-  fprintf(out, "%d:<Anisotropy> ", Counts.TypesOfMolecules+9);
-  fprintf(out, "%d:<Acylindricity> ", Counts.TypesOfMolecules+10);
-  fprintf(out, "%d:<Asphericity> ", Counts.TypesOfMolecules+11);
-  fprintf(out, "%d:<eigen.x> ", Counts.TypesOfMolecules+12);
-  fprintf(out, "%d:<eigen.y> ", Counts.TypesOfMolecules+13);
-  fprintf(out, "%d:<eigen.z> ", Counts.TypesOfMolecules+14);
+  fprintf(out, "(%d) <Rg>_n, ", Counts.TypesOfMolecules+3);
+  fprintf(out, "(%d) <Rg>_w, ", Counts.TypesOfMolecules+4);
+  fprintf(out, "(%d) <Rg>_z, ", Counts.TypesOfMolecules+5);
+  fprintf(out, "(%d) <Rg^2>_n, ", Counts.TypesOfMolecules+6);
+  fprintf(out, "(%d) <Rg^2>_w, ", Counts.TypesOfMolecules+7);
+  fprintf(out, "(%d) <Rg^2>_z, ", Counts.TypesOfMolecules+8);
+  fprintf(out, "(%d) <Anis>, ", Counts.TypesOfMolecules+9);
+  fprintf(out, "(%d) <Acyl>, ", Counts.TypesOfMolecules+10);
+  fprintf(out, "(%d) <Aspher>, ", Counts.TypesOfMolecules+11);
+  fprintf(out, "(%d) <eigen.x>, ", Counts.TypesOfMolecules+12);
+  fprintf(out, "(%d) <eigen.y>, ", Counts.TypesOfMolecules+13);
+  fprintf(out, "(%d) <eigen.z>, ", Counts.TypesOfMolecules+14);
   putc('\n', out);
   fprintf(out, "# %8.3f", (double)(mass_sum[0][0])/agg_counts_sum[0]); //<M_As>_n
   fprintf(out, " %8.3f", (double)(mass_sum[0][1])/mass_sum[0][0]); //<M_As>_w

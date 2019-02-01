@@ -288,10 +288,13 @@ system.\n\n"); */
     putc('\n', out); //}}}
 
     // print bead type names to output file //{{{
-    fprintf(out, "# for each bead type: rdp | stderr | rnp | stderr\n");
-    putc('#', out);
+    fprintf(out, "# for each bead type: (1) rdp; (2) stderr; (3) rnp; (4) stderr\n");
+    fprintf(out, "# columns: (1) distance;");
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      fprintf(out, " %d: %s", 4*i+2, BeadType[i].Name);
+      fprintf(out, " (%d) %s", 4*i+2, BeadType[i].Name);
+      if (i != (Counts.TypesOfBeads-1)) {
+        putc(';', out);
+      }
     }
     putc('\n', out); //}}}
 

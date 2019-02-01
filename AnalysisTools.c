@@ -211,7 +211,7 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule) {
 
-  if (input_vcf[0] != '\0')
+//if (input_vcf[0] != '\0')
   printf("Counts.{");
   printf("TypesOfBeads =%3d, ", Counts.TypesOfBeads);
   printf("Bonded =%7d, ", Counts.Bonded);
@@ -249,7 +249,7 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
     printf("}, Mass =%7.2f", MoleculeType[i].Mass);
 
     if (bonds_file[0] == '\0') { // all bonds taken from vsf file
-      printf(", Bonds from vsf,");
+//    printf(", Bonds from vsf,");
     } else {
       // go through bond file to find out if molecule type 'i' is there
       FILE *bond;
@@ -1967,7 +1967,7 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
   }
 } //}}}
 
-//WriteCoorXYZ() //{{{
+// WriteCoorXYZ() //{{{
 void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
                   BeadType *BeadType, Bead *Bead) {
 

@@ -231,8 +231,8 @@ system.\n\n");
       putc('\n', out); //}}}
 
       fprintf(out, "# %s\n", MoleculeType[i].Name);
-      fprintf(out, "# 1:dt 2:<Rg>_n 3:<Rg>_w 4:<Rg>_z ");
-      fprintf(out, "5:<Anis>_n 6:<Acyl>_n 7:<Aspher>_n\n");
+      fprintf(out, "# (1) dt, (2) <Rg>_n, (3) <Rg>_w, (4) <Rg>_z, ");
+      fprintf(out, "(5) <Anis>_n, (6) <Acyl>_n, (7) <Aspher>_n");
       putc('\n', out);
 
       fclose(out);

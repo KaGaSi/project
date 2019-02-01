@@ -12,7 +12,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <output.vsf>    output structure file (*.vsf)\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -i <name>  use input .vsf file different from traject.vsf\n");
-  fprintf(stderr, "      -b <name>  file containing bond alternatives to FIELD\n");
+//fprintf(stderr, "      -b <name>  file containing bond alternatives to FIELD\n");
   fprintf(stderr, "      -v         verbose output\n");
   fprintf(stderr, "      -h         print this help and exit\n");
 } //}}}
@@ -117,7 +117,7 @@ system.\n\n");
       fprintf(stdout, "   <output.vsf>    output structure file (*.vsf)\n");
       fprintf(stdout, "   <options>\n");
       fprintf(stdout, "      -i   use input .vsf file different from traject.vsf\n");
-      fprintf(stdout, "      -b   file containing bond alternatives to FIELD\n");
+//    fprintf(stdout, "      -b   file containing bond alternatives to FIELD\n");
       fprintf(stdout, "      -v   verbose output\n");
       fprintf(stdout, "      -h   print this help and exit\n");
       exit(0);

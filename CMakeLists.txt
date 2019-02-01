@@ -27,13 +27,16 @@ set(UTILS Aggregates
           Config
           Config_from_xyz
           DensityAggregates
+          DensityBox
           DensityMolecules
           DihedralMolecules
           DistrAgg
+          GenSystem
           GyrationAggregates
           GyrationMolecules
           JoinAggregates
           JoinRuns
+          lmp_data
           PairCorrel
           PotentialAggregates
           SelectedVcf
