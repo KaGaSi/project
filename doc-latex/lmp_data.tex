@@ -1,0 +1,34 @@
+\section{lmp\_data} \label{sec:lmp_data}
+
+This utility generate \texttt{data} file for the
+\href{https://lammps.sandia.gov/}{lammps} simulation package (see
+\href{https://lammps.sandia.gov/}{lammps manual page} for details on the
+\texttt{data} file format).
+
+The utility reads information on system composition from \texttt{DL\_MESO}
+file (information on all beads and structure of molecules -- although it
+does not read dihedrals) and coordinates from \texttt{vcf} coordinate file.
+The utility ignores the interactions part from \texttt{FIELD}. The utility
+also ignore dihedrals.
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{lmp\_data <input> <out.data> <options>}
+
+\noindent
+\begin{longtable}{p{0.15\textwidth}p{0.794\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input>} & input \texttt{vcf} coordinate file \\
+  \texttt{<out.data>} & output \texttt{data} file \\
+  \toprule
+  \multicolumn{2}{l}{Options} \\
+  \midrule
+  \texttt{-f <name>} & FIELD file (default: FIELD)\\
+  \texttt{-st <int>} & coordinate timestep for creating the \texttt{data}
+  file \\
+  \bottomrule
+\end{longtable}

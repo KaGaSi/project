@@ -1,0 +1,50 @@
+\section{SelectedVcf} \label{sec:SelectedVcf}
+
+This utility creates a new \texttt{vcf} coordinate file containing only
+beads of specified types with an option of removing periodic boundary
+conditions (i.e., joining molecules).
+
+The selected bead types are printed as comments at the beginning of the
+output \texttt{vcf} file.
+
+Also, specified molecules can be excluded which is useful when the same
+bead type is shared between more molecule types. However, as of now, no
+utilities can read a \texttt{vcf} file that does not contain all beads of a
+given type, so this can be used only for vmd visualization.
+
+Lastly, \texttt{xyz} coordinate file can also be created from the selected
+bead type(s).
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{SelectedVcf <input> <output> <bead type(s)> <options>}
+
+\vspace{1em}
+\noindent
+\begin{longtable}{p{0.22\textwidth}p{0.724\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input>} & input coordinate file (either \texttt{vcf} or
+    \texttt{vtf} format) \\
+  \texttt{<output.vcf>} & output \texttt{vcf} coordinate file with indexed
+    coordinates \\
+  \texttt{<bead type(s)>} & bead type names to save (can be omitted if
+    \texttt{-r} is used) \\
+  \toprule
+  \multicolumn{2}{l}{Non-standard options} \\
+  \midrule
+  \texttt{-r} & reverse function, i.e., exclude \texttt{<bead type(s)>}
+    instead of including them; if no \texttt{<bead type(s)>} are specified,
+    all bead types are used (requires \texttt{<input>} with all bead types) \\
+  \texttt{--join} & join molecules by removing periodic boundary conditions \\
+  \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-sk <int>} & number of steps skip per one used (default: 0) \\
+  \texttt{-x <name(s)>} & exclude molecules of specified name(s) -- do not
+    use if \texttt{output.vcf} is further analysed \\
+  \texttt{-xyz <name>} & save coordinates to \texttt{xyz} file -- does not
+    take into account \texttt{-x} option \\
+  \bottomrule
+\end{longtable}

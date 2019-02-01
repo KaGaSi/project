@@ -1,0 +1,42 @@
+\section{JoinRuns} \label{sec:JoinRuns}
+
+This utility joins two independent simulation runs of the same system.
+That is, the system contains identical beads and molecules, but these beads
+and molecules are numbered differently in the \texttt{vsf} and \texttt{vcf}
+files from different simulations. The two input \texttt{vcf} files must
+contain the same timestep type (i.e., both indexed or both ordered) and the
+same number of beads (i.e., if one bead type is absent from one
+\texttt{vcf} file, it must be absent from the second one as well).
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{JoinRuns <1st input> <2nd input> <2nd vsf> <output> <bead type(s)> \\ <options>}
+
+\vspace{1em}
+\noindent
+\begin{longtable}{p{0.22\textwidth}p{0.724\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<1st input>} & input coordinate file from the first simulation (either \texttt{vcf} or
+    \texttt{vtf} format) \\
+  \texttt{<2nd input>} & input coordinate file from the second simulation (either \texttt{vcf} or
+    \texttt{vtf} format) \\
+  \texttt{<2nd vsf>} & input structure file from the second simulation
+    (structure file from the first simulation is \texttt{traject.vsf};
+    changeable via \texttt{-i} option) \\
+  \texttt{<output>} & output \texttt{vcf} coordinate file with indexed
+    coordinates \\
+  \texttt{<bead type(s)>} & bead type names to save \\
+  \toprule
+  \multicolumn{2}{l}{Non-standard options} \\
+  \midrule
+  \texttt{--join} & join molecules by removing periodic boundary conditions \\
+  \texttt{-st1 <int>} & starting timestep first run (default: 1) \\
+  \texttt{-st2 <int>} & starting timestep second run (default: 1) \\
+  \texttt{-sk1 <int>} & number of steps skip per one used for first run (default: 0) \\
+  \texttt{-sk2 <int>} & number of steps skip per one used for second run (default: 0) \\
+  \bottomrule
+\end{longtable}

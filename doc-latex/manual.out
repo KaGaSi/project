@@ -1,0 +1,33 @@
+\BOOKMARK [0][-]{chapter*.1}{Contents}{}% 1
+\BOOKMARK [0][-]{chapter.1}{Introdution}{}% 2
+\BOOKMARK [0][-]{chapter.2}{Installation}{}% 3
+\BOOKMARK [0][-]{chapter.3}{Format of input/output files}{}% 4
+\BOOKMARK [1][-]{section.3.1}{vsf structure file}{chapter.3}% 5
+\BOOKMARK [1][-]{section.3.2}{vcf coordinate file}{chapter.3}% 6
+\BOOKMARK [2][-]{subsection.3.2.1}{Ordered coordinate file}{section.3.2}% 7
+\BOOKMARK [2][-]{subsection.3.2.2}{Indexed coordinate file}{section.3.2}% 8
+\BOOKMARK [1][-]{section.3.3}{Aggregate file \(agg\)}{chapter.3}% 9
+\BOOKMARK [0][-]{chapter.4}{Utilities}{}% 10
+\BOOKMARK [1][-]{section.4.1}{AngleMolecules}{chapter.4}% 11
+\BOOKMARK [1][-]{section.4.2}{Aggregates and Aggregates-NotSameBeads}{chapter.4}% 12
+\BOOKMARK [1][-]{section.4.3}{Average}{chapter.4}% 13
+\BOOKMARK [1][-]{section.4.4}{BondLength}{chapter.4}% 14
+\BOOKMARK [1][-]{section.4.5}{Config}{chapter.4}% 15
+\BOOKMARK [1][-]{section.4.6}{DensityAggregates}{chapter.4}% 16
+\BOOKMARK [1][-]{section.4.7}{DensityBox}{chapter.4}% 17
+\BOOKMARK [1][-]{section.4.8}{DensityMolecules}{chapter.4}% 18
+\BOOKMARK [1][-]{section.4.9}{DihedralMolecules}{chapter.4}% 19
+\BOOKMARK [1][-]{section.4.10}{DistrAgg}{chapter.4}% 20
+\BOOKMARK [1][-]{section.4.11}{GenSystem}{chapter.4}% 21
+\BOOKMARK [1][-]{section.4.12}{GyrationAggregates}{chapter.4}% 22
+\BOOKMARK [1][-]{section.4.13}{GyrationMolecules}{chapter.4}% 23
+\BOOKMARK [1][-]{section.4.14}{JoinAggregates}{chapter.4}% 24
+\BOOKMARK [1][-]{section.4.15}{JoinRuns}{chapter.4}% 25
+\BOOKMARK [1][-]{section.4.16}{lmp\137data}{chapter.4}% 26
+\BOOKMARK [1][-]{section.4.17}{PairCorrel}{chapter.4}% 27
+\BOOKMARK [1][-]{section.4.18}{PotentialAggregates}{chapter.4}% 28
+\BOOKMARK [1][-]{section.4.19}{SelectedVcf}{chapter.4}% 29
+\BOOKMARK [1][-]{section.4.20}{traject}{chapter.4}% 30
+\BOOKMARK [1][-]{section.4.21}{TransformVsf}{chapter.4}% 31
+\BOOKMARK [0][-]{chapter.5}{Computational details}{}% 32
+\BOOKMARK [1][-]{section.5.1}{Read system data}{chapter.5}% 33

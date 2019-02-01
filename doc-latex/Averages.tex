@@ -1,0 +1,48 @@
+\section{Average} \label{sec:Average}
+
+This utility uses the binning method to analyse data in a text file. It
+does not use any of the standard options and prints the result only to
+standard output (e.i., screen).
+
+\texttt{Average} calculates average, statistical error, and estimate of the
+autocorrelation time $\tau$. Empty lines and comments (lines beginning with
+\texttt{\#}) are skipped. \texttt{Average} prints to standard output (i.e.,
+the screen) four numbers: \texttt{<n\_blocks> <average> <std error> <tau
+estimate>}:
+\begin{longtable}{ll}
+  \toprule
+  \texttt{<n\_blocks>} & number of blocks used for the binning analysis \\
+  \texttt{<average>} & simple arithmetic average \\
+  \texttt{<std error>} & one-$\sigma$ statistical error \\
+  \texttt{<tau estimate>} & estimate of autocorrelation time $\tau$ \\
+  \bottomrule
+\end{longtable}
+
+A way to quickly estimate a `real' value of $\tau$ is to use a wide range
+of \texttt{<n\_blocks>} value and plot the \texttt{<tau estimate>} values
+as a function of \texttt{<n\_blocks>}. Because the number of data points in
+one block of the binning analysis should be significantly larger than
+$\tau$ (e.g., ten times larger), plotting $f(x)=$(number of data lines in
+the file)$/(10x$) will produce an exponential function that intersects the
+\texttt{<tau estimate>} line. A value of \texttt{<tau estimate>} near the
+intersection (but to the left, where the exponential is above \texttt{<tau
+average>}) can be used as a good estimate of $\tau$.
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{Average <input> <column> <discard> <n\_blocks>}
+
+\noindent
+\begin{longtable}{p{0.15\textwidth}p{0.794\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input>} & input text file \\
+  \texttt{<column>} & column number in \texttt{<input>} for data analysis \\
+  \texttt{<discard>} & number of lines to discard from the beginning of
+    \texttt{<input>} \\
+  \texttt{<n\_blocks>} & number of blocks for binning analysis \\
+  \bottomrule
+\end{longtable}
