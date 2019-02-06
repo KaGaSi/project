@@ -461,7 +461,7 @@ system.\n\n");
   }
   for (int i = 0; i < (bins-avg); i++) {
 
-    fprintf(out, "%.2f", width*(i+0.5*avg));
+    fprintf(out, "%7.3f", width*(i+0.5*avg));
 
     for (int j = 0; j < Counts.TypesOfBeads; j++) {
       double temp_rho = 0, temp_number = 0,
@@ -469,10 +469,10 @@ system.\n\n");
 
       // sum densities to be averaged
       for (int k = 0; k < avg; k++) {
-        temp_rho += rho[j][i+k] / (volume * BeadType[j].Number * count);
-        temp_rho_err += rho_2[j][i+k] / (volume * BeadType[j].Number * count);
-        temp_number += rho[j][i+k] / (BeadType[j].Number * count);
-        temp_number_err += rho_2[j][i+k] / (BeadType[j].Number * count);
+        temp_rho += rho[j][i+k] / (volume * count);
+//      temp_rho_err += rho_2[j][i+k] / (volume * BeadType[j].Number * count);
+//      temp_number += rho[j][i+k] / (BeadType[j].Number * count);
+//      temp_number_err += rho_2[j][i+k] / (BeadType[j].Number * count);
       }
 
       temp_rho_err = sqrt(temp_rho_err - temp_rho);
