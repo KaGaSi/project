@@ -19,6 +19,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      --join         join molecules (remove pbc)\n");
   fprintf(stderr, "      -st <start>    number of timestep to start from\n");
   fprintf(stderr, "      -sk <skip>     leave out every 'skip' steps\n");
+  fprintf(stderr, "      -n <int(s)>    save only specified timesteps\n");
   fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
   fprintf(stderr, "      -xyz <name>    output xyz file\n");
   CommonHelp(1);
@@ -52,6 +53,7 @@ the system.\n\n");
       fprintf(stdout, "      --join         join molecules (remove pbc)\n");
       fprintf(stdout, "      -st <start>    number of timestep to start from\n");
       fprintf(stdout, "      -sk <skip>     leave out every 'skip' steps\n");
+      fprintf(stdout, "      -n <int(s)>    save only specified timesteps\n");
       fprintf(stdout, "      -x <name(s)>   exclude specified molecule(s)\n");
       fprintf(stdout, "      -xyz <name>    output xyz file\n");
       CommonHelp(0);
@@ -92,6 +94,7 @@ the system.\n\n");
         strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-sk") != 0 &&
+        strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-xyz") != 0 &&
         strcmp(argv[i], "-x") != 0) {
 
@@ -268,6 +271,15 @@ the system.\n\n");
   }
   //}}}
 
+  // '-n' option - specify bead ids //{{{
+  int save_step[100] = {0}, number_of_steps = 0, test = 0;
+  if (MultiIntegerOption(argc, argv, "-n", &test, save_step)) {
+    exit(1);
+  }
+  if (test != 0) { // -n is present
+    number_of_steps = test;
+  } //}}}
+
   // print selected bead type names to output .vcf file //{{{
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
@@ -289,6 +301,18 @@ the system.\n\n");
 
     fprintf(stdout, "\n   Starting from %d. timestep\n", start);
     fprintf(stdout, "   Every %d. timestep used\n", skip+1);
+
+    if (number_of_steps > 0) {
+      fprintf(stdout, "   Save %d timesteps:", number_of_steps);
+      for (int i = 0; i < number_of_steps; i++) {
+        fprintf(stdout, " %d", save_step[i]);
+        if (i != (number_of_steps-1)) {
+          putchar(',');
+        } else {
+          putchar('\n');
+        }
+      }
+    }
   }
 
   // bonds file is not needed anymore
@@ -348,7 +372,6 @@ the system.\n\n");
 
   // skip first start-1 steps //{{{
   count = 0;
-  int test;
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
 
@@ -389,6 +412,7 @@ the system.\n\n");
   //}}}
 
   // main loop //{{{
+  int count_n_opt = 0;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
@@ -402,93 +426,168 @@ the system.\n\n");
       }
     }
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
-      exit(1);
-    } //}}}
+    if (number_of_steps != 0) {
+      if (count_n_opt < number_of_steps) {
+        if (save_step[count_n_opt] == count) {
+          // read coordinates //{{{
+          if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+            // print newline to stdout if Step... doesn't end with one
+            ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+            exit(1);
+          } //}}}
 
-    // join molecules? //{{{
-    if (join) {
-      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-    } else { // if rounding leads to BoxLength, move it bead to other side of box
-      for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
-        char check[8];
-        char box[8];
-        // x direction
-        sprintf(check, "%.3f", Bead[i].Position.x);
-        sprintf(box, "%.3f", BoxLength.x);
-        if (strcmp(check, box) == 0) {
-          Bead[i].Position.x = 0;
+          // join molecules? //{{{
+          if (join) {
+            RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+          } else { // if rounding leads to BoxLength, move it bead to other side of box
+            for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
+              char check[8];
+              char box[8];
+              // x direction
+              sprintf(check, "%.3f", Bead[i].Position.x);
+              sprintf(box, "%.3f", BoxLength.x);
+              if (strcmp(check, box) == 0) {
+                Bead[i].Position.x = 0;
+              }
+              // y direction
+              sprintf(check, "%.3f", Bead[i].Position.y);
+              sprintf(box, "%.3f", BoxLength.y);
+              if (strcmp(check, box) == 0) {
+                Bead[i].Position.y = 0;
+              }
+              // z direction
+              sprintf(check, "%.3f", Bead[i].Position.z);
+              sprintf(box, "%.3f", BoxLength.z);
+              if (strcmp(check, box) == 0) {
+                Bead[i].Position.z = 0;
+              }
+            }
+          } //}}}
+
+          // open output .vcf file for appending //{{{
+          if ((out = fopen(output_vcf, "a")) == NULL) {
+            ErrorFileOpen(output_vcf, 'a');
+            exit(1);
+          } //}}}
+
+          WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
+
+          fclose(out);
+
+          // save to xyz file? //{{{
+          if (output_xyz[0] != '\0') {
+
+            // open output .xyz file for appending //{{{
+            if ((out = fopen(output_xyz, "a")) == NULL) {
+              ErrorFileOpen(output_xyz, 'a');
+              exit(1);
+            } //}}}
+
+            WriteCoorXYZ(out, Counts, BeadType, Bead);
+
+            fclose(out);
+          } //}}}
+
+          count_n_opt++;
+        } else {
+          if (SkipCoor(vcf, Counts, &stuff)) {
+            fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
+            exit(1);
+          }
         }
-        // y direction
-        sprintf(check, "%.3f", Bead[i].Position.y);
-        sprintf(box, "%.3f", BoxLength.y);
-        if (strcmp(check, box) == 0) {
-          Bead[i].Position.y = 0;
-        }
-        // z direction
-        sprintf(check, "%.3f", Bead[i].Position.z);
-        sprintf(box, "%.3f", BoxLength.z);
-        if (strcmp(check, box) == 0) {
-          Bead[i].Position.z = 0;
-        }
+      } else { // all required steps saved
+        printf("ok\n");
+        break;
       }
-    } //}}}
-
-    // open output .vcf file for appending //{{{
-    if ((out = fopen(output_vcf, "a")) == NULL) {
-      ErrorFileOpen(output_vcf, 'a');
-      exit(1);
-    } //}}}
-
-    WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
-
-    fclose(out);
-
-    // save to xyz file? //{{{
-    if (output_xyz[0] != '\0') {
-
-      // open output .xyz file for appending //{{{
-      if ((out = fopen(output_xyz, "a")) == NULL) {
-        ErrorFileOpen(output_xyz, 'a');
+    } else {
+      // read coordinates //{{{
+      if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+        // print newline to stdout if Step... doesn't end with one
+        ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
         exit(1);
       } //}}}
 
-      WriteCoorXYZ(out, Counts, BeadType, Bead);
+      // join molecules? //{{{
+      if (join) {
+        RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+      } else { // if rounding leads to BoxLength, move it bead to other side of box
+        for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
+          char check[8];
+          char box[8];
+          // x direction
+          sprintf(check, "%.3f", Bead[i].Position.x);
+          sprintf(box, "%.3f", BoxLength.x);
+          if (strcmp(check, box) == 0) {
+            Bead[i].Position.x = 0;
+          }
+          // y direction
+          sprintf(check, "%.3f", Bead[i].Position.y);
+          sprintf(box, "%.3f", BoxLength.y);
+          if (strcmp(check, box) == 0) {
+            Bead[i].Position.y = 0;
+          }
+          // z direction
+          sprintf(check, "%.3f", Bead[i].Position.z);
+          sprintf(box, "%.3f", BoxLength.z);
+          if (strcmp(check, box) == 0) {
+            Bead[i].Position.z = 0;
+          }
+        }
+      } //}}}
+
+      // open output .vcf file for appending //{{{
+      if ((out = fopen(output_vcf, "a")) == NULL) {
+        ErrorFileOpen(output_vcf, 'a');
+        exit(1);
+      } //}}}
+
+      WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
 
       fclose(out);
-    } //}}}
 
-    // skip every 'skip' steps //{{{
-    for (int i = 0; i < skip; i++) {
-      // test whether at vcf's eof //{{{
-      if ((test = getc(vcf)) == EOF) {
-        break;
-      }
-      ungetc(test, vcf); //}}}
+      // save to xyz file? //{{{
+      if (output_xyz[0] != '\0') {
 
-      if (!silent) {
-        fflush(stdout);
-        if (script) {
-          fprintf(stdout, "Step: %6d\n", count);
-        } else {
-          fprintf(stdout, "\rStep: %6d", ++count);
+        // open output .xyz file for appending //{{{
+        if ((out = fopen(output_xyz, "a")) == NULL) {
+          ErrorFileOpen(output_xyz, 'a');
+          exit(1);
+        } //}}}
+
+        WriteCoorXYZ(out, Counts, BeadType, Bead);
+
+        fclose(out);
+      } //}}}
+
+      // skip every 'skip' steps //{{{
+      for (int i = 0; i < skip; i++) {
+        // test whether at vcf's eof //{{{
+        if ((test = getc(vcf)) == EOF) {
+          break;
         }
-      }
+        ungetc(test, vcf); //}}}
 
-//    // read coordinates //{{{
-//    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
-//      // print newline to stdout if Step... doesn't end with one
-//      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
-//      exit(1);
-//    } //}}}
-      if (SkipCoor(vcf, Counts, &stuff)) {
-        fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
-        exit(1);
-      }
-    } //}}}
+        if (!silent) {
+          fflush(stdout);
+          if (script) {
+            fprintf(stdout, "Step: %6d\n", count);
+          } else {
+            fprintf(stdout, "\rStep: %6d", ++count);
+          }
+        }
+
+  //    // read coordinates //{{{
+  //    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+  //      // print newline to stdout if Step... doesn't end with one
+  //      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+  //      exit(1);
+  //    } //}}}
+        if (SkipCoor(vcf, Counts, &stuff)) {
+          fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
+          exit(1);
+        }
+      } //}}}
+    }
 
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
