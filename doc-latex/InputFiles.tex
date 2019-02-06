@@ -5,15 +5,17 @@ All utilities read information about the system from
 \href{https://github.com/olenz/vtfplugin/wiki/VTF-format}{vsf/vcf files}
 (formatted as described below) and \texttt{FIELD} file (input file for
 \href{http://www.scd.stfc.ac.uk//research/app/ccg/software/DL_MESO/40694.aspx}{DL\_MESO
-simulation package}).  Particle masses and charges are read from the
-\texttt{FIELD} file, but all other structure information (i.e., numbers of
-beads/molecules, all bonds) is read from the structure file, \texttt{vsf}
-(Section~\ref{sec:StructureVsf}), and from the coordinate file,
-\texttt{vcf} (Section~\ref{sec:CoordinateVcf}).  The utilities consider
-only bead types that are present in the \texttt{vcf} coordinate file (i.e.,
-bead types present in the \texttt{vsf} file but not in the \texttt{vcf}
-file are not seen by the utilities). A description of how the system data
-are read is shown in Chapter~\ref{chap:ReadData}.
+simulation package}).
+All system information is read from the \texttt{vsf} structure file
+(Section~\ref{sec:StructureVsf}) and from the \texttt{vcf} coordinate file
+(Section~\ref{sec:CoordinateVcf}). One \texttt{vtf} file containing a
+structure and coordinate sections can also be used.
+The \texttt{FIELD} file is only used when bead charge
+and/or mass is missing from the \texttt{vsf} structure file.
+The utilities consider only bead types that are present in the \texttt{vcf}
+coordinate file (i.e., bead types present in the \texttt{vsf} file but not
+in the \texttt{vcf} file are not seen by the utilities). A description of
+how the system data are read is shown in Chapter~\ref{chap:ReadData}.
 
 Both \texttt{vsf} and \texttt{vcf} files can be generated using a
 \texttt{traject} utility provided by the DL\_MESO simulation package
@@ -23,8 +25,9 @@ structure and coordinates can be in one file (with \texttt{vtf} extension)
 -- this file can be used instead of separate \texttt{vsf} and
 \texttt{vcf} files.
 
-All utilites assume cuboid simulation box with dimensions from 0 to $N$,
-where $N$ is the box size (which can be different in all three dimensions).
+All utilities assume cuboid simulation box with dimensions from 0 to $N$,
+where $N$ is the side length of the box (which can be different in all
+three dimensions).
 %}}}
 
 \section{\texttt{vsf} structure file} \label{sec:StructureVsf} %{{{

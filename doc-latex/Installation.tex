@@ -12,14 +12,13 @@ of \texttt{AnalysisTools} root directory):
 
 \vspace{1em}
 \noindent
-\texttt{cmake -DCMAKE\_BUILD\_TYPE=Release -G "Unix Makefiles" ../}
+\texttt{cmake -G "Unix Makefiles" ../}
 \vspace{1em}
 
 The binaries will be in `bin` subdirectory of `build`.
 
-Version for debugging can be compiled when
-\texttt{-DCMAKE\_BUILD\_TYPE=Debug} is used instead of
-\texttt{-DCMAKE\_BUILD\_TYPE=Release}.
+Cmake variable \texttt{-DCMAKE\_BUILD\_TYPE=Debug} can be used to compile
+the version of utilities for debugging.
 
 To compile individual \texttt{C} programs using \texttt{gcc}, run (assuming
 you are in a subdirectory of \texttt{AnalysisTools} root directory):
@@ -27,8 +26,7 @@ you are in a subdirectory of \texttt{AnalysisTools} root directory):
 \vspace{1em}
 \noindent
 \texttt{gcc -O3 -lm ../AnalysisTools.c ../Error.c ../Options.c
-PATH\_TO\_PRO}-
-
+../Utility/pro}-
 \noindent
-\texttt{GRAM -o OUTPUT\_NAME}.
+\texttt{gram.c}.
 \vspace{1em}
