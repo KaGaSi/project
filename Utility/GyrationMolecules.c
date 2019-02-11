@@ -231,8 +231,9 @@ system.\n\n");
       putc('\n', out); //}}}
 
       fprintf(out, "# %s\n", MoleculeType[i].Name);
-      fprintf(out, "# (1) dt, (2) <Rg>_n, (3) <Rg>_w, (4) <Rg>_z, ");
-      fprintf(out, "(5) <Anis>_n, (6) <Acyl>_n, (7) <Aspher>_n");
+      fprintf(out, "# (1) dt, (2) <Rg>, (3) <Rg^2>, ");
+      fprintf(out, "(4) <Anis>, (5) <Acyl>, (6) <Aspher>");
+      fprintf(out, "(7) <eigen.x>, (8) <eigen.y>, (9) <eigen.z>");
       putc('\n', out);
 
       fclose(out);
@@ -290,13 +291,12 @@ system.\n\n");
   free(bonds_file); //}}}
 
   // allocate memory for sums of shape descriptors //{{{
-  double **Rg_sum = malloc(Counts.TypesOfMolecules*sizeof(double *));
-  double *Anis_sum = calloc(Counts.TypesOfMolecules,sizeof(double));
-  double *Acyl_sum = calloc(Counts.TypesOfMolecules,sizeof(double));
-  double *Aspher_sum = calloc(Counts.TypesOfMolecules,sizeof(double));
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    Rg_sum[i] = calloc(3,sizeof(double));
-  } //}}}
+  double *Rg_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
+  double *sqrRg_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
+  double *Anis_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
+  double *Acyl_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
+  double *Aspher_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
+  struct Vector *eigen_sum = calloc(Counts.TypesOfMolecules, sizeof(struct Vector)); //}}}
 
   // skip first start-1 steps //{{{
   int test;
@@ -359,21 +359,20 @@ system.\n\n");
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
 
-    // allocate memory for shape descriptors //{{{
-    double **Rg = malloc(Counts.TypesOfMolecules*sizeof(double *));
-    double *Anis = calloc(Counts.TypesOfMolecules,sizeof(double));
-    double *Acyl = calloc(Counts.TypesOfMolecules,sizeof(double));
-    double *Aspher = calloc(Counts.TypesOfMolecules,sizeof(double));
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      Rg[i] = calloc(3,sizeof(double));
-    } //}}}
+    // allocate arrays for the timestep //{{{
+    int *agg_counts_step = calloc(Counts.TypesOfMolecules,sizeof(int));
+    double *Rg_step = calloc(Counts.TypesOfMolecules, sizeof(double));
+    double *sqrRg_step = calloc(Counts.TypesOfMolecules, sizeof(double));
+    double *Anis_step = calloc(Counts.TypesOfMolecules,sizeof(double));
+    double *Acyl_step = calloc(Counts.TypesOfMolecules,sizeof(double));
+    double *Aspher_step = calloc(Counts.TypesOfMolecules,sizeof(double));
+    struct Vector *eigen_step = calloc(Counts.TypesOfMolecules,sizeof(struct Vector)); //}}}
 
     // calculate shape descriptors //{{{
     for (int i = 0; i < Counts.Molecules; i++) {
       int mol_type = Molecule[i].Type;
 
       if (MoleculeType[mol_type].Use) {
-
         // copy bead ids to a separate array //{{{
         int *list = malloc(MoleculeType[mol_type].nBeads*sizeof(int));
         int n = 0;
@@ -389,27 +388,38 @@ system.\n\n");
 
         free(list); // free array of bead ids for gyration calculation
 
-        // Radius of gyration
-        Rg[Molecule[i].Type][0] +=      sqrt(eigen.x + eigen.y + eigen.z);
-        Rg[Molecule[i].Type][1] +=           eigen.x + eigen.y + eigen.z;
-        Rg[Molecule[i].Type][2] += CUBE(sqrt(eigen.x + eigen.y + eigen.z));
+        double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
+
+        if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
+          fprintf(stderr, "Error: negative eigenvalues (%lf, %lf, %lf)\n\n", eigen.x, eigen.y, eigen.z);
+        }
+        // radius of gyration
+        Rg_step[mol_type] += Rgi; // for number avg
+        // squared radius of gyration
+        sqrRg_step[mol_type] += SQR(Rgi); // for number avg
         // relative shape anisotropy
-        Anis[Molecule[i].Type] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
+        Anis_step[mol_type] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
         // acylindricity
-        Acyl[Molecule[i].Type] += eigen.y - eigen.x;
+        Acyl_step[mol_type] += eigen.y - eigen.x;
         // asphericity
-        Aspher[Molecule[i].Type] += eigen.z - 0.5 * (eigen.x + eigen.y);
+        Aspher_step[mol_type] += eigen.z - 0.5 * (eigen.x + eigen.y);
+        // eigenvalues
+        eigen_step[mol_type].x += eigen.x;
+        eigen_step[mol_type].y += eigen.y;
+        eigen_step[mol_type].z += eigen.z;
       }
     } //}}}
 
-    // add shape descriptors to sum //{{{
+    // add values to sums //{{{
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      Rg_sum[i][0] += Rg[i][0];
-      Rg_sum[i][1] += Rg[i][1];
-      Rg_sum[i][2] += Rg[i][2];
-      Anis_sum[i] += Anis[i];
-      Acyl_sum[i] += Acyl[i];
-      Aspher_sum[i] += Aspher[i];
+      Rg_sum[i] += Rg_step[i];
+      sqrRg_sum[i] += sqrRg_step[i];
+      Anis_sum[i] += Anis_step[i];
+      Acyl_sum[i] += Acyl_step[i];
+      Aspher_sum[i] += Aspher_step[i];
+      eigen_sum[i].x += eigen_step[i].x;
+      eigen_sum[i].y += eigen_step[i].y;
+      eigen_sum[i].z += eigen_step[i].z;
     } //}}}
 
     // print shape descriptors to output file(s) //{{{
@@ -424,10 +434,14 @@ system.\n\n");
         }
 
         fprintf(out, "%5d", count);
-        fprintf(out, " %8.5f %8.5f %8.5f", Rg[i][0]/MoleculeType[i].Number, Rg[i][1]/Rg[i][0], Rg[i][2]/Rg[i][1]);
-        fprintf(out, " %8.5f", Anis[i]/MoleculeType[i].Number);
-        fprintf(out, " %8.5f", Acyl[i]/MoleculeType[i].Number);
-        fprintf(out, " %8.5f", Aspher[i]/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", Rg_step[i]/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", sqrRg_step[i]/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", Anis_step[i]/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", Acyl_step[i]/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", Aspher_step[i]/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", eigen_step[i].x/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", eigen_step[i].y/MoleculeType[i].Number);
+        fprintf(out, " %8.5f", eigen_step[i].z/MoleculeType[i].Number);
         putc('\n', out);
 
         fclose(out);
@@ -439,13 +453,14 @@ system.\n\n");
       fprintf(stdout, "\n%s", stuff);
     } //}}}
 
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      free(Rg[i]);
-    }
-    free(Rg);
-    free(Anis);
-    free(Acyl);
-    free(Aspher);
+    // free memory //{{{
+    free(agg_counts_step);
+    free(Rg_step);
+    free(sqrRg_step);
+    free(Anis_step);
+    free(Acyl_step);
+    free(Aspher_step);
+    free(eigen_step); //}}}
   }
   fclose(vcf);
 
@@ -458,19 +473,16 @@ system.\n\n");
     }
   } //}}}
 
-//// calculate simple averages //{{{
-//for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//  fprintf(stdout, "%10s %lf\n", MoleculeType[i].Name, Rg_sum[i][0]/(count*MoleculeType[i].Number));
-//} //}}}
+  // calculate simple averages //{{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    fprintf(stdout, "%10s %lf\n", MoleculeType[i].Name, Rg_sum[i]/(count*MoleculeType[i].Number));
+  } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    free(Rg_sum[i]);
-  }
   free(Rg_sum);
   free(Anis_sum);
   free(Acyl_sum);
