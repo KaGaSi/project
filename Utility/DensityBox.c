@@ -180,7 +180,7 @@ system.\n\n");
   double width = atof(argv[count]); //}}}
 
   // <output.rho> - filename with bead densities //{{{
-  char output_rho[16];
+  char output_rho[32];
   strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{

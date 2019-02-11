@@ -467,7 +467,11 @@ system.\n\n");
       split = strtok(NULL, " \t"); // second id
       split = strtok(NULL, " \t"); // spring constant
       split = strtok(NULL, " \t"); // length - what is needed
-      prototype_z[i][j+1] = prototype_z[i][j] + atof(split);
+      double length = atof(split);
+      if (fabs(length) < 0.01) {
+        length = 0.7;
+      }
+      prototype_z[i][j+1] = prototype_z[i][j] + length;
     }
 
     printf("\nbox = (%lf, %lf, %lf)\n\nPrototype %s molecule (z coordinate):\n", BoxLength.x, BoxLength.y, BoxLength.z, MoleculeType[i].Name);

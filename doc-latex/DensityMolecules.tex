@@ -10,22 +10,7 @@ but specified bead in the molecule can be used instead (\texttt{-c}
 option). The bead is specified by its index inside the molecule as defined
 in the \texttt{vsf} file. For example, assume that molecule's beads in
 \texttt{vsf} are ordered \texttt{A}, \texttt{B}, \texttt{C}. Then, bead
-\texttt{A} is 1, bead \texttt{B} is 2, and \texttt{C} is 3. The index for
-the bead RDP should be calculated from is an argument of the \texttt{-c}
-option. The number of arguments of \texttt{-c} must be equal to the number
-of specified molecule type(s). The order for the arguments is taken from
-the \texttt{vsf} file, not from the \texttt{DensityMolecules} command. For
-example, assume that RDPs for molecules \texttt{Mol\_A} (with centre at the
-third bead) and \texttt{Mol\_B} (with centre at the centre of mass) should
-be calculated. The form of the \texttt{-c} option depends on the order of
-when the first molecules \texttt{Mol\_A} and \texttt{Mol\_B} appear in the
-\texttt{vsf} file:
-\begin{enumerate}[nosep]
-  \item if \texttt{Mol\_A} is above \texttt{Mol\_B} in \texttt{vsf}, then
-    it must be \texttt{-c 3 x} (where \texttt{x} means the centre of mass);
-  \item if \texttt{Mol\_B} is above \texttt{Mol\_A} in \texttt{vsf}, then
-    it must be \texttt{-c x 3}.
-\end{enumerate}
+\texttt{A} is 1, bead \texttt{B} is 2, and \texttt{C} is 3.
 
 Usage:
 
@@ -34,7 +19,7 @@ Usage:
 \texttt{DensityMolecules <input> <width> <output> <mol name(s)> <options>}
 
 \noindent
-\begin{longtable}{p{0.20\textwidth}p{0.744\textwidth}}
+\begin{longtable}{p{0.22\textwidth}p{0.724\textwidth}}
   \toprule
   \multicolumn{2}{l}{Mandatory arguments} \\
   \midrule
@@ -50,11 +35,11 @@ Usage:
   \texttt{--joined} & specify that \texttt{<input>} contains joined
     coordinates (i.e., periodic boundary conditions for molecules do not
     have to be removed) \\
-  \texttt{-n <int>} & number of bins to average to get smoother density
+  \texttt{-n <int>} & number of bins to average for smoother density
     (default: 1) \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
-  \texttt{-c <int>/x} & use specified bead (\texttt{<int>}) or centre of
-    molecule's mass (\texttt{x}) as centre (i.e., as $r=0$) \\
+  \texttt{-c <name> <int>} & use specified bead in a molecule
+    \texttt{<name>} instead of its centre of mass \\
   \bottomrule
 \end{longtable}
 
