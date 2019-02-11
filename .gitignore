@@ -5,3 +5,11 @@ cscope.out
 tags
 DoxyErrors.txt
 OneTime
+*aux
+*latexmk
+*log
+*fls
+*gz
+*toc
+*out
+*xmpi

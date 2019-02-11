@@ -11,15 +11,15 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
   fprintf(stderr, "   %s <input> <width> <output.rho> <mol name(s)> <options>\n\n", cmd);
 
-  fprintf(stderr, "   <input>           input filename (either vcf or vtf format)\n");
-  fprintf(stderr, "   <width>           width of a single bin\n");
-  fprintf(stderr, "   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
-  fprintf(stderr, "   <mol name(s)>     molecule names to calculate density for\n");
+  fprintf(stderr, "   <input>            input filename (either vcf or vtf format)\n");
+  fprintf(stderr, "   <width>            width of a single bin\n");
+  fprintf(stderr, "   <output.rho>       output density file (automatic ending 'molecule_name.rho' added)\n");
+  fprintf(stderr, "   <mol name(s)>      molecule names to calculate density for\n");
   fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined       specify that <input> contains joined coordinates\n");
-  fprintf(stderr, "      -n <int>       number of bins to average\n");
-  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(stderr, "      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
+  fprintf(stderr, "      --joined        specify that <input> contains joined coordinates\n");
+  fprintf(stderr, "      -n <int>        number of bins to average\n");
+  fprintf(stderr, "      -st <int>       starting timestep for calculation\n");
+  fprintf(stderr, "      -c <name> <int> use <int>-th molecule bead instead of centre of mass\n");
   CommonHelp(1);
 } //}}}
 
@@ -43,15 +43,15 @@ system.\n\n");
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input> <width> <output.rho> <mol name(s)> <options>\n\n", argv[0]);
 
-      fprintf(stdout, "   <input>           input filename (either vcf or vtf format)\n");
-      fprintf(stdout, "   <width>           width of a single bin\n");
-      fprintf(stdout, "   <output.rho>      output density file (automatic ending 'molecule_name.rho' added)\n");
-      fprintf(stdout, "   <mol name(s)>     molecule names to calculate density for\n");
+      fprintf(stdout, "   <input>            input filename (either vcf or vtf format)\n");
+      fprintf(stdout, "   <width>            width of a single bin\n");
+      fprintf(stdout, "   <output.rho>       output density file (automatic ending 'molecule_name.rho' added)\n");
+      fprintf(stdout, "   <mol name(s)>      molecule names to calculate density for\n");
       fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined       specify that <input> contains joined coordinates\n");
-      fprintf(stdout, "      -n <int>       number of bins to average\n");
-      fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
-      fprintf(stdout, "      -c 'x's/<ints> use <int>-th molecule bead instead of centre of mass\n");
+      fprintf(stdout, "      --joined        specify that <input> contains joined coordinates\n");
+      fprintf(stdout, "      -n <int>        number of bins to average\n");
+      fprintf(stdout, "      -st <int>       starting timestep for calculation\n");
+      fprintf(stdout, "      -c <name> <int> use <int>-th molecule bead instead of centre of mass\n");
       CommonHelp(0);
       exit(0);
     }
@@ -248,7 +248,7 @@ system.\n\n");
     fclose(out); //}}}
   } //}}}
 
-  // -c 'x's/<int(s)> option - specify which bead to use as a molecule centre //{{{
+  // -c option - specify which bead to use as a molecule centre //{{{
 
   // array for considering whether to use COM or specified bead number //{{{
   int centre[Counts.TypesOfMolecules];

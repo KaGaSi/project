@@ -463,20 +463,24 @@ system.\n\n");
   putc('\n', out); //}}}
 
   // print bond coefficients //{{{
-  fprintf(out, "Bond Coeffs\n\n");
-  for (int i = 0; i < count_bond_types; i++) {
-    // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
-    fprintf(out, "%2d %lf %lf\n", i+1, bond_type[i][0]/2, bond_type[i][1]);
-  }
-  putc('\n', out); //}}}
+  if (count_bond_types > 0) {
+    fprintf(out, "Bond Coeffs\n\n");
+    for (int i = 0; i < count_bond_types; i++) {
+      // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
+      fprintf(out, "%2d %lf %lf\n", i+1, bond_type[i][0]/2, bond_type[i][1]);
+    }
+    putc('\n', out);
+  } //}}}
 
   // print angle coefficients //{{{
-  fprintf(out, "Angle Coeffs\n\n");
-  for (int i = 0; i < count_angle_types; i++) {
-    // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
-    fprintf(out, "%2d %lf %lf\n", i+1, angle_type[i][0]/2, angle_type[i][1]);
-  }
-  putc('\n', out); //}}}
+  if (count_angle_types > 0) {
+    fprintf(out, "Angle Coeffs\n\n");
+    for (int i = 0; i < count_angle_types; i++) {
+      // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
+      fprintf(out, "%2d %lf %lf\n", i+1, angle_type[i][0]/2, angle_type[i][1]);
+    }
+    putc('\n', out);
+  } //}}}
 
   // print bead coordinates //{{{
   fprintf(out, "Atoms\n\n");
