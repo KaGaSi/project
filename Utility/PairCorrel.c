@@ -255,11 +255,15 @@ the system.\n\n");
   putc('\n', out); //}}}
 
   // print bead type names to output file //{{{
-  putc('#', out);
+  fprintf(out, "# (1) distance;");
+  count = 1;
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     for (int j = i; j < Counts.TypesOfBeads; j++) {
       if (BeadType[i].Use && BeadType[j].Use) {
-        fprintf(out, " %s-%s", BeadType[i].Name, BeadType[j].Name);
+        fprintf(out, " (%d) %s-%s", ++count, BeadType[i].Name, BeadType[j].Name);
+      }
+      if (i != (Counts.TypesOfBeads-1) || j != (Counts.TypesOfBeads-1)) {
+        putc(';', out);
       }
     }
   }
@@ -428,7 +432,7 @@ the system.\n\n");
   }
 
   // calculate pcf
-  for (int j = 1; j < (bins-avg); j++) {
+  for (int j = 0; j < (bins-avg); j++) {
 
     // calculate volume of every shell that will be averaged
     double shell[avg];

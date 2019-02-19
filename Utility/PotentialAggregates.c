@@ -14,7 +14,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(stderr, "   <input.agg>       input agg file\n");
   fprintf(stderr, "   <width>           width of a single bin\n");
-  fprintf(stderr, "   <output.txt>      output file (automatic ending '#.txt' added)\n");
+  fprintf(stderr, "   <output>          output file with electrostatic potential\n");
   fprintf(stderr, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      --joined       specify that <input> contains joined coordinates\n");
@@ -49,7 +49,7 @@ system.\n\n"); */
       fprintf(stdout, "   <input.vcf>       input coordinate file (either vcf or vtf format)\n");
       fprintf(stdout, "   <input.agg>       input agg file\n");
       fprintf(stdout, "   <width>           width of a single bin\n");
-      fprintf(stdout, "   <output.txt>      output file (automatic ending '#.txt' added)\n");
+      fprintf(stdout, "   <output>          output file with electrostatic potential\n");
       fprintf(stdout, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
       fprintf(stdout, "   <options>\n");
       fprintf(stdout, "      --joined       specify that <input> contains joined coordinates\n");
@@ -212,7 +212,7 @@ system.\n\n"); */
   }
   double width = atof(argv[count]); //}}}
 
-  // <output.txt> - filename with bead densities //{{{
+  // <output> - filename with bead densities //{{{
   char output_elstat[32];
   strcpy(output_elstat, argv[++count]); //}}}
 
@@ -257,34 +257,6 @@ system.\n\n"); */
     } //}}}
 
     agg_sizes[aggs][0] = atoi(argv[count]);
-
-    // write initial stuff to output density file //{{{
-    FILE *out;
-    char str[128];
-    strcpy(str, output_elstat);
-
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (specific_moltype_for_size[i]) {
-        char str2[256];
-        sprintf(str2, "%s%s", str, MoleculeType[i].Name);
-        strcpy(str, str2);
-      }
-    }
-    char str2[256];
-    sprintf(str2, "%s_%d.txt", str, agg_sizes[aggs][0]);
-    strcpy(str, str2);
-    if ((out = fopen(str, "w")) == NULL) {
-      ErrorFileOpen(str, 'w');
-      exit(1);
-    }
-
-    // print command to output file //{{{
-    putc('#', out);
-    for (int i = 0; i < argc; i++)
-      fprintf(out, " %s", argv[i]);
-    putc('\n', out); //}}}
-
-    fclose(out); //}}}
 
     aggs++; // number of aggregate sizes
   } //}}}
@@ -877,52 +849,41 @@ system.\n\n"); */
   } //}}}
 
   // write elstat to output file(s) //{{{
+  FILE *out;
+  if ((out = fopen(output_elstat, "w")) == NULL) {
+    ErrorFileOpen(output_elstat, 'w');
+    exit(1);
+  }
+
+  // print command to output file //{{{
+  putc('#', out);
+  for (int i = 0; i < argc; i++)
+    fprintf(out, " %s", argv[i]);
+  putc('\n', out); //}}}
+
+  // print aggregate sizes //{{{
+  fprintf(out, "# (1) distance;");
   for (int i = 0; i < aggs; i++) {
-    FILE *out;
-    // assemble correct name
-    sprintf(str, "%s", output_elstat);
-    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (specific_moltype_for_size[j]) {
-        char str2[256];
-        sprintf(str2, "%s%s", str, MoleculeType[j].Name);
-        strcpy(str, str2);
-      }
+    fprintf(out, " (%d) %d", i+2, agg_sizes[i][0]);
+    if (i != (aggs-1)) {
+      putc(';', out);
     }
-    char str2[256];
-    sprintf(str2, "%s_%d.txt", str, agg_sizes[i][0]);
-    strcpy(str, str2);
-    if ((out = fopen(str, "a")) == NULL) {
-      ErrorFileOpen(str, 'a');
-      exit(1);
-    }
-
-    // average elstat
-    for (int j = 0; j < bins; j++) {
-      if ((width*j) > 0.1) {
-        // print distance from aggregate com
-        fprintf(out, "%.2f", width*(j+0.5));
-
-        // print average value and standard deviation to output file
-        fprintf(out, " %20.15f", elstat_potential[i][j]/agg_sizes[i][1]);
-        putc('\n',out);
-      }
-    }
-
-    fprintf(out, "# %d molecules in aggregate (sum of", agg_sizes[i][0]);
-    int types = 0;
-    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (specific_moltype_for_size[j]) {
-        if (++types == 1) { // first mol type
-          fprintf(out, " %s", MoleculeType[j].Name);
-        } else { // second and higher mol type
-          fprintf(out, ", %s", MoleculeType[j].Name);
-        }
-      }
-    }
-    fprintf(out, " - %d aggregates)\n", agg_sizes[i][1]);
-
-    fclose(out);
   } //}}}
+
+  // print electrostatic potential
+  for (int j = 0; j < bins; j++) {
+    if ((width*j) > 0.1) {
+      // print distance from aggregate com
+      fprintf(out, "%.2f", width*(j+0.5));
+
+      for (int i = 0; i < aggs; i++) {
+        // print average value and standard deviation to output file
+        fprintf(out, " %lf", elstat_potential[i][j]/agg_sizes[i][1]);
+      }
+    }
+    putc('\n',out);
+  }
+  fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
@@ -936,11 +897,9 @@ system.\n\n"); */
   }
   free(agg_sizes);
   for (int i = 0; i < aggs; i++) {
-//  free(elstat[i]);
     free(elstat_potential[i]);
     free(elstat_potential_sqr[i]);
   }
-//free(elstat);
   free(elstat_potential_sqr);
   free(specific_moltype_for_size);
   free(index); //}}}
