@@ -54,8 +54,8 @@ type_def=-1;
     if (Bead[i].Type != type_def) {
       fprintf(fw, "atom %7d ", i);
       fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
-      fprintf(fw, "mass %4.2f ", BeadType[Bead[i].Type].Mass);
-      fprintf(fw, "charge %5.2f\n", BeadType[Bead[i].Type].Charge);
+      fprintf(fw, "mass %lf ", BeadType[Bead[i].Type].Mass);
+      fprintf(fw, "charge %lf\n", BeadType[Bead[i].Type].Charge);
     }
   } //}}}
 
