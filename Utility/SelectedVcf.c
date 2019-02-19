@@ -234,20 +234,15 @@ the system.\n\n");
     int type = FindBeadType(argv[count], Counts, BeadType);
 
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n", argv[count], input_vcf);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n   Present bead types:", argv[count], input_vcf);
+      for (int i = 0; i < Counts.TypesOfBeads; i++) {
+        fprintf(stderr, "%s\n", BeadType[i].Name);
+      }
       exit(1);
     }
 
     BeadType[type].Write = true;
-  }
-
-//// Error - does not make sense to use all bead types
-//if ((count-5) == Counts.TypesOfBeads) {
-//  fprintf(stderr, "All beadtypes are selected which would only copy %s,\n", input_vcf);
-//  fprintf(stderr, "therefore this is not allowed!\n\n");
-//  ErrorHelp(argv[0]);
-//  exit(1);
-//} //}}}
+  } //}}}
 
   // if '-r' is used, switch Write bools for all bead types //{{{
   if (reverse) {
