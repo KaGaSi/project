@@ -693,6 +693,11 @@ system.\n\n");
   // '-x' option //{{{
   if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
     exit(1);
+  }
+
+  // used molecule type = write molecule type -- for now
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType[i].Write = MoleculeType[i].Use;
   } //}}}
 
   // print command to output .agg file //{{{

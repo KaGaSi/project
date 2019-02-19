@@ -1950,8 +1950,8 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
 
       if (Bead[i].Molecule != -1) { // bead in a molecule
 
-        int mol_typ = Molecule[Bead[i].Molecule].Type;
-        if (MoleculeType[mol_typ].Write) {
+        int mol_type = Molecule[Bead[i].Molecule].Type;
+        if (MoleculeType[mol_type].Write) {
           fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                        Bead[i].Position.x,
                                                        Bead[i].Position.y,
