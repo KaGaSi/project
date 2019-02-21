@@ -4,10 +4,17 @@ This utility calculates angles between beads in each molecule of specified
 molecule type(s). The beads do not have to be connected, so the angle does
 not have to be between two bonds.
 
-The angle is specified by three bead indices (according to the order of
-beads in the molecule in \texttt{vsf} -- similarly to the \texttt{-c}
-option in \texttt{DensityMolecules}, i.e.,
-Section~\ref{sec:DensityMolecules}). More than one angle can be specified
+The angle is specified by three bead indices taken from the \texttt{vsf}
+file (\texttt{-n} option) These indices are from 1 to $N$, where $N$ is the
+number of beads in the molecule type. Generally, the numbering of beads
+inside a molecule is made according to the first molecule of the given type
+in \texttt{vsf} file. For example, assume that beads of the first molecule
+called \texttt{mol} in the \texttt{vsf} file are ordered \texttt{A}
+(\texttt{vsf} index 123), \texttt{B} (\texttt{vsf} index 124), \texttt{C}
+(\texttt{vsf} index 200). Then, bead \texttt{A} is 1, bead \texttt{B} is 2,
+and \texttt{C} is 3.
+
+More than one angle can be specified
 (i.e., a multiple of three numbers have to be supplied to the \texttt{-n}
 option.). For example, assuming indices \texttt{1 2 3} are specified
 (default if \texttt{-n} option is not used), the angle will be between
