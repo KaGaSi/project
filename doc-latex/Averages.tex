@@ -18,6 +18,57 @@ estimate>}:
   \bottomrule
 \end{longtable}
 
+The average of an observable $\mathcal{O}$ is a simple
+arithmetic mean:
+\begin{equation} \label{eq:Average} %{{{
+  \langle\mathcal{O}\rangle = \frac{1}{N} \sum^N_{i=1} \mathcal{O}_i,
+\end{equation} %}}}
+where $N$ is the number of measurements and the subscript $i$ denotes
+individual measurements. If the measurements are independent (i.e.,
+uncorrelated), the statistical error is given by:
+\begin{equation} \label{eq:IndependentError} %{{{
+  \epsilon^2 =
+    \frac{\sigma^2_{\mathcal{O}_i}}{N},
+\end{equation} %}}}
+where $\sigma^2_{\mathcal{O}_i}$
+is the variance of the individual
+measurements,
+\begin{equation} %{{{
+  \sigma^2_{\mathcal{O}_i} = \frac{1}{N-1} \sum^N_{i=1} (\mathcal{O}_i -
+  \langle\mathcal{O}\rangle)^2.
+\end{equation} %}}}
+
+For correlated data, the autocorrelation time,
+$\tau$, representing the number of steps between two uncorrelated
+measurements must be determined. Every
+$\tau$-th measurement is uncorrelated, so the
+equation~\eqref{eq:IndependentError} can then be used to estimate the
+error.
+
+A commonly used method to estimate the autocorrelation time
+is the binning (or block) method. In this method, the correlated data are
+divided into $N_{\mr{B}}$ non-overlapping blocks of size $k$ ($N=k
+N_{\mr{B}}$) with per-block averages, $\mathcal{O}_{\mr{B},n}$,
+defined as:
+\begin{equation} \label{eq:BlockAverage} %{{{
+  \mathcal{O}_{\mr{B},n} = \frac{1}{k}
+    \sum^{k n}_{\substack{i=1+\\(n-1)k}} \mathcal{O}_i.
+\end{equation} %}}}
+If $k\gg\tau$, the blocks are assumed to be uncorrelated and
+equation~\eqref{eq:IndependentError} can be used:
+\begin{equation} \label{eq:Error} %{{{
+  \epsilon^2 =
+  \frac{\sigma^2_{\mr{B}} }{N_{\mr{B}} } = \frac{1}{N_{\mr{B}} (N_{\mr{B}}
+  -1)} \sum^{N_{\mr{B}} }_{n=1} (\mathcal{O}_{\mr{B},n} -
+  \overline{\mathcal{O}})^2.
+\end{equation} %}}}
+An estimate of the autocorrelation time can be obtained using the following
+formula:
+\begin{equation} \label{eq:tau} %{{{
+  \tau_{\mathcal{O}} = \frac{k \sigma^2_{\mr{B}} }{2
+  \sigma^2_{\mathcal{O}_i}}.
+\end{equation} %}}}
+
 A way to quickly estimate a `real' value of $\tau$ is to use a wide range
 of \texttt{<n\_blocks>} value and plot the \texttt{<tau estimate>} values
 as a function of \texttt{<n\_blocks>}. Because the number of data points in
