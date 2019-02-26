@@ -1,9 +1,15 @@
 \section{SelectedVcf} \label{sec:SelectedVcf}
 
 This utility creates a new \texttt{vcf} coordinate file containing only
-beads of specified types with an option of removing periodic boundary
-conditions (i.e., joining molecules). The selected bead types are printed
-as comments at the beginning of the output \texttt{vcf} file.
+beads of specified types with output \texttt{vcf} file. The selected bead
+types are printed as comments at the beginning of the output \texttt{vcf}
+file.
+
+There is an option to remove periodic boundary conditions (i.e., to join
+molecules). Conversely, the simualation box can be wrapped (i.e., the
+periodic boundary conditions applied). If both \texttt{--join} and
+\texttt{-w} options are used, the simuation box is first wrapped and then
+the molecules are joined.
 
 Also, specified molecules can be excluded which is useful when the same
 bead type is shared between more molecule types. However, as of now, no
@@ -38,6 +44,7 @@ Usage:
     instead of including them; if no \texttt{<bead type(s)>} are specified,
     all bead types are used (requires \texttt{<input>} with all bead types) \\
   \texttt{--join} & join molecules by removing periodic boundary conditions \\
+  \texttt{-w} & wrap simulation box (i.e., apply periodic boundary conditions) \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
   \texttt{-sk <int>} & number of steps skip per one used (default: 0) \\
   \texttt{-n <int(s)>} & save only specified timesteps \\
