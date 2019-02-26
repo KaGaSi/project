@@ -17,6 +17,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   <options>\n");
   fprintf(stderr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
   fprintf(stderr, "      --join         join molecules (remove pbc)\n");
+  fprintf(stderr, "      -w             wrap coordinates (i.e., apply pbc)\n");
   fprintf(stderr, "      -st <start>    number of timestep to start from\n");
   fprintf(stderr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(stderr, "      -n <int(s)>    save only specified timesteps\n");
@@ -51,6 +52,7 @@ the system.\n\n");
       fprintf(stdout, "   <options>\n");
       fprintf(stdout, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
       fprintf(stdout, "      --join         join molecules (remove pbc)\n");
+      fprintf(stdout, "      -w             wrap coordinates (i.e., apply pbc)\n");
       fprintf(stdout, "      -st <start>    number of timestep to start from\n");
       fprintf(stdout, "      -sk <skip>     leave out every 'skip' steps\n");
       fprintf(stdout, "      -n <int(s)>    save only specified timesteps\n");
@@ -91,6 +93,7 @@ the system.\n\n");
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--join") != 0 &&
+        strcmp(argv[i], "-w") != 0 &&
         strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-sk") != 0 &&
@@ -146,8 +149,11 @@ the system.\n\n");
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
-  // should output coordinates be joined? //{{{
-  bool join = BoolOption(argc, argv, "--join"); //}}}
+  // should output coordinates be joined?
+  bool join = BoolOption(argc, argv, "--join");
+
+  // should output coordinates be wrapped?
+  bool wrap = BoolOption(argc, argv, "-w");
 
   // starting timestep //{{{
   int start = 1;
@@ -431,6 +437,11 @@ the system.\n\n");
             exit(1);
           } //}}}
 
+          // wrap coordinates? //{{{
+          if (wrap) {
+            RestorePBC(Counts, BoxLength, &Bead);
+          } // }}}
+
           // join molecules? //{{{
           if (join) {
             RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
@@ -501,6 +512,11 @@ the system.\n\n");
         ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
         exit(1);
       } //}}}
+
+      // wrap coordinates? //{{{
+      if (wrap) {
+        RestorePBC(Counts, BoxLength, &Bead);
+      } // }}}
 
       // join molecules? //{{{
       if (join) {
