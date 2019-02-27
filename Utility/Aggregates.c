@@ -615,9 +615,9 @@ system.\n\n");
 
   count = 0; // count mandatory arguments
 
-  // <input> - filename of input vcf file (must end with .vcf) //{{{
-  char input_vcf[32];
-  strcpy(input_vcf, argv[++count]);
+  // <input> - filename of input coor file //{{{
+  char input_coor[32];
+  strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
@@ -627,7 +627,7 @@ system.\n\n");
   }
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vcf, ext, extension)) {
+  if (!ErrorExtension(input_coor, ext, extension)) {
     ErrorHelp(argv[0]);
     exit(1);
   }
@@ -680,7 +680,7 @@ system.\n\n");
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -688,7 +688,7 @@ system.\n\n");
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n   Present bead types:\n", argv[count], input_vcf);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n   Present bead types:\n", argv[count], input_coor);
       for (int i = 0; i < Counts.TypesOfBeads; i++) {
         fprintf(stderr, "%s\n", BeadType[i].Name);
       }
@@ -723,8 +723,8 @@ system.\n\n");
 
   // open input coordinate file //{{{
   FILE *vcf;
-  if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    ErrorFileOpen(input_vcf, 'r');
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
 
@@ -733,14 +733,14 @@ system.\n\n");
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Error: cannot read a string from '%s' file\n\n", input_vcf);
+      fprintf(stderr, "Error: cannot read a string from '%s' file\n\n", input_coor);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_vcf);
+    fprintf(stderr, "Cannot read pbc from %s!\n", input_coor);
     exit(1);
   }
 
@@ -804,7 +804,7 @@ system.\n\n");
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "\n   Distance for closeness check: %lf\n", distance);
     fprintf(stdout, "   Number of needed contacts for aggregate check: %d\n", contacts);
@@ -832,7 +832,7 @@ system.\n\n");
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -885,7 +885,7 @@ system.\n\n");
 
     // are all molecules accounted for? //{{{
     if (test_count != Counts.Molecules) {
-      fprintf(stderr, "Error: not all molecules were assigned to aggregates!\n");
+      fprintf(stderr, "Error: not all molecules were assigned to aggregates\n");
       fprintf(stderr, "       Counts.Molecules = %5d; Molecules in aggregates: %d\n\n", Counts.Molecules, test_count);
       exit(1);
     } //}}}
