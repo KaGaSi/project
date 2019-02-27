@@ -5,8 +5,8 @@
 #include <math.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
-#include "../Errors.h"
 #include "Aggregates.h"
+#include "../Errors.h"
 
 void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "Usage:\n");
@@ -40,7 +40,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     (*Aggregate)[i].nMonomers = 0;
   }
 
-  for (int i = 0; i < ((*Counts).Bonded+(*Counts).Unbonded); i++) {
+  for (int i = 0; i < (*Counts).Beads; i++) {
     (*Bead)[i].nAggregates = 0;
   } //}}}
 
@@ -70,7 +70,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
   // allocate memory for arrays for cell linked list
   int *Head = malloc((n_cells.x*n_cells.y*n_cells.z)*sizeof(int));
-  int *Link = malloc(((*Counts).Unbonded+(*Counts).Bonded)*sizeof(int));
+  int *Link = malloc((*Counts).Beads*sizeof(int));
 
   // initialize Head array //{{{
   for (int i = 0; i < (n_cells.x*n_cells.y*n_cells.z); i++) {
@@ -78,7 +78,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   } //}}}
 
   // sort beads into cells //{{{
-  for (int i = 0; i < ((*Counts).Unbonded+(*Counts).Bonded); i++) {
+  for (int i = 0; i < (*Counts).Beads; i++) {
     int cell = (int)((*Bead)[i].Position.x / cell_size)
              + (int)((*Bead)[i].Position.y / cell_size) * n_cells.x
              + (int)((*Bead)[i].Position.z / cell_size) * n_cells.x * n_cells.y;
@@ -157,7 +157,6 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                     }
                   }
                 }
-
               }
               j = Link[j];
             }
@@ -546,16 +545,18 @@ system.\n\n");
   // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
   int ext = 1;
   char **extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
-  strcpy(extension[0], ".vcf");
-  if (!ErrorExtension(joined_vcf, ext, extension)) {
-    ErrorHelp(argv[0]);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  if (joined_vcf[0] != '\0') {
+    extension[0] = malloc(5*sizeof(char));
+    strcpy(extension[0], ".vcf");
+    if (!ErrorExtension(joined_vcf, ext, extension)) {
+      ErrorHelp(argv[0]);
+      exit(1);
+    }
+    for (int i = 0; i < ext; i++) {
+      free(extension[i]);
+    }
+    free(extension);
+  } //}}}
 
   // use .vsf file other than traject.vsf? //{{{
   char *input_vsf = calloc(32,sizeof(char *));
@@ -566,7 +567,7 @@ system.\n\n");
     strcpy(input_vsf, "traject.vsf");
   }
 
-  // test if structure file ends with '.vsf'
+  // test if structure file ends with '.vsf' or '.vtf' (required by VMD)
   ext = 2;
   extension = malloc(ext*sizeof(char *));
   for (int i = 0; i < ext; i++) {
@@ -590,8 +591,8 @@ system.\n\n");
   } //}}}
 
   // output verbosity //{{{
-  bool verbose2, silent;
   bool verbose = BoolOption(argc, argv, "-v"); // verbose output
+  bool verbose2, silent;
   VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
   SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
@@ -835,7 +836,6 @@ system.\n\n");
 
     // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
     if (joined_vcf[0] != '\0') {
-
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
