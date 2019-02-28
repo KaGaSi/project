@@ -279,7 +279,19 @@ the system.\n\n");
   }
   if (test != 0) { // -n is present
     number_of_steps = test;
-  } //}}}
+
+    // sort from lowest to highest
+    for (int i = 0; i < (number_of_steps-1); i++) {
+      for (int j = (i+1); j < number_of_steps; j++) {
+        if (save_step[i] > save_step[j]) {
+          int swap = save_step[i];
+          save_step[i] = save_step[j];
+          save_step[j] = swap;
+        }
+      }
+    }
+  }
+  //}}}
 
   // print selected bead type names to output .vcf file //{{{
   FILE *out;
@@ -502,7 +514,6 @@ the system.\n\n");
           }
         }
       } else { // all required steps saved
-        printf("ok\n");
         break;
       }
     } else {
