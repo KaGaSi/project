@@ -1952,13 +1952,13 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
 
         int mol_type = Molecule[Bead[i].Molecule].Type;
         if (MoleculeType[mol_type].Write) {
-          fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
+          fprintf(vcf_file, "%8d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                        Bead[i].Position.x,
                                                        Bead[i].Position.y,
                                                        Bead[i].Position.z);
         }
       } else { // monomer bead
-        fprintf(vcf_file, "%6d %7.3f %7.3f %7.3f\n", Bead[i].Index,
+        fprintf(vcf_file, "%8d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                      Bead[i].Position.x,
                                                      Bead[i].Position.y,
                                                      Bead[i].Position.z);
