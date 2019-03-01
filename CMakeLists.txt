@@ -19,7 +19,8 @@ foreach(library ${LIBRARIES})
   add_library(${library} ${library}.c)
 endforeach(library)
 
-set(UTILS Aggregates
+set(UTILS AddToSystem
+          Aggregates
           Aggregates-NotSameBeads
           AngleMolecules
           Average
