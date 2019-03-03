@@ -139,8 +139,8 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
  * is absent, all bead types are switched to `Use = true`. Argument: `-bt
  * <name(s)>`
  */
-bool BeadTypeOption(int argc, char **argv, Counts Counts,
-                    BeadType **BeadType) {
+bool BeadTypeOption(int argc, char **argv, bool use,
+                    Counts Counts, BeadType **BeadType) {
 
   // specify what bead types to use - either specified by '-bt' option or all
   int types = -1;
@@ -161,7 +161,7 @@ bool BeadTypeOption(int argc, char **argv, Counts Counts,
   }
   if (types == -1) {
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      (*BeadType)[i].Use = true;
+      (*BeadType)[i].Use = use;
     }
   }
 

@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
 #include "../Errors.h"
@@ -18,6 +19,9 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "      -w             wrap coordinates (i.e., apply pbc)\n");
   fprintf(stderr, "      -st <start>    number of timestep to start from\n");
   fprintf(stderr, "      -xyz <name>    output xyz file\n");
+  fprintf(stderr, "      -bt            specify bead types new beads should be far from/near to (default: none)\n");
+  fprintf(stderr, "      -ld <float>    specify lowest distance from chosen bead types (default: none)\n");
+  fprintf(stderr, "      -hd <float>    specify highest distance from chosen bead types (default: none)\n");
   CommonHelp(1);
 } //}}}
 
@@ -116,6 +120,9 @@ the system.\n\n");
       fprintf(stdout, "      -w             wrap coordinates (i.e., apply pbc)\n");
       fprintf(stdout, "      -st <start>    number of timestep to start from\n");
       fprintf(stdout, "      -xyz <name>    output xyz file\n");
+      fprintf(stdout, "      -bt <type(s)>  specify bead types new beads should be far from/near to (default: none)\n");
+      fprintf(stdout, "      -ld <float>    specify lowest distance from chosen bead types\n");
+      fprintf(stdout, "      -hd <float>    specify highest distance from chosen bead types\n");
       CommonHelp(0);
       exit(0);
     }
@@ -147,7 +154,10 @@ the system.\n\n");
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-w") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
-        strcmp(argv[i], "-xyz") != 0) {
+        strcmp(argv[i], "-xyz") != 0 &&
+        strcmp(argv[i], "-bt") != 0 &&
+        strcmp(argv[i], "-ld") != 0 &&
+        strcmp(argv[i], "-hd") != 0) {
       ErrorOption(argv[i]);
       ErrorHelp(argv[0]);
       exit(1);
@@ -208,6 +218,15 @@ the system.\n\n");
   // save into xyz file? //{{{
   char *output_xyz = calloc(32,sizeof(char *));
   if (FileOption(argc, argv, "-xyz", &output_xyz)) {
+    exit(1);
+  } //}}}
+
+  // specify lowest and/or highest distance from beads of type specified by '-bt' option //{{{
+  double lowest_dist = -1, highest_dist = -1;
+  if (DoubleOption(argc, argv, "-ld", &lowest_dist)) {
+    exit(1);
+  }
+  if (DoubleOption(argc, argv, "-hd", &highest_dist)) {
     exit(1);
   } //}}}
   //}}}
@@ -277,14 +296,19 @@ the system.\n\n");
   // vsf file is not needed anymore
   free(input_vsf);
 
+  // -bt <name(s)> - specify what bead types to use //{{{
+  if (BeadTypeOption(argc, argv, false, Counts, &BeadType)) {
+    exit(0);
+  } //}}}
+
   // all beads & molecules are to be written //{{{
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Write = true;
-    BeadType[i].Use = true;
+//  BeadType[i].Use = true;
   }
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = true;
-    MoleculeType[i].Use = true;
+//  MoleculeType[i].Use = true;
   } //}}}
 
   // print information - verbose output //{{{
@@ -548,7 +572,6 @@ the system.\n\n");
       split[0] = strtok(line, " \t");
       // is the bead type registered in the molecule already?
       int type = FindBeadType(split[0], Counts_add, BeadType_add);
-      printf("xXx %d %s\n", type, split[0]);
       bool exists = false;
       for (int k = 0; k < MoleculeType_add[i].nBTypes; k++) {
         if (type == MoleculeType_add[i].BType[k]) {
@@ -573,6 +596,17 @@ the system.\n\n");
       prototype[i][j].y = atof(split[2]);
       split[3] = strtok(NULL, " \t");
       prototype[i][j].z = atof(split[3]); //}}}
+
+      // first bead should have coordinates [0,0,0] //{{{
+      Vector zero_first;
+      if (j == 0) {
+        zero_first.x = prototype[i][j].x;
+        zero_first.y = prototype[i][j].y;
+        zero_first.z = prototype[i][j].z;
+      }
+      prototype[i][j].x -= zero_first.x;
+      prototype[i][j].y -= zero_first.y;
+      prototype[i][j].z -= zero_first.z; //}}}
 
       // fill _add structures //{{{
       for (int l = 0; l < MoleculeType_add[i].Number; l++) {
@@ -643,6 +677,21 @@ the system.\n\n");
       fprintf(stdout, "                 %10.5f %10.5f %10.5f\n", prototype[i][j].x, prototype[i][j].y, prototype[i][j].z);
     }
     putchar('\n');
+  }
+
+  if (lowest_dist != -1) {
+    fprintf(stdout, "Lowest distance from specied beads: %lf\n", lowest_dist);
+  }
+  if (highest_dist != -1) {
+    fprintf(stdout, "Highest distance from specied beads: %lf\n", highest_dist);
+  } putchar('\n'); //}}}
+
+  // square lowest/highest distance, if '-ld' and/or '-hd' options used //{{{
+  if (lowest_dist != -1) {
+    lowest_dist = SQR(lowest_dist);
+  }
+  if (highest_dist != -1) {
+    highest_dist = SQR(highest_dist);
   } //}}}
 
   // add monomeric beads //{{{
@@ -672,6 +721,31 @@ the system.\n\n");
     random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
     random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
     random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+    // for now: only first bead at least sqrt(min) dist away from Ap and Am and B //{{{
+    double min_dist;
+    if (lowest_dist != -1 || highest_dist != -1) {
+      do {
+        random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
+        random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
+        random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+
+        min_dist = SQR(BoxLength.x * 100);
+        for (int j = 0; j < Counts.Beads; j++) {
+          int btype = Bead[j].Type;
+          if (BeadType[btype].Use) {
+            Vector dist;
+            dist = Distance(Bead[j].Position, random, BoxLength);
+            dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
+            if (dist.x < min_dist) {
+              min_dist = dist.x;
+            }
+          }
+        }
+      } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
+               (highest_dist != -1 && highest_dist <= min_dist));
+    } //}}}
+    fflush(stdout);
+    fprintf(stdout, "\r%d %lf", i, sqrt(min_dist));
     for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
       int id = Molecule_add[i].Bead[j];
       for (int k = count; k < Counts.Beads; k++) {
@@ -710,8 +784,8 @@ the system.\n\n");
     BeadType[new].Number = BeadType_add[i].Number;
     BeadType[new].Charge = BeadType_add[i].Charge;
     BeadType[new].Mass = BeadType_add[i].Mass;
-    BeadType[new].Use = true;
     BeadType[new].Write = true;
+//  BeadType[new].Use = true;
   }
   // molecule types
   for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
@@ -728,8 +802,8 @@ the system.\n\n");
     }
     MoleculeType[new].Mass = MoleculeType_add[i].Mass;
     MoleculeType[new].InVcf = true; // some of those flags are useless (and not just here)
-    MoleculeType[new].Use = true;
     MoleculeType[new].Write = true;
+//  MoleculeType[new].Use = true;
   }
   // molecules
   for (int i = 0; i < Counts_add.Molecules; i++) {
@@ -744,7 +818,7 @@ the system.\n\n");
   } //}}}
 
   // print overall system
-  fprintf(stdout, "Old + new (if added molecules/beads are of already known type, they appear twice):\n");
+  fprintf(stdout, "\nOld + new (if added molecules/beads are of already known type, they appear twice):\n");
   VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
   // bonds file is not needed anymore
   free(bonds_file);

@@ -69,12 +69,13 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf); //}}}
  *
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
+ * \param [in]  use          if the option is not present, set all BeadType[].Use flags to 'use'
  * \param [in]  Counts       numbers of beads, molecules, etc.
  * \param [out] BeadType     information about bead types
  * \return `true` or `false` error or not error
  */
-bool BeadTypeOption(int argc, char **argv, Counts Counts,
-                    BeadType **BeadType); //}}}
+bool BeadTypeOption(int argc, char **argv, bool use,
+                    Counts Counts, BeadType **BeadType); //}}}
 
 // BoolOption() //{{{
 /**
