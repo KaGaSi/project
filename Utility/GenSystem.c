@@ -126,7 +126,7 @@ system.\n\n");
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
+  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
     count++;
   }
 
@@ -140,7 +140,8 @@ system.\n\n");
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-f") != 0 &&
-        strcmp(argv[i], "-v") != 0) {
+        strcmp(argv[i], "-v") != 0 &&
+        strcmp(argv[i], "-h") != 0) {
 
       ErrorOption(argv[i]);
       ErrorHelp(argv[0]);
@@ -491,7 +492,7 @@ system.\n\n");
   printf("Length = %lf\n", length); //}}}
 
   double dist = 0.7; // distance between layers (and beads)
-  int x_n = BoxLength.x / dist, y_n = BoxLength.y / dist; // number of positions per x and y axes
+  int x_n = BoxLength.x / dist, y_n = BoxLength.y / dist, z_n = BoxLength.z / dist; // number of positions per axes
   int x = 0, y = 0; // coordinates that are incrementally increased
   double z = 0.1; // coordinates that are incrementally increased
   int count_free = 0; // count number of unbonded beads that are placed
@@ -505,7 +506,7 @@ system.\n\n");
     printf("(%d layers)\n", layer[i]);
     total_layers += layer[i];
   }
-  int sol_layers = Counts.Unbonded / (x_n * y_n);
+  int sol_layers = Counts.Unbonded / (x_n * z_n);
   int free_layer_per_mol_layer = sol_layers / total_layers;
   printf("%d molecule layers and %d solvent layers (%d solvent layers per one molecule layer).\n", total_layers, sol_layers, free_layer_per_mol_layer);
 
