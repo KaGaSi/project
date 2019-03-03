@@ -1928,9 +1928,9 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
 
 // WriteCoorIndexed() //{{{
 /**
- * Function writing coordinates to a `.vcf` file. According to the Use flag
- * in BeadType structure only certain bead types will be saved into the
- * indexed timestep in .vcf file (\ref IndexedCoorFile).
+ * Function writing coordinates to a `.vcf` file. According to the Write flag
+ * in BeadType and MoleculeType structures only certain bead types will be
+ * saved into the indexed timestep in .vcf file.
  */
 void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
                       BeadType *BeadType, Bead *Bead,
