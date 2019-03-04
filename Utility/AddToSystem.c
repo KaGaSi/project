@@ -65,7 +65,7 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
       fprintf(fw, "charge %lf", BeadType[Bead[i].Type].Charge);
       if (Bead[i].Molecule != -1) {
         fprintf(fw, " resname %10s ", MoleculeType[Molecule[Bead[i].Molecule].Type].Name);
-        fprintf(fw, "resid %5d", Bead[i].Molecule);
+        fprintf(fw, "resid %5d", Bead[i].Molecule+1);
       }
       putc('\n', fw);
     }
