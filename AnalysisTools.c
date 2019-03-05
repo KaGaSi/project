@@ -461,8 +461,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
             type_qm = type;
           }
           // increment number of beads of given type
-          (*BeadType)[type].Number++;
-          //}}}
+          (*BeadType)[type].Number++; //}}}
         } else if (strcmp("resname", split[i]) == 0) { // molecule type name //{{{
           // if the molecule name doesn't exist, add it to the structures
           int type;
@@ -591,9 +590,19 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       if (mol_id > -1) {
         (*Molecule)[mol_id].Type = mol_type;
         (*MoleculeType)[mol_type].nBeads++;
+
+//      printf(" bead_type=%2d (%3s), bead_id=%5d,", bead_type, (*BeadType)[bead_type].Name, bead_id);
+//      printf(" mol_type=%2d (%5s),", mol_type, (*MoleculeType)[mol_type].Name);
+//      printf(" mol_id=%3d", mol_id);
+//      putchar('\n');
       }
     } //}}}
   } //}}}
+//for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
+//  if ((*Bead)[i].Molecule != -1) {
+//    printf("%d %d %s\n", i, (*Bead)[i].Molecule, (*BeadType)[(*Bead)[i].Type].Name); // default beads aren't in molecules
+//  }
+//}
 
   // assign 'type_default' to default beads //{{{
   int count = 0;
@@ -665,6 +674,10 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       }
     }
   } //}}}
+
+//for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+//  printf("%s %d %d %d\n", (*MoleculeType)[i].Name, (*MoleculeType)[i].nBeads, (*MoleculeType)[i].nBonds, (*MoleculeType)[i].Number);
+//}
 
   // find the highest number of bonds //{{{
   int max_bonds = 0;
@@ -854,34 +867,64 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   } //}}}
 
   // fill BTypes array //{{{
-  // allocate arrays //{{{
+  // allocate & initialize arrays //{{{
+  bool used[(*Counts).TypesOfMolecules];
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     (*MoleculeType)[i].BType = calloc((*Counts).TypesOfBeads, sizeof(int));
-  } //}}}
-  int tmp = 0;
-  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     (*MoleculeType)[i].nBTypes = 0;
-    // go through all beads of the first molecule of the given molecule type
-    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
-      int id = (*Molecule)[tmp].Bead[j];
-      // test if bead id's type is present in BType array //{{{
-      bool in_mol = false;
-      for (int k = 0; k < (*MoleculeType)[i].nBTypes; k++) {
-        if ((*MoleculeType)[i].BType[k] == (*Bead)[id].Type) {
-          in_mol = true;
-          break;
+    used[i] = false;
+  } //}}}
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    int mol_type = (*Molecule)[i].Type;
+    if (!used[mol_type]) { // go only through the first molecule of the given type
+      for (int j = 0; j < (*MoleculeType)[mol_type].nBeads; j++) {
+        int id = (*Molecule)[i].Bead[j];
+        // test if bead id's type is present in BType array //{{{
+        bool in_mol = false;
+        for (int k = 0; k < (*MoleculeType)[mol_type].nBTypes; k++) {
+          if ((*MoleculeType)[mol_type].BType[k] == (*Bead)[id].Type) {
+            in_mol = true;
+            break;
+          }
+        } //}}}
+        // if bead id is of a type not yet present in BType array, add it there
+        if (!in_mol) {
+          (*MoleculeType)[mol_type].BType[(*MoleculeType)[mol_type].nBTypes] = (*Bead)[id].Type;
+          (*MoleculeType)[mol_type].nBTypes++;
         }
-      } //}}}
-      // if bead id is of a type not yet present in BType array, add it there
-      if (!in_mol) {
-        (*MoleculeType)[i].BType[(*MoleculeType)[i].nBTypes] = (*Bead)[id].Type;
-
-        (*MoleculeType)[i].nBTypes++;
       }
     }
-    // count total number of molecules
-    tmp += (*MoleculeType)[i].Number;
   } //}}}
+
+//// fill BTypes array //{{{
+//// allocate arrays //{{{
+//for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+//  (*MoleculeType)[i].BType = calloc((*Counts).TypesOfBeads, sizeof(int));
+//} //}}}
+//int tmp = 0;
+//for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+//  (*MoleculeType)[i].nBTypes = 0;
+//  // go through all beads of the first molecule of the given molecule type
+//  for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+//    int id = (*Molecule)[tmp].Bead[j];
+//    // test if bead id's type is present in BType array //{{{
+//    bool in_mol = false;
+//    for (int k = 0; k < (*MoleculeType)[i].nBTypes; k++) {
+//      if ((*MoleculeType)[i].BType[k] == (*Bead)[id].Type) {
+//        in_mol = true;
+//        break;
+//      }
+//    } //}}}
+//    // if bead id is of a type not yet present in BType array, add it there
+//    if (!in_mol) {
+//      (*MoleculeType)[i].BType[(*MoleculeType)[i].nBTypes] = (*Bead)[id].Type;
+
+//      (*MoleculeType)[i].nBTypes++;
+//    }
+//  }
+//  // count total number of molecules
+//  tmp += (*MoleculeType)[i].Number;
+//} //}}}
 
   // sixth, go through vcf to find which bead types are there //{{{
   bool indexed = true;
