@@ -790,34 +790,34 @@ timestep can be left out.\n\n");
   for (int i = 0; i < Counts_add.Molecules; i++) {
     int mol_type = Molecule_add[i].Type;
 
-    // rotate the prototype molecule randomly //{{{
-    // random rotation axis
     Vector random;
-    random.x = (double)rand() / ((double)RAND_MAX); // random number <0,1>
-    random.y = (double)rand() / ((double)RAND_MAX);
-    random.z = (double)rand() / ((double)RAND_MAX);
-    // random rotation angle
-    double angle = (double)rand() / ((double)RAND_MAX) * PI;
-    // create rotation matrix
-    struct Tensor {
-      Vector x, y, z;
-    } rot;
-    rot.x.x = cos(angle) + SQR(random.x) * (1 - cos(angle));
-    rot.x.y = random.x * random.y * (1 - cos(angle)) - random.z * sin(angle);
-    rot.x.z = random.x * random.z * (1 - cos(angle)) + random.y * sin(angle);
-    rot.y.x = random.x * random.y * (1 - cos(angle)) + random.z * sin(angle);
-    rot.y.y = cos(angle) + SQR(random.y) * (1 - cos(angle));
-    rot.y.z = random.y * random.z * (1 - cos(angle)) - random.x * sin(angle);
-    rot.z.x = random.x * random.z * (1 - cos(angle)) - random.y * sin(angle);
-    rot.z.y = random.y * random.z * (1 - cos(angle)) + random.x * sin(angle);
-    rot.z.z = cos(angle) + SQR(random.z) * (1 - cos(angle));
-    // transform the prototype molecule (rotation matrix x coordinates)
-    Vector rotated[MoleculeType_add[mol_type].nBeads];
-    for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
-      rotated[j].x = rot.x.x * prototype[mol_type][j].x + rot.x.y * prototype[mol_type][j].y + rot.x.z * prototype[mol_type][j].z;
-      rotated[j].y = rot.y.x * prototype[mol_type][j].x + rot.y.y * prototype[mol_type][j].y + rot.y.z * prototype[mol_type][j].z;
-      rotated[j].z = rot.z.x * prototype[mol_type][j].x + rot.z.y * prototype[mol_type][j].y + rot.z.z * prototype[mol_type][j].z;
-    } //}}}
+//  // rotate the prototype molecule randomly //{{{
+//  // random rotation axis
+//  random.x = (double)rand() / ((double)RAND_MAX); // random number <0,1>
+//  random.y = (double)rand() / ((double)RAND_MAX);
+//  random.z = (double)rand() / ((double)RAND_MAX);
+//  // random rotation angle
+//  double angle = (double)rand() / ((double)RAND_MAX) * PI;
+//  // create rotation matrix
+//  struct Tensor {
+//    Vector x, y, z;
+//  } rot;
+//  rot.x.x = cos(angle) + SQR(random.x) * (1 - cos(angle));
+//  rot.x.y = random.x * random.y * (1 - cos(angle)) - random.z * sin(angle);
+//  rot.x.z = random.x * random.z * (1 - cos(angle)) + random.y * sin(angle);
+//  rot.y.x = random.x * random.y * (1 - cos(angle)) + random.z * sin(angle);
+//  rot.y.y = cos(angle) + SQR(random.y) * (1 - cos(angle));
+//  rot.y.z = random.y * random.z * (1 - cos(angle)) - random.x * sin(angle);
+//  rot.z.x = random.x * random.z * (1 - cos(angle)) - random.y * sin(angle);
+//  rot.z.y = random.y * random.z * (1 - cos(angle)) + random.x * sin(angle);
+//  rot.z.z = cos(angle) + SQR(random.z) * (1 - cos(angle));
+//  // transform the prototype molecule (rotation matrix x coordinates)
+//  Vector rotated[MoleculeType_add[mol_type].nBeads];
+//  for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
+//    rotated[j].x = rot.x.x * prototype[mol_type][j].x + rot.x.y * prototype[mol_type][j].y + rot.x.z * prototype[mol_type][j].z;
+//    rotated[j].y = rot.y.x * prototype[mol_type][j].x + rot.y.y * prototype[mol_type][j].y + rot.y.z * prototype[mol_type][j].z;
+//    rotated[j].z = rot.z.x * prototype[mol_type][j].x + rot.z.y * prototype[mol_type][j].y + rot.z.z * prototype[mol_type][j].z;
+//  } //}}}
 
     // for now: only first bead's distance from stuff is checked //{{{
     double min_dist;
@@ -855,9 +855,12 @@ timestep can be left out.\n\n");
         count++; // so that the for l doesn't go through all beads every time
         if (Bead[k].Molecule == -1 && BeadType[Bead[k].Type].Charge == 0) {
           Vector r;
-          r.x = random.x + rotated[j].x;
-          r.y = random.y + rotated[j].y;
-          r.z = random.z + rotated[j].z;
+//        r.x = random.x + rotated[j].x;
+//        r.y = random.y + rotated[j].y;
+//        r.z = random.z + rotated[j].z;
+          r.x = random.x + prototype[mol_type][j].x;
+          r.y = random.y + prototype[mol_type][j].y;
+          r.z = random.z + prototype[mol_type][j].z;
 
           Bead[k].Position.x = r.x;
           Bead[k].Position.y = r.y;
