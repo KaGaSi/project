@@ -283,16 +283,8 @@ system.\n\n");
   fprintf(out, "0.000000 %lf 0.000000\n", BoxLength.y);
   fprintf(out, "0.000000 0.000000 %lf\n", BoxLength.z); //}}}
 
-  // coordinates of unbonded beads //{{{
-  for (int i = 0; i < Counts.Unbonded; i++) {
-    fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
-    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
-                                  Bead[i].Position.y,
-                                  Bead[i].Position.z);
-  } //}}}
-
-  // coordinates of bonded beads //{{{
-  for (int i = Counts.Unbonded; i < (Counts.Unbonded+Counts.Bonded); i++) {
+  // bead coordinates //{{{
+  for (int i = 0; i < Counts.Beads; i++) {
     fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
     fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
                                   Bead[i].Position.y,
