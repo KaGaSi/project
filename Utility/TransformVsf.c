@@ -41,54 +41,36 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
     }
   } //}}}
 
-//// print default bead type //{{{
-//fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
-//fprintf(fw, "mass %4.2f ", BeadType[type_def].Mass);
-//fprintf(fw, "charge %5.2f\n", BeadType[type_def].Charge); //}}}
+  // print default bead type //{{{
+  fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
+  fprintf(fw, "mass %9.5f ", BeadType[type_def].Mass);
+  fprintf(fw, "charge %9.5f\n", BeadType[type_def].Charge); //}}}
 
-type_def=-1;
-  // print unbonded beads //{{{
-  for (int i = 0; i < Counts.Unbonded; i++) {
+  // print beads //{{{
+  for (int i = 0; i < Counts.BeadsInVsf; i++) {
 
     // don't print beads with type 'type_def'
     if (Bead[i].Type != type_def) {
       fprintf(fw, "atom %7d ", i);
       fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
-      fprintf(fw, "mass %lf ", BeadType[Bead[i].Type].Mass);
-      fprintf(fw, "charge %lf\n", BeadType[Bead[i].Type].Charge);
-    }
-  } //}}}
-
-  // print bonded beads //{{{
-  for (int i = 0; i < Counts.Molecules; i++) {
-    int type = Molecule[i].Type;
-
-    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      int bead = Molecule[i].Bead[j];
-      fprintf(fw, "atom %7d ", bead);
-      fprintf(fw, "name %8s ", BeadType[Bead[bead].Type].Name);
-      fprintf(fw, "mass %4.2f ", BeadType[Bead[bead].Type].Mass);
-      fprintf(fw, "charge %5.2f ", BeadType[Bead[bead].Type].Charge);
-      fprintf(fw, "resname %10s ", MoleculeType[type].Name);
-      fprintf(fw, "resid %5d\n", i+1);
+      fprintf(fw, "mass %9.5f ", BeadType[Bead[i].Type].Mass);
+      fprintf(fw, "charge %9.5f", BeadType[Bead[i].Type].Charge);
+      if (Bead[i].Molecule != -1) {
+        fprintf(fw, " resname %10s ", MoleculeType[Molecule[Bead[i].Molecule].Type].Name);
+        fprintf(fw, "resid %5d", Bead[i].Molecule+1);
+      }
+      putc('\n', fw);
     }
   } //}}}
 
   // print bonds //{{{
   putc('\n', fw);
-  count = 0;
-  // go through all molecule types
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    // go through all molecules of type 'i'
-    for (int j = 0; j < MoleculeType[i].Number; j++) {
-      // go through all bonds of 'j'-th molecule of type 'i'
-      fprintf(fw, "# resid %d\n", count+1); // in VMD resid start with 1
-      for (int k = 0; k < MoleculeType[i].nBonds; k++) {
-        fprintf(fw, "bond %6d: %6d\n", Molecule[count].Bead[MoleculeType[i].Bond[k][0]],
-                                       Molecule[count].Bead[MoleculeType[i].Bond[k][1]]);
-      }
-
-      count++;
+  for (int i = 0; i < Counts.Molecules; i++) {
+    fprintf(fw, "# resid %d\n", i+1); // in VMD resid start with 1
+    int mol_type = Molecule[i].Type;
+    for (int j = 0; j < MoleculeType[mol_type].nBonds; j++) {
+      fprintf(fw, "bond %6d: %6d\n", Molecule[i].Bead[MoleculeType[mol_type].Bond[j][0]],
+                                     Molecule[i].Bead[MoleculeType[mol_type].Bond[j][1]]);
     }
   } //}}}
 
@@ -232,6 +214,9 @@ system.\n\n");
 
   // vsf file is not needed anymore
   free(input_vsf); //}}}
+//for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+//  printf("%d\n", MoleculeType[i].nBTypes);
+//}
 
   // print information - verbose option //{{{
   if (verbose) {
