@@ -157,7 +157,7 @@ timestep can be left out.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(32,sizeof(char *));
+  char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -184,7 +184,7 @@ timestep can be left out.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(1);
   } //}}}
@@ -207,7 +207,7 @@ timestep can be left out.\n\n");
   } //}}}
 
   // save into xyz file? //{{{
-  char *output_xyz = calloc(32,sizeof(char *));
+  char *output_xyz = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-xyz", &output_xyz)) {
     exit(1);
   } //}}}
@@ -247,7 +247,7 @@ timestep can be left out.\n\n");
   count = 0; // count mandatory arguments
 
   // <input.vcf> - input coordinate file //{{{
-  char input_coor[32];
+  char input_coor[1024];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -268,11 +268,11 @@ timestep can be left out.\n\n");
   free(extension); //}}}
 
   // <input add> - FIELD-like file with molecules to add //{{{
-  char input_add[32];
+  char input_add[1024];
   strcpy(input_add, argv[++count]); //}}}
 
   // <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[32];
+  char output_vcf[1024];
   strcpy(output_vcf, argv[++count]);
 
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
@@ -290,7 +290,7 @@ timestep can be left out.\n\n");
   free(extension); //}}}
 
   // <out.vsf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vsf[32];
+  char output_vsf[1024];
   strcpy(output_vsf, argv[++count]);
 
   // test if <out.vsf> filename ends with '.vsf' (required by VMD)
@@ -350,7 +350,7 @@ timestep can be left out.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[32];
+  char str[1024];
   // skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -456,7 +456,9 @@ timestep can be left out.\n\n");
   Counts_add.Bonded = 0;
   Counts_add.Unbonded = 0;
   Counts_add.BeadsInVsf = 0;
-  Counts_add.Molecules = 0; //}}}
+  Counts_add.Molecules = 0;
+  Counts_add.TypesOfBeads = 0;
+  Counts_add.TypesOfMolecules = 0; //}}}
 
   // read stuff to be added //{{{
   // open the FIELD-like file for reading //{{{
@@ -507,14 +509,17 @@ timestep can be left out.\n\n");
     BeadType_add[i].Number = atoi(split[3]); //}}}
 
     // realloc & fill Bead_add //{{{
-    Bead_add = realloc(Bead_add, (Counts_add.Unbonded+BeadType_add[i].Number)*sizeof(struct Bead));
-    for (int j = Counts_add.Unbonded; j < (Counts_add.Unbonded+BeadType_add[i].Number); j++) {
-      Bead_add[j].Type = i;
-      Bead_add[j].Molecule = -1;
-      Bead_add[j].nAggregates = 0;
-      Bead_add[j].Aggregate = malloc(1*sizeof(int));
-      Bead_add[j].Index = j; // probably useless here
-    } //}}}
+    int total_beads = Counts_add.Unbonded + BeadType_add[i].Number;
+    if (total_beads > 0) {
+      Bead_add = realloc(Bead_add, total_beads*sizeof(struct Bead));
+      for (int j = Counts_add.Unbonded; j < total_beads; j++) {
+        Bead_add[j].Type = i;
+        Bead_add[j].Molecule = -1;
+        Bead_add[j].nAggregates = 0;
+        Bead_add[j].Aggregate = calloc(1,sizeof(int));
+        Bead_add[j].Index = j; // probably useless here
+      } //}}}
+    }
 
     Counts_add.Unbonded += BeadType_add[i].Number;
     Counts_add.Beads += BeadType_add[i].Number;
@@ -576,7 +581,9 @@ timestep can be left out.\n\n");
     int beads = MoleculeType_add[i].Number*MoleculeType_add[i].nBeads;
 
     // realloc _add structures //{{{
+    printf("xxx %d %d\n", Counts_add.Beads, beads);
     Bead_add = realloc(Bead_add, (Counts_add.Beads+beads)*sizeof(struct Bead));
+    printf("xxx %d %d\n", Counts_add.Molecules, MoleculeType_add[i].Number);
     Molecule_add = realloc(Molecule_add, (Counts_add.Molecules+MoleculeType_add[i].Number)*sizeof(struct Molecule));
     for (int j = Counts_add.Molecules; j < (Counts_add.Molecules+MoleculeType_add[i].Number); j++) {
       Molecule_add[j].Bead = malloc(MoleculeType_add[i].nBeads*sizeof(int));
@@ -699,6 +706,8 @@ timestep can be left out.\n\n");
              strcmp(split[0], "Finish") != 0 &&
              strcmp(split[0], "FINISH") != 0); //}}}
   } //}}}
+
+  Counts_add.BeadsInVsf = Counts_add.Beads;
 
   fclose(in_add); //}}}
 
@@ -848,7 +857,7 @@ timestep can be left out.\n\n");
     } //}}}
 
     fflush(stdout);
-    fprintf(stdout, "\r%d %lf", i, sqrt(min_dist));
+    fprintf(stdout, "\rMolecules placed: %d", i);
     for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
       int id = Molecule_add[i].Bead[j];
       for (int k = count; k < Counts.Beads; k++) {
@@ -953,7 +962,7 @@ timestep can be left out.\n\n");
 
   // print overall system //{{{
   fprintf(stdout, "\nOld + new (if added molecules/beads are of already known type, they appear twice):\n");
-  VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+//VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
@@ -1024,6 +1033,10 @@ timestep can be left out.\n\n");
   FreeBead(Counts, &Bead);
   FreeBead(Counts_add, &Bead_add);
   free(stuff);
+  free(output_xyz);
+  for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
+    free(prototype[i]);
+  }
   //}}}
 
   return 0;

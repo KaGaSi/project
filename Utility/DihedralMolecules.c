@@ -94,7 +94,7 @@ system.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(32,sizeof(char *));
+  char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -121,7 +121,7 @@ system.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
@@ -154,7 +154,7 @@ system.\n\n");
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[32];
+  char input_coor[1024];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -187,7 +187,7 @@ system.\n\n");
   int bins = ceil(180 / width); //}}}
 
   // <output> - file name with dihedral angle distribution //{{{
-  char output_distr[32];
+  char output_distr[1024];
   strcpy(output_distr, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -251,7 +251,7 @@ system.\n\n");
   } //}}}
 
   // '-a' option - write angles for all molecules //{{{
-  char *output = calloc(32,sizeof(char *));
+  char *output = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-a", &output)) {
     exit(1);
   }
@@ -302,7 +302,7 @@ system.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[128];
+  char str[1024];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -328,10 +328,10 @@ system.\n\n");
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
-  stuff = malloc(128*sizeof(int));
+  stuff = malloc(1024*sizeof(int));
 
   // initialize the array
-  for (int i = 0; i < 128; i++) {
+  for (int i = 0; i < 1024; i++) {
     stuff[i] = '\0';
   } //}}}
 

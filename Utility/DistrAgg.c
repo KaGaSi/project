@@ -97,7 +97,7 @@ the system.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(32,sizeof(char *));
+  char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -124,7 +124,7 @@ the system.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
@@ -154,7 +154,7 @@ the system.\n\n");
   count = 0; // count mandatory arguments
 
   // <input.agg> - input agg file //{{{
-  char input_agg[32];
+  char input_agg[1024];
   strcpy(input_agg, argv[++count]);
 
   // test if <output.agg> filename ends with '.agg' (required by VMD)
@@ -184,11 +184,11 @@ the system.\n\n");
     ; //}}}
 
   // <output distr file> - filename with weight and number distributions //{{{
-  char output_distr[123];
+  char output_distr[1024];
   strcpy(output_distr, argv[++count]); //}}}
 
   // <output avg file> - filename with weight and number average aggregation numbers //{{{
-  char output_avg[123];
+  char output_avg[1024];
   strcpy(output_avg, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -256,7 +256,7 @@ the system.\n\n");
   int multiply = 1000;
   int composition[100] = {0}, comp_number_of_sizes = 0,
       types[2][2] = {{-1},{-1}}; // [x][0]: mol type; [x][1]: number of mols
-  char output_comp[32];
+  char output_comp[1024];
   if (FileIntsOption(argc, argv, "-c", composition, &comp_number_of_sizes, output_comp)) {
     exit(1);
   }
