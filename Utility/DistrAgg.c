@@ -227,8 +227,7 @@ the system.\n\n");
   } //}}}
 
   // '-m' option //{{{
-  int *specific_moltype_for_size;
-  specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
   // all are to be used without '-m' option
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
@@ -281,8 +280,7 @@ the system.\n\n");
   } //}}}
 
   // '--only' option //{{{
-  int *only_specific_moltype_aggregates;
-  only_specific_moltype_aggregates = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *only_specific_moltype_aggregates = calloc(Counts.TypesOfMolecules,sizeof(int));
   if (MoleculeTypeOption2(argc, argv, "--only", &only_specific_moltype_aggregates, Counts, &MoleculeType)) {
     exit(1);
   }
@@ -880,13 +878,13 @@ the system.\n\n");
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(specific_moltype_for_size);
+  free(only_specific_moltype_aggregates);
   for (int i = 0; i < Counts.Molecules; i++) {
     free(molecules_sum[i]);
+    free(ndistr_comp[i]);
   }
   free(molecules_sum);
-  for (int i = 0; i < (Counts.Molecules); i++) {
-    free(ndistr_comp[i]);
-  } //}}}
+  //}}}
 
   return 0;
 }
