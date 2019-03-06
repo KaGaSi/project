@@ -140,7 +140,7 @@ system.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(32,sizeof(char *));
+  char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -167,7 +167,7 @@ system.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
@@ -180,7 +180,7 @@ system.\n\n");
   count = 0; // count arguments
 
   // <output.vsf> - output structure file (must end with .vsf) //{{{
-  char output[32];
+  char output[1024];
   strcpy(output, argv[++count]);
 
   // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)
