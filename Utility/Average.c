@@ -83,7 +83,7 @@ can be considered a good estimate for tau.\n\n");
   count = 0; // count mandatory arguments
 
   // <input> - filename of input file //{{{
-  char input[32];
+  char input[1024];
   strcpy(input, argv[++count]); //}}}
 
   // <column> - column number to analyze //{{{
