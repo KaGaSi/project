@@ -89,7 +89,7 @@ the last step is used.\n\n");
   count = 0; // count mandatory arguments
 
   // <input.xyz> - filename of input xyz file (must end with .xyz) //{{{
-  char input_xyz[32];
+  char input_xyz[1024];
   strcpy(input_xyz, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)

@@ -94,7 +94,7 @@ system.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(32,sizeof(char *));
+  char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -121,7 +121,7 @@ system.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
@@ -160,7 +160,7 @@ system.\n\n");
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[32];
+  char input_coor[1024];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -190,7 +190,7 @@ system.\n\n");
   double width = atof(argv[count]); //}}}
 
   // <output.rho> - filename with bead densities //{{{
-  char output_rho[16];
+  char output_rho[1024];
   strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -207,6 +207,7 @@ system.\n\n");
   free(input_vsf);
 
   // <molecule names> - types of molecules for calculation //{{{
+  char str[1024];
   while (++count < argc && argv[count][0] != '-') {
 
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
@@ -220,11 +221,11 @@ system.\n\n");
 
     // write initial stuff to output density file //{{{
     FILE *out;
-    char str[128];
 
-    sprintf(str, "%s%s.rho", output_rho, argv[count]);
-    if ((out = fopen(str, "w")) == NULL) {
-      ErrorFileOpen(str, 'w');
+    char str2[1050];
+    sprintf(str2, "%s%s.rho", output_rho, argv[count]);
+    if ((out = fopen(str2, "w")) == NULL) {
+      ErrorFileOpen(str2, 'w');
       exit(1);
     }
 
@@ -300,7 +301,6 @@ system.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[128];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -342,10 +342,10 @@ system.\n\n");
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
-  stuff = malloc(128*sizeof(int));
+  stuff = malloc(1024*sizeof(int));
 
   // initialize the array
-  for (int i = 0; i < 128; i++) {
+  for (int i = 0; i < 1024; i++) {
     stuff[i] = '\0';
   } //}}}
 
@@ -525,9 +525,10 @@ system.\n\n");
     if (MoleculeType[i].Use) {
       FILE *out;
 
-      sprintf(str, "%s%s.rho", output_rho, MoleculeType[i].Name);
-      if ((out = fopen(str, "a")) == NULL) {
-        ErrorFileOpen(str, 'a');
+      char str2[1050];
+      sprintf(str2, "%s%s.rho", output_rho, MoleculeType[i].Name);
+      if ((out = fopen(str2, "a")) == NULL) {
+        ErrorFileOpen(str2, 'a');
         exit(1);
       }
 

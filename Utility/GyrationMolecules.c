@@ -89,7 +89,7 @@ system.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(32,sizeof(char *));
+  char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -116,7 +116,7 @@ system.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
@@ -149,7 +149,7 @@ system.\n\n");
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[32];
+  char input_coor[1024];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -170,7 +170,7 @@ system.\n\n");
   free(extension); //}}}
 
   // <output> - filename with shape descriptors //{{{
-  char output[32];
+  char output[1024];
   strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -215,12 +215,12 @@ system.\n\n");
   // write initial stuff to output file //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
-      char str[128];
-      sprintf(str, "%s-%s.txt", output, MoleculeType[i].Name);
+      char str2[1050];
+      sprintf(str2, "%s-%s.txt", output, MoleculeType[i].Name);
 
       FILE *out;
-      if ((out = fopen(str, "w")) == NULL) {
-        ErrorFileOpen(str, 'w');
+      if ((out = fopen(str2, "w")) == NULL) {
+        ErrorFileOpen(str2, 'w');
         exit(1);
       }
 
@@ -248,7 +248,7 @@ system.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[128];
+  char str[1024];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -275,10 +275,10 @@ system.\n\n");
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
-  stuff = malloc(128*sizeof(int));
+  stuff = malloc(1024*sizeof(int));
 
   // initialize the array
-  for (int i = 0; i < 128; i++) {
+  for (int i = 0; i < 1024; i++) {
     stuff[i] = '\0';
   } //}}}
 
@@ -425,11 +425,12 @@ system.\n\n");
     // print shape descriptors to output file(s) //{{{
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {
-        sprintf(str, "%s-%s.txt", output, MoleculeType[i].Name);
+        char str2[1050];
+        sprintf(str2, "%s-%s.txt", output, MoleculeType[i].Name);
 
         FILE *out;
-        if ((out = fopen(str, "a")) == NULL) {
-          ErrorFileOpen(str, 'a');
+        if ((out = fopen(str2, "a")) == NULL) {
+          ErrorFileOpen(str2, 'a');
           exit(1);
         }
 
