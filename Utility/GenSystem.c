@@ -160,7 +160,7 @@ system.\n\n");
   // }}}
 
   // FIELD-like file //{{{
-  char *input = calloc(32, sizeof(char *));
+  char *input = calloc(1024, sizeof(char *));
   if (FileOption(argc, argv, "-f", &input)) {
     exit(1);
   }
@@ -172,7 +172,7 @@ system.\n\n");
   count = 0; // count arguments
 
   // <out.vsf> - output structure file (must end with .vsf) //{{{
-  char output[32];
+  char output[1024];
   strcpy(output, argv[++count]);
 
   // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)
@@ -192,7 +192,7 @@ system.\n\n");
   free(extension); //}}}
 
   // <out.vcf> - output vcf file //{{{
-  char *output_vcf = calloc(32, sizeof(char));
+  char *output_vcf = calloc(1024, sizeof(char));
   char stuff[1024];
   strcpy(output_vcf, argv[++count]);
 

@@ -1525,7 +1525,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     (*BeadType)[i].Write = false;
   } //}}}
 
-//// prints for debugging //{{{
+//// prints for debugging //{{{{{{
 //// number of a(tom) lines (including comments and blanks) in vsf
 //printf("atom_lines=%d\n", atom_lines);
 //// Counts struct
@@ -1566,7 +1566,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 //      printf(" %d-%d}", (*MoleculeType)[i].Bond[j][0], (*MoleculeType)[i].Bond[j][1]);
 //    }
 //  }
-//  printf("}\n");
+//  printf("}\n");}}}
 //}
 //// BeadType struct
 //for (int i = 0; i < (*Counts).TypesOfBeads; i++) {

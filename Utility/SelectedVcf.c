@@ -109,7 +109,7 @@ the system.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(32,sizeof(char *));
+  char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -136,7 +136,7 @@ the system.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(1);
   } //}}}
@@ -168,7 +168,7 @@ the system.\n\n");
   } //}}}
 
   // save into xyz file? //{{{
-  char *output_xyz = calloc(32,sizeof(char *));
+  char *output_xyz = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-xyz", &output_xyz)) {
     exit(1);
   } //}}}
@@ -184,7 +184,7 @@ the system.\n\n");
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_vcf[32];
+  char input_vcf[1024];
   strcpy(input_vcf, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -205,7 +205,7 @@ the system.\n\n");
   free(extension); //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[32];
+  char output_vcf[1024];
   strcpy(output_vcf, argv[++count]);
 
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
@@ -339,7 +339,7 @@ the system.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[32];
+  char str[1024];
   // skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -633,6 +633,7 @@ the system.\n\n");
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(stuff);
+  free(output_xyz);
   //}}}
 
   return 0;

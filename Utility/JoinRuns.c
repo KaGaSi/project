@@ -94,14 +94,14 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
   // options before reading system data //{{{
   // save coordinates of joined aggregates //{{{
-  char joined_vcf[32];
+  char joined_vcf[1024];
   bool error = JoinCoorOption(argc, argv, joined_vcf);
   if (error) {
     exit(1);
   } //}}}
 
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf_1 = calloc(32,sizeof(char *));
+  char *input_vsf_1 = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf_1)) {
     exit(1);
   }
@@ -128,7 +128,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
@@ -180,7 +180,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   count = 0; // count mandatory arguments
 
   // <1st input> - first input coordinate file //{{{
-  char input_vcf_1[32];
+  char input_vcf_1[1024];
   strcpy(input_vcf_1, argv[++count]);
 
   // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
@@ -201,7 +201,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   free(extension); //}}}
 
   // <2nd input> - second input coordinate file //{{{
-  char input_vcf_2[32];
+  char input_vcf_2[1024];
   strcpy(input_vcf_2, argv[++count]);
 
   // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -222,7 +222,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   free(extension); //}}}
 
   // <2nd input.vsf> - second structure file (must end with .vsf) //{{{
-  char *input_vsf_2 = calloc(32,sizeof(char *));
+  char *input_vsf_2 = calloc(1024,sizeof(char *));
   strcpy(input_vsf_2, argv[++count]);
 
   // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
@@ -243,7 +243,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   free(extension); //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[32];
+  char output_vcf[1024];
   strcpy(output_vcf, argv[++count]);
 
   // test if output coordinate file ends with '.vcf' (required by vmd)
@@ -340,7 +340,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[32];
+  char str[1024];
   // 1st vcf file - skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf_1, "%s", str) != 1) {
@@ -386,7 +386,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
-  stuff = calloc(128,sizeof(int)); //}}}
+  stuff = calloc(1024,sizeof(int)); //}}}
 
   // start first run with start-th step //{{{
   int test;

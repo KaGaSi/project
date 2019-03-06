@@ -77,7 +77,7 @@ system.\n\n");
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(32,sizeof(char *));
+  char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -104,7 +104,7 @@ system.\n\n");
   free(extension); //}}}
 
   // use bonds file? //{{{
-  char *bonds_file = calloc(32,sizeof(char *));
+  char *bonds_file = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(0);
   } //}}}
@@ -134,7 +134,7 @@ system.\n\n");
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[32];
+  char input_coor[1024];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -180,7 +180,7 @@ system.\n\n");
   free(bonds_file); //}}}
 
   // get pbc from coordinate file //{{{
-  char str[32];
+  char str[1024];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -214,7 +214,7 @@ system.\n\n");
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff;
-  stuff = calloc(128,sizeof(int)); //}}}
+  stuff = calloc(1024,sizeof(int)); //}}}
 
   // main loop //{{{
   fpos_t pos, pos_old; // for saving pointer position in vcf file
@@ -238,7 +238,7 @@ system.\n\n");
     fgetpos(vcf, &pos);
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\n\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
       pos = pos_old;
       count--;
     }
@@ -283,16 +283,8 @@ system.\n\n");
   fprintf(out, "0.000000 %lf 0.000000\n", BoxLength.y);
   fprintf(out, "0.000000 0.000000 %lf\n", BoxLength.z); //}}}
 
-  // coordinates of unbonded beads //{{{
-  for (int i = 0; i < Counts.Unbonded; i++) {
-    fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
-    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
-                                  Bead[i].Position.y,
-                                  Bead[i].Position.z);
-  } //}}}
-
-  // coordinates of bonded beads //{{{
-  for (int i = Counts.Unbonded; i < (Counts.Unbonded+Counts.Bonded); i++) {
+  // bead coordinates //{{{
+  for (int i = 0; i < Counts.Beads; i++) {
     fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
     fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
                                   Bead[i].Position.y,
