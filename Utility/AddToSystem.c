@@ -581,9 +581,7 @@ timestep can be left out.\n\n");
     int beads = MoleculeType_add[i].Number*MoleculeType_add[i].nBeads;
 
     // realloc _add structures //{{{
-    printf("xxx %d %d\n", Counts_add.Beads, beads);
     Bead_add = realloc(Bead_add, (Counts_add.Beads+beads)*sizeof(struct Bead));
-    printf("xxx %d %d\n", Counts_add.Molecules, MoleculeType_add[i].Number);
     Molecule_add = realloc(Molecule_add, (Counts_add.Molecules+MoleculeType_add[i].Number)*sizeof(struct Molecule));
     for (int j = Counts_add.Molecules; j < (Counts_add.Molecules+MoleculeType_add[i].Number); j++) {
       Molecule_add[j].Bead = malloc(MoleculeType_add[i].nBeads*sizeof(int));
@@ -839,7 +837,8 @@ timestep can be left out.\n\n");
         min_dist = SQR(BoxLength.x * 100);
         for (int j = 0; j < Counts.Beads; j++) {
           int btype = Bead[j].Type;
-          if (BeadType[btype].Use) {
+          // j can be added monomeric bead, so it's type can be higher than the number of types
+          if (btype < Counts.TypesOfBeads && BeadType[btype].Use) {
             Vector dist;
             dist = Distance(Bead[j].Position, random, BoxLength);
             dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
@@ -857,7 +856,7 @@ timestep can be left out.\n\n");
     } //}}}
 
     fflush(stdout);
-    fprintf(stdout, "\rMolecules placed: %d", i);
+    fprintf(stdout, "\rMolecules placed: %d", i+1);
     for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
       int id = Molecule_add[i].Bead[j];
       for (int k = count; k < Counts.Beads; k++) {
@@ -914,7 +913,7 @@ timestep can be left out.\n\n");
     BeadType[new].Charge = BeadType_add[i].Charge;
     BeadType[new].Mass = BeadType_add[i].Mass;
     BeadType[new].Write = true;
-//  BeadType[new].Use = true;
+    BeadType[new].Use = true;
   } //}}}
   // molecule types //{{{
   for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
@@ -937,7 +936,7 @@ timestep can be left out.\n\n");
     MoleculeType[new].Mass = MoleculeType_add[i].Mass;
     MoleculeType[new].InVcf = true; // some of those flags are useless (and not just here)
     MoleculeType[new].Write = true;
-//  MoleculeType[new].Use = true;
+    MoleculeType[new].Use = true;
   } //}}}
   // molecules //{{{
   for (int i = 0; i < Counts_add.Molecules; i++) {
@@ -965,7 +964,7 @@ timestep can be left out.\n\n");
 
   // print overall system //{{{
   fprintf(stdout, "\nOld + new (if added molecules/beads are of already known type, they appear twice):\n");
-//VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+  VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
