@@ -992,13 +992,10 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         (*BeadType)[i].Use = false;
       } //}}}
 
-      // ignore the rest of the line //{{{
-      while(getc(vcf) != '\n')
-        ; //}}}
-
-      // read data //{{{
+      // read data
       // the first coordinate line
       fgets(line, sizeof(line), vcf);
+
       // trim trailing whitespace in line //{{{
       int length = strlen(line);
       // last string character needs to be '\0'
@@ -1014,6 +1011,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         fprintf(stderr, "Error: %s - blank line instead of a first coordinate line\n", vcf_file);
         exit(1);
       }//}}}
+
       // split the line into array //{{{
       char *split[30];
       split[0] = strtok(line, " \t");
@@ -1058,7 +1056,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
           (*Counts).Beads += (*BeadType)[i].Number;
         }
       } //}}}
-    //}}}
     //}}}
     } else { // error //{{{
       fprintf(stderr, "Error: %s - missing 'i(ndexed)' or 'o(rdered)' keyword\n", vcf_file);
@@ -1252,6 +1249,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       count++;
     }
   } //}}}
+// for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+//   printf("x %s\n", (*BeadType)[i].Name);
+// }
 
   // copy bead type names //{{{
   int beadtype_alloced = (*Counts).TypesOfBeads;
@@ -1262,6 +1262,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   for (int i = 0; i < beadtype_alloced; i++) {
     strcpy(name[i], (*BeadType)[i].Name);
   } //}}}
+// for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+//   printf("xx %s\n", (*BeadType)[i].Name);
+// }
 
   // remove unused bead types from BeadType struct and molecule bonds //{{{
   count = 0;
@@ -1287,8 +1290,14 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       count++;
     }
   } //}}}
+// for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+//   printf("xxx %s\n", (*BeadType)[i].Name);
+// }
 
   (*Counts).TypesOfBeads = count;
+// for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+//   printf("xxxx %s\n", (*BeadType)[i].Name);
+// }
 
   // read bonds - again, unfortunately //{{{
   // open vsf structure file //{{{

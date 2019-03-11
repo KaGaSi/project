@@ -60,6 +60,13 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
         fprintf(fw, "resid %5d", Bead[i].Molecule+1);
       }
       putc('\n', fw);
+    // print highest bead id even if it's default type
+    } else if (i == (Counts.BeadsInVsf-1)) {
+      fprintf(fw, "atom %7d ", i);
+      fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
+      fprintf(fw, "mass %lf ", BeadType[Bead[i].Type].Mass);
+      fprintf(fw, "charge %lf", BeadType[Bead[i].Type].Charge);
+      putc('\n', fw);
     }
   } //}}}
 

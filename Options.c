@@ -80,7 +80,7 @@ bool ExcludeOption(int argc, char **argv, Counts Counts,
 
         if (type == -1) { // is it in vsf?
           fprintf(stderr, "Error: non-existent molecule name (%s)\n", argv[i+1+j]);
-          fprintf(stderr, "Molecule names in structure fule:\n");
+          fprintf(stderr, "Molecule names in structure file:\n");
           for (int k = 0; k < Counts.TypesOfMolecules; k++) {
             fprintf(stderr, "%3d %s\n", k, (*MoleculeType)[k].Name);
           }
@@ -151,7 +151,7 @@ bool BeadTypeOption(int argc, char **argv, bool use,
       while (++types < argc && argv[types][0] != '-') {
         int type = FindBeadType(argv[types], Counts, *BeadType);
         if (type == -1) {
-          fprintf(stderr, "Bead type '%s' does not exist in structure fule ('-bt' option)!\n", argv[types]);
+          fprintf(stderr, "Bead type '%s' does not exist in structure file ('-bt' option)!\n", argv[types]);
           return(true);
         }
 
