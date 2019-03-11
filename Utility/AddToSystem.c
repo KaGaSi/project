@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <math.h>
+#include <time.h>
 #include "../AnalysisTools.h"
 #include "../Options.h"
 #include "../Errors.h"
@@ -70,6 +71,13 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
         fprintf(fw, " resname %10s ", MoleculeType[Molecule[Bead[i].Molecule].Type].Name);
         fprintf(fw, "resid %5d", Bead[i].Molecule+1);
       }
+      putc('\n', fw);
+    // print highest bead id even if it's default type
+    } else if (i == (Counts.BeadsInVsf-1)) {
+      fprintf(fw, "atom %7d ", i);
+      fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
+      fprintf(fw, "mass %lf ", BeadType[Bead[i].Type].Mass);
+      fprintf(fw, "charge %lf", BeadType[Bead[i].Type].Charge);
       putc('\n', fw);
     }
   } //}}}
@@ -328,11 +336,9 @@ timestep can be left out.\n\n");
   // all beads & molecules are to be written //{{{
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Write = true;
-//  BeadType[i].Use = true;
   }
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = true;
-//  MoleculeType[i].Use = true;
   } //}}}
 
   // print information - verbose output //{{{
@@ -533,9 +539,9 @@ timestep can be left out.\n\n");
     // first string of the line
     split[0] = strtok(line, " \t");
 
-  } while (strcmp(split[0], "molecules") != 0 &&
-           strcmp(split[0], "MOLECULES") != 0 &&
-           strcmp(split[0], "Molecules") != 0); //}}}
+  } while (strncmp(split[0], "molecules", 8) != 0 &&
+           strncmp(split[0], "MOLECULES", 8) != 0 &&
+           strncmp(split[0], "Molecules", 8) != 0); //}}}
 
   // after 'molecule' is number of molecule types //{{{
   split[1] = strtok(NULL, " \t");
@@ -710,59 +716,61 @@ timestep can be left out.\n\n");
   fclose(in_add); //}}}
 
   // print what is to be added //{{{
-  fprintf(stdout, "To add:\n");
+  if (verbose) {
+    fprintf(stdout, "To add:\n");
 
-  fprintf(stdout, "   Counts.{");
-  fprintf(stdout, "TypesOfBeads =%3d, ", Counts_add.TypesOfBeads);
-  fprintf(stdout, "Bonded =%7d, ", Counts_add.Bonded);
-  fprintf(stdout, "Unbonded =%7d, ", Counts_add.Unbonded);
-  fprintf(stdout, "Beads = %7d, ", Counts_add.Beads);
-  fprintf(stdout, "TypesOfMolecules =%3d, ", Counts_add.TypesOfMolecules);
-  fprintf(stdout, "Molecules =%4d}\n", Counts_add.Molecules);
-  putchar('\n');
+    fprintf(stdout, "   Counts.{");
+    fprintf(stdout, "TypesOfBeads =%3d, ", Counts_add.TypesOfBeads);
+    fprintf(stdout, "Bonded =%7d, ", Counts_add.Bonded);
+    fprintf(stdout, "Unbonded =%7d, ", Counts_add.Unbonded);
+    fprintf(stdout, "Beads = %7d, ", Counts_add.Beads);
+    fprintf(stdout, "TypesOfMolecules =%3d, ", Counts_add.TypesOfMolecules);
+    fprintf(stdout, "Molecules =%4d}\n", Counts_add.Molecules);
+    putchar('\n');
 
-  for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
-    fprintf(stdout, "   BeadType[%2d].{", i);
-    fprintf(stdout, "Name =%10s, ", BeadType_add[i].Name);
-    fprintf(stdout, "Number =%7d, ", BeadType_add[i].Number);
-    fprintf(stdout, "Charge =%6.2f, ", BeadType_add[i].Charge);
-    fprintf(stdout, "Mass =%5.2f}\n", BeadType_add[i].Mass);
-  }
-  putchar('\n');
-
-  for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
-    fprintf(stdout, "   MoleculeType[%d].{", i);
-    fprintf(stdout, "Name =%10s", MoleculeType_add[i].Name);
-    fprintf(stdout, ", Number =%4d", MoleculeType_add[i].Number);
-    fprintf(stdout, ", nBeads =%3d", MoleculeType_add[i].nBeads);
-//  fprintf(stdout, ", nBonds =%3d", MoleculeType_add[i].nBonds);
-
-    fprintf(stdout, ", nBTypes =%2d, BType{", MoleculeType_add[i].nBTypes);
-    fprintf(stdout, "%8s", BeadType_add[MoleculeType_add[i].BType[0]].Name);
-    for (int j = 1; j < MoleculeType_add[i].nBTypes; j++) {
-      fprintf(stdout, ",%8s", BeadType_add[MoleculeType_add[i].BType[j]].Name);
-    }
-    putchar('}');
-    fprintf(stdout, ", Mass =%7.2f", MoleculeType_add[i].Mass);
-    fprintf(stdout, "}\n");
-  }
-  putchar('\n');
-
-  fprintf(stdout, "   Molecule prototypes \n");
-  for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
-    fprintf(stdout, "     %10s: %10.5f %10.5f %10.5f\n", MoleculeType_add[i].Name, prototype[i][0].x, prototype[i][0].y, prototype[i][0].z);
-    for (int j = 1; j < MoleculeType_add[i].nBeads; j++) {
-      fprintf(stdout, "                 %10.5f %10.5f %10.5f\n", prototype[i][j].x, prototype[i][j].y, prototype[i][j].z);
+    for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
+      fprintf(stdout, "   BeadType[%2d].{", i);
+      fprintf(stdout, "Name =%10s, ", BeadType_add[i].Name);
+      fprintf(stdout, "Number =%7d, ", BeadType_add[i].Number);
+      fprintf(stdout, "Charge =%6.2f, ", BeadType_add[i].Charge);
+      fprintf(stdout, "Mass =%5.2f}\n", BeadType_add[i].Mass);
     }
     putchar('\n');
-  }
 
-  if (lowest_dist != -1) {
-    fprintf(stdout, "Lowest distance from specied beads: %lf\n", lowest_dist);
-  }
-  if (highest_dist != -1) {
-    fprintf(stdout, "Highest distance from specied beads: %lf\n", highest_dist);
-  } putchar('\n'); //}}}
+    for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
+      fprintf(stdout, "   MoleculeType[%d].{", i);
+      fprintf(stdout, "Name =%10s", MoleculeType_add[i].Name);
+      fprintf(stdout, ", Number =%4d", MoleculeType_add[i].Number);
+      fprintf(stdout, ", nBeads =%3d", MoleculeType_add[i].nBeads);
+  //  fprintf(stdout, ", nBonds =%3d", MoleculeType_add[i].nBonds);
+
+      fprintf(stdout, ", nBTypes =%2d, BType{", MoleculeType_add[i].nBTypes);
+      fprintf(stdout, "%8s", BeadType_add[MoleculeType_add[i].BType[0]].Name);
+      for (int j = 1; j < MoleculeType_add[i].nBTypes; j++) {
+        fprintf(stdout, ",%8s", BeadType_add[MoleculeType_add[i].BType[j]].Name);
+      }
+      putchar('}');
+      fprintf(stdout, ", Mass =%7.2f", MoleculeType_add[i].Mass);
+      fprintf(stdout, "}\n");
+    }
+    putchar('\n');
+
+    fprintf(stdout, "   Molecule prototypes \n");
+    for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
+      fprintf(stdout, "     %10s: %10.5f %10.5f %10.5f\n", MoleculeType_add[i].Name, prototype[i][0].x, prototype[i][0].y, prototype[i][0].z);
+      for (int j = 1; j < MoleculeType_add[i].nBeads; j++) {
+        fprintf(stdout, "                 %10.5f %10.5f %10.5f\n", prototype[i][j].x, prototype[i][j].y, prototype[i][j].z);
+      }
+      putchar('\n');
+    }
+
+    if (lowest_dist != -1) {
+      fprintf(stdout, "Lowest distance from specied beads: %lf\n", lowest_dist);
+    }
+    if (highest_dist != -1) {
+      fprintf(stdout, "Highest distance from specied beads: %lf\n", highest_dist);
+    } putchar('\n');
+  } //}}}
 
   // square lowest/highest distance, if '-ld' and/or '-hd' options used //{{{
   if (lowest_dist != -1) {
@@ -771,6 +779,9 @@ timestep can be left out.\n\n");
   if (highest_dist != -1) {
     highest_dist = SQR(highest_dist);
   } //}}}
+
+  // seed random number generator
+  srand(time(0));
 
   // add monomeric beads //{{{
   count = 0;
@@ -790,41 +801,63 @@ timestep can be left out.\n\n");
           break;
         }
       }
+
+      // print number of placed beads? //{{{
+      if (!silent) {
+        if (script) {
+          fprintf(stdout, "Monomer beads placed: %4d\n", i+1);
+        } else {
+          fflush(stdout);
+          fprintf(stdout, "\rMonomer beads placed: %3d", i+1);
+        }
+      } //}}}
     }
+  }
+
+  // print number of placed beads? //{{{
+  if (!silent) {
+    fprintf(stdout, "\n");
   } //}}}
+  //}}}
 
   // add the molecules //{{{
   for (int i = 0; i < Counts_add.Molecules; i++) {
     int mol_type = Molecule_add[i].Type;
 
     Vector random;
-//  // rotate the prototype molecule randomly //{{{
-//  // random rotation axis
-//  random.x = (double)rand() / ((double)RAND_MAX); // random number <0,1>
-//  random.y = (double)rand() / ((double)RAND_MAX);
-//  random.z = (double)rand() / ((double)RAND_MAX);
-//  // random rotation angle
-//  double angle = (double)rand() / ((double)RAND_MAX) * PI;
-//  // create rotation matrix
-//  struct Tensor {
-//    Vector x, y, z;
-//  } rot;
-//  rot.x.x = cos(angle) + SQR(random.x) * (1 - cos(angle));
-//  rot.x.y = random.x * random.y * (1 - cos(angle)) - random.z * sin(angle);
-//  rot.x.z = random.x * random.z * (1 - cos(angle)) + random.y * sin(angle);
-//  rot.y.x = random.x * random.y * (1 - cos(angle)) + random.z * sin(angle);
-//  rot.y.y = cos(angle) + SQR(random.y) * (1 - cos(angle));
-//  rot.y.z = random.y * random.z * (1 - cos(angle)) - random.x * sin(angle);
-//  rot.z.x = random.x * random.z * (1 - cos(angle)) - random.y * sin(angle);
-//  rot.z.y = random.y * random.z * (1 - cos(angle)) + random.x * sin(angle);
-//  rot.z.z = cos(angle) + SQR(random.z) * (1 - cos(angle));
-//  // transform the prototype molecule (rotation matrix x coordinates)
-//  Vector rotated[MoleculeType_add[mol_type].nBeads];
-//  for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
-//    rotated[j].x = rot.x.x * prototype[mol_type][j].x + rot.x.y * prototype[mol_type][j].y + rot.x.z * prototype[mol_type][j].z;
-//    rotated[j].y = rot.y.x * prototype[mol_type][j].x + rot.y.y * prototype[mol_type][j].y + rot.y.z * prototype[mol_type][j].z;
-//    rotated[j].z = rot.z.x * prototype[mol_type][j].x + rot.z.y * prototype[mol_type][j].y + rot.z.z * prototype[mol_type][j].z;
-//  } //}}}
+    // rotate the prototype molecule randomly //{{{
+    // random rotation axis
+    double dist;
+    do {
+      random.x = (double)rand() / ((double)RAND_MAX) * 2 - 1; // random number <-1,1>
+      random.y = (double)rand() / ((double)RAND_MAX) * 2 - 1;
+      random.z = (double)rand() / ((double)RAND_MAX) * 2 - 1;
+      dist = sqrt(SQR(random.x)+SQR(random.y)+SQR(random.z));
+    } while (dist > 1.00001 || dist < 0.99999);
+    // random rotation angle
+    double angle = (double)rand() / ((double)RAND_MAX) * PI;
+    // create rotation matrix
+    struct Tensor {
+      Vector x, y, z;
+    } rot;
+    rot.x.x = cos(angle) + SQR(random.x) * (1 - cos(angle));
+    rot.x.y = random.x * random.y * (1 - cos(angle)) - random.z * sin(angle);
+    rot.x.z = random.x * random.z * (1 - cos(angle)) + random.y * sin(angle);
+
+    rot.y.x = random.x * random.y * (1 - cos(angle)) + random.z * sin(angle);
+    rot.y.y = cos(angle) + SQR(random.y) * (1 - cos(angle));
+    rot.y.z = random.y * random.z * (1 - cos(angle)) - random.x * sin(angle);
+
+    rot.z.x = random.x * random.z * (1 - cos(angle)) - random.y * sin(angle);
+    rot.z.y = random.y * random.z * (1 - cos(angle)) + random.x * sin(angle);
+    rot.z.z = cos(angle) + SQR(random.z) * (1 - cos(angle));
+    // transform the prototype molecule (rotation matrix x coordinates)
+    Vector rotated[MoleculeType_add[mol_type].nBeads];
+    for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
+      rotated[j].x = rot.x.x * prototype[mol_type][j].x + rot.x.y * prototype[mol_type][j].y + rot.x.z * prototype[mol_type][j].z;
+      rotated[j].y = rot.y.x * prototype[mol_type][j].x + rot.y.y * prototype[mol_type][j].y + rot.y.z * prototype[mol_type][j].z;
+      rotated[j].z = rot.z.x * prototype[mol_type][j].x + rot.z.y * prototype[mol_type][j].y + rot.z.z * prototype[mol_type][j].z;
+    } //}}}
 
     // for now: only first bead's distance from stuff is checked //{{{
     double min_dist;
@@ -855,20 +888,18 @@ timestep can be left out.\n\n");
       random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
     } //}}}
 
-    fflush(stdout);
-    fprintf(stdout, "\rMolecules placed: %d", i+1);
     for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
       int id = Molecule_add[i].Bead[j];
       for (int k = count; k < Counts.Beads; k++) {
         count++; // so that the for l doesn't go through all beads every time
         if (Bead[k].Molecule == -1 && BeadType[Bead[k].Type].Charge == 0) {
           Vector r;
-//        r.x = random.x + rotated[j].x;
-//        r.y = random.y + rotated[j].y;
-//        r.z = random.z + rotated[j].z;
-          r.x = random.x + prototype[mol_type][j].x;
-          r.y = random.y + prototype[mol_type][j].y;
-          r.z = random.z + prototype[mol_type][j].z;
+          r.x = random.x + rotated[j].x;
+          r.y = random.y + rotated[j].y;
+          r.z = random.z + rotated[j].z;
+//        r.x = random.x + prototype[mol_type][j].x;
+//        r.y = random.y + prototype[mol_type][j].y;
+//        r.z = random.z + prototype[mol_type][j].z;
 
           Bead[k].Position.x = r.x;
           Bead[k].Position.y = r.y;
@@ -880,7 +911,23 @@ timestep can be left out.\n\n");
         }
       }
     }
+
+    // print number of placed molecules? //{{{
+    if (!silent) {
+      if (script) {
+        fprintf(stdout, "Molecules placed: %3d\n", i+1);
+      } else {
+        fflush(stdout);
+        fprintf(stdout, "\rMolecules placed: %3d", i+1);
+      }
+    } //}}}
+  }
+
+  // print number of placed beads? //{{{
+  if (!silent) {
+    fprintf(stdout, "\n");
   } //}}}
+  //}}}
 
 // test print //{{{
 //for (int i = 0; i < Counts_add.Molecules; i++) {
@@ -963,8 +1010,10 @@ timestep can be left out.\n\n");
   } //}}}
 
   // print overall system //{{{
-  fprintf(stdout, "\nOld + new (if added molecules/beads are of already known type, they appear twice):\n");
-  VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+  if (verbose) {
+    fprintf(stdout, "\nOld + new (if added molecules/beads are of already known type, they appear twice):\n");
+    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+  }
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
