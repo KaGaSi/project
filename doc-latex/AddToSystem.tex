@@ -1,0 +1,145 @@
+\section{AddToSystem} \label{sec:AddToSystem}
+
+REMOVE -w OPTION, BECAUSE THE UTILITY SHOULD WRAP THE COORDINATES. ADD
+--join OPTION TO SAVE BOTH WRAPPED AND JOINED COORDINATES.
+
+This utility takes an existing system specified by \texttt{vcf} coordinate
+and \texttt{vsf} structure files and adds new beads into it. The new beads
+replace neutral unbonded with the lowest indices (as ordered in the
+\texttt{vsf} file) from the original system. The utility generates
+\texttt{vcf} and \texttt{vsf} files for the new system.
+
+\texttt{AddToSystem} does not check whether there are enough unbonded
+neutral beads to be replaced by the new beads (if not, the utility will
+either crash or run forever).
+
+For now, the new unbonded beads are added anywhere in the simulation
+(i.e., they ignore \texttt{-ld}, \texttt{-hd}, and \texttt{-bt} options)
+and only the first bead of any molecule obeys the \texttt{-ld},
+\texttt{-hd}, and \texttt{-bt} options. The coordinates of the remaining
+beads in a molecule are governed by the provided coordinates (see below).
+The molecules are added with a random orientation.
+
+If \texttt{-ld} and/or \texttt{-hd} options are used, they must accompanied
+by the \texttt{-bt} option.
+
+The structure and number of added molecules and monomeric beads are read
+from a \texttt{FIELD}-like file. This file must contain \texttt{species}
+section followed by \texttt{molecule} section as described in the DL\_MESO
+simulation package.
+
+The \texttt{species} section contains the number of bead types and their
+properties:
+\begin{verbatim}
+  species <int>
+  <name>  <mass> <charge> <number of unbonded beads>
+\end{verbatim}
+The first line must start with \texttt{species} keyword followed by the
+number of bead types. For each bead type a single line must contain the name of
+the bead, their mass and charge, and a number of these beads that are not
+in a molecule (i.e., monomeric beads).
+
+The following \texttt{molecule} section contains information about
+structure and numbers of molecules to be added:
+
+\noindent
+\begin{longtable}{ll}
+  \texttt{molecule <int>} & number of types of molecules \\
+  \texttt{<name>} & name of the first molecule type \\
+  \texttt{nummols <int>} & number of these molecules \\
+  \texttt{beads <int>} & number of beads in these molecules \\
+  \texttt{<bead name> <float> <float> <float>} & a line for each of the \texttt{<int>} beads \\
+  \texttt{...} & \ \ \ \ specifying bead name and \\
+  \texttt{<bead name> <float> <float> <float>} & \ \ \ \ Cartesian coordinates \\
+  \texttt{bonds <int>} & number of bonds in these molecule \\
+  \texttt{<string> <int> <int>} & a line for each of the \texttt{<int>} bonds \\
+  \texttt{...} & \ \ \ \ containing arbitrary string and \\
+  \texttt{<string> <int> <int>} & \ \ \ \ indices connected beads \\
+  \texttt{...} & anything beyond here is ignored \\
+  \texttt{finish} & description of a molecule is finished \\
+\end{longtable}
+
+The \texttt{molecule} keyword specifies the number of molecule types, that
+is the number of \texttt{finish} keywords that must be present. The
+\texttt{<bead name>} must be present in the \texttt{species} section. The
+arbitrary \texttt{<string>} in the \texttt{bonds} is ignored by
+\texttt{AddToSystem} (it is a relic from the \texttt{DL\_MESO} simulation
+package, where the \texttt{<string>} specifies a type of bond). The indices
+in \texttt{bond} lines run from 1 to the number of beads in the molecules and are
+ordered according to the \texttt{beads} part of the section. Because
+\texttt{molecule} section in the \texttt{FIELD} file from \texttt{DL\_MESO}
+can also include bond angles and dihedral angles, anything beyond the last
+bond line is ignored (until the \texttt{finish} keyword is read).
+
+The following is an example of the \texttt{FIELD}-like file:
+\begin{verbatim}
+  species 3
+  A   1.0  1.0  0
+  B   1.0  0.0  0
+  CI  1.0 -1.0 30
+
+  molecule 2
+  Dimer
+  nummols 10
+  beads 2
+  A 0.0 0.0 0.0
+  A 0.5 0.5 0.5
+  bonds 1
+  harm 1 2
+  finish
+  surfact
+  nummols 10
+  beads 3
+  A 0.0 0.0 0.0
+  B 0.0 0.0 0.0
+  B 0.5 0.5 0.5
+  bonds 2
+  harm 1 2
+  harm 2 3
+  angles 1
+  harm 1 2 3
+  finish
+\end{verbatim}
+In this example, 30 monomeric negatively charged beads called \texttt{CI}
+are added as well as 20 molecules -- 10 molecules called \texttt{Dimer} and
+10 molecules called \texttt{surfact}. \texttt{Dimer} molecules contain two
+\texttt{A} beads and one bond each; \texttt{surfact} molecules contain
+three beads and two bonds each. The part starting with \texttt{angles} and
+ending with \texttt{finish} is ignored. All in all, 80 beads are added --
+30 \texttt{CI}, 30 \texttt{A}, and 20 \texttt{B} beads.
+
+The utility creates the \texttt{vcf} and \texttt{vsf} files with the new
+system and can also write the coordinates into a \texttt{xyz} file.
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{AddToSystem <input.vcf> <input add> <out.vcf> <out.vsf> <options>}
+
+\vspace{1em}
+\noindent
+\begin{longtable}{p{0.235\textwidth}p{0.709\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input>} & input coordinate file (either \texttt{vcf} or
+    \texttt{vtf} format) \\
+  \texttt{<input add>} & FIELD-like file specifying additions to the system \\
+  \texttt{<out.vcf>} & output \texttt{vcf} coordinate file for the new
+  system \\
+  \texttt{<out.vsf>} & output \texttt{vsf} structure file for the new system \\
+  \toprule
+  \multicolumn{2}{l}{Non-standard options} \\
+  \midrule
+  \texttt{-w} & wrap simulation box (i.e., apply periodic boundary conditions) \\
+  \texttt{-st <int>} & timestep to add new beads to (default: 1) \\
+  \texttt{-xyz <name>} & save coordinates to \texttt{xyz} file \\
+  \texttt{-ld <float>} & lowest distance from beads specified by
+    \texttt{-bt} option \\
+  \texttt{-hd <float>} & highest distance from beads specified by
+    \texttt{-bt} option \\
+  \texttt{-bt <bead names>} & bead types to use in conjunction with
+    \texttt{-ld} and/or \texttt{-hd} options \\
+  \bottomrule
+\end{longtable}
