@@ -15,7 +15,7 @@ void ErrorHelp(char cmd[50]) { //{{{
   fprintf(stderr, "   %s <input.vcf> <input add> ", cmd);
   fprintf(stderr, "<out.vcf> <out.vsf> <options>\n\n");
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(stderr, "   <input.vcf>       input filename (vcf or vtf format)\n");
   fprintf(stderr, "   <input add>       FIELD-like file with molecules to add\n");
   fprintf(stderr, "   <out.vcf>         output coordinate file (vcf format)\n");
   fprintf(stderr, "   <out.vsf>         output structure file (vsf format)\n");
@@ -103,15 +103,22 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       fprintf(stdout, "\
-SelectedVcf creates new <output.vcf> file from <input.vcf> containing only \
-selected bead types. Also <start> timesteps can be omitted and every <skip> \
-timestep can be left out.\n\n");
+AddToSystem takes existing coordinates and adds monomeric beads and/or \
+molecules to the system. The data for added components are read from a \
+FIELD-like file that have to contain species and molecule sections (the \
+same as for DL_MESO simulation program). \
+The new beads replace neutral monomeric beads with lowest indices \
+from the original system. The new beads \
+can be placed far from/near to beads of specified type; in case of molecules, \
+only the distance of the first bead of each molecule is checked for now. \
+Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
+\n\n");
 
       fprintf(stdout, "Usage:\n");
       fprintf(stdout, "   %s <input.vcf> <input add> ", argv[0]);
-      fprintf(stdout, "<output.vcf> <options>\n\n");
+      fprintf(stdout, "<out.vcf> <out.vsf> <options>\n\n");
 
-      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
+      fprintf(stdout, "   <input.vcf>       input filename (vcf or vtf format)\n");
       fprintf(stdout, "   <input add>       FIELD-like file with molecules to add\n");
       fprintf(stdout, "   <out.vcf>         output coordinate file (vcf format)\n");
       fprintf(stdout, "   <out.vsf>         output structure file (vsf format)\n");
