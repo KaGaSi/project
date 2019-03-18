@@ -615,11 +615,11 @@ system.\n\n");
 
   count = 0; // count mandatory arguments
 
-  // <input> - filename of input coor file //{{{
+  // <input> - filename of input coordinate file //{{{
   char input_coor[1024];
   strcpy(input_coor, argv[++count]);
 
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  // test if <input> ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
   extension = malloc(ext*sizeof(char *));
   for (int i = 0; i < ext; i++) {
@@ -658,7 +658,7 @@ system.\n\n");
   char output_agg[1024];
   strcpy(output_agg, argv[++count]);
 
-  // test if <output.agg> filename ends with '.agg' (required by VMD)
+  // test if <output.agg> ends with '.agg'
   ext = 1;
   extension = malloc(ext*sizeof(char *));
   extension[0] = malloc(5*sizeof(char));
@@ -682,6 +682,9 @@ system.\n\n");
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
 
+  // vsf file is not needed anymore
+  free(input_vsf);
+
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
@@ -702,6 +705,7 @@ system.\n\n");
   if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
     exit(1);
   }
+
   // used molecule type = write molecule type -- for now
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = MoleculeType[i].Use;
@@ -951,7 +955,6 @@ system.\n\n");
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(stuff);
-  free(input_vsf);
   //}}}
 
   return 0;

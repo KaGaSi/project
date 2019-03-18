@@ -647,7 +647,7 @@ system.\n\n");
   }
   int contacts = atoi(argv[count]); //}}}
 
-  // <output.agg> - output agg file //{{{
+  // <output.agg> - filename of output agg file (must end with .agg) //{{{
   char output_agg[1024];
   strcpy(output_agg, argv[++count]);
 
@@ -684,7 +684,10 @@ system.\n\n");
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "Error: bead type '%s' is not in %s file\n\n", argv[count], input_coor);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n   Present bead types:\n", argv[count], input_coor);
+      for (int i = 0; i < Counts.TypesOfBeads; i++) {
+        fprintf(stderr, "%s\n", BeadType[i].Name);
+      }
       exit(1);
     }
 
