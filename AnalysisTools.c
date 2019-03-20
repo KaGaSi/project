@@ -78,25 +78,21 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
  * or program error.
  */
 void CommonHelp(bool error) {
+  FILE *ptr;
   if (error) {
-    fprintf(stderr, "   <standard options>\n");
-    fprintf(stderr, "      -i <name>      use input .vsf file different from traject.vsf\n");
-//  fprintf(stderr, "      -b <name>      file containing bond alternatives to FIELD\n");
-    fprintf(stderr, "      -v             verbose output\n");
-    fprintf(stderr, "      -V             more verbose output\n");
-    fprintf(stderr, "      -s             no output (overrides verbose options)\n");
-    fprintf(stderr, "      -h             print this help and exit\n");
-    fprintf(stderr, "      --script       do not reprint line (useful when output goes to file)\n");
+    ptr = stderr;
   } else {
-    fprintf(stdout, "   <standard options>\n");
-    fprintf(stdout, "      -i <name>      use input .vsf file different from traject.vsf\n");
-//  fprintf(stdout, "      -b <name>      file containing bond alternatives to FIELD\n");
-    fprintf(stdout, "      -v             verbose output\n");
-    fprintf(stdout, "      -V             more verbose output\n");
-    fprintf(stdout, "      -s             no output (overrides verbose options)\n");
-    fprintf(stdout, "      -h             print this help and exit\n");
-    fprintf(stdout, "      --script       do not reprint line (useful when output goes to file)\n");
+    ptr = stdout;
   }
+
+  fprintf(ptr, "   <standard options>\n");
+  fprintf(ptr, "      -i <name>      use input .vsf file different from traject.vsf\n");
+//fprintf(ptr, "      -b <name>      file containing bond alternatives to FIELD\n");
+  fprintf(ptr, "      -v             verbose output\n");
+  fprintf(ptr, "      -V             more verbose output\n");
+  fprintf(ptr, "      -s             no output (overrides verbose options)\n");
+  fprintf(ptr, "      -h             print this help and exit\n");
+  fprintf(ptr, "      --script       do not reprint line (useful when output goes to file)\n");
 } //}}}
 
 // CommonOptions() //{{{

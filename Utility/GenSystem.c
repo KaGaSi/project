@@ -7,15 +7,26 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <out.vsf> <out.vcf> <options>\n\n", cmd);
-  fprintf(stderr, "   <out.vsf>     output structure file (*.vsf)\n");
-  fprintf(stderr, "   <out.vcf>     output coordinate file (*.vcf)\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -f <name>  FIELD-like file (default: FIELD)\n");
-  fprintf(stderr, "      -v         verbose output\n");
-  fprintf(stderr, "      -h         print this help and exit\n");
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, "\
+GenVsf reads information from FIELD-like file and creates \
+vsf structure file and generates coordinates for all beads \
+(used, e.g., as initial configuration for a simulation).\n\n");
+  }
+
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <out.vsf> <out.vcf> <options>\n\n", cmd);
+  fprintf(ptr, "   <out.vsf>     output structure file (*.vsf)\n");
+  fprintf(ptr, "   <out.vcf>     output coordinate file (*.vcf)\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -f <name>  FIELD-like file (default: FIELD)\n");
+  fprintf(ptr, "      -v         verbose output\n");
+  fprintf(ptr, "      -h         print this help and exit\n");
 } //}}}
 
 // WriteVsf() //{{{
@@ -99,29 +110,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-GenVsf reads information from FIELD-like file and creates \
-vsf structure file and generates coordinates for all beads \
-(used, e.g., as initial configuration for a simulation).\n\n");
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD (along \
-with optional bond file) files to determine all information about the \
-system.\n\n");
-*/
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <out.vsf> <out.vcf> <options>\n\n", argv[0]);
-      fprintf(stdout, "   <out.vsf>     output structure file (*.vsf)\n");
-      fprintf(stdout, "   <out.vcf>     output coordinate file (*.vcf)\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -f <name>  FIELD-like file (default: FIELD)\n");
-      fprintf(stdout, "      -v         verbose output\n");
-      fprintf(stdout, "      -h         print this help and exit\n");
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 2; //}}}
 
   // check if correct number of arguments //{{{
@@ -132,7 +124,7 @@ system.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -144,7 +136,7 @@ system.\n\n");
         strcmp(argv[i], "-h") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -183,7 +175,7 @@ system.\n\n");
   }
   strcpy(extension[0], ".vsf");
   if (!ErrorExtension(output, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -202,7 +194,7 @@ system.\n\n");
   extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {

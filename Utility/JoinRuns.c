@@ -6,23 +6,35 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <1st input.vcf> <2nd input.vcf> <2nd input.vsf> ", cmd);
-  fprintf(stderr, "<output.vcf> <type names> <options>\n\n");
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, "\
+JoinRuns joins two simulation runs with different .vsf files. The first .vsf is \
+assumed to be traject.vsf (if not, use '-i' option) and the FIELD file has to \
+be the same for both simulation runs. Bead types in both .vcf files must be the \
+same, but only selected bead types are saved to output.vcf file.\n\n");
+  }
 
-  fprintf(stderr, "   <1st input.vcf>   input filename of 1st run (vcf format)\n");
-  fprintf(stderr, "   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
-  fprintf(stderr, "   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
-  fprintf(stderr, "   <output.vcf>      output filename (vcf format)\n");
-  fprintf(stderr, "   <type names>      names of bead types to save\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --join         join molecules (remove pbc)\n");
-  fprintf(stderr, "      -st1 <int>     starting timestep from 1st run\n");
-  fprintf(stderr, "      -st2 <int>     starting timestep from 2nd run\n");
-  fprintf(stderr, "      -sk1 <int>     skip every <int> steps from 1st run\n");
-  fprintf(stderr, "      -sk2 <int>     skip every <int> steps from 2nd run\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <1st input.vcf> <2nd input.vcf> <2nd input.vsf> ", cmd);
+  fprintf(ptr, "<output.vcf> <type names> <options>\n\n");
+
+  fprintf(ptr, "   <1st input.vcf>   input filename of 1st run (vcf format)\n");
+  fprintf(ptr, "   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
+  fprintf(ptr, "   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
+  fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
+  fprintf(ptr, "   <type names>      names of bead types to save\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      --join         join molecules (remove pbc)\n");
+  fprintf(ptr, "      -st1 <int>     starting timestep from 1st run\n");
+  fprintf(ptr, "      -st2 <int>     starting timestep from 2nd run\n");
+  fprintf(ptr, "      -sk1 <int>     skip every <int> steps from 1st run\n");
+  fprintf(ptr, "      -sk2 <int>     skip every <int> steps from 2nd run\n");
+  CommonHelp(error);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -30,32 +42,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help nd exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-JoinRuns joins two simulation runs with different .vsf files. The first .vsf is \
-assumed to be traject.vsf (if not, use '-i' option) and the FIELD file has to \
-be the same for both simulation runs. Bead types in both .vcf files must be the \
-same, but only selected bead types are saved to output.vcf file.\n\n");
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <1st input.vcf> <2nd input.vcf> <2nd input.vsf> ", argv[0]);
-      fprintf(stdout, "<output.vcf> <type names> <options>\n\n");
-
-      fprintf(stdout, "   <1st input.vcf>   input filename of 1st run (vcf format)\n");
-      fprintf(stdout, "   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
-      fprintf(stdout, "   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
-      fprintf(stdout, "   <output.vcf>      output filename (vcf format)\n");
-      fprintf(stdout, "   <type names>      names of bead types to save\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --join         join molecules (remove pbc)\n");
-      fprintf(stdout, "      -st1 <int>     starting timestep from 1st run\n");
-      fprintf(stdout, "      -st2 <int>     starting timestep from 2nd run\n");
-      fprintf(stdout, "      -sk1 <int>     skip every <int> steps from 1st run\n");
-      fprintf(stdout, "      -sk2 <int>     skip every <int> steps from 2nd run\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 5; //}}}
 
   // check if correct number of arguments //{{{
@@ -66,7 +56,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -87,7 +77,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
         strcmp(argv[i], "-sk2") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -119,7 +109,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf_1, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -192,7 +182,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf_1, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -213,7 +203,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf_2, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -234,7 +224,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf_2, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -254,7 +244,7 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   }
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {

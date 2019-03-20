@@ -7,18 +7,30 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <output> <mol name(s)> <options>\n\n", cmd);
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, "\
+GyrationAggregates calculates radii of gyration during the simulation for \
+given molecule(s). The radius of gyration is calculated from eigenvalues \
+of gyration tensor. It also prints average radii of gyration to the screen. \
+Bead types to be used for calculation can be specified.\n\n");
+  }
 
-  fprintf(stderr, "   <input>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(stderr, "   <output>          output file with shape descriptors (automatic ending '-<name>.txt')\n");
-  fprintf(stderr, "   <mol name(s)>     molecule types to calculate shape descriptors for\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined       specify that <input> contains joined coordinates\n");
-  fprintf(stderr, "      -bt            specify bead types to be used for calculation (default is all)\n");
-  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input> <output> <mol name(s)> <options>\n\n", cmd);
+
+  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <output>          output file with shape descriptors (automatic ending '-<name>.txt')\n");
+  fprintf(ptr, "   <mol name(s)>     molecule types to calculate shape descriptors for\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "      -bt            specify bead types to be used for calculation (default is all)\n");
+  fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  CommonHelp(error);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -26,33 +38,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-GyrationAggregates calculates radii of gyration during the simulation for \
-given molecule(s). The radius of gyration is calculated from eigenvalues \
-of gyration tensor. It also prints average radii of gyration to the screen. \
-Bead types to be used for calculation can be specified.\n\n");
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD (along \
-with optional bond file) files to determine all information about the \
-system.\n\n");
-*/
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input> <output> <mol name(s)> <options>\n\n", argv[0]);
-
-      fprintf(stdout, "   <input>           input coordinate file (either vcf or vtf format)\n");
-      fprintf(stdout, "   <output>          output file with shape descriptors (automatic ending '-<mol name>.txt')\n");
-      fprintf(stdout, "   <mol name(s)>     molecule type(s) to calculate shape descriptors for\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined       specify that <input> contains joined coordinates\n");
-      fprintf(stdout, "      -bt            specify bead types to be used for calculation (default is all)\n");
-      fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 3; //}}}
 
   // check if correct number of arguments //{{{
@@ -63,7 +52,7 @@ system.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -82,7 +71,7 @@ system.\n\n");
         strcmp(argv[i], "-st") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -107,7 +96,7 @@ system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -161,7 +150,7 @@ system.\n\n");
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {

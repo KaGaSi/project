@@ -7,21 +7,32 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.agg> <output distr file> <output avg file> <options>\n\n", cmd);
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, "\
+DistrAgg calculates weight and number average aggregation numbers during the \
+simulation run as well as overall weight and number distributions and volume \
+fractions of aggregates.\n\n");
+  }
 
-  fprintf(stderr, "   <input.agg>            input filename (agg format)\n");
-  fprintf(stderr, "   <distr file>           filename with weight and number distributions\n");
-  fprintf(stderr, "   <avg file>             filename with weight and number averages throughout simulation\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -st <int>           start distribution calculation with <int>-th step\n");
-  fprintf(stderr, "      -n <int> <int>      calculate for aggregate sizes in given range\n");
-  fprintf(stderr, "      -m <name(s)>        agg size means number of <name> molecule types in an aggregate\n");
-  fprintf(stderr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
-  fprintf(stderr, "      --only <name>       use just aggregates composed of a specified molecule\n");
-  fprintf(stderr, "      -c <name> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input.agg> <output distr file> <output avg file> <options>\n\n", cmd);
+
+  fprintf(ptr, "   <input.agg>            input filename (agg format)\n");
+  fprintf(ptr, "   <distr file>           filename with weight and number distributions\n");
+  fprintf(ptr, "   <avg file>             filename with weight and number averages throughout simulation\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -st <int>           start distribution calculation with <int>-th step\n");
+  fprintf(ptr, "      -n <int> <int>      calculate for aggregate sizes in given range\n");
+  fprintf(ptr, "      -m <name(s)>        agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(ptr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
+  fprintf(ptr, "      --only <name>       use just aggregates composed of a specified molecule\n");
+  fprintf(ptr, "      -c <name> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
+  CommonHelp(error);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -29,35 +40,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-DistrAgg calculates weight and number average aggregation numbers during the \
-simulation run as well as overall weight and number distributions and volume \
-fractions of aggregates.\n\n");
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD \
-(along with optional bond file) files to determine all information about \
-the system.\n\n");
-*/
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.agg> <output distr file> <output avg file> <options>\n\n", argv[0]);
-
-      fprintf(stdout, "   <input.agg>            input filename (agg format)\n");
-      fprintf(stdout, "   <distr file>           filename with weight and number distributions\n");
-      fprintf(stdout, "   <avg file>             filename with weight and number averages throughout simulation\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -st <int>           start distribution calculation with <int>-th step\n");
-      fprintf(stdout, "      -n <int> <int>      calculate for aggregate sizes in given range\n");
-      fprintf(stdout, "      -m <name(s)>        agg size means number of <name> molecule types in an aggregate\n");
-      fprintf(stdout, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
-      fprintf(stdout, "      --only <name>       use just aggregates composed of a specified molecule\n");
-      fprintf(stdout, "      -c <nama> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 3; //}}}
 
   // check if correct number of arguments //{{{
@@ -68,7 +54,7 @@ the system.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -90,7 +76,7 @@ the system.\n\n");
         strcmp(argv[i], "-c") != 0 ) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -115,7 +101,7 @@ the system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -163,7 +149,7 @@ the system.\n\n");
   extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".agg");
   if (!ErrorExtension(input_agg, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
