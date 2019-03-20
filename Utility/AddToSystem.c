@@ -888,22 +888,31 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
       int id = Molecule_add[i].Bead[j];
       for (int k = count; k < Counts.Beads; k++) {
-        count++; // so that the for l doesn't go through all beads every time
+        count++; // so that the for loop doesn't go through all beads every time
         if (Bead[k].Molecule == -1 && BeadType[Bead[k].Type].Charge == 0) {
+          // move higher id beads one id down - dl_meso requires molecules are at the end
+          for (int l = k; l < (Counts.BeadsInVsf-1); l++) {
+            Bead[l].Type = Bead[l+1].Type;
+            Bead[l].Molecule = Bead[l+1].Molecule;
+            Bead[l].Index = l + 1;
+            Bead[l].Position.x = Bead[l+1].Position.x;
+            Bead[l].Position.y = Bead[l+1].Position.y;
+            Bead[l].Position.z = Bead[l+1].Position.z;
+          }
+
           Vector r;
           r.x = random.x + rotated[j].x;
           r.y = random.y + rotated[j].y;
           r.z = random.z + rotated[j].z;
-//        r.x = random.x + prototype[mol_type][j].x;
-//        r.y = random.y + prototype[mol_type][j].y;
-//        r.z = random.z + prototype[mol_type][j].z;
 
-          Bead[k].Position.x = r.x;
-          Bead[k].Position.y = r.y;
-          Bead[k].Position.z = r.z;
-          Bead[k].Molecule = Counts.Molecules + Bead_add[id].Molecule;
-          Bead[k].Type = Counts.TypesOfBeads + Bead_add[id].Type;
-          Bead_add[id].Index = Bead[k].Index;
+          Bead[Counts.BeadsInVsf-1].Position.x = r.x;
+          Bead[Counts.BeadsInVsf-1].Position.y = r.y;
+          Bead[Counts.BeadsInVsf-1].Position.z = r.z;
+          Bead[Counts.BeadsInVsf-1].Molecule = Counts.Molecules + Bead_add[id].Molecule;
+          Bead[Counts.BeadsInVsf-1].Type = Counts.TypesOfBeads + Bead_add[id].Type;
+
+          k--;
+
           break;
         }
       }
@@ -940,7 +949,7 @@ int main(int argc, char *argv[]) {
 //  putchar('\n');
 //} //}}}
 
-  // join _add structs to original structs //{{{
+  // join _add structs to original structs - add bonded beads at the end //{{{
   Counts.TypesOfBeads += Counts_add.TypesOfBeads;
   Counts.TypesOfMolecules += Counts_add.TypesOfMolecules;
   Counts.Molecules += Counts_add.Molecules;
@@ -995,7 +1004,7 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
 
-  // recount bonded & unbonded beads - not necessary, just for accounting //{{{
+  // recount bonded & unbonded beads //{{{
   Counts.Unbonded = 0;
   Counts.Bonded = 0;
   for (int i = 0; i < Counts.Beads; i++) {
@@ -1005,6 +1014,18 @@ int main(int argc, char *argv[]) {
       Counts.Bonded++;
     }
   } //}}}
+
+count = Counts.Unbonded;
+for (int i = 0; i < Counts.Molecules; i++) {
+  int mol_type = Molecule[i].Type;
+  for (int j = 0; j < MoleculeType[mol_type].nBeads; j++) {
+    Molecule[i].Bead[j] = count;
+    count++;
+  }
+}
+for (int i = 0; i < Counts.BeadsInVsf; i++) {
+  Bead[i].Index = i;
+}
 
   // print overall system //{{{
   if (verbose) {
