@@ -109,7 +109,7 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
  */
 void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, MoleculeType *MoleculeType, Molecule *Molecule, char *stuff); //}}}
 
-//WriteCoorXYZ() //{{{
+// WriteCoorXYZ() //{{{
 /**
  * \brief Function for writing xyz coordinates
  *
@@ -120,6 +120,20 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *B
  */
 void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
                   BeadType *BeadType, Bead *Bead); //}}}
+
+// WriteVsf() //{{{
+/**
+ * \brief Function writing vsf file
+ *
+ * \param [in] vsf_file      name of output .vsf structure file
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BeadType      information about bead types
+ * \param [in] Bead          coordinates of individual beads
+ * \param [in] MoleculeType  information about molecule types
+ * \param [in] Molecule      coordinates of individual molecules
+ */
+void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
+              MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 
 // FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name
