@@ -7,20 +7,32 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, "\
+DihedralMolecules utility calculates dihedral angle \
+between planes specified by beads in each molecule of specified molecule \
+type(s). \
+\n\n");
+  }
 
-  fprintf(stderr, "   <input>         input filename (either vcf or vtf format)\n");
-  fprintf(stderr, "   <width>         width of a single bin in degrees\n");
-  fprintf(stderr, "   <output>        output file with distribution of dihedral angles\n");
-  fprintf(stderr, "   <mol name(s)>   molecule names to calculate angles for\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined     specify that <input> contains joined coordinates\n");
-  fprintf(stderr, "      -n <ints>    bead indices (multiple of 6 <ints>) for dihedral calculation (default: 1 2 3 2 3 4)\n");
-  fprintf(stderr, "      -a <name>    write angle of all molecules in all times to <name>\n");
-  fprintf(stderr, "      -st <int>    starting timestep for calculation\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
+
+  fprintf(ptr, "   <input>         input filename (either vcf or vtf format)\n");
+  fprintf(ptr, "   <width>         width of a single bin in degrees\n");
+  fprintf(ptr, "   <output>        output file with distribution of dihedral angles\n");
+  fprintf(ptr, "   <mol name(s)>   molecule names to calculate angles for\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      --joined     specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "      -n <ints>    bead indices (multiple of 6 <ints>) for dihedral calculation (default: 1 2 3 2 3 4)\n");
+  fprintf(ptr, "      -a <name>    write angle of all molecules in all times to <name>\n");
+  fprintf(ptr, "      -st <int>    starting timestep for calculation\n");
+  CommonHelp(error);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -28,31 +40,7 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-DihedralMolecules utility calculates dihedral angle \
-between planes specified by beads in each molecule of specified molecule \
-type(s). \
-\n\n");
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD (along \
-with optional bond file) files to determine all information about the \
-system.\n\n");
-*/
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input> <width> <output>  <mol name(s)> <options>\n\n", argv[0]);
-
-      fprintf(stdout, "   <input>         input filename (either vcf or vtf format)\n");
-      fprintf(stdout, "   <width>         width of a single bin in degrees\n");
-      fprintf(stdout, "   <output>        output file with distribution of dihedral angles\n");
-      fprintf(stdout, "   <mol name(s)>   molecule names to calculate angles for\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined     specify that <input> contains joined coordinates\n");
-      fprintf(stdout, "      -n <ints>    bead indices (multiple of 6 <ints>) for dihedral calculation (default: 1 2 3 2 3 4)\n");
-      fprintf(stdout, "      -a <name>    write angle of all molecules in all times to <name>\n");
-      fprintf(stdout, "      -st <int>    starting timestep for calculation\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
@@ -67,7 +55,7 @@ system.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -87,7 +75,7 @@ system.\n\n");
         strcmp(argv[i], "-st") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -112,7 +100,7 @@ system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -166,7 +154,7 @@ system.\n\n");
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -178,7 +166,7 @@ system.\n\n");
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
     ErrorNaN("<width>");
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   double width = atof(argv[count]);
@@ -244,7 +232,7 @@ system.\n\n");
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && dihedral[i] >= MoleculeType[j].nBeads) {
         fprintf(stderr, "\nError: '-a' option - %d is larger than the number of beads in molecule %s\n\n", dihedral[i], MoleculeType[j].Name);
-        ErrorHelp(argv[0]);
+        Help(argv[0], true);
         exit(1);
       }
     } //}}}

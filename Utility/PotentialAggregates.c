@@ -7,20 +7,27 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <input.agg> <width> <output.txt> <agg sizes> <options>\n\n", cmd);
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+  }
 
-  fprintf(stderr, "   <input>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(stderr, "   <input.agg>       input agg file\n");
-  fprintf(stderr, "   <width>           width of a single bin\n");
-  fprintf(stderr, "   <output>          output file with electrostatic potential\n");
-  fprintf(stderr, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined       specify that <input> contains joined coordinates\n");
-  fprintf(stderr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(stderr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input> <input.agg> <width> <output.txt> <agg sizes> <options>\n\n", cmd);
+
+  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <input.agg>       input agg file\n");
+  fprintf(ptr, "   <width>           width of a single bin\n");
+  fprintf(ptr, "   <output>          output file with electrostatic potential\n");
+  fprintf(ptr, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
+  CommonHelp(error);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -28,38 +35,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-/*      fprintf(stdout, "\
-DensityAggregates utility calculates bead density for aggregates of given \
-size(s) from \
-their centre of mass. Beside unbonded beads it takes into account only beads \
-from the current aggregate, not from any other aggregate. \
-Care must be taken with beadtype names in molecule types, because if \
-one beadtype appears in more molecule types, the resulting density for that \
-beadtype will be averaged without regard for the various types of molecule it \
-comes from (in that case, use -x option with SelectedVcf utility).\n\n");*/
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD (along \
-with optional bond file) files to determine all information about the \
-system.\n\n"); */
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input> <input.agg> <width> <output.txt> <agg size(s)> <options>\n\n", argv[0]);
-
-      fprintf(stdout, "   <input.vcf>       input coordinate file (either vcf or vtf format)\n");
-      fprintf(stdout, "   <input.agg>       input agg file\n");
-      fprintf(stdout, "   <width>           width of a single bin\n");
-      fprintf(stdout, "   <output>          output file with electrostatic potential\n");
-      fprintf(stdout, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined       specify that <input> contains joined coordinates\n");
-      fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
-      fprintf(stdout, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 5; //}}}
 
   // check if correct number of arguments //{{{
@@ -70,7 +49,7 @@ system.\n\n"); */
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -89,7 +68,7 @@ system.\n\n"); */
         strcmp(argv[i], "-m") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -123,7 +102,7 @@ system.\n\n"); */
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -177,7 +156,7 @@ system.\n\n"); */
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -195,7 +174,7 @@ system.\n\n"); */
   extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".agg");
   if (!ErrorExtension(input_agg, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -207,7 +186,7 @@ system.\n\n"); */
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
     ErrorNaN("<width>");
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   double width = atof(argv[count]); //}}}

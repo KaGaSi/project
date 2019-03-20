@@ -10,23 +10,41 @@
 
 //TODO: add option to use centre of mass to decide on distance
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> <input add> ", cmd);
-  fprintf(stderr, "<out.vcf> <out.vsf> <options>\n\n");
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf or vtf format)\n");
-  fprintf(stderr, "   <input add>       FIELD-like file with molecules to add\n");
-  fprintf(stderr, "   <out.vcf>         output coordinate file (vcf format)\n");
-  fprintf(stderr, "   <out.vsf>         output structure file (vsf format)\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -w             wrap coordinates (i.e., apply pbc)\n");
-  fprintf(stderr, "      -st <start>    number of timestep to start from\n");
-  fprintf(stderr, "      -xyz <name>    output xyz file\n");
-  fprintf(stderr, "      -ld <float>    specify lowest distance from chosen bead types (default: none)\n");
-  fprintf(stderr, "      -hd <float>    specify highest distance from chosen bead types (default: none)\n");
-  fprintf(stderr, "      -bt <name(s)>  specify bead types new beads should be far from/near to (default: none)\n");
-  CommonHelp(1);
+    fprintf(ptr, "\
+AddToSystem takes existing coordinates and adds monomeric beads and/or \
+molecules to the system. The data for added components are read from a \
+FIELD-like file that have to contain species and molecule sections (the \
+same as for DL_MESO simulation program). \
+The new beads replace neutral monomeric beads with lowest indices \
+from the original system. The new beads \
+can be placed far from/near to beads of specified type; in case of molecules, \
+only the distance of the first bead of each molecule is checked for now. \
+Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
+\n\n");
+  }
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input.vcf> <input add> ", cmd);
+  fprintf(ptr, "<out.vcf> <out.vsf> <options>\n\n");
+
+  fprintf(ptr, "   <input.vcf>       input filename (vcf or vtf format)\n");
+  fprintf(ptr, "   <input add>       FIELD-like file with molecules to add\n");
+  fprintf(ptr, "   <out.vcf>         output coordinate file (vcf format)\n");
+  fprintf(ptr, "   <out.vsf>         output structure file (vsf format)\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -w             wrap coordinates (i.e., apply pbc)\n");
+  fprintf(ptr, "      -st <start>    number of timestep to start from\n");
+  fprintf(ptr, "      -xyz <name>    output xyz file\n");
+  fprintf(ptr, "      -ld <float>    specify lowest distance from chosen bead types (default: none)\n");
+  fprintf(ptr, "      -hd <float>    specify highest distance from chosen bead types (default: none)\n");
+  fprintf(ptr, "      -bt <name(s)>  specify bead types new beads should be far from/near to (default: none)\n");
+  CommonHelp(error);
 } //}}}
 
 // WriteVsf() //{{{
@@ -102,38 +120,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-AddToSystem takes existing coordinates and adds monomeric beads and/or \
-molecules to the system. The data for added components are read from a \
-FIELD-like file that have to contain species and molecule sections (the \
-same as for DL_MESO simulation program). \
-The new beads replace neutral monomeric beads with lowest indices \
-from the original system. The new beads \
-can be placed far from/near to beads of specified type; in case of molecules, \
-only the distance of the first bead of each molecule is checked for now. \
-Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
-\n\n");
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.vcf> <input add> ", argv[0]);
-      fprintf(stdout, "<out.vcf> <out.vsf> <options>\n\n");
-
-      fprintf(stdout, "   <input.vcf>       input filename (vcf or vtf format)\n");
-      fprintf(stdout, "   <input add>       FIELD-like file with molecules to add\n");
-      fprintf(stdout, "   <out.vcf>         output coordinate file (vcf format)\n");
-      fprintf(stdout, "   <out.vsf>         output structure file (vsf format)\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -w             wrap coordinates (i.e., apply pbc)\n");
-      fprintf(stdout, "      -st <start>    number of timestep to start from\n");
-      fprintf(stdout, "      -xyz <name>    output xyz file\n");
-      fprintf(stdout, "      -ld <float>    specify lowest distance from chosen bead types\n");
-      fprintf(stdout, "      -hd <float>    specify highest distance from chosen bead types\n");
-      fprintf(stdout, "      -bt <type(s)>  specify bead types new beads should be far from/near to (default: none)\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 4; //}}}
 
   // check if correct number of arguments //{{{
@@ -144,7 +134,7 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -165,7 +155,7 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
         strcmp(argv[i], "-ld") != 0 &&
         strcmp(argv[i], "-hd") != 0) {
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -190,7 +180,7 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -274,7 +264,7 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -296,7 +286,7 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -314,7 +304,7 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".vsf");
   if (!ErrorExtension(output_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -1024,8 +1014,15 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   // bonds file is not needed anymore
   free(bonds_file); //}}}
 
+  // open output .vcf file //{{{
+  FILE *out;
+  if ((out = fopen(output_vcf, "w")) == NULL) {
+    ErrorFileOpen(output_vcf, 'w');
+    exit(1);
+  } //}}}
+
   // open xyz file and write coordinates (if -xyz option is present) //{{{
-  FILE *xyz;
+  FILE *xyz = NULL; // just make sure it's initialized - for compiler error purposes
   if (output_xyz[0] != '\0') {
     // open output .xyz file for reading //{{{
     if ((xyz = fopen(output_xyz, "w")) == NULL) {
@@ -1034,13 +1031,6 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
     } //}}}
 
     WriteCoorXYZ(xyz, Counts, BeadType, Bead);
-  } //}}}
-
-  // open output .vcf file //{{{
-  FILE *out;
-  if ((out = fopen(output_vcf, "w")) == NULL) {
-    ErrorFileOpen(output_vcf, 'w');
-    exit(1);
   } //}}}
 
   // print command, bead type names & box size to output .vcf file //{{{

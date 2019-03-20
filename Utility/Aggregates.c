@@ -8,20 +8,37 @@
 #include "Aggregates.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <distance> <contacts> ", cmd);
-  fprintf(stderr, "<output.agg> <bead name(s)> <options>\n\n");
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, "\
+Aggregates utility determines which molecules belong to which aggregate on the \
+basis of given parameters - the minimum distance at which a pair of beads from \
+different molecules is considered a contact and the minimum number of such \
+contacts between two molecules to consider them as belonging to the same \
+aggregate. Only distances between specified bead types are considered. \
+Information about aggregates in each timestep is written to '.agg' file (see \
+documentation for the format of this file). \
+Coordinates of joined aggregates can be written to an output '.vcf' file (with \
+indexed timesteps).\n\n");
+  }
 
-  fprintf(stderr, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(stderr, "   <distance>            minimum distance for contact for aggregate check\n");
-  fprintf(stderr, "   <contacts>            minimum number of contacts for aggregate check\n");
-  fprintf(stderr, "   <output.agg>          output filename (agg format)\n");
-  fprintf(stderr, "   <bead name(s)>        names of bead types for closeness calculation\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
-  fprintf(stderr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input> <distance> <contacts> ", cmd);
+  fprintf(ptr, "<output.agg> <bead name(s)> <options>\n\n");
+
+  fprintf(ptr, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <distance>            minimum distance for contact for aggregate check\n");
+  fprintf(ptr, "   <contacts>            minimum number of contacts for aggregate check\n");
+  fprintf(ptr, "   <output.agg>          output filename (agg format)\n");
+  fprintf(ptr, "   <bead name(s)>        names of bead types for closeness calculation\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
+  fprintf(ptr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
+  CommonHelp(error);
 } //}}}
 
 // CalculateAggregates() //{{{
@@ -475,40 +492,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-Aggregates utility determines which molecules belong to which aggregate on the \
-basis of given parameters - the minimum distance at which a pair of beads from \
-different molecules is considered a contact and the minimum number of such \
-contacts between two molecules to consider them as belonging to the same \
-aggregate. Only distances between specified bead types are considered. \
-Information about aggregates in each timestep is written to '.agg' file (see \
-documentation for the format of this file). \
-Coordinates of joined aggregates can be written to an output '.vcf' file (with \
-indexed timesteps).\n\n");
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD (along \
-with optional bond file) files to determine all information about the \
-system.\n\n");
-*/
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input> <distance> <contacts> ", argv[0]);
-      fprintf(stdout, "<output.agg> <bead name(s)> <options>\n\n");
-
-      fprintf(stdout, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
-      fprintf(stdout, "   <distance>            minimum distance for contact for aggregate check\n");
-      fprintf(stdout, "   <contacts>            minimum number of contacts for aggregate check\n");
-      fprintf(stdout, "   <output.agg>          output filename (agg format)\n");
-      fprintf(stdout, "   <bead name(s)>        names of bead types for closeness calculation\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -x <mol name(s)>   exclude specified molecule(s)\n");
-      fprintf(stdout, "      -j <output.vcf>    output vcf file with joined coordinates\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 5; //}}}
 
   // check if correct number of arguments //{{{
@@ -519,7 +506,7 @@ system.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -537,7 +524,7 @@ system.\n\n");
         strcmp(argv[i], "-j") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -556,7 +543,7 @@ system.\n\n");
     extension[0] = malloc(5*sizeof(char));
     strcpy(extension[0], ".vcf");
     if (!ErrorExtension(joined_vcf, ext, extension)) {
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
     for (int i = 0; i < ext; i++) {
@@ -583,7 +570,7 @@ system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -628,7 +615,7 @@ system.\n\n");
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -640,7 +627,7 @@ system.\n\n");
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
     ErrorNaN("<distance>");
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   double distance = atof(argv[count]); //}}}
@@ -649,7 +636,7 @@ system.\n\n");
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
     ErrorNaN("<contacts>");
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   int contacts = atoi(argv[count]); //}}}
@@ -664,7 +651,7 @@ system.\n\n");
   extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".agg");
   if (!ErrorExtension(output_agg, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {

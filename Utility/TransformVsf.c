@@ -6,15 +6,26 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <output.vsf> <options>\n\n", cmd);
-  fprintf(stderr, "   <output.vsf>    output structure file (*.vsf)\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -i <name>  use input .vsf file different from traject.vsf\n");
-//fprintf(stderr, "      -b <name>  file containing bond alternatives to FIELD\n");
-  fprintf(stderr, "      -v         verbose output\n");
-  fprintf(stderr, "      -h         print this help and exit\n");
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, "\
+TransformVsf reads information from FIELD and traject.vsf files and creates \
+.vsf structure file used for visualisation of trajectory (.vcf files) via VMD \
+visualisation tool.\n\n");
+  }
+
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <output.vsf> <options>\n\n", cmd);
+  fprintf(ptr, "   <output.vsf>    output structure file (*.vsf)\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -i <name>  use input .vsf file different from traject.vsf\n");
+//fprintf(ptr, "      -b <name>  file containing bond alternatives to FIELD\n");
+  fprintf(ptr, "      -v         verbose output\n");
+  fprintf(ptr, "      -h         print this help and exit\n");
 } //}}}
 
 // WriteVsf() //{{{
@@ -90,29 +101,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-TransformVsf reads information from FIELD and traject.vsf files and creates \
-.vsf structure file used for visualisation of trajectory (.vcf files) via VMD \
-visualisation tool.\n\n");
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD (along \
-with optional bond file) files to determine all information about the \
-system.\n\n");
-*/
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <output.vsf>\n\n", argv[0]);
-      fprintf(stdout, "   <output.vsf>    output structure file (*.vsf)\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -i   use input .vsf file different from traject.vsf\n");
-//    fprintf(stdout, "      -b   file containing bond alternatives to FIELD\n");
-      fprintf(stdout, "      -v   verbose output\n");
-      fprintf(stdout, "      -h   print this help and exit\n");
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 1; //}}}
 
   // check if correct number of arguments //{{{
@@ -123,7 +115,7 @@ system.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -135,7 +127,7 @@ system.\n\n");
         strcmp(argv[i], "-v") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -165,7 +157,7 @@ system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -199,7 +191,7 @@ system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(output, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {

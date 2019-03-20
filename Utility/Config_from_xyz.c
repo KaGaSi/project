@@ -6,16 +6,27 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.xyz> <options>\n\n", cmd);
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(ptr, "\
+Config_from_xyz generates dl_meso CONFIG file from given step of a xyz file. \
+If the given timestep is larger than the number of steps the coordinate file, \
+the last step is used.\n\n");
+  }
 
-  fprintf(stderr, "   <input.xyz>       input filename (xyz format)\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
-  fprintf(stderr, "      -s             no output\n");
-  fprintf(stderr, "      -h             print this help and exit\n");
-  fprintf(stderr, "      --script       do not reprint line (useful when output goes to file)\n");
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input.xyz> <options>\n\n", cmd);
+
+  fprintf(ptr, "   <input.xyz>       input filename (xyz format)\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
+  fprintf(ptr, "      -s             no output\n");
+  fprintf(ptr, "      -h             print this help and exit\n");
+  fprintf(ptr, "      --script       do not reprint line (useful when output goes to file)\n");
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -23,24 +34,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-Config_from_xyz generates dl_meso CONFIG file from given step of a xyz file. \
-If the given timestep is larger than the number of steps the coordinate file, \
-the last step is used.\n\n");
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.xyz> <options>\n\n", argv[0]);
-
-      fprintf(stdout, "   <input.vcf>       input filename (xyz format)\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -st <step>     timestep for creating CONFIG (default: last)\n");
-      fprintf(stdout, "      -s             no output\n");
-      fprintf(stdout, "      -h             print this help and exit\n");
-      fprintf(stdout, "      --script       do not reprint line (useful when output goes to file)\n");
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 1; //}}}
 
   // check if correct number of arguments //{{{
@@ -51,7 +48,7 @@ the last step is used.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -64,7 +61,7 @@ the last step is used.\n\n");
         strcmp(argv[i], "-st") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -99,7 +96,7 @@ the last step is used.\n\n");
   extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".xyz");
   if (!ErrorExtension(input_xyz, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
