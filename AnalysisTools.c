@@ -2039,6 +2039,74 @@ void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
   }
 } //}}}
 
+// WriteVsf() //{{{
+/*
+ * Function creating `.vsf` structure file for use in conjunction with
+ * `.vcf` coordinate file for better visualisation via VMD program.
+ */
+void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
+              MoleculeType *MoleculeType, Molecule *Molecule) {
+
+  // opten structure file //{{{
+  FILE *fw;
+  if ((fw = fopen(input_vsf, "w")) == NULL) {
+    ErrorFileOpen(input_vsf, 'w');
+    exit(1);
+  } //}}}
+
+  // find most common type of bead and make it default //{{{
+  int type_def = 0, count = 0;
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    if (BeadType[i].Number >= count) {
+      count = BeadType[i].Number;
+      type_def = i;
+    }
+  } //}}}
+
+  // print default bead type //{{{
+  fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
+  fprintf(fw, "mass %9.5f ", BeadType[type_def].Mass);
+  fprintf(fw, "charge %9.5f\n", BeadType[type_def].Charge); //}}}
+
+  // print beads //{{{
+  for (int i = 0; i < Counts.BeadsInVsf; i++) {
+
+    // don't print beads with type 'type_def'
+    if (Bead[i].Type != type_def) {
+      fprintf(fw, "atom %7d ", i);
+      fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
+      fprintf(fw, "mass %9.5f ", BeadType[Bead[i].Type].Mass);
+      fprintf(fw, "charge %9.5f", BeadType[Bead[i].Type].Charge);
+      if (Bead[i].Molecule != -1) {
+        fprintf(fw, " resname %10s ", MoleculeType[Molecule[Bead[i].Molecule].Type].Name);
+        fprintf(fw, "resid %5d", Bead[i].Molecule+1);
+      }
+      putc('\n', fw);
+    // print highest bead id even if it's default type
+    } else if (i == (Counts.BeadsInVsf-1)) {
+      fprintf(fw, "atom %7d ", i);
+      fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
+      fprintf(fw, "mass %lf ", BeadType[Bead[i].Type].Mass);
+      fprintf(fw, "charge %lf", BeadType[Bead[i].Type].Charge);
+      putc('\n', fw);
+    }
+  } //}}}
+
+  // print bonds //{{{
+  putc('\n', fw);
+  for (int i = 0; i < Counts.Molecules; i++) {
+    fprintf(fw, "# resid %d\n", i+1); // in VMD resid start with 1
+    int mol_type = Molecule[i].Type;
+    for (int j = 0; j < MoleculeType[mol_type].nBonds; j++) {
+      fprintf(fw, "bond %6d: %6d\n", Molecule[i].Bead[MoleculeType[mol_type].Bond[j][0]],
+                                     Molecule[i].Bead[MoleculeType[mol_type].Bond[j][1]]);
+    }
+  } //}}}
+
+  // close structure file
+  fclose(fw);
+} //}}}
+
 // FindBeadType() //{{{
 int FindBeadType(char *name, Counts Counts, BeadType *BeadType) {
   int type;
