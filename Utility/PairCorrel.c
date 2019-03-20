@@ -7,18 +7,29 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <width> <output> <bead type(s)> <options>\n\n", cmd);
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, " \
+PairCorrel utility calculates pair correlation function for specified \
+bead types. All pairs of bead types (including same pair) are calculated - \
+given A and B types, pcf between A-A, A-B and B-B are calculated.\n\n");
+  }
 
-  fprintf(stderr, "   <input>          input coordinate file (either vcf or vtf format)\n");
-  fprintf(stderr, "   <width>          width of a single bin\n");
-  fprintf(stderr, "   <output>         output file with pair correlation function(s)\n");
-  fprintf(stderr, "   <bead type(s)>   bead type name(s) for pcf calculation\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -n <int>      number of bins to average\n");
-  fprintf(stderr, "      -st <int>     starting timestep for calculation\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input> <width> <output> <bead type(s)> <options>\n\n", cmd);
+
+  fprintf(ptr, "   <input>          input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <width>          width of a single bin\n");
+  fprintf(ptr, "   <output>         output file with pair correlation function(s)\n");
+  fprintf(ptr, "   <bead type(s)>   bead type name(s) for pcf calculation\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -n <int>      number of bins to average\n");
+  fprintf(ptr, "      -st <int>     starting timestep for calculation\n");
+  CommonHelp(error);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -26,31 +37,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, " \
-PairCorrel utility calculates pair correlation function for specified \
-bead types. All pairs of bead types (including same pair) are calculated - \
-given A and B types, pcf between A-A, A-B and B-B are calculated.\n\n");
-
-/*      fprintf(stdout, " \
-The utility uses traject.vsf (or other input structure file) and FIELD \
-(along with optional bond file) files to determine all information about \
-the system.\n\n");
-*/
-
-      fprintf(stdout, "   %s <input> <width> <output> <bead type(s)> <options>\n\n", argv[0]);
-
-      fprintf(stdout, "   <input>           input coordinate file (either vcf or vtf format)\n");
-      fprintf(stdout, "   <width>           width of a single bin\n");
-      fprintf(stdout, "   <output>          output file with pair correlation function(s)\n");
-      fprintf(stdout, "   <bead type(s)>    bead type name(s) for pcf calculation \n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -n <int>       number of bins to average\n");
-      fprintf(stdout, "      -st <int>      starting timestep for calculation\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 4; //}}}
 
   // check if correct number of arguments //{{{
@@ -61,7 +51,7 @@ the system.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -79,7 +69,7 @@ the system.\n\n");
         strcmp(argv[i], "-st") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -104,7 +94,7 @@ the system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -161,7 +151,7 @@ the system.\n\n");
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -173,7 +163,7 @@ the system.\n\n");
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
     ErrorNaN("<width>");
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   double bin_width = atof(argv[count]); //}}}

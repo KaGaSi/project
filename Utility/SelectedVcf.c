@@ -6,24 +6,35 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input.vcf> ", cmd);
-  fprintf(stderr, "<output.vcf> <type names> <options>\n\n");
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(ptr, "\
+SelectedVcf creates new <output.vcf> file from <input.vcf> containing only \
+selected bead types. Also <start> timesteps can be omitted and every <skip> \
+timestep can be left out.\n\n");
+  }
 
-  fprintf(stderr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(stderr, "   <output.vcf>      output filename (vcf format)\n");
-  fprintf(stderr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
-  fprintf(stderr, "      --join         join molecules (remove pbc)\n");
-  fprintf(stderr, "      -w             wrap coordinates (i.e., apply pbc)\n");
-  fprintf(stderr, "      -st <start>    number of timestep to start from\n");
-  fprintf(stderr, "      -sk <skip>     leave out every 'skip' steps\n");
-  fprintf(stderr, "      -n <int(s)>    save only specified timesteps\n");
-  fprintf(stderr, "      -x <name(s)>   exclude specified molecule(s)\n");
-  fprintf(stderr, "      -xyz <name>    output xyz file\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input.vcf> ", cmd);
+  fprintf(ptr, "<output.vcf> <type names> <options>\n\n");
+
+  fprintf(ptr, "   <input.vcf>       input filename (vcf format)\n");
+  fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
+  fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
+  fprintf(ptr, "      --join         join molecules (remove pbc)\n");
+  fprintf(ptr, "      -w             wrap coordinates (i.e., apply pbc)\n");
+  fprintf(ptr, "      -st <start>    number of timestep to start from\n");
+  fprintf(ptr, "      -sk <skip>     leave out every 'skip' steps\n");
+  fprintf(ptr, "      -n <int(s)>    save only specified timesteps\n");
+  fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
+  fprintf(ptr, "      -xyz <name>    output xyz file\n");
+  CommonHelp(error);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -31,38 +42,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-SelectedVcf creates new <output.vcf> file from <input.vcf> containing only \
-selected bead types. Also <start> timesteps can be omitted and every <skip> \
-timestep can be left out.\n\n");
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD (along \
-with optional bond file) files to determine all information about \
-the system.\n\n");
-*/
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input.vcf> ", argv[0]);
-      fprintf(stdout, "<output.vcf> <type names> <options>\n\n");
-
-      fprintf(stdout, "   <input.vcf>       input filename (vcf format)\n");
-      fprintf(stdout, "   <output.vcf>      output filename (vcf format)\n");
-      fprintf(stdout, "   <type names>      names of bead types to save (optional if '-r' used)\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
-      fprintf(stdout, "      --join         join molecules (remove pbc)\n");
-      fprintf(stdout, "      -w             wrap coordinates (i.e., apply pbc)\n");
-      fprintf(stdout, "      -st <start>    number of timestep to start from\n");
-      fprintf(stdout, "      -sk <skip>     leave out every 'skip' steps\n");
-      fprintf(stdout, "      -n <int(s)>    save only specified timesteps\n");
-      fprintf(stdout, "      -x <name(s)>   exclude specified molecule(s)\n");
-      fprintf(stdout, "      -xyz <name>    output xyz file\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 3; //}}}
 
   // check if correct number of arguments //{{{
@@ -78,7 +61,7 @@ the system.\n\n");
   // possible to exclude <type name(s)> if '-r' is used
   if (count < (req_args-1) || (count == (req_args-1) && !reverse)) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -102,7 +85,7 @@ the system.\n\n");
         strcmp(argv[i], "-x") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -127,7 +110,7 @@ the system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -196,7 +179,7 @@ the system.\n\n");
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -214,7 +197,7 @@ the system.\n\n");
   extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {

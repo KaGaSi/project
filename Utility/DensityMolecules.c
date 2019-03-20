@@ -7,20 +7,32 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-void ErrorHelp(char cmd[50]) { //{{{
-  fprintf(stderr, "Usage:\n");
-  fprintf(stderr, "   %s <input> <width> <output.rho> <mol name(s)> <options>\n\n", cmd);
+void Help(char cmd[50], bool error) { //{{{
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+    fprintf(stdout, "\
+DensityMolecules utility calculates number \
+density for all bead types from the \
+centre of mass (or specified bead number in a molecule) of specified molecules. \
+\n\n");
+  }
 
-  fprintf(stderr, "   <input>            input filename (either vcf or vtf format)\n");
-  fprintf(stderr, "   <width>            width of a single bin\n");
-  fprintf(stderr, "   <output.rho>       output density file (automatic ending 'molecule_name.rho' added)\n");
-  fprintf(stderr, "   <mol name(s)>      molecule names to calculate density for\n");
-  fprintf(stderr, "   <options>\n");
-  fprintf(stderr, "      --joined        specify that <input> contains joined coordinates\n");
-  fprintf(stderr, "      -n <int>        number of bins to average\n");
-  fprintf(stderr, "      -st <int>       starting timestep for calculation\n");
-  fprintf(stderr, "      -c <name> <int> use <int>-th molecule bead instead of centre of mass\n");
-  CommonHelp(1);
+  fprintf(ptr, "Usage:\n");
+  fprintf(ptr, "   %s <input> <width> <output.rho> <mol name(s)> <options>\n\n", cmd);
+
+  fprintf(ptr, "   <input>            input filename (either vcf or vtf format)\n");
+  fprintf(ptr, "   <width>            width of a single bin\n");
+  fprintf(ptr, "   <output.rho>       output density file (automatic ending 'molecule_name.rho' added)\n");
+  fprintf(ptr, "   <mol name(s)>      molecule names to calculate density for\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      --joined        specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "      -n <int>        number of bins to average\n");
+  fprintf(ptr, "      -st <int>       starting timestep for calculation\n");
+  fprintf(ptr, "      -c <name> <int> use <int>-th molecule bead instead of centre of mass\n");
+  CommonHelp(error);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -28,35 +40,10 @@ int main(int argc, char *argv[]) {
   // -h option - print help and exit //{{{
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
-      fprintf(stdout, "\
-DensityMolecules utility calculates number \
-density for all bead types from the \
-centre of mass (or specified bead number in a molecule) of specified molecules. \
-\n\n");
-
-/*      fprintf(stdout, "\
-The utility uses traject.vsf (or other input structure file) and FIELD (along \
-with optional bond file) files to determine all information about the \
-system.\n\n");
-*/
-
-      fprintf(stdout, "Usage:\n");
-      fprintf(stdout, "   %s <input> <width> <output.rho> <mol name(s)> <options>\n\n", argv[0]);
-
-      fprintf(stdout, "   <input>            input filename (either vcf or vtf format)\n");
-      fprintf(stdout, "   <width>            width of a single bin\n");
-      fprintf(stdout, "   <output.rho>       output density file (automatic ending 'molecule_name.rho' added)\n");
-      fprintf(stdout, "   <mol name(s)>      molecule names to calculate density for\n");
-      fprintf(stdout, "   <options>\n");
-      fprintf(stdout, "      --joined        specify that <input> contains joined coordinates\n");
-      fprintf(stdout, "      -n <int>        number of bins to average\n");
-      fprintf(stdout, "      -st <int>       starting timestep for calculation\n");
-      fprintf(stdout, "      -c <name> <int> use <int>-th molecule bead instead of centre of mass\n");
-      CommonHelp(0);
+      Help(argv[0], false);
       exit(0);
     }
   }
-
   int req_args = 4; //}}}
 
   // check if correct number of arguments //{{{
@@ -67,7 +54,7 @@ system.\n\n");
 
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   } //}}}
 
@@ -87,7 +74,7 @@ system.\n\n");
         strcmp(argv[i], "-c") != 0) {
 
       ErrorOption(argv[i]);
-      ErrorHelp(argv[0]);
+      Help(argv[0], true);
       exit(1);
     }
   } //}}}
@@ -112,7 +99,7 @@ system.\n\n");
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -172,7 +159,7 @@ system.\n\n");
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   for (int i = 0; i < ext; i++) {
@@ -184,7 +171,7 @@ system.\n\n");
   // Error - non-numeric argument
   if (argv[++count][0] < '0' || argv[count][0] > '9') {
     ErrorNaN("<width>");
-    ErrorHelp(argv[0]);
+    Help(argv[0], true);
     exit(1);
   }
   double width = atof(argv[count]); //}}}
@@ -271,7 +258,7 @@ system.\n\n");
           // Error - non-numeric argument //{{{
           if (argv[i+j+1][0] < '0' || argv[i+j+1][0] > '9') {
             ErrorNaN("-c");
-            ErrorHelp(argv[0]);
+            Help(argv[0], true);
             exit(1);
           } //}}}
 
