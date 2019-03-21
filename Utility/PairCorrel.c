@@ -439,7 +439,7 @@ int main(int argc, char *argv[]) {
 
           double temp = 0; // for normalisation
 
-          // sump pcfs from all shells to be averaged
+          // sum up pcfs from all shells to be averaged
           for (int m = 0; m < avg; m++) {
             double pairs;
             if (k == l) {
@@ -447,9 +447,9 @@ int main(int argc, char *argv[]) {
             } else {
               pairs = BeadType[k].Number * BeadType[l].Number;
             }
-            // for normalisation - WRONG
+            // for normalisation
             double pair_den = volume / pairs;
-            double norm_factor = pair_den / shell[m];
+            double norm_factor = pair_den / shell[m] / count;
             temp += pcf[k][l][j+m] * norm_factor;
           }
 

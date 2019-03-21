@@ -1001,6 +1001,7 @@ for (int i = 0; i < Counts.BeadsInVsf; i++) {
 
   fprintf(out, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z); //}}}
 
+  printf("%s\n", stuff);
   // print coordinates to output .vcf file
   WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
 
