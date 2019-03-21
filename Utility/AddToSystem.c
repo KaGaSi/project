@@ -38,7 +38,6 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   fprintf(ptr, "   <out.vcf>         output coordinate file (vcf format)\n");
   fprintf(ptr, "   <out.vsf>         output structure file (vsf format)\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -w             wrap coordinates (i.e., apply pbc)\n");
   fprintf(ptr, "      -st <start>    number of timestep to start from\n");
   fprintf(ptr, "      -xyz <name>    output xyz file\n");
   fprintf(ptr, "      -ld <float>    specify lowest distance from chosen bead types (default: none)\n");
@@ -80,7 +79,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-w") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-xyz") != 0 &&
         strcmp(argv[i], "-bt") != 0 &&
@@ -133,9 +131,6 @@ int main(int argc, char *argv[]) {
   SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
-
-  // should output coordinates be wrapped?
-  bool wrap = BoolOption(argc, argv, "-w");
 
   // starting timestep //{{{
   int start = 1;
@@ -716,21 +711,49 @@ int main(int argc, char *argv[]) {
   count = 0;
   for (int i = 0; i < Counts_add.Beads; i++) {
     if (Bead_add[i].Molecule == -1) {
-      Vector random;
-      random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
-      random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
-      random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+      // find what bead to rewrite //{{{
       for (int j = count; j < Counts.Beads; j++) {
+        count++;
         if (Bead[j].Molecule == -1 && BeadType[Bead[j].Type].Charge == 0) {
-          Bead[j].Position.x = random.x;
-          Bead[j].Position.y = random.y;
-          Bead[j].Position.z = random.z;
-          Bead[j].Type = Counts.TypesOfBeads + Bead_add[i].Type;
-          Bead_add[i].Index = Bead[j].Index;
           break;
         }
+      } //}}}
+
+      double min_dist;
+      Vector random;
+      if (lowest_dist != -1 || highest_dist != -1) {
+        do {
+          random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
+          random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
+          random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+
+          min_dist = SQR(BoxLength.x * 100);
+          for (int j = 0; j < Counts.Beads; j++) {
+            int btype = Bead[j].Type;
+            // j can be added monomeric bead, so it's type can be higher than the number of types
+            if (btype < Counts.TypesOfBeads && BeadType[btype].Use) {
+              Vector dist;
+              dist = Distance(Bead[j].Position, random, BoxLength);
+              dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
+              if (dist.x < min_dist) {
+                min_dist = dist.x;
+              }
+            }
+          }
+
+        } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
+                 (highest_dist != -1 && highest_dist <= min_dist));
+      } else {
+        random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
+        random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
+        random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
       }
 
+      Bead[count].Position.x = random.x;
+      Bead[count].Position.y = random.y;
+      Bead[count].Position.z = random.z;
+      Bead[count].Type = Counts.TypesOfBeads + Bead_add[i].Type;
+      Bead_add[i].Index = Bead[count].Index;
       // print number of placed beads? //{{{
       if (!silent) {
         if (script) {
@@ -1004,17 +1027,6 @@ for (int i = 0; i < Counts.BeadsInVsf; i++) {
   printf("%s\n", stuff);
   // print coordinates to output .vcf file
   WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
-
-  // write wrapped coordinates as well? //{{{
-  if (wrap) {
-    RestorePBC(Counts, BoxLength, &Bead);
-    WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
-
-    // write coordinates to xyz (if -xyz option is present)
-    if (output_xyz[0] != '\0') {
-      WriteCoorXYZ(xyz, Counts, BeadType, Bead);
-    }
-  } //}}}
 
   // close output files //{{{
   fclose(out);
