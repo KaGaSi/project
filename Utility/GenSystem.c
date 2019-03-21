@@ -598,6 +598,8 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  strcpy(stuff, "# by AddToSystem\n");
+
   // write pbc
   fprintf(out, "pbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
   // write coordinates
