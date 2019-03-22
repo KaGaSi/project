@@ -223,9 +223,9 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType);
 
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n   Present bead types:", argv[count], input_vcf);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\nPresent bead types:\n", argv[count], input_vcf);
       for (int i = 0; i < Counts.TypesOfBeads; i++) {
-        fprintf(stderr, "%s\n", BeadType[i].Name);
+        fprintf(stderr, "   %s\n", BeadType[i].Name);
       }
       exit(1);
     }
