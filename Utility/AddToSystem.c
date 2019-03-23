@@ -8,8 +8,6 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-//TODO: add option to use centre of mass to decide on distance
-
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -43,6 +41,7 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   fprintf(ptr, "      -ld <float>    specify lowest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -hd <float>    specify highest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -bt <name(s)>  specify bead types new beads should be far from/near to (default: none)\n");
+  fprintf(ptr, "      -gc            use molecule's geometric centre for its distance check instead of its first bead\n");
   CommonHelp(error);
 } //}}}
 
@@ -83,7 +82,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-xyz") != 0 &&
         strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "-ld") != 0 &&
-        strcmp(argv[i], "-hd") != 0) {
+        strcmp(argv[i], "-hd") != 0 &&
+        strcmp(argv[i], "-gc") != 0) {
       ErrorOption(argv[i]);
       Help(argv[0], true);
       exit(1);
@@ -167,6 +167,9 @@ int main(int argc, char *argv[]) {
     }
   }
   //}}}
+
+  // use centre of mass instead of the first bead for distance check of new molecules //{{{
+  bool com = BoolOption(argc, argv, "-gc"); // verbose output //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -639,6 +642,31 @@ int main(int argc, char *argv[]) {
 
   fclose(in_add); //}}}
 
+  // if '-gc' is used, change molecular prototypes to have com=(0,0,0) //{{{
+  if (com) {
+    for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
+      Vector centre;
+      centre.x = 0;
+      centre.y = 0;
+      centre.z = 0;
+
+      for (int j = 0; j < MoleculeType_add[i].nBeads; j++) {
+        centre.x += prototype[i][j].x;
+        centre.y += prototype[i][j].y;
+        centre.z += prototype[i][j].z;
+      }
+      centre.x /= MoleculeType_add[i].nBeads;
+      centre.y /= MoleculeType_add[i].nBeads;
+      centre.z /= MoleculeType_add[i].nBeads;
+
+      for (int j = 0; j < MoleculeType_add[i].nBeads; j++) {
+        prototype[i][j].x -= centre.x;
+        prototype[i][j].y -= centre.y;
+        prototype[i][j].z -= centre.z;
+      }
+    }
+  } //}}}
+
   // print what is to be added //{{{
   if (verbose) {
     fprintf(stdout, "To add:\n");
@@ -970,17 +998,18 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-count = Counts.Unbonded;
-for (int i = 0; i < Counts.Molecules; i++) {
-  int mol_type = Molecule[i].Type;
-  for (int j = 0; j < MoleculeType[mol_type].nBeads; j++) {
-    Molecule[i].Bead[j] = count;
-    count++;
+  // correct indices of beads in molecules in Molecule[].Bead[] arrays //{{{
+  count = Counts.Unbonded;
+  for (int i = 0; i < Counts.Molecules; i++) {
+    int mol_type = Molecule[i].Type;
+    for (int j = 0; j < MoleculeType[mol_type].nBeads; j++) {
+      Molecule[i].Bead[j] = count;
+      count++;
+    }
   }
-}
-for (int i = 0; i < Counts.BeadsInVsf; i++) {
-  Bead[i].Index = i;
-}
+  for (int i = 0; i < Counts.BeadsInVsf; i++) {
+    Bead[i].Index = i;
+  } //}}}
 
   // print overall system //{{{
   if (verbose) {
