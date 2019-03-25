@@ -30,6 +30,7 @@ timestep can be left out.\n\n");
   fprintf(ptr, "      --join         join molecules (remove pbc)\n");
   fprintf(ptr, "      -w             wrap coordinates (i.e., apply pbc)\n");
   fprintf(ptr, "      -st <start>    number of timestep to start from\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   fprintf(ptr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(ptr, "      -n <int(s)>    save only specified timesteps\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
@@ -79,6 +80,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-w") != 0 &&
         strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-sk") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-xyz") != 0 &&
@@ -141,6 +143,18 @@ int main(int argc, char *argv[]) {
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (start > end) {
+    fprintf(stderr, "\nErorr: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
 
@@ -297,6 +311,9 @@ int main(int argc, char *argv[]) {
 
     fprintf(stdout, "\n   Starting from %d. timestep\n", start);
     fprintf(stdout, "   Every %d. timestep used\n", skip+1);
+    if (end != -1) {
+      fprintf(stdout, "   Ending with %d. timestep\n", end);
+    }
 
     if (number_of_steps > 0) {
       fprintf(stdout, "   Save %d timesteps:", number_of_steps);
@@ -597,6 +614,9 @@ int main(int argc, char *argv[]) {
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
       fprintf(stdout, "\n%s", stuff);
+
+    if (end == count)
+      break;
   }
 
   if (!silent) {
