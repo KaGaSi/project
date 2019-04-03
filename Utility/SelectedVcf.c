@@ -13,17 +13,17 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(ptr, "\
-SelectedVcf creates new <output.vcf> file from <input.vcf> containing only \
+SelectedVcf creates new <output> file from <input> containing only \
 selected bead types. Also <start> timesteps can be omitted and every <skip> \
 timestep can be left out.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input.vcf> ", cmd);
-  fprintf(ptr, "<output.vcf> <type names> <options>\n\n");
+  fprintf(ptr, "   %s <input> ", cmd);
+  fprintf(ptr, "<output> <type names> <options>\n\n");
 
-  fprintf(ptr, "   <input.vcf>       input filename (vcf format)\n");
-  fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
+  fprintf(ptr, "   <input>           input filename (vcf or vtf format)\n");
+  fprintf(ptr, "   <output>          output filename (vcf format)\n");
   fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
