@@ -213,7 +213,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-m' option //{{{
-  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *specific_moltype_for_size = calloc(Counts.TypesOfMolecules,sizeof(int *));
   // all are to be used without '-m' option
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
@@ -581,6 +581,7 @@ int main(int argc, char *argv[]) {
       fprintf(out, " %8.3f", (double)(avg_As_n_step[1])/aggs_step); // <As>_n (whole agg mass)
       fprintf(out, " %8.3f", (double)(avg_As_w_step[0])/avg_As_n_step[0]); // <As>_w (options' mass)
       fprintf(out, " %8.3f", (double)(avg_As_w_step[1])/avg_As_n_step[1]); // <As>_w (whole agg mass)
+      fprintf(out, " %5d", aggs_step); // number of aggregates in the step
 
       putc('\n', out);
       fclose(out); //}}}

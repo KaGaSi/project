@@ -8,6 +8,9 @@
 #include "Aggregates.h"
 #include "../Errors.h"
 
+//TODO: '-xd' option to ignore molecules close to specified molecule
+// ...apply -xd only to specified bead types!
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -37,6 +40,7 @@ indexed timesteps).\n\n");
   fprintf(ptr, "   <bead name(s)>        names of bead types for closeness calculation\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
+  fprintf(ptr, "      -xd <mol name(s)>  exclude molecule close to specified molecule(s)\n");
   fprintf(ptr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
   CommonHelp(error);
 } //}}}
@@ -46,6 +50,7 @@ indexed timesteps).\n\n");
  * Function to determine distribution of molecules in aggregates.
  */
 void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int contacts,
+                         int *xd_mols, bool **xd_use_mol,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
                          MoleculeType *MoleculeType, Molecule **Molecule) {
 
@@ -108,6 +113,117 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   int Dcy[14] = {0, 0, 1, 1, 1,-1,-1,-1, 0, 0, 0, 1, 1, 1};
   int Dcz[14] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1}; //}}}
 
+  // disqualify '-xd'ed molecules //{{{
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    if (xd_mols[(*Molecule)[i].Type]) {
+      (*xd_use_mol)[i] = false;
+    }
+  } //}}}
+
+  // disqualify molecules via '-xd' option //{{{
+  for (int c1z = 0; c1z < n_cells.z; c1z++) {
+    for (int c1y = 0; c1y < n_cells.y; c1y++) {
+      for (int c1x = 0; c1x < n_cells.x; c1x++) {
+
+        // select first cell
+        int cell1 = c1x + c1y * n_cells.x + c1z * n_cells.x * n_cells.y;
+
+        // select first bead in the cell 'cell1'
+        int i = Head[cell1];
+
+        while (i != -1) {
+          for (int k = 0; k < 14; k++) {
+            int c2x = c1x + Dcx[k]; //{{{
+            int c2y = c1y + Dcy[k];
+            int c2z = c1z + Dcz[k];
+
+            // periodic boundary conditions for cells
+            if (c2x >= n_cells.x)
+              c2x -= n_cells.x;
+            else if (c2x < 0)
+              c2x += n_cells.x;
+
+            if (c2y >= n_cells.y)
+              c2y -= n_cells.y;
+            else if (c2y < 0)
+              c2y += n_cells.y;
+
+            if (c2z >= n_cells.z)
+              c2z -= n_cells.z;
+
+            // select second cell
+            int cell2 = c2x + c2y * n_cells.x + c2z * n_cells.x * n_cells.y; //}}}
+
+            // select bead in the cell 'cell2' //{{{
+            int j;
+            if (cell1 == cell2) { // next bead in 'cell1'
+              j = Link[i];
+            } else { // first bead in 'cell2'
+              j = Head[cell2];
+            } //}}}
+
+            while (j != -1) {
+              if ((*Bead)[i].Molecule != -1 && (*Bead)[j].Molecule != -1) { // both i and j must be in molecule)
+                int mol_i = (*Bead)[i].Molecule;
+                int mol_j = (*Bead)[j].Molecule;
+                int type_i = (*Molecule)[mol_i].Type;
+                int type_j = (*Molecule)[mol_j].Type;
+
+                // one must be used and the other not
+                if ((BeadType[(*Bead)[i].Type].Use && (*xd_use_mol)[mol_i] && xd_mols[type_j]) ||
+                    (BeadType[(*Bead)[j].Type].Use && (*xd_use_mol)[mol_j] && xd_mols[type_i])) {
+
+                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  rij.x = SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
+
+//if (mol_i == 216 || mol_j == 216) {
+//  printf("i=%d; %d; %5s (%d); ", (*Bead)[i].Index,
+//                                 (*xd_use_mol)[mol_i],
+//                                 BeadType[(*Bead)[i].Type].Name,
+//                                 BeadType[(*Bead)[i].Type].Use);
+//  printf("j=%d; %d; %5s (%d); ", (*Bead)[j].Index,
+//                                 (*xd_use_mol)[mol_j],
+//                                 BeadType[(*Bead)[j].Type].Name,
+//                                 BeadType[(*Bead)[j].Type].Use);
+//  printf("distance = %lf\n", rij.x);
+//}
+
+                  if (rij.x <= sqdist) {
+//if (mol_i == 216 || mol_j == 216) {
+//  printf("i=%d; %d; %5s (%d); ", (*Bead)[i].Index,
+//                                 (*xd_use_mol)[mol_i],
+//                                 BeadType[(*Bead)[i].Type].Name,
+//                                 BeadType[(*Bead)[i].Type].Use);
+//  printf("j=%d; %d; %5s (%d)\n", (*Bead)[j].Index,
+//                                 (*xd_use_mol)[mol_j],
+//                                 BeadType[(*Bead)[j].Type].Name,
+//                                 BeadType[(*Bead)[j].Type].Use);
+//  printf("distance = %lf\n", rij.x);
+//}
+                    if ((*xd_use_mol)[mol_i]) {
+                      (*xd_use_mol)[mol_i] = false;
+                    } else {
+                      (*xd_use_mol)[mol_j] = false;
+                    }
+                    break;
+                  }
+                }
+              }
+              j = Link[j];
+            }
+          }
+          i = Link[i];
+        }
+      }
+    }
+  } //}}}
+
+//// disqualify '-xd'ed molecules //{{{
+//for (int i = 0; i < (*Counts).Molecules; i++) {
+//  int type_i = (*Molecule)[i].Type;
+//  printf("%3d (%5s) %d\n", i+1, MoleculeType[type_i].Name, (*xd_use_mol)[i]);
+//} //}}}
+
   // count contacts between all molecules pairs (using cell linked list) //{{{
   for (int c1z = 0; c1z < n_cells.z; c1z++) {
     for (int c1y = 0; c1y < n_cells.y; c1y++) {
@@ -123,9 +239,9 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
           for (int k = 0; k < 14; k++) {
             int c2x = c1x + Dcx[k]; //{{{
             int c2y = c1y + Dcy[k];
-            int c2z = c1z + Dcz[k]; //}}}
+            int c2z = c1z + Dcz[k];
 
-            // periodic boundary conditions for cells //{{{
+            // periodic boundary conditions for cells
             if (c2x >= n_cells.x)
               c2x -= n_cells.x;
             else if (c2x < 0)
@@ -137,10 +253,10 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
               c2y += n_cells.y;
 
             if (c2z >= n_cells.z)
-              c2z -= n_cells.z; //}}}
+              c2z -= n_cells.z;
 
             // select second cell
-            int cell2 = c2x + c2y * n_cells.x + c2z * n_cells.x * n_cells.y;
+            int cell2 = c2x + c2y * n_cells.x + c2z * n_cells.x * n_cells.y; //}}}
 
             // select bead in the cell 'cell2' //{{{
             int j;
@@ -151,14 +267,13 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
             } //}}}
 
             while (j != -1) {
-              if ((*Bead)[i].Molecule != -1 && (*Bead)[j].Molecule != -1) { // both i and j must be in molecule
+              if ((*Bead)[i].Molecule != -1 && (*Bead)[j].Molecule != -1) {// both i and j must be in molecule
                 int type_i = (*Molecule)[(*Bead)[i].Molecule].Type;
                 int type_j = (*Molecule)[(*Bead)[j].Molecule].Type;
 
-                if (BeadType[(*Bead)[i].Type].Use && // bead i must be of specified type
-                    BeadType[(*Bead)[j].Type].Use && // bead j as well
-                    MoleculeType[type_i].Use && // molecule with i cannot be excluded
-                    MoleculeType[type_j].Use) { // molecule with j the same
+                if (BeadType[(*Bead)[i].Type].Use && BeadType[(*Bead)[j].Type].Use && // beads must be of specified type
+                    MoleculeType[type_i].Use && MoleculeType[type_j].Use && // molecules can't be excluded via -x option
+                    (*xd_use_mol)[(*Bead)[i].Molecule] && (*xd_use_mol)[(*Bead)[j].Molecule]) { // molecules can't be excluded via -xd option
 
                   // calculate distance between i and j beads
                   Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
@@ -166,6 +281,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                   // are 'i' and 'j' close enough?
                   if ((*Bead)[i].Molecule != (*Bead)[j].Molecule &&
                       (SQR(rij.x) + SQR(rij.y) + SQR(rij.z)) <= sqdist) {
+                    // xd option
                     if (i > j) {
                       contact[(*Bead)[i].Molecule][(*Bead)[j].Molecule]++;
                     } else {
@@ -186,7 +302,6 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   // evaluate the contacts //{{{
   // first molecule
   for (int i = 1; i < (*Counts).Molecules; i++) {
-
     // second molecule
     for (int j = 0; j < i; j++) {
 
@@ -521,6 +636,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
+        strcmp(argv[i], "-xd") != 0 &&
         strcmp(argv[i], "-j") != 0) {
 
       ErrorOption(argv[i]);
@@ -698,6 +814,24 @@ int main(int argc, char *argv[]) {
     MoleculeType[i].Write = MoleculeType[i].Use;
   } //}}}
 
+  // '-xd' option //{{{
+  int *xd_mols = calloc(Counts.TypesOfMolecules,sizeof(int *));
+  if (MoleculeTypeOption2(argc, argv, "-xd", &xd_mols, Counts, &MoleculeType)) {
+    exit(1);
+  }
+
+  // set all individual molecules to be used - changes in CalculateAggregates()
+  bool *xd_use_mol = calloc(Counts.Molecules, sizeof(bool));
+
+  // is -xd in use?
+  bool xd = false;
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (xd_mols[i]) {
+      xd = true;
+      break;
+    }
+  } //}}}
+
   // print command to output .agg file //{{{
   FILE *out;
   if ((out = fopen(output_agg, "w")) == NULL) {
@@ -799,6 +933,15 @@ int main(int argc, char *argv[]) {
 
     fprintf(stdout, "\n   Distance for closeness check: %lf\n", distance);
     fprintf(stdout, "   Number of needed contacts for aggregate check: %d\n", contacts);
+    if (xd) {
+      fprintf(stdout, "   Ignore molecules close to:");
+      for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+        if (xd_mols[i]){
+          fprintf(stdout, " %s", MoleculeType[i].Name);
+        }
+        putchar('\n');
+      }
+    }
   }
 
   // bonds file is not needed anymore
@@ -820,6 +963,10 @@ int main(int argc, char *argv[]) {
       }
     }
 
+    for (int i = 0; i < Counts.Molecules; i++) {
+      xd_use_mol[i] = true;
+    }
+
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
@@ -829,7 +976,7 @@ int main(int argc, char *argv[]) {
 
     RestorePBC(Counts, BoxLength, &Bead);
 
-    CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, BoxLength, BeadType, &Bead, MoleculeType, &Molecule);
+    CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, xd_mols, &xd_use_mol, BoxLength, BeadType, &Bead, MoleculeType, &Molecule);
 
     // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
     if (joined_vcf[0] != '\0') {
@@ -855,7 +1002,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // write data to output .agg file //{{{
-
     // find the number of aggregates - remove aggregates only of excluded mols //{{{
     int no_excluded_aggs = 0;
     int test_count = 0; // to test that every molecule is in an aggregate
@@ -864,12 +1010,14 @@ int main(int argc, char *argv[]) {
 
       test_count += Aggregate[i].nMolecules;
 
-      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-        int moltype = Molecule[Aggregate[i].Molecule[j]].Type;
-        if (MoleculeType[moltype].Use) {
-          Aggregate[i].Use = true;
-          no_excluded_aggs++;
-          break;
+      if (Aggregate[i].nMolecules != 1 || xd_use_mol[Aggregate[i].Molecule[0]]) {
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          int moltype = Molecule[Aggregate[i].Molecule[j]].Type;
+          if (MoleculeType[moltype].Use) {
+            Aggregate[i].Use = true;
+            no_excluded_aggs++;
+            break;
+          }
         }
       }
     } //}}}
