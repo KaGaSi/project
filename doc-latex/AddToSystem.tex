@@ -5,19 +5,17 @@ and \texttt{vsf} structure files and adds new beads into it. The new beads
 replace neutral unbonded ones with the lowest indices (as ordered in the
 \texttt{vsf} file) from the original system. If molecules are added,
 \texttt{AddToSystem} places them at the end (for the sake of
-\texttt{DL\_MESO} which requires molecules to be after unbonded beads).
-The utility generates \texttt{vcf} and \texttt{vsf} files for the new
-system.
+\texttt{DL\_MESO} which requires molecules to be after unbonded beads). The
+utility generates \texttt{vcf} and \texttt{vsf} files for the new system.
 
 \texttt{AddToSystem} does not check whether there are enough unbonded
-neutral beads to be replaced by the new beads (if not, the utility will
-either crash or run forever).
+neutral beads to be replaced by the new beads.
 
 The coordinates of the new unbonded beads are ruled by the \texttt{-ld},
-\texttt{-hd}, and \texttt{-bt} options, only the first bead of any molecule
-obeys the options. The coordinates of the remaining beads in a molecule are
-governed by the provided coordinates. The molecules are added with a random
-orientation.
+\texttt{-hd}, and \texttt{-bt} options; the first bead of the new molecules
+obey these options. The coordinates of the remaining beads in a molecule
+are governed by the provided coordinates. The molecules are added with a
+random orientation.
 
 If \texttt{-ld} and/or \texttt{-hd} options are used, they must accompanied
 by the \texttt{-bt} option.
@@ -34,9 +32,9 @@ properties:
   <name>  <mass> <charge> <number of unbonded beads>
 \end{verbatim}
 The first line must start with \texttt{species} keyword followed by the
-number of bead types. For each bead type, a single line must contain the name of
-the beads, their mass and charge, and a number of these beads that are not
-in a molecule (i.e., unbonded or monomeric beads).
+number of bead types. For each bead type a single line must contain the name of
+the bead, their mass and charge, and a number of these beads that are not
+in a molecule (i.e., monomeric beads).
 
 The \texttt{molecule} section that must be behind the \texttt{species}
 section contains information about structure and numbers of molecules to be
@@ -66,13 +64,13 @@ arbitrary \texttt{<string>} in the \texttt{bonds} is ignored by
 \texttt{AddToSystem} (it is a relic from the \texttt{DL\_MESO} simulation
 package, where the \texttt{<string>} specifies a type of bond). The indices
 in \texttt{bond} lines run from 1 to the number of beads in the molecules and are
-ordered according to the \texttt{beads} line of the section. Because
+ordered according to the \texttt{beads} part of the section. Because
 \texttt{molecule} section in the \texttt{FIELD} file from \texttt{DL\_MESO}
 can also include bond angles and dihedral angles, anything beyond the last
 bond line is ignored (until the \texttt{finish} keyword is read).
 
-If no molecules are to be added, the line \texttt{molecule 0} must still be
-present in the file.
+If no molecules are to be added, the line \texttt{molecule 0} must be still
+be present in the file.
 
 The following is an example of the \texttt{FIELD}-like file:
 \begin{verbatim}
@@ -86,7 +84,7 @@ The following is an example of the \texttt{FIELD}-like file:
   nummols 10
   beads 2
   A 0.0 0.0 0.0
-  A 0.5 0.5 0.5
+  A 0.5 0.0 0.0
   bonds 1
   harm 1 2
   finish
@@ -94,8 +92,8 @@ The following is an example of the \texttt{FIELD}-like file:
   nummols 10
   beads 3
   A 0.0 0.0 0.0
-  B 0.0 0.0 0.0
-  B 0.5 0.5 0.5
+  B 0.5 0.0 0.0
+  B 1.0 0.0 0.0
   bonds 2
   harm 1 2
   harm 2 3
@@ -103,13 +101,13 @@ The following is an example of the \texttt{FIELD}-like file:
   harm 1 2 3
   finish
 \end{verbatim}
-In this example, 30 unbonded (or monomeric) negatively charged beads called \texttt{CI}
-are added as well as 20 molecules -- 10 molecules called \texttt{Dimer} and
-10 molecules called \texttt{surfact}. \texttt{Dimer} molecules contain two
-\texttt{A} beads and one bond each; \texttt{surfact} molecules contain
-three beads and two bonds each. The part starting with \texttt{angles} and
-ending with \texttt{finish} is ignored. All in all, 80 beads are added --
-30 \texttt{CI}, 30 \texttt{A}, and 20 \texttt{B} beads.
+In this example, 30 unbonded (or monomeric) negatively charged beads called
+\texttt{CI} are added as well as 20 molecules -- 10 molecules called
+\texttt{Dimer} and 10 molecules called \texttt{surfact}. \texttt{Dimer}
+molecules contain two \texttt{A} beads and one bond each; \texttt{surfact}
+molecules contain three beads and two bonds each. The part starting with
+\texttt{angles} and ending with \texttt{finish} is ignored. All in all, 80
+beads are added -- 30 \texttt{CI}, 30 \texttt{A}, and 20 \texttt{B} beads.
 
 The utility creates the \texttt{vcf} and \texttt{vsf} files with the new
 system and can also write the coordinates into a \texttt{xyz} file.
