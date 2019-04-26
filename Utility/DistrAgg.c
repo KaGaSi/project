@@ -465,7 +465,7 @@ int main(int argc, char *argv[]) {
 
       // if '-x' option is used, discount aggregates with only specified molecule type(s) //{{{
       test = false;
-      for (int j = 0; j < size; j++) {
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         int moltype = Molecule[Aggregate[i].Molecule[j]].Type;
         if (MoleculeType[moltype].Write) {
           test = true; // a molecule that shouldn't be in agg 'i' is there
