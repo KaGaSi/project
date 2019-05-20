@@ -10,16 +10,16 @@ $\langle\mathcal{O}\rangle_{\mathrm{n}}$,
 $\langle\mathcal{O}\rangle_{\mathrm{w}}$, and
 $\langle\mathcal{O}\rangle_{\mathrm{z}}$, respectively, are defined as
 \begin{equation} \label{eq:Avg}
-  \langle\mathcal{O}\rangle_{\mathrm{n}} = \frac{\sum_i\mathcal{O}_i}{N}
+  \langle\mathcal{O}\rangle_{\mathrm{n}} = \frac{\sum_i N_i\mathcal{O}_i     }{N}
   \mbox{, \ \ \ }
-  \langle\mathcal{O}\rangle_{\mathrm{w}} = \frac{\sum_i m_i\mathcal{O}_i}{\sum_i m_i}
+  \langle\mathcal{O}\rangle_{\mathrm{w}} = \frac{\sum_i N_im_i\mathcal{O}_i  }{\sum_i N_i m_i}
   \mbox{, and \ \ \ }
-  \langle\mathcal{O}\rangle_{\mathrm{z}} = \frac{\sum_i m_i^2\mathcal{O}_i}{\sum_i m_i^2},
+  \langle\mathcal{O}\rangle_{\mathrm{z}} = \frac{\sum_i N_im_i^2\mathcal{O}_i}{\sum_i N_i m_i^2},
 \end{equation}
-where $N$ is the total number of measurements, e.g., the total number of
-aggregates if a utility calculates per-aggregate averages (or molecules if
-a utility calculates per-molecule averages); $m_i$ is mass of an aggregate
-$i$ (or molecule $i$).
+where $N$ is the total number of measurements, i.e., the total number of
+aggregates for per-aggregate averages (or molecules for per-molecule
+averages); $N_i$ is the number of measurements with the value
+$\mathcal{O}_i$, and $m_i$ is mass of an aggregate $i$ (or a molecule $i$).
 
 Per-timestep averages are written to the \texttt{<output avg>} and overall
 averages are appended as comments (with commented legend) to both
