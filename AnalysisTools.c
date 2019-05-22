@@ -799,7 +799,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         bool test_id1 = false, test_id2 = false;
         for (int i = 0; i < (*MoleculeType)[mol_type].nBeads; i++) {
           if (!test_id1 && id1 == (*Molecule)[mol_id].Bead[i]) {
-          printf("okkk\n");
             (*MoleculeType)[mol_type].Bond[count_bonds[mol_type]][0] = i;
             test_id1 = true;
           }
