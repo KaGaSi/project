@@ -66,6 +66,20 @@ typedef struct BeadType {
          Mass; ///< mass of every bead of given type
 } BeadType; //}}}
 
+// struct Bead //{{{
+/**
+ * \brief Information about every bead.
+ */
+typedef struct Bead {
+  int Type, ///< type of bead corresponding to index in BeadType struct
+      Molecule, ///< index number of molecule corresponding to Molecule struct (-1 for monomeric bead)
+      nAggregates, ///< number of aggregates the bead is in (only monomeric beads can be in more aggregates - allocated memory for 10)
+      *Aggregate, ///< index numbers of aggregates corresponding to Aggregate struct (-1 for bead in no aggregate)
+      Index; ///< index of the bead according to .vsf file (needed for indexed timesteps)
+
+  Vector Position; ///< cartesian coordinates of the bead
+} Bead; //}}}
+
 // struct MoleculeType //{{{
 /**
  * \brief Information about molecule types.
@@ -87,20 +101,6 @@ typedef struct MoleculeType {
        Use, ///< should molecule type be used for calculation?
        Write; ///< should molecule type be used for calculation?
 } MoleculeType; //}}}
-
-// struct Bead //{{{
-/**
- * \brief Information about every bead.
- */
-typedef struct Bead {
-  int Type, ///< type of bead corresponding to index in BeadType struct
-      Molecule, ///< index number of molecule corresponding to Molecule struct (-1 for monomeric bead)
-      nAggregates, ///< number of aggregates the bead is in (only monomeric beads can be in more aggregates - allocated memory for 10)
-      *Aggregate, ///< index numbers of aggregates corresponding to Aggregate struct (-1 for bead in no aggregate)
-      Index; ///< index of the bead according to .vsf file (needed for indexed timesteps)
-
-  Vector Position; ///< cartesian coordinates of the bead
-} Bead; //}}}
 
 // struct Molecule //{{{
 /**

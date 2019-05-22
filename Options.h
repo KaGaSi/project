@@ -128,6 +128,20 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value);
 bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *values);
 // }}}
 
+// MultiDoubleOption() //{{{
+/**
+ * \brief Function for any option with two integer arguments.
+ *
+ * \param [in]  argc   number of program's arguments
+ * \param [in]  argv   program's arguments
+ * \param [in]  opt    option switch (e.g. array containing `-n`)
+ * \param [out] count  number of numeric arguments
+ * \param [out] values array of double values of given option
+ * \return `true` or `false` for error
+ */
+bool MultiDoubleOption(int argc, char **argv, char *opt, int *count, double *values);
+// }}}
+
 // FileIntsOption() //{{{
 /**
  * \brief Function for any option with filename and up to a hundred

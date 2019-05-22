@@ -211,7 +211,7 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
 
 // DoubleOption() //{{{
 /**
- * Function for any option with integer argument. The option (e.g. `-n`)
+ * Function for any option with double argument. The option (e.g. `-n`)
  * is an argument of this function.
  */
 bool DoubleOption(int argc, char **argv, char *opt, double *value) {
@@ -259,6 +259,49 @@ bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *value
         } //}}}
 
         values[n] = atoi(argv[arg]);
+
+        n++;
+        arg = i+1+n;
+
+        // warning - too many numeric arguments //{{{
+        if (n == 100) {
+          fprintf(stderr, "Warning: Option '%s' - too many numberic arguments; ", opt);
+          fprintf(stderr, "only first 100 used\n");
+          *count = n;
+          return true;
+        } //}}}
+      }
+
+      *count = n;
+    }
+  }
+
+  return false;
+} //}}}
+
+// MultiDoubleOption() //{{{
+/**
+ * Function for any option with two double arguments. The option (e.g. `-n`)
+ * is an argument of this function.
+ */
+bool MultiDoubleOption(int argc, char **argv, char *opt, int *count, double *values) {
+
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], opt) == 0) {
+
+      int n = 0; // number of arguments
+
+      // read integers
+      int arg = i+1+n;
+      while ((arg) < argc && argv[arg][0] != '-') {
+
+        // Error - non-numeric or missing argument //{{{
+        if (argv[arg][0] < '0' || argv[i+1+n][0] > '9') {
+          fprintf(stderr, "Error: option '%s' - non-numeric argement(s)\n", opt);
+          return true;
+        } //}}}
+
+        values[n] = atof(argv[arg]);
 
         n++;
         arg = i+1+n;
