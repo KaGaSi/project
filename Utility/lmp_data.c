@@ -449,7 +449,7 @@ int main(int argc, char *argv[]) {
   // print masses of bead types //{{{
   fprintf(out, "Masses\n\n");
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    fprintf(out, "%2d %lf\n", i+1, BeadType[i].Mass);
+    fprintf(out, "%2d %lf # %s\n", i+1, BeadType[i].Mass, BeadType[i].Name);
   }
   putc('\n', out); //}}}
 
