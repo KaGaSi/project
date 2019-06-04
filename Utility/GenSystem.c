@@ -405,7 +405,7 @@ int main(int argc, char *argv[]) {
     }
   }
   double length = prototype_z[longest][MoleculeType[longest].nBeads-1];
-  printf("Length = %lf\n", length); //}}}
+  printf("Length of the molecule: %lf\n", length); //}}}
 
   double dist = 0.7; // distance between layers (and beads)
   int x_n = BoxLength.x / dist, y_n = BoxLength.y / dist, z_n = BoxLength.z / dist; // number of positions per axes
@@ -417,9 +417,8 @@ int main(int argc, char *argv[]) {
   int total_layers = 0;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     layer[i] = x_n * (int)(BoxLength.z / (prototype_z[i][MoleculeType[i].nBeads-1] + dist));
-    printf("%s per layer: %d ", MoleculeType[i].Name, layer[i]);
+    printf("Maximum number of %s molecules per layer: %d\n", MoleculeType[i].Name, layer[i]);
     layer[i] = MoleculeType[i].Number / layer[i] + 1;
-    printf("(%d layers)\n", layer[i]);
     total_layers += layer[i];
   }
   int sol_layers = Counts.Unbonded / (x_n * z_n);
@@ -507,7 +506,7 @@ int main(int argc, char *argv[]) {
   z = 0.1; // coordinates that are incrementally increased
   double y_coor = 0.1;
   count_free = 0; // count number of unbonded beads that are placed
-  printf("y_dist = %lf\n", y_dist);
+//printf("y_dist = %lf\n", y_dist);
 
   // molecules layers with solvent layers in between //{{{
   for (int i = 0; i < Counts.Molecules; i++) {
