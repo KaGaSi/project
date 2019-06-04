@@ -21,7 +21,7 @@ endforeach(library)
 
 set(UTILS AddToSystem
           Aggregates
-#         Aggregates-NotSameBeads
+          Aggregates-NotSameBeads
           AngleMolecules
           Average
           BondLength

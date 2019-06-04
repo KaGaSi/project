@@ -38,7 +38,6 @@ indexed timesteps).\n\n");
   fprintf(ptr, "   <bead name(s)>        names of bead types for closeness calculation\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
-//fprintf(ptr, "      -xa <mol name(s)>  exclude aggregates containing specified molecule(s)\n");
   fprintf(ptr, "      -xm <mol name(s)>  exclude molecule close to specified molecule(s)\n");
   fprintf(ptr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
   CommonHelp(error);
@@ -49,7 +48,6 @@ indexed timesteps).\n\n");
  * Function to determine distribution of molecules in aggregates.
  */
 void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int contacts,
-//                       int *xa_mols, bool **xa_use_agg,
                          int *xm_mols, bool **xm_use_mol,
                          Vector BoxLength, BeadType *BeadType, Bead **Bead,
                          MoleculeType *MoleculeType, Molecule **Molecule) {
@@ -238,7 +236,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
             } //}}}
 
             while (j != -1) {
-              if ((*Bead)[i].Molecule != -1 && (*Bead)[j].Molecule != -1) {// both i and j must be in molecule
+              if ((*Bead)[i].Molecule != -1 && (*Bead)[j].Molecule != -1) { // both i and j must be in molecule
                 int type_i = (*Molecule)[(*Bead)[i].Molecule].Type;
                 int type_j = (*Molecule)[(*Bead)[j].Molecule].Type;
 
@@ -607,7 +605,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
-//      strcmp(argv[i], "-xa") != 0 &&
         strcmp(argv[i], "-xm") != 0 &&
         strcmp(argv[i], "-j") != 0) {
 
