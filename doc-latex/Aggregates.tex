@@ -4,12 +4,22 @@ These utilities determine which molecules belong to which aggregates
 according to a simple criterion: two molecules belong to the same aggregate
 if they share at least a specified number of contact pairs. A contact pair
 is a pair of two beads belonging to different molecules which are closer
-than a specified distance.
+than a specified distance. The information is written in \texttt{agg}
+format described in Section~\ref{sec:AggFile}.
 
 The number of contact pairs, the distance, and bead type(s) to use for
 aggregate determination are all arguments of the utilities.  Any molecule
-type(s) can be excluded from aggregate determination (and therefore from
-the output \texttt{agg} file).
+type(s) can be excluded from aggregate determination (\texttt{-x <mol
+name(s)>} option); they are also excluded from the output \texttt{agg}
+file).  Moreover, any molecules close to specified molecule(s) can be
+excluded (\texttt{-xm <mol name(s)>} option); here, `close' means any of
+the bead types used aggregate determination is closer than
+\texttt{<distance>} to any bead of the specified molecule.
+
+Also, periodic boundary conditions can be removed from whole aggregates and
+the new coordinates saved to an indexed \texttt{vcf} file (\texttt{-j}
+option). Therefore aggregates will not be split by simulation box
+boundaries when, for example, visualizing the molecules with vmd.
 
 While the \texttt{Aggregates} utility uses all possible pairs of given bead
 types, \texttt{Aggrega}-\texttt{tes-NotSameBeads} does not use same-type pairs. For
@@ -18,14 +28,6 @@ example, if bead types \texttt{A} and \texttt{B} are given,
 \texttt{A-A}, \texttt{A-B}, and \texttt{B-B}), but
 \texttt{Aggregates-NotSameBeads} will use only \texttt{A-B} bead type
 pairs.
-
-Also, periodic boundary conditions can be removed from whole aggregates and
-the new coordinates saved to an indexed \texttt{vcf} file (\texttt{-j}
-option). Therefore aggregates will not be split by simulation box
-boundaries when, for example, visualizing the molecules with vmd.
-
-The information is written in \texttt{agg} format which is described in
-Section~\ref{sec:AggFile}.
 
 Usage:
 
@@ -36,7 +38,7 @@ Usage:
 
 \vspace{1em}
 \noindent
-\begin{longtable}{p{0.24\textwidth}p{0.704\textwidth}}
+\begin{longtable}{p{0.25\textwidth}p{0.694\textwidth}}
   \toprule
   \multicolumn{2}{l}{Mandatory arguments} \\
   \midrule
@@ -56,6 +58,8 @@ Usage:
   \midrule
   \texttt{-x <mol name(s)>} & exclude specified molecule type(s) from
     aggregate determination (and from the output \texttt{agg} file) \\
+  \texttt{-xm <mol name(s)>} & exclude molecules that are close to
+    specified molecule(s) \\
   \texttt{-j <output.vcf>} & output \texttt{vcf} file with coordinates of
     joined aggregates (i.e., without periodic boundary conditions) \\
   \bottomrule

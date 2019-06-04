@@ -740,9 +740,9 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts_add.Beads; i++) {
     if (Bead_add[i].Molecule == -1) {
       // find what bead to rewrite //{{{
-      for (int j = count; j < Counts.Beads; j++) {
+      for (int j = (count-1); j < Counts.Beads; j++) {
         count++;
-        if (Bead[j].Molecule == -1 && BeadType[Bead[j].Type].Charge == 0) {
+        if (Bead[count].Molecule == -1 && BeadType[Bead[count].Type].Charge == 0) {
           break;
         }
       } //}}}
@@ -870,11 +870,11 @@ int main(int argc, char *argv[]) {
 
     for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
       int id = Molecule_add[i].Bead[j];
-      for (int k = count; k < Counts.Beads; k++) {
+      for (int k = (count-1); k < Counts.Beads; k++) {
         count++; // so that the for loop doesn't go through all beads every time
-        if (Bead[k].Molecule == -1 && BeadType[Bead[k].Type].Charge == 0) {
+        if (Bead[count].Molecule == -1 && BeadType[Bead[count].Type].Charge == 0) {
           // move higher id beads one id down - dl_meso requires molecules are at the end
-          for (int l = k; l < (Counts.BeadsInVsf-1); l++) {
+          for (int l = count; l < (Counts.BeadsInVsf-1); l++) {
             Bead[l].Type = Bead[l+1].Type;
             Bead[l].Molecule = Bead[l+1].Molecule;
             Bead[l].Index = l + 1;
@@ -1053,7 +1053,6 @@ int main(int argc, char *argv[]) {
 
   fprintf(out, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z); //}}}
 
-  printf("%s\n", stuff);
   // print coordinates to output .vcf file
   WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
 

@@ -22,15 +22,15 @@ fractions of aggregates.\n\n");
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input.agg> <output distr file> <output avg file> <options>\n\n", cmd);
 
-  fprintf(ptr, "   <input.agg>            input filename (agg format)\n");
-  fprintf(ptr, "   <distr file>           filename with weight and number distributions\n");
-  fprintf(ptr, "   <avg file>             filename with weight and number averages throughout simulation\n");
+  fprintf(ptr, "   <input.agg>            input agg file\n");
+  fprintf(ptr, "   <distr file>           output file with distribution of aggregate sizes\n");
+  fprintf(ptr, "   <avg file>             output file with per-timestep averages\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -st <int>           start distribution calculation with <int>-th step\n");
-  fprintf(ptr, "      -n <int> <int>      calculate for aggregate sizes in given range\n");
-  fprintf(ptr, "      -m <name(s)>        agg size means number of <name> molecule types in an aggregate\n");
+  fprintf(ptr, "      -st <int>           starting timestep for calculation (default: 1)\n");
+  fprintf(ptr, "      -n <int> <int>      use aggregate sizes in a given range\n");
+  fprintf(ptr, "      -m <name(s)>        use number of specified molecule(s) as aggrete size\n");
   fprintf(ptr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
-  fprintf(ptr, "      --only <name>       use just aggregates composed of a specified molecule\n");
+  fprintf(ptr, "      --only <name(s)>    use only aggregates composed of a specified molecule\n");
   fprintf(ptr, "      -c <name> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
   CommonHelp(error);
 } //}}}
@@ -203,9 +203,8 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\nError: option '-n' requires two numeric arguments\n\n");
     exit(1);
   }
-  range_As[0]--;
 
-  // make sure first number is larger
+  // make sure first number is smaller
   if (range_As[0] > range_As[1]) {
     int tmp = range_As[0];
     range_As[0] = range_As[1];
@@ -213,14 +212,25 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-m' option //{{{
-  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *specific_moltype_for_size = calloc(Counts.TypesOfMolecules,sizeof(int *));
   // all are to be used without '-m' option
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
   }
   if (MoleculeTypeOption2(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
     exit(1);
-  } //}}}
+  }
+
+  // is '-m' used?
+  bool m_option = false;
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (specific_moltype_for_size[i] == 0) {
+      m_option = true;
+      break;
+    }
+  }
+  // mass is only one; -m decides just what do we consider as A_S
+  m_option = false; //}}}
 
   // '-x' option //{{{
   if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
@@ -306,15 +316,15 @@ int main(int argc, char *argv[]) {
 
   // arrays for distribution //{{{
   // number distribution
-  long int ndistr[Counts.Molecules];
+  long double ndistr[Counts.Molecules];
   // weight and z distributions - [][0] = mass of mols according to options; [][1] = mass of whole agg
-  long int wdistr[Counts.Molecules][2];
-  long int zdistr[Counts.Molecules][2];
+  long double wdistr[Counts.Molecules][2];
+  long double zdistr[Counts.Molecules][2];
   // volume distribution - probably works, but not really needed, so not sure
   // [][0] = volume of mols according to options; [][1] = volume of whole agg
-  long int voldistr[Counts.Molecules][2];
+  long double voldistr[Counts.Molecules][2];
   // number distribution of agg composition
-  long int *ndistr_comp[Counts.Molecules];
+  long double *ndistr_comp[Counts.Molecules];
   for (int i = 0; i < Counts.Molecules; i++) {
     ndistr_comp[i] = malloc((multiply*Counts.Molecules)*sizeof(long int));
   }
@@ -352,52 +362,67 @@ int main(int argc, char *argv[]) {
   }
   putc('\n', out);
 
-  fprintf(out, "# column: (1) step, ");
-  fprintf(out, "(2) <M>_n, ");
-  fprintf(out, "(3) <M>_n - whole agg mass, ");
-  fprintf(out, "(4) <M>_w, ");
-  fprintf(out, "(5) <M>_w - whole agg mass, ");
-  fprintf(out, "(6) <As>_n, ");
-  fprintf(out, "(7) <As>_n - whole agg As, ");
-  fprintf(out, "(8) <As>_w, ");
-  fprintf(out, "(9) <As>_w - whole agg As\n");
+  count = 1;
+  fprintf(out, "# column: (%d) step, ", count++);
+  if (m_option) { // -m is used, two agg masses are considered
+    fprintf(out, "(%d) <M>_n, ", count++);
+    count++;
+    fprintf(out, "(%d) <M>_w, ", count++);
+    count++;
+    fprintf(out, "(%d) <M>_z, ", count++);
+    count++;
+    fprintf(out, "(%d) <As>_n, ", count++);
+    fprintf(out, "(%d) <As>_w, ", count++);
+    count++;
+    fprintf(out, "(%d) <As>_z, ", count++);
+    count++;
+  } else {
+    fprintf(out, "(%d) <M>_n, ", count++);
+    fprintf(out, "(%d) <M>_w, ", count++);
+    fprintf(out, "(%d) <M>_z, ", count++);
+    fprintf(out, "(%d) <As>_n, ", count++);
+    fprintf(out, "(%d) <As>_w, ", count++);
+    fprintf(out, "(%d) <As>_z, ", count++);
+  }
+  fprintf(out, "(%d) number of aggregates", count++);
+  putc('\n', out);
   fclose(out); //}}}
 
   // main loop //{{{
-  count = 0;
+  int count_step = 0;
   // [0][] = simple sum, [1][] = sum of squares, [2][] = sume of cubes
   // [][0] = mass of mols in agg from options, [][1] = mass of the whole aggregate
-  double mass_sum[3][2] = {{0}};
+  double mass_sum[3][2] = {{0}}, As_sum[3][2] = {{0}};
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
     // print (or not) step number //{{{
-    count++;
-    if (count < start) {
+    count_step++;
+    if (count_step < start) {
       if (!silent) {
         if (script) {
-          fprintf(stdout, "Discarding Step: %6d\n", count);
+          fprintf(stdout, "Discarding Step: %6d\n", count_step);
         } else {
           fflush(stdout);
-          fprintf(stdout, "\rDiscarding Step: %6d", count);
+          fprintf(stdout, "\rDiscarding Step: %6d", count_step);
         }
       }
-    } else if (count == start) {
+    } else if (count_step == start) {
       if (!silent) {
         if (script) {
-          fprintf(stdout, "Discarded Steps: %6d\n", count-1);
+          fprintf(stdout, "Discarded Steps: %6d\n", count_step-1);
         } else {
           fflush(stdout);
-          fprintf(stdout, "\rDiscarded Steps: %6d\n", count-1);
+          fprintf(stdout, "\rDiscarded Steps: %6d\n", count_step-1);
         }
       }
     } else {
       if (!silent) {
         if (script) {
-          fprintf(stdout, "Step: %6d\n", count);
+          fprintf(stdout, "Step: %6d\n", count_step);
         } else {
           fflush(stdout);
-          fprintf(stdout, "\rStep: %6d", count);
+          fprintf(stdout, "\rStep: %6d", count_step);
         }
       }
     } //}}}
@@ -425,9 +450,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // go through all aggregates
-    int aggs_step = 0, // number of aggregates (w/o unimers if --no-unimers)
-        avg_mass_n_step[2] = {0}, avg_mass_w_step[2] = {0}, // per-step mass averages
-        avg_As_n_step[2] = {0}, avg_As_w_step[2] = {0}; // per-step As averages
+    int aggs_step = 0; // number of eligible aggregates per step
+    double avg_mass_n_step[2] = {0}, avg_mass_w_step[2] = {0}, avg_mass_z_step[2] = {0}, // per-step mass averages
+           avg_As_n_step[2] = {0}, avg_As_w_step[2] = {0},  avg_As_z_step[2] = {0}; // per-step As averages
     for (int i = 0; i < Counts.Aggregates; i++) {
 
       /* determine aggregate size and mass: //{{{
@@ -465,7 +490,7 @@ int main(int argc, char *argv[]) {
 
       // if '-x' option is used, discount aggregates with only specified molecule type(s) //{{{
       test = false;
-      for (int j = 0; j < size; j++) {
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         int moltype = Molecule[Aggregate[i].Molecule[j]].Type;
         if (MoleculeType[moltype].Write) {
           test = true; // a molecule that shouldn't be in agg 'i' is there
@@ -512,44 +537,51 @@ int main(int argc, char *argv[]) {
         }
       } //}}}
 
-      // for average aggregate mass during the step //{{{
+      // for average aggregate mass during the step
       avg_mass_n_step[0] += agg_mass;
       avg_mass_w_step[0] += SQR(agg_mass);
+      avg_mass_z_step[0] += CUBE(agg_mass);
       avg_mass_n_step[1] += Aggregate[i].Mass;
-      avg_mass_w_step[1] += SQR(Aggregate[i].Mass); //}}}
+      avg_mass_w_step[1] += SQR(Aggregate[i].Mass);
+      avg_mass_z_step[1] += CUBE(Aggregate[i].Mass);
 
-      // for average aggregation number during the step //{{{
+      // for average aggregation number during the step
       avg_As_n_step[0] += size;
-      avg_As_w_step[0] += SQR(size);
+      avg_As_w_step[0] += size * agg_mass;
+      avg_As_z_step[0] += size * SQR(agg_mass);
       avg_As_n_step[1] += Aggregate[i].nMolecules;
-      avg_As_w_step[1] += SQR(Aggregate[i].nMolecules); //}}}
+      avg_As_w_step[1] += Aggregate[i].nMolecules * Aggregate[i].Mass;
+      avg_As_z_step[1] += Aggregate[i].nMolecules * SQR(Aggregate[i].Mass);
 
-      // number of eligible aggregate for a step
       aggs_step++;
 
       // start calculation of averages from specified 'start' timestep
-      if (count >= start) {
+      if (count_step >= start) {
 
         // distribution //{{{
         ndistr[size-1]++;
-
         wdistr[size-1][0] += agg_mass;
         wdistr[size-1][1] += Aggregate[i].Mass;
-
         zdistr[size-1][0] += SQR(agg_mass);
         zdistr[size-1][1] += SQR(Aggregate[i].Mass);
-
         voldistr[size-1][0] += agg_vol;
         voldistr[size-1][1] += Aggregate[i].nBeads; //}}}
 
         // number of various species in the aggregate //{{{
         count_agg[size-1]++;
 
+        As_sum[0][0] += size;
+        As_sum[1][0] += size * agg_mass;
+        As_sum[2][0] += size * SQR(agg_mass);
+        As_sum[0][1] += Aggregate[i].nMolecules;
+        As_sum[1][1] += Aggregate[i].nMolecules * Aggregate[i].Mass;
+        As_sum[2][1] += Aggregate[i].nMolecules * SQR(Aggregate[i].Mass);
+
         mass_sum[0][0] += agg_mass;
-        mass_sum[0][1] += Aggregate[i].Mass;
         mass_sum[1][0] += SQR(agg_mass);
-        mass_sum[1][1] += SQR(Aggregate[i].Mass);
         mass_sum[2][0] += CUBE(agg_mass);
+        mass_sum[0][1] += Aggregate[i].Mass;
+        mass_sum[1][1] += SQR(Aggregate[i].Mass);
         mass_sum[2][1] += CUBE(Aggregate[i].Mass);
 
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
@@ -572,15 +604,32 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
 
-      fprintf(out, "%5d", count); // step
-      fprintf(out, " %8.3f", (double)(avg_mass_n_step[0])/aggs_step); // <mass>_n (options' mass)
-      fprintf(out, " %8.3f", (double)(avg_mass_n_step[1])/aggs_step); // <mass>_n (whole agg mass)
-      fprintf(out, " %8.3f", (double)(avg_mass_w_step[0])/avg_mass_n_step[0]); // <mass>_w (options' mass)
-      fprintf(out, " %8.3f", (double)(avg_mass_w_step[1])/avg_mass_n_step[1]); // <mass>_w (whole agg mass)
-      fprintf(out, " %8.3f", (double)(avg_As_n_step[0])/aggs_step); // <As>_n (options' mass)
-      fprintf(out, " %8.3f", (double)(avg_As_n_step[1])/aggs_step); // <As>_n (whole agg mass)
-      fprintf(out, " %8.3f", (double)(avg_As_w_step[0])/avg_As_n_step[0]); // <As>_w (options' mass)
-      fprintf(out, " %8.3f", (double)(avg_As_w_step[1])/avg_As_n_step[1]); // <As>_w (whole agg mass)
+      fprintf(out, "%5d", count_step); // step
+      fprintf(out, " %10.5f", avg_mass_n_step[0]/aggs_step); // <mass>_n
+      if (m_option) {
+        fprintf(out, " %10.5f", avg_mass_n_step[1]/aggs_step); // <mass>_n (whole agg mass)
+      }
+      fprintf(out, " %10.5f", avg_mass_w_step[0]/avg_mass_n_step[0]); // <mass>_w
+      if (m_option) {
+        fprintf(out, " %10.5f", avg_mass_w_step[1]/avg_mass_n_step[1]); // <mass>_w (whole agg mass)
+      }
+      fprintf(out, " %10.5f", avg_mass_z_step[0]/avg_mass_w_step[0]); // <mass>_z
+      if (m_option) {
+        fprintf(out, " %10.5f", avg_mass_z_step[1]/avg_mass_w_step[1]); // <mass>_z (whole agg mass)
+      }
+      fprintf(out, " %10.5f", avg_As_n_step[0]/aggs_step); // <As>_n
+      if (m_option) {
+        fprintf(out, " %10.5f", avg_As_n_step[1]/aggs_step); // <As>_n (whole agg)
+      }
+      fprintf(out, " %10.5f", avg_As_w_step[0]/avg_mass_n_step[0]); // <As>_w
+      if (m_option) {
+        fprintf(out, " %10.5f", avg_As_w_step[1]/avg_mass_n_step[1]); // <As>_w (whole agg mass)
+      }
+      fprintf(out, " %10.5f", avg_As_z_step[0]/avg_mass_w_step[0]); // <As>_z
+      if (m_option) {
+        fprintf(out, " %10.5f", avg_As_z_step[1]/avg_mass_w_step[1]); // <As>_z (whole agg mass)
+      }
+      fprintf(out, " %5d", aggs_step); // number of aggregates in the step
 
       putc('\n', out);
       fclose(out); //}}}
@@ -590,10 +639,10 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_step);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_step);
     }
   } //}}}
 
@@ -610,18 +659,27 @@ int main(int argc, char *argv[]) {
   }
   putc('\n', out);
 
+  count = 1;
   fprintf(out, "# column: ");
-  fprintf(out, "(1) As, ");
-  fprintf(out, "(2) F_n(As) - whole agg mass, ");
-  fprintf(out, "(3) F_w(As), ");
-  fprintf(out, "(4) F_w(As) - whole agg mass, ");
-  fprintf(out, "(5) F_z(As), ");
-  fprintf(out, "(6) F_z(As) - whole agg mass, ");
-  fprintf(out, "(7) <volume distribution>, ");
-  fprintf(out, "(8) <volume distribution> - whole agg volume, ");
-  fprintf(out, "(9) number of aggs,");
+  if (m_option) { // -m is used, two agg masses are considered
+    fprintf(out, "(%d) As, ", count++);
+    fprintf(out, "(%d) F_n(As), ", count++);
+    fprintf(out, "(%d) F_w(As), ", count++);
+    count++;
+    fprintf(out, "(%d) F_z(As), ", count++);
+    count++;
+    fprintf(out, "(%d) <volume distribution>, ", count++);
+    count++;
+  } else {
+    fprintf(out, "(%d) As, ", count++);
+    fprintf(out, "(%d) F_n(As), ", count++);
+    fprintf(out, "(%d) F_w(As), ", count++);
+    fprintf(out, "(%d) F_z(As), ", count++);
+    fprintf(out, "(%d) <volume distribution>, ", count++);
+  }
+  fprintf(out, "(%d) number of aggs,", count++);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, " (%d) <%s>_n", i+10, MoleculeType[i].Name);
+    fprintf(out, " (%d) <%s>_n", i+count, MoleculeType[i].Name);
     if (i != (Counts.TypesOfMolecules-1)) {
       putc(',', out);
     }
@@ -635,7 +693,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  count -= start -1;
+  count_step -= start - 1;
 
   // normalization factors
   long int ndistr_norm = 0, wdistr_norm[2] = {0}, zdistr_norm[2] = {0}, voldistr_norm[2] = {0};
@@ -654,21 +712,27 @@ int main(int argc, char *argv[]) {
 
   for (int i = 0; i < Counts.Molecules; i++) {
     if (count_agg[i] > 0) {
-      fprintf(out, "%4d %lf %lf %lf %lf %lf %lf %lf %6d", i+1, // As
-                  (double)(ndistr[i])/ndistr_norm, // number As distr
-                  (double)(wdistr[i][0])/wdistr_norm[0], // weight distr (options mass)
-                  (double)(wdistr[i][1])/wdistr_norm[1], // weight distr (whole mass)
-                  (double)(zdistr[i][0])/zdistr_norm[0], // z distr (options mass)
-                  (double)(zdistr[i][1])/zdistr_norm[1], // z distr (whole agg mass)
-                  (double)(voldistr[i][0])/voldistr_norm[0], // volume distribution (options agg)
-                  (double)(voldistr[i][1])/voldistr_norm[1], // volume distribution (whole agg)
-                  count_agg[i]);
+      fprintf(out, "%4d", i+1); // As
+      fprintf(out, " %10.5f", (double)(ndistr[i])/ndistr_norm); // number As distr
+      fprintf(out, " %10.5f", (double)(wdistr[i][0])/wdistr_norm[0]); // weight distr
+      if (m_option) {
+        fprintf(out, " %10.5f", (double)(wdistr[i][1])/wdistr_norm[1]); // weight distr (whole agg mass)
+      }
+      fprintf(out, " %10.5f", (double)(zdistr[i][0])/zdistr_norm[0]); // z distr
+      if (m_option) {
+        fprintf(out, " %10.5f", (double)(zdistr[i][1])/zdistr_norm[1]); // z distr (whole agg mass)
+      }
+      fprintf(out, " %10.5f", (double)(voldistr[i][0])/voldistr_norm[0]); // volume distribution
+      if (m_option) {
+        fprintf(out, " %10.5f", (double)(voldistr[i][1])/voldistr_norm[1]); // volume distribution (whole agg mass)
+      }
+      fprintf(out, " %6d", count_agg[i]); // number of aggregates
       // print average number of molecule types in aggregates
       for (int j = 0; j < Counts.TypesOfMolecules; j++) {
         if (count_agg[i] == 0) {
           fprintf(out, "%8s", "?");
         } else {
-          fprintf(out, " %7.3f", (double)(molecules_sum[i][j])/count_agg[i]);
+          fprintf(out, " %10.5f", (double)(molecules_sum[i][j])/count_agg[i]);
         }
       }
       putc('\n', out);
@@ -698,94 +762,155 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // print legend (with column numbers) //{{{
-  // distr file
   putc('#', out);
-  fprintf(out, " (1) <M>_n,");
-  fprintf(out, " (2) <M>_n - whole agg mass,");
-  fprintf(out, " (3) <M>_w,");
-  fprintf(out, " (4) <M>_w - whole agg mass,");
-  fprintf(out, " (5) <M>_z,");
-  fprintf(out, " (6) <M>_z - whole agg mass,");
+  putc('#', out2);
+  // distr file
+  count = 1;
+  fprintf(out, " (%d) <As>_n,", count++);
+  if (m_option) { // -m is used, two agg masses are considered
+    fprintf(out, " (%d) <As>_w,", count++);
+    count++;
+    fprintf(out, " (%d) <As>_z,", count++);
+    count++;
+    fprintf(out, " (%d) <M>_n,", count++);
+    count++;
+    fprintf(out, " (%d) <M>_w,", count++);
+    count++;
+    fprintf(out, " (%d) <M>_z,", count++);
+    count++;
+  } else {
+    fprintf(out, " (%d) <As>_w,", count++);
+    fprintf(out, " (%d) <As>_z,", count++);
+    fprintf(out, " (%d) <M>_n,", count++);
+    fprintf(out, " (%d) <M>_w,", count++);
+    fprintf(out, " (%d) <M>_z,", count++);
+  }
+//count++;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, " (%d) <%s>_n", i+7, MoleculeType[i].Name);
+    fprintf(out, " (%d) <%s>_n", i+count, MoleculeType[i].Name);
     if (i != (Counts.TypesOfMolecules-1) && !only) {
       putc(',', out);
     }
   }
   // avg file
-  putc('#', out2);
-  fprintf(out2, " (1) <M>_n,");
-  fprintf(out2, " (2) <M>_n - whole agg mass,");
-  fprintf(out2, " (3) <M>_w,");
-  fprintf(out2, " (4) <M>_w - whole agg mass,");
-  fprintf(out2, " (5) <M>_z,");
-  fprintf(out2, " (6) <M>_z - whole agg mass,");
+  count = 1;
+  fprintf(out2, " (%d) <As>_n,", count++);
+  if (m_option) { // -m is used, two agg masses are considered
+    fprintf(out2, " (%d) <As>_w,", count++);
+    count++;
+    fprintf(out2, " (%d) <As>_z,", count++);
+    count++;
+    fprintf(out2, " (%d) <M>_n,", count++);
+    count++;
+    fprintf(out2, " (%d) <M>_w,", count++);
+    count++;
+    fprintf(out2, " (%d) <M>_z,", count++);
+    count++;
+  } else {
+    fprintf(out2, " (%d) <As>_w,", count++);
+    fprintf(out2, " (%d) <As>_z,", count++);
+    fprintf(out2, " (%d) <M>_n,", count++);
+    fprintf(out2, " (%d) <M>_w,", count++);
+    fprintf(out2, " (%d) <M>_z,", count++);
+  }
+//count++;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out2, " (%d) <%s>_n", i+7, MoleculeType[i].Name);
+    fprintf(out2, " (%d) <%s>_n", i+count, MoleculeType[i].Name);
     if (i != (Counts.TypesOfMolecules-1) && !only) {
       putc(',', out2);
     }
   }
-  if (only) {
-    // distr file
-    fprintf(out, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+7);
-    // avg file
-    fprintf(out2, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+7);
-  }
+//if (only) {
+//  // distr file
+//  fprintf(out, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+count);
+//  // avg file
+//  fprintf(out2, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+count);
+//}
   putc('\n', out);
   putc('\n', out2); //}}}
 
   // print the averages //{{{
   // distr file
-  fprintf(out, "# ");
-  fprintf(out2, "# ");
+  fprintf(out, "#");
+  fprintf(out2, "#");
 
   // distr file
-  fprintf(out, "%10.3f ", mass_sum[0][0]/count_agg[0]); // <M>_n (options' mass)
-  fprintf(out, "%10.3f ", mass_sum[0][1]/count_agg[0]); // <M>_n (whole agg mass)
-  fprintf(out, "%10.3f ", mass_sum[1][0]/mass_sum[0][0]); // <M>_w (options' mass)
-  fprintf(out, "%10.3f ", mass_sum[1][1]/mass_sum[0][1]); // <M>_w (whole agg mass)
-  fprintf(out, "%10.3f ", mass_sum[2][0]/mass_sum[1][0]); // <M>_z (options' mass)
-  fprintf(out, "%10.3f ", mass_sum[2][1]/mass_sum[1][1]); // <M>_z (whole agg mass)
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
+  fprintf(out, " %lf", As_sum[0][0]/count_agg[0]); // <As>_n
+  fprintf(out, " %lf", As_sum[1][0]/mass_sum[0][0]); // <As>_w
+  if (m_option) {
+    fprintf(out, " %lf", As_sum[1][1]/mass_sum[0][1]); // <As>_w (whole agg)
   }
-  // avg file
-  fprintf(out2, "%10.3f ", mass_sum[0][0]/count_agg[0]); // <M>_n (options' mass)
-  fprintf(out2, "%10.3f ", mass_sum[0][1]/count_agg[0]); // <M>_n (whole agg mass)
-  fprintf(out2, "%10.3f ", mass_sum[1][0]/mass_sum[0][0]); // <M>_w (options' mass)
-  fprintf(out2, "%10.3f ", mass_sum[1][1]/mass_sum[0][1]); // <M>_w (whole agg mass)
-  fprintf(out2, "%10.3f ", mass_sum[2][0]/mass_sum[1][0]); // <M>_z (options' mass)
-  fprintf(out2, "%10.3f ", mass_sum[2][1]/mass_sum[1][1]); // <M>_z (whole agg mass)
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out2, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
+  fprintf(out, " %lf", As_sum[2][0]/mass_sum[1][0]); // <As>_z
+  if (m_option) {
+    fprintf(out, " %lf", As_sum[2][1]/mass_sum[1][1]); // <As>_z (whole agg)
   }
 
-  if (only) {
-    int only_molecules_sum = 0;
-    int only_moltype_number = 0;
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (only_specific_moltype_aggregates[i]) {
-        only_molecules_sum += molecules_sum[0][i];
-        only_moltype_number += MoleculeType[i].Number;
-      }
-    }
-//  printf("%d %ld\n", only_molecules_sum, only_count_chains);
-    // distr file
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (only_specific_moltype_aggregates[i]) {
-        fprintf(out, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
-      }
-    }
-    fprintf(out, " %10.3f", (double)(only_count_chains)/(count*only_moltype_number));
-    // avg file
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (only_specific_moltype_aggregates[i]) {
-        fprintf(out2, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
-      }
-    }
-    fprintf(out2, " %10.3f", (double)(only_count_chains)/(count*only_moltype_number));
+  fprintf(out, " %lf", mass_sum[0][0]/count_agg[0]); // <M>_n
+  if (m_option) {
+    fprintf(out, " %lf", mass_sum[0][1]/count_agg[0]); // <M>_n (whole agg)
   }
+  fprintf(out, " %lf", mass_sum[1][0]/mass_sum[0][0]); // <M>_w
+  if (m_option) {
+    fprintf(out, " %lf", mass_sum[1][1]/mass_sum[0][1]); // <M>_w (whole agg)
+  }
+  fprintf(out, " %lf", mass_sum[2][0]/mass_sum[1][0]); // <M>_z
+  if (m_option) {
+    fprintf(out, " %lf", mass_sum[2][1]/mass_sum[1][1]); // <M>_z (whole agg)
+  }
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    fprintf(out, " %lf", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
+  }
+  // avg file
+  fprintf(out2, " %lf", As_sum[0][0]/count_agg[0]); // <As>_n
+  fprintf(out2, " %lf", As_sum[1][0]/mass_sum[0][0]); // <As>_w
+  if (m_option) {
+    fprintf(out2, " %lf", As_sum[1][1]/mass_sum[0][1]); // <As>_w (whole agg)
+  }
+  fprintf(out2, " %lf", As_sum[2][0]/mass_sum[1][0]); // <As>_z
+  if (m_option) {
+    fprintf(out2, " %lf", As_sum[2][1]/mass_sum[1][1]); // <As>_z (whole agg)
+  }
+
+  fprintf(out2, " %lf", mass_sum[0][0]/count_agg[0]); // <M>_n
+  if (m_option) {
+    fprintf(out2, " %lf", mass_sum[0][1]/count_agg[0]); // <M>_n (whole agg)
+  }
+  fprintf(out2, " %lf", mass_sum[1][0]/mass_sum[0][0]); // <M>_w
+  if (m_option) {
+    fprintf(out2, " %lf", mass_sum[1][1]/mass_sum[0][1]); // <M>_w (whole agg)
+  }
+  fprintf(out2, " %lf", mass_sum[2][0]/mass_sum[1][0]); // <M>_z
+  if (m_option) {
+    fprintf(out2, " %lf", mass_sum[2][1]/mass_sum[1][1]); // <M>_z (whole agg)
+  }
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    fprintf(out2, " %lf", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
+  }
+
+//if (only) {
+//  int only_molecules_sum = 0;
+//  int only_moltype_number = 0;
+//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+//    if (only_specific_moltype_aggregates[i]) {
+//      only_molecules_sum += molecules_sum[0][i];
+//      only_moltype_number += MoleculeType[i].Number;
+//    }
+//  }
+//  // distr file
+//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+//    if (only_specific_moltype_aggregates[i]) {
+//      fprintf(out, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
+//    }
+//  }
+//  fprintf(out, " %10.3f", (double)(only_count_chains)/(count_step*only_moltype_number));
+//  // avg file
+//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+//    if (only_specific_moltype_aggregates[i]) {
+//      fprintf(out2, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
+//    }
+//  }
+//  fprintf(out2, " %10.3f", (double)(only_count_chains)/(count_step*only_moltype_number));
+//}
 
   putc('\n', out);
   putc('\n', out2); //}}}
@@ -835,7 +960,6 @@ int main(int argc, char *argv[]) {
         sum[composition[j]-1] += ndistr_comp[composition[j]-1][i];
       }
     }
-//printf("low=%lf\n", (double)(low)/multiply);
 
     // print data
     for (int i = low; i < (multiply*Counts.Molecules); i++) {
@@ -869,8 +993,7 @@ int main(int argc, char *argv[]) {
     free(molecules_sum[i]);
     free(ndistr_comp[i]);
   }
-  free(molecules_sum);
-  //}}}
+  free(molecules_sum); //}}}
 
   return 0;
 }

@@ -1,7 +1,7 @@
 test*
 build
 doc
-cscope.out
+cscope*
 tags
 DoxyErrors.txt
 OneTime
