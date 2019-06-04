@@ -279,9 +279,9 @@ int main(int argc, char *argv[]) {
   // bead coordinates //{{{
   for (int i = 0; i < Counts.Beads; i++) {
     fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
-    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
-                                  Bead[i].Position.y,
-                                  Bead[i].Position.z);
+    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x-BoxLength.x/2,
+                                  Bead[i].Position.y-BoxLength.y/2,
+                                  Bead[i].Position.z-BoxLength.z/2);
   } //}}}
 
   fclose(out); //}}}
