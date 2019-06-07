@@ -16,12 +16,11 @@ For example, create directory `build`; `cd` to the directory; and
 to install all the programs, run from the command line this
 command to first create unix makefile and then compile all programs:
 
-`cmake -DCMAKE_BUILD_TYPE=Release -G "Unix Makefiles" ../ ; make`
+`cmake  ../; make`
 
-Version for debugging is compiled when `-DCMAKE_BUILD_TYPE=Debug` is used
-instead of `-DCMAKE_BUILD_TYPE=Release` and `../` represent the path to the
-repository (i.e., one directory up from `build`). The binaries will be in
-`bin` subdirectory of `build`.
+Version for debugging is compiled when `-DCMAKE_BUILD_TYPE=Debug` option is
+used; `../` represent the path to the repository (i.e., one directory up
+from `build`). The binaries will be in `bin` subdirectory of `build`.
 
 To compile individual C programs using `gcc`, run:
 
