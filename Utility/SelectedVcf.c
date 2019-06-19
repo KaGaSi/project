@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
-    fprintf(stderr, "\nErorr: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\nErorr: starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
 
