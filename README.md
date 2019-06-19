@@ -19,11 +19,8 @@ command to first create unix makefile and then compile all programs:
 `cmake  ../; make`
 
 Version for debugging is compiled when `-DCMAKE_BUILD_TYPE=Debug` option is
-used; `../` represent the path to the repository (i.e., one directory up
-from `build`). The binaries will be in `bin` subdirectory of `build`.
-
-To compile individual C programs using `gcc`, run:
-
-`gcc -O3 -lm $PATH_TO_REPOSITORY/AnalysisTools.c $PATH_TO_REPOSITORY/Options.c $PATH_TO_PROGRAM -o $OUTPUT_NAME`
+used with cmake; `../` represent the path to the repository (i.e., one
+directory up from `build`). The binaries will be in `bin` subdirectory of
+`build`. To compile individual, just run `make UTILITY_NAM`
 
 Reference manual is included in the repository (refman.pdf).
