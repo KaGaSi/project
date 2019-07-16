@@ -13,7 +13,7 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-lmp_data utility generates lammps data file from FIELD and coordinate file.\
+lmp_data utility generates lammps data file from FIELD and coordinate file. \
 It assumes molecules have bonds and can also have angles, but no dihedrals.\n\n");
   }
 
@@ -295,9 +295,9 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "molecule") == 0 ||
-        strcmp(split, "Molecule") == 0 ||
-        strcmp(split, "MOLECULE") == 0 ) {
+    if (strncmp(split, "molecule", 8) == 0 ||
+        strncmp(split, "Molecule", 8) == 0 ||
+        strncmp(split, "MOLECULE", 8) == 0 ) {
       break;
     }
   } //}}}
