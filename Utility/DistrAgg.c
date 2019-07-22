@@ -182,12 +182,13 @@ int main(int argc, char *argv[]) {
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
   Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+  Counts Counts; // structure with number of beads, molecules, etc.
+  int *Index; // revers of Bead[].Index //}}}
 
   // read system information //{{{
   char vcf[1];
   vcf[0] = '\0';
-  ReadStructure(input_vsf, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  ReadStructure(input_vsf, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule, &Index);
 
   // vsf file is not needed anymore
   free(input_vsf); //}}}
@@ -427,7 +428,7 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule);
+    ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
 
     // print info about aggregates if '-V' is used //{{{
     if (verbose2) {

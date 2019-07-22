@@ -491,8 +491,9 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                     (*Aggregate)[agg_j].Monomer[(*Aggregate)[agg_j].nMonomers] = (*Bead)[i].Index;
                     (*Aggregate)[agg_j].nMonomers++;
 
-                    (*Bead)[i].Aggregate[(*Bead)[i].nAggregates] = agg_j;
                     (*Bead)[i].nAggregates++;
+                    (*Bead)[i].Aggregate = realloc((*Bead)[i].Aggregate, (*Bead)[i].nAggregates*sizeof(int));
+                    (*Bead)[i].Aggregate[(*Bead)[i].nAggregates-1] = agg_j;
                   }
                 } //}}}
               } else if ((*Bead)[j].Molecule == -1 && // monomeric 'j'
@@ -518,8 +519,9 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                     (*Aggregate)[agg_i].Monomer[(*Aggregate)[agg_i].nMonomers] = (*Bead)[j].Index;
                     (*Aggregate)[agg_i].nMonomers++;
 
-                    (*Bead)[j].Aggregate[(*Bead)[j].nAggregates] = agg_i;
                     (*Bead)[j].nAggregates++;
+                    (*Bead)[j].Aggregate = realloc((*Bead)[j].Aggregate, (*Bead)[j].nAggregates*sizeof(int));
+                    (*Bead)[j].Aggregate[(*Bead)[j].nAggregates-1] = agg_i;
                   }
                 }
               } //}}}
@@ -573,7 +575,6 @@ int main(int argc, char *argv[]) {
       exit(0);
     }
   }
-
   int req_args = 6; //}}}
 
   // check if correct number of arguments //{{{
@@ -618,18 +619,18 @@ int main(int argc, char *argv[]) {
   // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
   int ext = 1;
   char **extension = malloc(ext*sizeof(char *));
+  extension[0] = malloc(5*sizeof(char));
+  strcpy(extension[0], ".vcf");
   if (joined_vcf[0] != '\0') {
-    extension[0] = malloc(5*sizeof(char));
-    strcpy(extension[0], ".vcf");
     if (!ErrorExtension(joined_vcf, ext, extension)) {
       Help(argv[0], true);
       exit(1);
     }
-    for (int i = 0; i < ext; i++) {
-      free(extension[i]);
-    }
-    free(extension);
-  } //}}}
+  }
+  for (int i = 0; i < ext; i++) {
+    free(extension[i]);
+  }
+  free(extension); //}}}
 
   // use .vsf file other than traject.vsf? //{{{
   char *input_vsf = calloc(1024,sizeof(char *));
@@ -743,10 +744,11 @@ int main(int argc, char *argv[]) {
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
   Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+  Counts Counts; // structure with number of beads, molecules, etc.
+  int *Index; // reverse of Bead[].Index //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule, &Index);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -1047,6 +1049,8 @@ int main(int argc, char *argv[]) {
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
+  free(xm_use_mol);
+  free(xm_mols);
   free(BeadType);
   FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
