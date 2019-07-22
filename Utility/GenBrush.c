@@ -220,9 +220,9 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "molecule") == 0 ||
-        strcmp(split, "Molecule") == 0 ||
-        strcmp(split, "MOLECULE") == 0 ) {
+    if (strncmp(split, "molecule", 8) == 0 ||
+        strncmp(split, "Molecule", 8) == 0 ||
+        strncmp(split, "MOLECULE", 8) == 0 ) {
       Counts.TypesOfMolecules = atoi(strtok(NULL, " \t"));
       break;
     }
@@ -362,7 +362,6 @@ int main(int argc, char *argv[]) {
   mols[1] = round(BoxLength.y / spacing[1]);
   printf("Grid of %d x %d mols\n", mols[0], mols[1]);
 
-  // Generate coordinates //{{{
   // open FIELD-like file //{{{
   if ((fr = fopen(input, "r")) == NULL) {
     ErrorFileOpen(input, 'r');
@@ -373,9 +372,9 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "molecule") == 0 ||
-        strcmp(split, "Molecule") == 0 ||
-        strcmp(split, "MOLECULE") == 0 ) {
+    if (strncmp(split, "molecule", 8) == 0 ||
+        strncmp(split, "Molecule", 8) == 0 ||
+        strncmp(split, "MOLECULE", 8) == 0 ) {
       Counts.TypesOfMolecules = atoi(strtok(NULL, " \t"));
       break;
     }
@@ -420,198 +419,17 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // longest molecule type //{{{
-  int longest = -1;
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    if (MoleculeType[i].nBeads > longest) {
-      longest = i;
+  // TODO: generalize (at some late point)
+  // TODO now: allocate the arrays
+  Counts.Molecules = mols[0] * mols[1] * 2;
+  Counts.Beads = mols[0] * mols[1] * 2 * MoleculeType[0].nBeads;
+  Molecule = realloc(Molecule, Counts.Molecules*sizeof(struct Molecule));
+
+  for (int i = 0; i < mols[0]; i++) {
+    for (int j = 0; j < mols[1]; j++) {
+      
     }
   }
-  double length = prototype_z[longest][MoleculeType[longest].nBeads-1];
-  printf("Length of the molecule: %lf\n", length); //}}}
-
-  double dist = 0.7; // distance between layers (and beads)
-  int x_n = BoxLength.x / dist, y_n = BoxLength.y / dist, z_n = BoxLength.z / dist; // number of positions per axes
-  int x = 0, y = 0; // coordinates that are incrementally increased
-  double z = 0.1; // coordinates that are incrementally increased
-  int count_free = 0; // count number of unbonded beads that are placed
-
-  int layer[Counts.TypesOfMolecules];
-  int total_layers = 0;
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    layer[i] = x_n * (int)(BoxLength.z / (prototype_z[i][MoleculeType[i].nBeads-1] + dist));
-    printf("Maximum number of %s molecules per layer: %d\n", MoleculeType[i].Name, layer[i]);
-    layer[i] = MoleculeType[i].Number / layer[i] + 1;
-    total_layers += layer[i];
-  }
-  int sol_layers = Counts.Unbonded / (x_n * z_n);
-  int free_layer_per_mol_layer = sol_layers / total_layers;
-  printf("%d molecule layers and %d solvent layers (%d solvent layers per one molecule layer).\n", total_layers, sol_layers, free_layer_per_mol_layer);
-
-  // molecules layers with solvent layers in between //{{{
-  for (int i = 0; i < Counts.Molecules; i++) {
-    int type = Molecule[i].Type;
-    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      int id = Molecule[i].Bead[j];
-      Bead[id].Position.x = (x % x_n) * dist + 0.1;
-      Bead[id].Position.y = (y % y_n) * dist + 0.1;
-      Bead[id].Position.z = z + prototype_z[type][j];
-    }
-
-    z += prototype_z[type][MoleculeType[type].nBeads-1] + dist;
-    // add solvent when molecule do not fit till the end of z direction
-    if ((z+prototype_z[type][MoleculeType[type].nBeads-1]) >= BoxLength.z) {
-      for (; count_free < Counts.Unbonded; count_free++) {
-        Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
-        Bead[count_free].Position.y = (y % y_n) * dist + 0.1;
-        Bead[count_free].Position.z = z;
-        z += dist;
-        if (z >= BoxLength.z) {
-          break;
-        }
-      }
-      z = 0.1;
-    }
-    // if z is filled, change also x and y
-    if (z == 0.1) {
-      x++;
-      int y_old = y;
-      y = x / x_n;
-      // when y changes, whole xz layer of molecules was added -- add xz layers of unbonded beads
-      if ((y-y_old) > 0) {
-        for (int j = 0; j < free_layer_per_mol_layer; j++) {
-          for (; count_free < Counts.Unbonded; count_free++) {
-            Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
-            Bead[count_free].Position.y = (y % y_n) * dist + 0.1;
-            Bead[count_free].Position.z = z;
-            z += dist;
-            if (z >= BoxLength.z) {
-              z = 0.1;
-            }
-            if (z == 0.1) {
-              x++;
-              y_old = y;
-              y = x / x_n;
-              // when y changes, whole xz layer of unbonded beads was added
-              if ((y-y_old) > 0) {
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-  } //}}}
-
-  // remaining unbonded beads //{{{
-  for (; count_free < Counts.Unbonded; count_free++) {
-    Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
-    Bead[count_free].Position.y = (y % y_n) * dist + 0.1;
-    Bead[count_free].Position.z = z;
-//  printf("%d %lf %lf %lf\n", count_free, Bead[count_free].Position.x, Bead[count_free].Position.y, Bead[count_free].Position.z);
-    z += dist;
-    if (z >= BoxLength.z) {
-      z = 0.1;
-    }
-    if (z >= BoxLength.z) {
-      z = 0.1;
-    }
-    if (z == 0.1) {
-      x++;
-      y = x / x_n;
-    }
-  } //}}}
-
-  // tweak y_dist and do it again //{{{
-  double y_dist = ((BoxLength.y - 0.5) / (y * dist)) * dist;
-  x = 0; // coordinates that are incrementally increased
-  y = 0; // coordinates that are incrementally increased
-  z = 0.1; // coordinates that are incrementally increased
-  double y_coor = 0.1;
-  count_free = 0; // count number of unbonded beads that are placed
-//printf("y_dist = %lf\n", y_dist);
-
-  // molecules layers with solvent layers in between //{{{
-  for (int i = 0; i < Counts.Molecules; i++) {
-    int type = Molecule[i].Type;
-    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      int id = Molecule[i].Bead[j];
-      Bead[id].Position.x = (x % x_n) * dist + 0.1;
-      Bead[id].Position.y = y_coor;
-      Bead[id].Position.z = z + prototype_z[type][j];
-    }
-
-    z += prototype_z[type][MoleculeType[type].nBeads-1] + dist;
-    // add solvent when molecule do not fit till the end of z direction
-    if ((z+prototype_z[type][MoleculeType[type].nBeads-1]) >= BoxLength.z) {
-      for (; count_free < Counts.Unbonded; count_free++) {
-        Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
-        Bead[count_free].Position.y = y_coor;
-        Bead[count_free].Position.z = z;
-        z += dist;
-        if (z >= BoxLength.z) {
-          break;
-        }
-      }
-      z = 0.1;
-    }
-    // if z is filled, change also x and y
-    if (z == 0.1) {
-      x++;
-      int y_old = y;
-      y = x / x_n;
-      // when y changes, whole xz layer of molecules was added -- add xz layers of unbonded beads
-      if ((y-y_old) > 0) {
-        y_coor += y_dist;
-        for (int j = 0; j < free_layer_per_mol_layer; j++) {
-          for (; count_free < Counts.Unbonded; count_free++) {
-            Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
-            Bead[count_free].Position.y = y_coor;
-            Bead[count_free].Position.z = z;
-            z += dist;
-            if (z >= BoxLength.z) {
-              z = 0.1;
-            }
-            if (z == 0.1) {
-              x++;
-              y_old = y;
-              y = x / x_n;
-              // when y changes, whole xz layer of unbonded beads was added
-              if ((y-y_old) > 0) {
-                y_coor += y_dist;
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-  } //}}}
-
-  // remaining unbonded beads //{{{
-  for (; count_free < Counts.Unbonded; count_free++) {
-    Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
-    Bead[count_free].Position.y = y_coor;
-    Bead[count_free].Position.z = z;
-//  printf("%d %lf %lf %lf\n", count_free, Bead[count_free].Position.x, Bead[count_free].Position.y, Bead[count_free].Position.z);
-    z += dist;
-    if (z >= BoxLength.z) {
-      z = 0.1;
-    }
-    if (z >= BoxLength.z) {
-      z = 0.1;
-    }
-    if (z == 0.1) {
-      x++;
-      int y_old = y;
-      y = x / x_n;
-      if ((y-y_old) > 0) {
-        y_coor += y_dist;
-      }
-    }
-  } //}}}
-  //}}}
-  //}}}
 
   // open output .vcf file for writing //{{{
   FILE *out;
@@ -620,7 +438,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  strcpy(stuff, "# by AddToSystem\n");
+  strcpy(stuff, "# by GenBrush\n");
 
   // write pbc
   fprintf(out, "pbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
