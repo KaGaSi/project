@@ -319,7 +319,7 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  */
 bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     *Counts, BeadType **BeadType, Bead **Bead, MoleculeType **MoleculeType,
-    Molecule **Molecule) {
+    Molecule **Molecule, int **Index) {
 
   FILE *vsf;
 
@@ -516,6 +516,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   (*Counts).Molecules = max_mol; // mol ids start from 1 in vsf
   (*Counts).BeadsInVsf = max_bead + 1; // bead ids start from 0 in vsf
 
+  // reverse of Bead[].Index
+  *Index = calloc((*Counts).BeadsInVsf, sizeof(int));
+
   // allocate Bead and Molecule structures
   *Bead = calloc((*Counts).BeadsInVsf, sizeof(struct Bead));
   int mol_alloced = (*Counts).Molecules; // redundant as the earilier max_mol is not used later
@@ -580,6 +583,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       }
 
       // assign values to Bead & Molecule
+      (*Index)[bead_id] = bead_id; // reverse of Bead[].Index
       (*Bead)[bead_id].Type = bead_type;
       (*Bead)[bead_id].Index = bead_id;
       (*Bead)[bead_id].Molecule = mol_id;
@@ -604,6 +608,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   int count = 0;
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     if ((*Bead)[i].Type == -1) {
+      (*Index)[i] = i; // reverse of Bead[].Index
       (*Bead)[i].Type = type_default;
       (*Bead)[i].Index = i;
       (*Bead)[i].Molecule = -1; // default beads aren't in molecules
@@ -1202,6 +1207,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       (*Bead)[count].Type = (*Bead)[i].Type;
       (*Bead)[count].Molecule = (*Bead)[i].Molecule;
       (*Bead)[count].Index = (*Bead)[i].Index;
+      (*Index)[(*Bead)[i].Index] = count;
       int id = (*Bead)[count].Molecule;
       if (id != -1) {
         int type = (*Molecule)[id].Type;
@@ -1311,8 +1317,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 
   // allocate Bead[].Aggregate array //{{{
   for (int i = 0; i < (*Counts).Beads; i++) {
-    // quite a lot memory to be on the save side
-    (*Bead)[i].Aggregate = calloc(20, sizeof(int));
+    (*Bead)[i].Aggregate = calloc(1, sizeof(int));
   } //}}}
 
   // set all molecule & bead types to be unused //{{{
@@ -1604,11 +1609,11 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
  */
 bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
                     BeadType *BeadType, Bead **Bead,
-                    MoleculeType *MoleculeType, Molecule **Molecule) {
+                    MoleculeType *MoleculeType, Molecule **Molecule, int *Index) {
 
   bool error = false;
 
-  // is there a Step? I.e., isn't this the line 'Last Step'?
+  // is there a Step? i.e., isn't this the line 'Last Step'?
   if (getc(agg_file) == 'L') {
     error = true;
   } else {
@@ -1645,7 +1650,13 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
       // read monomeric beads in Aggregate 'i' //{{{
       fscanf(agg_file, "%d :", &(*Aggregate)[i].nMonomers);
       for (int j = 0; j < (*Aggregate)[i].nMonomers; j++) {
-        fscanf(agg_file, "%d", &(*Aggregate)[i].Monomer[j]);
+        int id;
+        fscanf(agg_file, "%d", &id); // monomer index from vsf file
+        (*Aggregate)[i].Monomer[j] = id;
+        int id_in_program = Index[id];
+        (*Bead)[id_in_program].nAggregates++;
+        (*Bead)[id_in_program].Aggregate = realloc((*Bead)[id_in_program].Aggregate, (*Bead)[id_in_program].nAggregates*sizeof(int));
+        (*Bead)[id_in_program].Aggregate[(*Bead)[id_in_program].nAggregates-1] = i;
       }
 
       while (getc(agg_file) != '\n')
@@ -1673,7 +1684,11 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
         // increment number of beads in aggregate 'i'
         (*Aggregate)[i].nBeads += MoleculeType[(*Molecule)[mol].Type].nBeads;
       }
-    } //}}}
+    }
+
+    // fill Bead[].Aggregate for monomeric Beads
+//  for (int i = 0, i < (*Counts).Bead)
+    //}}}
 
     // calculate aggregates' masses //{{{
     for (int i = 0; i < (*Counts).Aggregates; i++) {
@@ -1685,6 +1700,9 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
         (*Aggregate)[i].Mass += MoleculeType[type].Mass;
       }
     } //}}}
+  }
+  for (int i = 0; i < (*Counts).Beads; i++) {
+    printf("%7d %7d %7d %7d %7d\n", (*Bead)[i].Index, (*Bead)[i].Molecule, (*Bead)[i].Aggregate[0], (*Bead)[i].nAggregates, Index[(*Bead)[i].Index]);
   }
   return error;
 } //}}}

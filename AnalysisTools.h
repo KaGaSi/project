@@ -52,7 +52,7 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * */
 bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Counts,
                    BeadType **BeadType, Bead **Bead,
-                   MoleculeType **MoleculeType, Molecule **Molecule); //}}}
+                   MoleculeType **MoleculeType, Molecule **Molecule, int **Index); //}}}
 
 // ReadCoordinates() //{{{
 /**
@@ -93,7 +93,7 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
  */
 bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
                     BeadType *BeadType, Bead **Bead,
-                    MoleculeType *MoleculeType, Molecule **Molecule); //}}}
+                    MoleculeType *MoleculeType, Molecule **Molecule, int *Index); //}}}
 
 // WriteCoorIndexed //{{{
 /**
