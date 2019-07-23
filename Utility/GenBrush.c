@@ -7,6 +7,16 @@
 #include "../Options.h"
 #include "../Errors.h"
 
+/* Takes FIELD with box dimensions on the first line, with species section
+ * containing beads in molecules, and with molecule section containing 1
+ * molecule type as well as nummols 1. It uses the coordinates from
+ * molecule section as a prototype for the brush and creates a brush on z-
+ * sides of the box with given brush density. It is assumed that the total
+ * number of beads is 3*(box volume). Brush molecules are placed at the end
+ * of the vsf file and remaining beads are neutral monomeric beads with
+ * mass 0 and name None.
+ */
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -30,6 +40,7 @@ on a square grid with specified distance between anchoring points.\n\n");
   fprintf(ptr, "      -s <float> <float>  spacing in x and y directions (default: 1 1)\n");
   fprintf(ptr, "      -f <name>           FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      -v                  verbose output\n");
+  fprintf(ptr, "      -V                  more verbose output\n");
   fprintf(ptr, "      -h                  print this help and exit\n");
 } //}}}
 
@@ -62,6 +73,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
+        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-h") != 0) {
 
       ErrorOption(argv[i]);
@@ -91,6 +103,10 @@ int main(int argc, char *argv[]) {
 
   // output verbosity //{{{
   bool verbose = BoolOption(argc, argv, "-v"); // verbose output
+  bool verbose2; // silent;
+  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
+//SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
+//bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
   // FIELD-like file //{{{
@@ -152,7 +168,6 @@ int main(int argc, char *argv[]) {
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information from FIELD-like //{{{
   // open FIELD-like file //{{{
   FILE *fr;
   if ((fr = fopen(input, "r")) == NULL) {
@@ -171,19 +186,22 @@ int main(int argc, char *argv[]) {
   BoxLength.y = atof(box[1]);
   BoxLength.z = atof(box[2]); //}}}
 
-  Counts.BeadsInVsf = 3 * BoxLength.z * BoxLength.y * BoxLength.z;
+  // assumes number bead density equal to 3
+  // TODO: generalize by adding an option for custom number of beads
+  Counts.BeadsInVsf = 3 * BoxLength.x * BoxLength.y * BoxLength.z;
   Counts.Beads = Counts.BeadsInVsf;
   Bead = malloc(Counts.Beads*sizeof(struct Bead));
+
   // allocate Bead Aggregate array - needed only to free() //{{{
   for (int i = 0; i < Counts.Beads; i++) {
     Bead[i].Aggregate = calloc(1,sizeof(double));
     Bead[i].nAggregates = 0;
   } //}}}
 
-  int mols[2]; // number of molecules in x ([0]) and y ([1]) directions
+  // number of molecules in x and y directions
+  int mols[2];
   mols[0] = round(BoxLength.x / spacing[0]);
   mols[1] = round(BoxLength.y / spacing[1]);
-  printf("Grid of %d x %d mols\n", mols[0], mols[1]);
 
   Counts.Molecules = mols[0] * mols[1] * 2;
   Molecule = calloc(Counts.Molecules, sizeof(struct Molecule));
@@ -239,7 +257,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  MoleculeType = calloc(Counts.TypesOfMolecules,sizeof(struct MoleculeType));
+  MoleculeType = calloc(Counts.TypesOfMolecules, sizeof(struct MoleculeType));
+  Vector **prototype = malloc(Counts.TypesOfMolecules*sizeof(struct Vector *));
 
   // read info about molecule types (and calculate numbers of beads and stuff) //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -263,7 +282,9 @@ int main(int argc, char *argv[]) {
     // number of beads //{{{
     fgets(line, sizeof(line), fr);
     strtok(line, " \t ");
-    MoleculeType[i].nBeads = atoi(strtok(NULL, " \t")); //}}}
+    MoleculeType[i].nBeads = atoi(strtok(NULL, " \t"));
+    MoleculeType[i].Bead = calloc(MoleculeType[i].nBeads, sizeof(int));
+    prototype[i] = calloc(MoleculeType[i].nBeads, sizeof(Vector)); //}}}
     // number & ids of beadtypes & mass //{{{
     MoleculeType[i].nBTypes = 0;
     MoleculeType[i].BType = calloc(1,sizeof(int));
@@ -272,6 +293,7 @@ int main(int argc, char *argv[]) {
       fgets(line, sizeof(line), fr);
       bool test = false;
       int type = FindBeadType(strtok(line, " \t "), Counts, BeadType);
+      MoleculeType[i].Bead[j] = type;
       for (int k = 0; k < MoleculeType[i].nBTypes; k++) {
         if (MoleculeType[i].BType[k] == type) {
           test = true;
@@ -284,6 +306,10 @@ int main(int argc, char *argv[]) {
         MoleculeType[i].BType[MoleculeType[i].nBTypes-1] = type;
       }
       MoleculeType[i].Mass += BeadType[type].Mass;
+      // read coordinates
+      prototype[i][j].x = atof(strtok(NULL, " \t"));
+      prototype[i][j].y = atof(strtok(NULL, " \t"));
+      prototype[i][j].z = atof(strtok(NULL, " \t"));
     } //}}}
     // number of bonds //{{{
     fgets(line, sizeof(line), fr);
@@ -298,7 +324,6 @@ int main(int argc, char *argv[]) {
       MoleculeType[i].Bond[j][0] = atoi(strtok(NULL, " \t")) - 1;
       MoleculeType[i].Bond[j][1] = atoi(strtok(NULL, " \t")) - 1;
     } //}}}
-
     // skip till 'finish' //{{{
     while(fgets(line, sizeof(line), fr)) {
       char *split;
@@ -310,141 +335,87 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
   } //}}}
-  //}}}
+  fclose(fr);
 
-//TODO now: fill Molecule[].Bead
-  // fill arrays - based on a single molecule types
+  // fill arrays - based on a single molecule type for now //{{{
   Counts.Bonded = 0;
   int i = 0; // at some point, there will be more molecule types
   MoleculeType[i].Number = Counts.Molecules;
   Counts.Bonded += MoleculeType[i].Number * MoleculeType[i].nBeads;
   Counts.Unbonded = Counts.Beads - Counts.Bonded;
+  printf("%d %d %d\n", Counts.Beads, Counts.Bonded, Counts.Unbonded);
   count = Counts.Unbonded;
   for (int j = 0; j < Counts.Molecules; j++) {
     Molecule[j].Bead = calloc(MoleculeType[i].nBeads, sizeof(int));
     Molecule[j].Type = i;
     for (int k = 0; k < MoleculeType[i].nBeads; k++) {
       Molecule[j].Bead[k] = count;
+      Bead[count].Molecule = j;
       count++;
     }
   }
-  // fill Bead array
-  for (int i = 0; i < Counts.Unbonded; i++) {
-    Bead[i].Type = 0;
-    Bead[i].Molecule = -1;
-    Bead[i].Index = i;
-  }
-  for (int i = 0; i < Counts.Molecules; i++) {
-    int mol_type = Molecule[i].Type; // for now, always 0
-    for (int j = 0; j < MoleculeType[mol_type].nBeads; j++) {
-    //TODO now: fill Molecule[].Bead - here? Or when reading the FIELD?
-    //when reading the FIELD before, prototypes were created - add bead types to that
-    }
-  }
-//// realloc Bead and Molecule arrays //{{{
-//Molecule = realloc(Molecule, (Counts.Molecules+MoleculeType[i].Number)*sizeof(struct Molecule));
-//for (int j = 0; j < MoleculeType[i].Number; j++) {
-//  Molecule[Counts.Molecules+j].Bead = calloc(MoleculeType[i].nBeads, (sizeof(int)));
-//  Molecule[Counts.Molecules+j].Type = i;
-//} //}}}
-//    BeadType[type].Number += MoleculeType[i].Number;
-//    // fill Bead & Molecule arrays
-//    for (int k = 0; k < MoleculeType[i].Number; k++) {
-//      int id = Counts.Beads + MoleculeType[i].nBeads * k + j;
-//      Bead[id].Type = type;
-//      Bead[id].Molecule = k;
-//      Bead[id].Index = id;
-//      Molecule[Counts.Molecules+k].Bead[j] = id;
-//    }
 
-//// calculate total number of beads //{{{
-//Counts.Beads = 0;
-//for (int i = 0; i < Counts.TypesOfBeads; i++) {
-//  Counts.Beads += BeadType[i].Number;
-//}
-//Counts.Bonded = Counts.Beads - Counts.Unbonded;
-//Counts.BeadsInVsf = Counts.Beads; //}}}
-
-  // calculate total number of molecules //{{{
-  Counts.Molecules = 0;
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    Counts.Molecules += MoleculeType[i].Number;
-  } //}}}
-
-  // write all molecules & beads //{{{
+  // write all molecules & beads
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = true;
   }
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Write = true;
   } //}}}
-  fclose(fr); //}}}
 
-  // create & fill output vsf file
-  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
-
-  // open FIELD-like file //{{{
-  if ((fr = fopen(input, "r")) == NULL) {
-    ErrorFileOpen(input, 'r');
-    exit(1);
+  // put unbonded beads in the middle of the box - just for the fun of it //{{{
+  for (int i = 0; i < Counts.Unbonded; i++) {
+    Bead[i].Position.x = BoxLength.x / 2;
+    Bead[i].Position.y = BoxLength.y / 2;
+    Bead[i].Position.z = BoxLength.z / 2;
+    Bead[i].Type = 0;
+    Bead[i].Molecule = -1;
+    Bead[i].Index = i;
   } //}}}
 
-  // skip to molecule section //{{{
-  while(fgets(line, sizeof(line), fr)) {
-    char *split;
-    split = strtok(line, " \t ");
-    if (strncmp(split, "molecule", 8) == 0 ||
-        strncmp(split, "Molecule", 8) == 0 ||
-        strncmp(split, "MOLECULE", 8) == 0 ) {
-      Counts.TypesOfMolecules = atoi(strtok(NULL, " \t"));
-      break;
-    }
-  } //}}}
-
-  // read bond lenghts for all molecule types and create prototype molecules //{{{
-  double *prototype_z[Counts.TypesOfMolecules]; // prototype molecule z coordinate
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    // allocate array for bond lengths
-    prototype_z[i] = calloc(MoleculeType[i].nBeads,sizeof(double));
-    prototype_z[i][0] = 0;
-
-    // skip to bonds section //{{{
-    while(fgets(line, sizeof(line), fr)) {
-      char *split;
-      split = strtok(line, " \t");
-      if (strcmp(split, "bonds") == 0 ||
-          strcmp(split, "Bonds") == 0 ||
-          strcmp(split, "BONDS") == 0 ) {
-        break;
-      }
-    } //}}}
-
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      fgets(line, sizeof(line), fr);
-      char *split;
-      split = strtok(line, " \t"); // bond type
-      split = strtok(NULL, " \t"); // first id
-      split = strtok(NULL, " \t"); // second id
-      split = strtok(NULL, " \t"); // spring constant
-      split = strtok(NULL, " \t"); // length - what is needed
-      double length = atof(split);
-      if (fabs(length) < 0.01) {
-        length = 0.7;
-      }
-      prototype_z[i][j+1] = prototype_z[i][j] + length;
-    }
-
-    printf("\nbox = (%lf, %lf, %lf)\n\nPrototype %s molecule (z coordinate):\n", BoxLength.x, BoxLength.y, BoxLength.z, MoleculeType[i].Name);
-    for (int j = 0; j < MoleculeType[i].nBeads; j++) {
-      printf("%2d: %lf\n", j, prototype_z[i][j]);
-    }
-  } //}}}
-
+  // generate brush on the grid & fill remaining Bead[] array //{{{
+  count = Counts.Unbonded;
+  // z=0
+  printf("%d\n", count);
   for (int i = 0; i < mols[0]; i++) {
     for (int j = 0; j < mols[1]; j++) {
-
+      Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
+      Bead[count].Position.y = spacing[0] / 2 + spacing[0] * j;
+      Bead[count].Position.z = 0;
+      Bead[count].Index = count;
+      Bead[count].Type = MoleculeType[0].Bead[0];
+//    printf("\n%7d %d %s\n", count, Bead[count].Type, BeadType[Bead[count].Type].Name);
+      for (int k = 1; k < MoleculeType[0].nBeads; k++) {
+        Bead[count+k].Position.x = Bead[count].Position.x + prototype[0][k].x;
+        Bead[count+k].Position.y = Bead[count].Position.y + prototype[0][k].y;
+        Bead[count+k].Position.z = Bead[count].Position.z + prototype[0][k].z;
+        Bead[count+k].Index = count + k;
+        Bead[count+k].Type = MoleculeType[0].Bead[k];
+//      printf("%7d %d %s\n", count+k, Bead[count+k].Type, BeadType[Bead[count+k].Type].Name);
+      }
+      count += MoleculeType[0].nBeads;
     }
   }
+  // z=BoxLength
+  for (int i = 0; i < mols[0]; i++) {
+    for (int j = 0; j < mols[1]; j++) {
+      Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
+      Bead[count].Position.y = spacing[0] / 2 + spacing[0] * j;
+      Bead[count].Position.z = BoxLength.z;
+      Bead[count].Index = count;
+      Bead[count].Type = MoleculeType[0].Bead[0];
+//    printf("\n%7d %d %s\n", count, Bead[count].Type, BeadType[Bead[count].Type].Name);
+      for (int k = 1; k < MoleculeType[0].nBeads; k++) {
+        Bead[count+k].Position.x = Bead[count].Position.x - prototype[0][k].x;
+        Bead[count+k].Position.y = Bead[count].Position.y - prototype[0][k].y;
+        Bead[count+k].Position.z = Bead[count].Position.z - prototype[0][k].z;
+        Bead[count+k].Index = count + k;
+        Bead[count+k].Type = MoleculeType[0].Bead[k];
+//      printf("%7d %d %s\n", count+k, Bead[count+k].Type, BeadType[Bead[count+k].Type].Name);
+      }
+      count += MoleculeType[0].nBeads;
+    }
+  } //}}}
 
   // open output .vcf file for writing //{{{
   FILE *out;
@@ -455,18 +426,35 @@ int main(int argc, char *argv[]) {
 
   strcpy(stuff, "# by GenBrush\n");
 
-  // write pbc
+  // write output vsf file
+  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
+
+  // write output vcf file
+  // pbc
   fprintf(out, "pbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
-  // write coordinates
+  // coordinates
   WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
   fclose(out);
 
   // print information - verbose option //{{{
   if (verbose) {
+    fprintf(stdout, "\nGrid of %d x %d molecules on each wall", mols[0], mols[1]);
     char null[1] = {'\0'};
     putchar('\n');
     putchar('\n');
-    VerboseOutput(false, null, null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, null, null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    // molecule prototypes
+    putchar('\n');
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(stdout, "Prototype of %s\n", MoleculeType[i].Name);
+      for (int j = 0; j < MoleculeType[i].nBeads; j++) {
+        fprintf(stdout, "%8s %lf %lf %lf\n", BeadType[MoleculeType[i].Bead[j]].Name,
+                                             prototype[i][j].x,
+                                             prototype[i][j].y,
+                                             prototype[i][j].z);
+      }
+      putchar('\n');
+    }
   } //}}}
 
   // free memory - to make valgrind happy //{{{
@@ -475,9 +463,11 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    free(prototype_z[i]);
+    free(prototype[i]);
   }
-  free(input); //}}}
+  free(prototype);
+  free(input);
+  free(output_vcf); //}}}
 
   return 0;
 }
