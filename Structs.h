@@ -89,6 +89,7 @@ typedef struct MoleculeType {
 
   int Number, ///< number of molecules of given type
       nBeads, ///< number of beads in every molecule of given type
+      *Bead, ///< ids of bead types of every molecule bead
       nBonds, ///< number of bonds in every molecule of given type
       **Bond, ///< pair of ids for every bond (with relative bead numbers from 0 to nBeads)
                // has to be sorted; size: [MoleculeType[i].Bonds][2]
