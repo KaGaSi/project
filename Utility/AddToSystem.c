@@ -508,7 +508,8 @@ int main(int argc, char *argv[]) {
     fgets(line, 1024, in_add);
     split[0] = strtok(line, " \t");
     split[1] = strtok(NULL, " \t");
-    MoleculeType_add[i].nBeads = atoi(split[1]); //}}}
+    MoleculeType_add[i].nBeads = atoi(split[1]);
+    MoleculeType_add[i].Bead = calloc(MoleculeType[i].nBeads, sizeof(int)); //}}}
 
     // total number of beads in the molecules of type 'i'
     int beads = MoleculeType_add[i].Number*MoleculeType_add[i].nBeads;
@@ -839,7 +840,8 @@ int main(int argc, char *argv[]) {
       rotated[j].z = rot.z.x * prototype[mol_type][j].x + rot.z.y * prototype[mol_type][j].y + rot.z.z * prototype[mol_type][j].z;
     } //}}}
 
-    // for now: only first bead's distance from stuff is checked //{{{
+    // first bead's distance from specified bead typtes is checked //{{{
+    // first bead can have coordinates [0,0,0] or such that the molecule's geometric centre is [0,0,0] (if -gc is used)
     double min_dist;
     if (lowest_dist != -1 || highest_dist != -1) {
       do {
@@ -957,6 +959,7 @@ int main(int argc, char *argv[]) {
     strcpy(MoleculeType[new].Name, MoleculeType_add[i].Name);
     MoleculeType[new].Number = MoleculeType_add[i].Number;
     MoleculeType[new].nBeads = MoleculeType_add[i].nBeads;
+    MoleculeType[new].Bead = calloc(MoleculeType[new].nBeads, sizeof(int));
     MoleculeType[new].nBonds = MoleculeType_add[i].nBonds;
     MoleculeType[new].Bond = malloc(MoleculeType[new].nBonds*sizeof(int *));
     for (int j = 0; j < MoleculeType[new].nBonds; j++) {
@@ -1068,8 +1071,8 @@ int main(int argc, char *argv[]) {
   // free memory - to make valgrind happy //{{{
   free(BeadType);
   free(BeadType_add);
-  FreeMoleculeType(Counts, &MoleculeType);
   FreeMoleculeType(Counts_add, &MoleculeType_add);
+  FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeMolecule(Counts_add, &Molecule_add);
   FreeBead(Counts, &Bead);
