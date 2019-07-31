@@ -33,6 +33,7 @@ set(UTILS AddToSystem
           DihedralMolecules
           DistrAgg
           GenSystem
+          GenBrush
           GyrationAggregates
           GyrationMolecules
           JoinAggregates
