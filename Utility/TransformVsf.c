@@ -135,16 +135,16 @@ int main(int argc, char *argv[]) {
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information{{{
-  char vcf[1];
-  vcf[0] = '\0';
-  ReadStructure(input_vsf, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  // read system information
+  char input_coor[1] = {'\0'};
+  ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(input_vsf); //}}}
+  free(input_vsf);
 //for (int i = 0; i < Counts.TypesOfMolecules; i++) {
 //  printf("%d\n", MoleculeType[i].nBTypes);
 //}
@@ -162,6 +162,7 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead); //}}}

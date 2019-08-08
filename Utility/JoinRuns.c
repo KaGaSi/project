@@ -257,18 +257,20 @@ int main(int argc, char *argv[]) {
   BeadType *BeadType1; // structure with info about all bead types
   MoleculeType *MoleculeType1; // structure with info about all molecule types
   Bead *Bead1; // structure with info about every bead
+  int *Index1; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule1; // structure with info about every molecule
   // data from 2nd run
   BeadType *BeadType2; // structure with info about all bead types
   MoleculeType *MoleculeType2; // structure with info about all molecule types
   Bead *Bead2; // structure with info about every bead
+  int *Index2; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule2; // structure with info about every molecule
   // Counts is the same for both runs
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information //{{{
-  bool indexed = ReadStructure(input_vsf_1, input_vcf_1, bonds_file, &Counts, &BeadType1, &Bead1, &MoleculeType1, &Molecule1);
-  ReadStructure(input_vsf_2, input_vcf_2, bonds_file, &Counts, &BeadType2, &Bead2, &MoleculeType2, &Molecule2);
+  bool indexed = ReadStructure(input_vsf_1, input_vcf_1, bonds_file, &Counts, &BeadType1, &Bead1, &Index1, &MoleculeType1, &Molecule1);
+  ReadStructure(input_vsf_2, input_vcf_2, bonds_file, &Counts, &BeadType2, &Bead2, &Index2, &MoleculeType2, &Molecule2);
 
   // vsf files are not needed anymore
   free(input_vsf_1);
@@ -404,7 +406,7 @@ int main(int argc, char *argv[]) {
     ungetc(test, vcf_1);
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf_1, Counts, &Bead1, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
       exit(1);
@@ -470,7 +472,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep from 1st run: %6d", ++count);
 
       // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf_1, Counts, &Bead1, &stuff)) != 0) {
+      if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
         ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
         exit(1);
@@ -511,7 +513,7 @@ int main(int argc, char *argv[]) {
     ungetc(test, vcf_2);
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf_2, Counts, &Bead2, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_vcf_2, test, count, stuff, input_vsf_2);
       exit(1);
@@ -642,7 +644,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep from 2st run: %6d", ++count);
 
       // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf_2, Counts, &Bead2, &stuff)) != 0) {
+      if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
         ErrorCoorRead(input_vcf_2, test, count, stuff, input_vsf_2);
         exit(1);
@@ -664,6 +666,8 @@ int main(int argc, char *argv[]) {
   // free memory - to make valgrind happy //{{{
   free(BeadType1);
   free(BeadType2);
+  free(Index1);
+  free(Index2);
   FreeMoleculeType(Counts, &MoleculeType1);
   FreeMoleculeType(Counts, &MoleculeType2);
   FreeMolecule(Counts, &Molecule1);
