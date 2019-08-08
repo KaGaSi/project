@@ -144,8 +144,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_vcf[1024];
-  strcpy(input_vcf, argv[++count]);
+  char input_coor[1024];
+  strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
   }
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vcf, ext, extension)) {
+  if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   }
@@ -199,14 +199,15 @@ int main(int argc, char *argv[]) {
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information{{{
-  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  // read system information
+  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(input_vsf); //}}}
+  free(input_vsf);
 
   // '-m' option //{{{
   int *specific_moltype_for_size;
@@ -267,7 +268,7 @@ int main(int argc, char *argv[]) {
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n", name, input_vcf);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n", name, input_coor);
       exit(1);
     }
 
@@ -293,8 +294,8 @@ int main(int argc, char *argv[]) {
 
   // open input coordinate file //{{{
   FILE *vcf;
-  if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    ErrorFileOpen(input_vcf, 'r');
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
 
@@ -303,7 +304,7 @@ int main(int argc, char *argv[]) {
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
       exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
@@ -311,7 +312,7 @@ int main(int argc, char *argv[]) {
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
     exit(1);
   }
 
@@ -361,7 +362,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "Chosen aggregate sizes:");
     for (int i = 0; i < aggs; i++) {
@@ -390,23 +391,21 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
       count--; // because last step isn't processed
       fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, count, stuff);
       test = '\0';
-      break;
+      exit(1);
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\nError: premature end of %s file (%d. step - '%s')\n\n", input_vcf, --count, stuff);
+      fprintf(stderr, "\nError: premature end of %s file (%d. step - '%s')\n\n", input_coor, --count, stuff);
       exit(1);
     }
   }
-  if (test == '\0') {
-    exit(1);
-  }
+
   // print number of discarded steps? //{{{
   if (!silent) {
     if (script) {
@@ -442,7 +441,7 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // read aggregates //{{{
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
@@ -453,9 +452,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -866,6 +865,7 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);

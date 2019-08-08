@@ -45,14 +45,15 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * \param [out] Counts        numbers of beads, molecules, etc.
  * \param [out] BeadType      information about bead types
  * \param [out] Bead          informationn about individual beads
+ * \param [out] Index         bead indices between program and vsf (i.e., opposite of Bead[].Index)
  * \param [out] MoleculeType  information about molecule types
  * \param [out] Molecule      information about individual molecules
  * \return 'true' or 'false' for .vcf file with indexed or ordered
  * timesteps, respectively
  * */
 bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Counts,
-                   BeadType **BeadType, Bead **Bead,
-                   MoleculeType **MoleculeType, Molecule **Molecule, int **Index); //}}}
+                   BeadType **BeadType, Bead **Bead, int **Index,
+                   MoleculeType **MoleculeType, Molecule **Molecule); //}}}
 
 // ReadCoordinates() //{{{
 /**
@@ -61,11 +62,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
  * \param [in]  indexed    is the vcf indexed?
  * \param [in]  vcf_file   name of input .vcf coordinate file
  * \param [in]  Counts     numbers of beads, molecules, etc.
+ * \param [in]  Index         bead indices between program and vsf (i.e., opposite of Bead[].Index)
  * \param [out] Bead       coordinates of individual beads
  * \param [out] stuff      first line of a timestep
  * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
  */
-int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
+int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, int *Index, Bead **Bead, char **stuff); //}}}
 
 // SkipCoor() //{{{
 /**

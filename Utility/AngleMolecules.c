@@ -183,11 +183,12 @@ int main(int argc, char *argv[]) {
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -396,7 +397,7 @@ int main(int argc, char *argv[]) {
     }
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
       exit(1);
@@ -558,6 +559,7 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
