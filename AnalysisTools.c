@@ -313,8 +313,8 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * overhaul. Thankfully, it works.
  */
 bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
-    *Counts, BeadType **BeadType, Bead **Bead, MoleculeType **MoleculeType,
-    Molecule **Molecule, int **Index) {
+    *Counts, BeadType **BeadType, Bead **Bead, int **Index,
+    MoleculeType **MoleculeType, Molecule **Molecule) {
 
   FILE *vsf;
 
@@ -1398,7 +1398,7 @@ void MoveCOMMolecules(Counts Counts, Vector BoxLength,
 /**
  * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
  */
-int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
+int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, int *Index, Bead **Bead, char **stuff) {
 
   // initial stuff //{{{
   (*stuff)[0] = '\0'; // no comment line
@@ -1426,13 +1426,6 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, ch
   fsetpos(vcf_file, &position); //}}}
 
   if (indexed) { // indexed timestep
-    // allocate helper array of coordinates //{{{
-    double imp = 1000000; // a value impossible for bead's coordinate
-    Vector *pos = malloc(Counts.BeadsInVsf*sizeof(Vector));
-    for (int i = 0; i < Counts.BeadsInVsf; i++) {
-      pos[i].x = imp;
-    } //}}}
-
     // read data //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       fgets(line, sizeof(line), vcf_file);
@@ -1483,24 +1476,10 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, ch
       } //}}}
 
       // bead coordinates
-      pos[index].x = atof(split[1]);
-      pos[index].y = atof(split[2]);
-      pos[index].z = atof(split[3]);
+      (*Bead)[Index[index]].Position.x = atof(split[1]);
+      (*Bead)[Index[index]].Position.y = atof(split[2]);
+      (*Bead)[Index[index]].Position.z = atof(split[3]);
     } //}}}
-
-    // copy coordinates to Bead struct //{{{
-    int count = 0;
-    for (int i = 0; i < Counts.BeadsInVsf; i++) {
-      if (pos[i].x != imp) { // i.e., if bead i is present in the timestep
-        (*Bead)[count].Position.x = pos[i].x;
-        (*Bead)[count].Position.y = pos[i].y;
-        (*Bead)[count].Position.z = pos[i].z;
-        if ((++count) == Counts.Beads) {
-          break;
-        }
-      }
-    } //}}}
-    free(pos);
   } else { // ordered timestep
     // read data //{{{
     for (int i = 0; i < Counts.Beads; i++) {
