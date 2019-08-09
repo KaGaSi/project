@@ -2268,6 +2268,28 @@ double Min3(double x, double y, double z) {
   return min;
 } //}}}
 
+// Max3() //{{{
+/**
+ * Function returning the highest number from three floats.
+ */
+double Max3(double x, double y, double z) {
+
+  double max;
+  if (x < y) {
+    if (y < z) {
+      max = z;
+    } else {
+      max = y;
+    }
+  } else if (x < z) {
+    max = z;
+  } else {
+    max = x;
+  }
+
+  return max;
+} //}}}
+
 // Sort3() //{{{
 /**
  * Function returning sorted numbers x < y < z.
