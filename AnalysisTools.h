@@ -248,6 +248,17 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
  */
 double Min3(double x, double y, double z); //}}}
 
+// Max3() //{{{
+/**
+ * \brief Function returning the highest number from three floats.
+ *
+ * \param [in] x   first double precision number
+ * \param [in] y   second double precision number
+ * \param [in] z   third double precision number
+ * \return highest of the supplied numbers
+ */
+double Max3(double x, double y, double z); //}}}
+
 // Sort3() //{{{
 /**
  * \brief Function returning sorted numbers x < y < z.
