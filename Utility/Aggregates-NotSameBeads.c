@@ -610,28 +610,6 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // save coordinates of joined aggregates //{{{
-  char joined_vcf[1024];
-  if (JoinCoorOption(argc, argv, joined_vcf)) {
-    exit(1);
-  }
-
-  // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
-  int ext = 1;
-  char **extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
-  strcpy(extension[0], ".vcf");
-  if (joined_vcf[0] != '\0') {
-    if (!ErrorExtension(joined_vcf, ext, extension)) {
-      Help(argv[0], true);
-      exit(1);
-    }
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
   // use .vsf file other than traject.vsf? //{{{
   char *input_vsf = calloc(1024,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
@@ -642,26 +620,29 @@ int main(int argc, char *argv[]) {
   }
 
   // test if structure file ends with '.vsf' or '.vtf' (required by VMD)
-  ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
+  // save coordinates of joined aggregates //{{{
+  char joined_vcf[1024];
+  if (JoinCoorOption(argc, argv, joined_vcf)) {
+    exit(1);
+  }
+
+  // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (joined_vcf[0] != '\0') {
+    if (!ErrorExtension(joined_vcf, ext, extension)) {
+      Help(argv[0], true);
+      exit(1);
+    }
   } //}}}
 
   // output verbosity //{{{
@@ -688,20 +669,12 @@ int main(int argc, char *argv[]) {
 
   // test if <input> ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <distance> - number of starting timestep //{{{
   // Error - non-numeric argument
@@ -727,17 +700,11 @@ int main(int argc, char *argv[]) {
 
   // test if <output.agg> ends with '.agg'
   ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".agg");
   if (!ErrorExtension(output_agg, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -748,7 +715,7 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -894,7 +861,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "\n   Distance for closeness check: %lf\n", distance);
     fprintf(stdout, "   Number of needed contacts for aggregate check: %d\n", contacts);
@@ -907,10 +874,7 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
     }
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+  } //}}}
 
   // main loop //{{{
   count = 0; // count timesteps

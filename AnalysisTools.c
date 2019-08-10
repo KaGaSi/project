@@ -13,7 +13,7 @@
  * 'species' lines in FIELD. It only reads information about bead types with
  * Use=true flag.
  */
-void ReadFIELD(char *bonds_file, Counts *Counts,
+void ReadFIELD(Counts *Counts,
                BeadType **BeadType, MoleculeType **MoleculeType) {
 
   // open FIELD file //{{{
@@ -99,7 +99,7 @@ void CommonHelp(bool error) {
 /**
  * Function for options common to most of the utilities.
  */
-bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
+bool CommonOptions(int argc, char **argv, char **vsf_file,
                    bool *verbose, bool *verbose2, bool *silent, bool *script) {
 
   bool error = false;
@@ -132,24 +132,6 @@ bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
   // -i option is not used
   if ((*vsf_file)[0] == '\0') {
     strcpy(*vsf_file, "traject.vsf");
-  } //}}}
-
-  // -b <name> option - filename of input bond file //{{{
-  (*bonds_file)[0] = '\0'; // check if -b option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-b") == 0) {
-
-      // wrong argument to -b option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-b' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-
-        error = true;
-        break;
-      }
-
-      strcpy(*bonds_file, argv[i+1]);
-    }
   } //}}}
 
   // -v option - verbose output //{{{
@@ -203,7 +185,7 @@ bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
  * Function providing standard verbose output (for cases when verbose
  * option is used). It prints most of the information about used system.
  */
-void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
+void VerboseOutput(bool Verbose2, char *input_vcf, Counts Counts,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule) {
 
@@ -223,9 +205,9 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
     printf("Name =%10s, ", BeadType[i].Name);
     printf("Number =%7d, ", BeadType[i].Number);
     printf("Charge =%6.2f, ", BeadType[i].Charge);
-    printf("Mass =%5.2f, ", BeadType[i].Mass);
-    printf("Use = %3s, ", BeadType[i].Use? "Yes":"No");
-    printf("Write = %3s}\n", BeadType[i].Write? "Yes":"No");
+    printf("Mass =%5.2f}\n", BeadType[i].Mass);
+//  printf("Use = %3s, ", BeadType[i].Use? "Yes":"No");
+//  printf("Write = %3s}\n", BeadType[i].Write? "Yes":"No");
   }
   putchar('\n');
 
@@ -239,56 +221,16 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
       printf(", %s", BeadType[MoleculeType[i].Bead[j]].Name);
     }
     printf("}\n  nBonds  = %d\n  Bond    = {", MoleculeType[i].nBonds);
-    printf("%d-%d", MoleculeType[i].Bond[0][0], MoleculeType[i].Bond[0][1]);
+    printf("%d-%d", MoleculeType[i].Bond[0][0]+1, MoleculeType[i].Bond[0][1]+1);
     for (int j = 1; j < MoleculeType[i].nBonds; j++) {
-      printf(", %d-%d", MoleculeType[i].Bond[j][0], MoleculeType[i].Bond[j][1]);
+      printf(", %d-%d", MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
     }
     printf("}\n  nBTypes = %d\n  BType   = {", MoleculeType[i].nBTypes);
     printf("%s", BeadType[MoleculeType[i].BType[0]].Name);
     for (int j = 1; j < MoleculeType[i].nBTypes; j++) {
       printf(", %s", BeadType[MoleculeType[i].BType[j]].Name);
     }
-    printf("}\n  Mass    = %.5f\n", MoleculeType[i].Mass);
-    printf("  Use     = %s\n", MoleculeType[i].Use? "Yes":"No");
-    printf("  Write   = %s}\n", MoleculeType[i].Write? "Yes":"No");
-
-// there's no bonds_file anywhere anymore //{{{
-//  if (bonds_file[0] == '\0') { // all bonds taken from vsf file
-//    printf(", Bonds from vsf,");
-//  } else {
-//    // go through bond file to find out if molecule type 'i' is there
-//    FILE *bond;
-//    if ((bond = fopen(bonds_file, "r")) == NULL) {
-//      ErrorFileOpen(bonds_file, 'r');
-//      exit(1);
-//    }
-
-//    int test;
-//    char str[32];
-//    while ((test = getc(bond)) != EOF) {
-//      ungetc(test, bond);
-
-//      if ((fscanf(bond, "%s %d", str, &test)) != 2) {
-//        fprintf(stderr, "Cannot read string or number of bonds from %s with '-v' option!\n", bonds_file);
-//        exit(1);
-//      }
-
-//      if (strcmp(str, MoleculeType[i].Name) == 0) {
-//        printf(", Bonds from '%s',", bonds_file);
-//        break;
-//      }
-
-//      while (getc(bond) != '\n')
-//        ;
-//    }
-
-//    // if not in bonds_file, then bonds taken from FIELD
-//    if (test == EOF) {
-//      printf(", Bonds from 'FIELD',");
-//    }
-
-//    fclose(bond);
-//  } //}}}
+    printf("}\n  Mass    = %.5f}\n", MoleculeType[i].Mass);
   }
 
   // print bead ids of all molecules if '-V' option is used
@@ -312,7 +254,7 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * Overly complicated, some things done more than once, needs complete
  * overhaul. Thankfully, it works.
  */
-bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
+bool ReadStructure(char *vsf_file, char *vcf_file, Counts
     *Counts, BeadType **BeadType, Bead **Bead, int **Index,
     MoleculeType **MoleculeType, Molecule **Molecule) {
 
@@ -1287,7 +1229,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     }
   }
   if (!charge_mass) {
-    ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
+    ReadFIELD(Counts, BeadType, MoleculeType);
   } //}}}
 
   // calculate molecule mass //{{{
@@ -1678,9 +1620,9 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
       }
     } //}}}
   }
-  for (int i = 0; i < (*Counts).Beads; i++) {
-    printf("%7d %7d %7d %7d %7d\n", (*Bead)[i].Index, (*Bead)[i].Molecule, (*Bead)[i].Aggregate[0], (*Bead)[i].nAggregates, Index[(*Bead)[i].Index]);
-  }
+//for (int i = 0; i < (*Counts).Beads; i++) {
+//  printf("%7d %7d %7d %7d %7d\n", (*Bead)[i].Index, (*Bead)[i].Molecule, (*Bead)[i].Aggregate[0], (*Bead)[i].nAggregates, Index[(*Bead)[i].Index]);
+//}
   return error;
 } //}}}
 

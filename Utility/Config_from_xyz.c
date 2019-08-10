@@ -89,20 +89,14 @@ int main(int argc, char *argv[]) {
   char input_xyz[1024];
   strcpy(input_xyz, argv[++count]);
 
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  // test if <input> filename ends with '.xyz' (required by VMD)
   int ext = 1;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
+  char extension[2][5];
   strcpy(extension[0], ".xyz");
   if (!ErrorExtension(input_xyz, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // get number of beads from xyz file //{{{
   // open input coordinate file
