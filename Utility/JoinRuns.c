@@ -101,26 +101,12 @@ int main(int argc, char *argv[]) {
 
   // test if structure file ends with '.vsf'
   int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf_1, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
   } //}}}
 
   // output verbosity //{{{
@@ -175,20 +161,12 @@ int main(int argc, char *argv[]) {
 
   // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf_1, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <2nd input> - second input coordinate file //{{{
   char input_vcf_2[1024];
@@ -196,20 +174,12 @@ int main(int argc, char *argv[]) {
 
   // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf_2, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <2nd input.vsf> - second structure file (must end with .vsf) //{{{
   char *input_vsf_2 = calloc(1024,sizeof(char *));
@@ -217,20 +187,12 @@ int main(int argc, char *argv[]) {
 
   // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
   ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf_2, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char output_vcf[1024];
@@ -238,19 +200,11 @@ int main(int argc, char *argv[]) {
 
   // test if output coordinate file ends with '.vcf' (required by vmd)
   ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // variables - structures //{{{
   // data from 1st run
@@ -269,8 +223,8 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information //{{{
-  bool indexed = ReadStructure(input_vsf_1, input_vcf_1, bonds_file, &Counts, &BeadType1, &Bead1, &Index1, &MoleculeType1, &Molecule1);
-  ReadStructure(input_vsf_2, input_vcf_2, bonds_file, &Counts, &BeadType2, &Bead2, &Index2, &MoleculeType2, &Molecule2);
+  bool indexed = ReadStructure(input_vsf_1, input_vcf_1, &Counts, &BeadType1, &Bead1, &Index1, &MoleculeType1, &Molecule1);
+  ReadStructure(input_vsf_2, input_vcf_2, &Counts, &BeadType2, &Bead2, &Index2, &MoleculeType2, &Molecule2);
 
   // vsf files are not needed anymore
   free(input_vsf_1);
@@ -311,14 +265,10 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf_1, bonds_file, Counts, BeadType1, Bead1, MoleculeType1, Molecule1);
-
+    VerboseOutput(verbose2, input_vcf_1, Counts, BeadType1, Bead1, MoleculeType1, Molecule1);
     fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
     fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+  } //}}}
 
   // open input coordinate files //{{{
   FILE *vcf_1, *vcf_2;

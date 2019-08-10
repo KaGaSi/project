@@ -48,7 +48,7 @@ void ErrorNaN(char *option) {
 // ErrorExtension() //{{{
 /** Error when missing or incorrect file extension
  */
-bool ErrorExtension(char *file, int number, char **extension) {
+bool ErrorExtension(char *file, int number, char extension[][5]) {
 
   char *dot = strrchr(file, '.');
 

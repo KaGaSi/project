@@ -23,14 +23,13 @@ void CommonHelp(bool error); //}}}
  *
  * \param [in] Verbose2      print extra information if 'true'
  * \param [in] input_vcf     .vcf coordinate file
- * \param [in] bonds_file    filename with bonds
  * \param [in] Counts        numbers of beads, molecules, etc.
  * \param [in] BeadType      information about bead types
  * \param [in] Bead          informationn about individual beads
  * \param [in] MoleculeType  information about molecule types
  * \param [in] Molecule      information about individual molecules
  */
-void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
+void VerboseOutput(bool Verbose2, char *input_vcf, Counts Counts,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 
@@ -41,7 +40,6 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  *
  * \param [in]  vsf_file      .vsf structure file
  * \param [in]  vcf_file      .vcf coordinate file
- * \param [in]  bonds_file    filename with bonds
  * \param [out] Counts        numbers of beads, molecules, etc.
  * \param [out] BeadType      information about bead types
  * \param [out] Bead          informationn about individual beads
@@ -51,7 +49,7 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * \return 'true' or 'false' for .vcf file with indexed or ordered
  * timesteps, respectively
  * */
-bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Counts,
+bool ReadStructure(char *vsf_file, char *vcf_file, Counts *Counts,
                    BeadType **BeadType, Bead **Bead, int **Index,
                    MoleculeType **MoleculeType, Molecule **Molecule); //}}}
 

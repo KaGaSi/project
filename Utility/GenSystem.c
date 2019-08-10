@@ -93,19 +93,12 @@ int main(int argc, char *argv[]) {
 
   // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)
   int ext = 1;
-  char **extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  char extension[2][5];
   strcpy(extension[0], ".vsf");
   if (!ErrorExtension(output, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <out.vcf> - output vcf file //{{{
   char *output_vcf = calloc(1024, sizeof(char));
@@ -114,17 +107,11 @@ int main(int argc, char *argv[]) {
 
   // test if outpuf_vcf has '.vcf' extension - required by vmd //{{{
   ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
   //}}}
 
   // variables - structures //{{{
@@ -610,7 +597,7 @@ int main(int argc, char *argv[]) {
     char null[1] = {'\0'};
     putchar('\n');
     putchar('\n');
-    VerboseOutput(false, null, null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(false, null, Counts, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // free memory - to make valgrind happy //{{{
