@@ -7,8 +7,6 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-//TODO: Use the new MoleculeType[].Bead[] array to specify which beads are in the bond
-
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -17,7 +15,8 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
     fprintf(stdout, "\
 BondLength utility calculates distribution of bond lengths for all bead type \
-pairs in specified molecule(s).\n\n");
+pairs in specified molecule(s). It can also calculate distribution of distances \
+between any two beads in a molecule.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -26,11 +25,11 @@ pairs in specified molecule(s).\n\n");
   fprintf(ptr, "   <input>                 input filename (vcf or vtf format)\n");
   fprintf(ptr, "   <width>                 width of a single bin\n");
   fprintf(ptr, "   <output>                output file with distribution of bond lengths\n");
-  fprintf(ptr, "   <mole name(s)>          names of molecule type(s) to use for calculation\n");
+  fprintf(ptr, "   <mole name(s)>          molecule name(s) to calculate bond lengths for\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -st <int>            starting timestep for calculation\n");
-  fprintf(ptr, "      -d <out> <ints>      calculate distribution of distances between specified bead indices\n");
-  fprintf(ptr, "      -w <double>          warn if bond length exceeds <double> (default: half a box length in any dimension)\n");
+  fprintf(ptr, "      -d <out> <ints>      write distribution of distances between specified beads in the molecule to file <out>\n");
+  fprintf(ptr, "      -w <double>          warn if bond length exceeds <double> (default: half a box length)\n");
   CommonHelp(error);
 } //}}}
 
@@ -61,7 +60,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
@@ -89,26 +87,12 @@ int main(int argc, char *argv[]) {
 
   // test if structure file ends with '.vsf'
   int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
   } //}}}
 
   // output verbosity //{{{
@@ -140,21 +124,12 @@ int main(int argc, char *argv[]) {
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(8*sizeof(char));
-  }
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <width> - width of a single bin //{{{
   // Error - non-numeric argument
@@ -178,7 +153,7 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -228,13 +203,10 @@ int main(int argc, char *argv[]) {
     bead[i]--; // ids should start with zero (or -1 if none specified)
   } //}}}
 
-  // print information - verbose output //{{{
+  // print information - verbose output
   if (verbose) {
-    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
   }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -292,9 +264,12 @@ int main(int argc, char *argv[]) {
   }
   // extra arrays for -d option
   double *distance[Counts.TypesOfMolecules][number_of_beads/2];
+  double min_max_d_option[Counts.TypesOfMolecules][number_of_beads/2][2];
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     for (int j = 0; j < (number_of_beads/2); j++) {
       distance[i][j] = calloc(bins, sizeof(double));
+      min_max_d_option[i][j][0] = 10 * Max3(BoxLength.x, BoxLength.y, BoxLength.z);
+      min_max_d_option[i][j][1] = 0;
     }
   } //}}}
 
@@ -416,21 +391,21 @@ int main(int argc, char *argv[]) {
     // calculate distance (-d option) //{{{
     if (output_d[0] != '\0') {
       for (int i = 0; i < Counts.Molecules; i++) {
-        int type = Molecule[i].Type;
-        if (MoleculeType[type].Use) { // use only specified molecule types
+        int mtype = Molecule[i].Type;
+        if (MoleculeType[mtype].Use) { // use only specified molecule types
           for (int j = 0; j < number_of_beads; j += 2) {
 
             // bead ids the distance //{{{
             int id1, id2;
             // use first molecule bead if bead index too high or -1
-            if (bead[j] == -1 || bead[j] >= MoleculeType[type].nBeads) {
+            if (bead[j] == -1 || bead[j] >= MoleculeType[mtype].nBeads) {
               id1 = Molecule[i].Bead[0];
             } else{ // use specified index otherwise
               id1 = Molecule[i].Bead[bead[j]];
             }
             // use last molecule bead if bead index too high or -1
-            if (bead[j+1] == -1 || bead[j+1] >= MoleculeType[type].nBeads) {
-              id2 = Molecule[i].Bead[MoleculeType[type].nBeads-1];
+            if (bead[j+1] == -1 || bead[j+1] >= MoleculeType[mtype].nBeads) {
+              id2 = Molecule[i].Bead[MoleculeType[mtype].nBeads-1];
             } else{ // use specified index otherwise
               id2 = Molecule[i].Bead[bead[j+1]];
             } //}}}
@@ -443,9 +418,16 @@ int main(int argc, char *argv[]) {
 
             dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z)); //}}}
 
+            // mins & maxes //{{{
+            if (dist.x < min_max_d_option[mtype][j/2][0]) {
+              min_max_d_option[mtype][j/2][0] = dist.x;
+            } else if (dist.x > min_max_d_option[mtype][j/2][1]) {
+              min_max_d_option[mtype][j/2][1] = dist.x;
+            } //}}}
+
             int k = dist.x / width;
             if (k < bins) {
-              distance[type][j/2][k]++;
+              distance[mtype][j/2][k]++;
             }
           }
         }
@@ -516,10 +498,9 @@ int main(int argc, char *argv[]) {
         for (int k = j; k < MoleculeType[i].nBTypes; k++) {
           if (bonds[i][MoleculeType[i].BType[j]][MoleculeType[i].BType[k]] > 0) {
             fprintf(out, " (%d) %s-%s", ++count, BeadType[MoleculeType[i].BType[j]].Name, BeadType[MoleculeType[i].BType[k]].Name);
+            // add semicolon if this is the last pair for this molecule, add comma otherwise
             if (k == (MoleculeType[i].nBTypes-1)) {
-              if (i != (Counts.TypesOfMolecules-1)) {
-                putc(';', out);
-              }
+              putc(';', out);
             } else {
               putc(',', out);
             }
@@ -562,8 +543,8 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // write mins and maxes //{{{
-  // key
-  fprintf(out, "# mins/maxes -");
+  // legend line
+  fprintf(out, "# mins(odd columns)/maxes(even columns) -");
   count = 1;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
@@ -587,7 +568,7 @@ int main(int argc, char *argv[]) {
     }
   }
   putc('\n', out);
-  // data
+  // data line
   putc('#', out);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     for (int j = 0; j < Counts.TypesOfBeads; j++) {
@@ -597,7 +578,8 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-  } //}}}
+  }
+  putc('\n', out); //}}}
   fclose(out); //}}}
 
   // write distribution of distances from '-d' option //{{{
@@ -615,9 +597,21 @@ int main(int argc, char *argv[]) {
       fprintf(out, " %s", argv[i]);
     putc('\n', out); //}}}
 
-    // print first line of output file - molecule names and indices //{{{
-    fprintf(out, "# (1) distance");
+    // print the first line of output file - molecule names with bead order //{{{
+    fprintf(out, "# bead order in molecule(s) -");
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      if (MoleculeType[i].Use) {
+        fprintf(out, " %s:", MoleculeType[i].Name);
+        for (int j = 0; j < MoleculeType[i].nBeads; j++) {
+          fprintf(out, " %s", BeadType[MoleculeType[i].Bead[j]].Name);
+        }
+        putc(';', out);
+      }
+    }
+    putc('\n', out); //}}}
 
+    // print the second line of output file - molecule names and indices with column numbers //{{{
+    fprintf(out, "# (1) distance;");
     count = 1;
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {
@@ -640,10 +634,9 @@ int main(int argc, char *argv[]) {
           } //}}}
 
           fprintf(out, " (%d) %d-%d", ++count, id1, id2);
+          // add semicolon if this is the last pair for this molecule, add comma otherwise
           if (j == (number_of_beads-2)) {
-            if (i != (Counts.TypesOfMolecules-1)) {
-              putc(';', out);
-            }
+            putc(';', out);
           } else {
             putc(',', out);
           }
@@ -652,22 +645,70 @@ int main(int argc, char *argv[]) {
     }
     putc('\n', out); //}}}
 
-    // write to output file //{{{
+    // write distances to output file //{{{
     for (int i = 0; i < bins; i++) {
       fprintf(out, "%7.4f", width*(2*i+1)/2);
 
       for (int j = 0; j < Counts.TypesOfMolecules; j++) {
         if (MoleculeType[j].Use) {
           for (int k = 0; k < number_of_beads; k += 2) {
-            fprintf(out, " %10f", (double)(distance[j][k/2][i])/(count*MoleculeType[j].Number));
+            fprintf(out, " %10f", (double)(distance[j][k/2][i])/((count-1)*MoleculeType[j].Number));
           }
         }
       }
       putc('\n', out);
+    } //}}}
+
+    // write mins and maxes //{{{
+    // legend line
+    fprintf(out, "# mins(odd columns)/maxes(even columns) -");
+    count = 1;
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      if (MoleculeType[i].Use) {
+        fprintf(out, " %s:", MoleculeType[i].Name);
+
+        for (int j = 0; j < number_of_beads; j += 2) {
+          // bead ids the distance //{{{
+          int id1, id2;
+          // use first molecule bead if bead index too high or -1
+          if (bead[j] == -1 || bead[j] >= MoleculeType[i].nBeads) {
+            id1 = 1;
+          } else{ // use specified index otherwise
+            id1 = bead[j]+1;
+          }
+          // use last molecule bead if bead index too high or -1
+          if (bead[j+1] == -1 || bead[j+1] >= MoleculeType[i].nBeads) {
+            id2 = MoleculeType[i].nBeads;
+          } else{ // use specified index otherwise
+            id2 = bead[j+1]+1;
+          } //}}}
+
+          fprintf(out, " (%d) %d-%d", count, id1, id2);
+          count += 2;
+          // add semicolon if this is the last pair for this molecule, add comma otherwise
+          if (j == (number_of_beads-2)) {
+            putc(';', out);
+          } else {
+            putc(',', out);
+          }
+        }
+      }
     }
-    fclose(out); //}}}
-  }
-  //}}}
+    putc('\n', out);
+
+    // data line
+    putc('#', out);
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      if (MoleculeType[i].Use) {
+        for (int j = 0; j < number_of_beads; j+=2) {
+          fprintf(out, " %lf %lf", min_max_d_option[i][j/2][0], min_max_d_option[i][j/2][1]);
+        }
+      }
+    }
+    putc('\n', out); //}}}
+
+    fclose(out);
+  } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
@@ -687,8 +728,7 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < (number_of_beads/2); j++) {
       free(distance[i][j]);
     }
-  }
-  //}}}
+  } //}}}
 
   return 0;
 }

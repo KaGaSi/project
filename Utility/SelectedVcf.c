@@ -13,7 +13,7 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(ptr, "\
-SelectedVcf creates new <output> file from <input> containing only \
+SelectedVcf creates new <output.vcf> file from <input> containing only \
 selected bead types. Also <start> timesteps can be omitted and every <skip> \
 timestep can be left out.\n\n");
   }
@@ -23,7 +23,7 @@ timestep can be left out.\n\n");
   fprintf(ptr, "<output> <type names> <options>\n\n");
 
   fprintf(ptr, "   <input>           input filename (vcf or vtf format)\n");
-  fprintf(ptr, "   <output>          output filename (vcf format)\n");
+  fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
   fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
@@ -104,25 +104,11 @@ int main(int argc, char *argv[]) {
 
   // test if structure file ends with '.vsf'
   int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
     Help(argv[0], true);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
     exit(1);
   } //}}}
 
@@ -186,20 +172,12 @@ int main(int argc, char *argv[]) {
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char output_vcf[1024];
@@ -207,17 +185,11 @@ int main(int argc, char *argv[]) {
 
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
   ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -228,7 +200,7 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_vcf, bonds_file, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_vcf, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -308,7 +280,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_vcf, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "\n   Starting from %d. timestep\n", start);
     fprintf(stdout, "   Every %d. timestep used\n", skip+1);
@@ -327,10 +299,7 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+  } //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
