@@ -20,28 +20,29 @@ AddToSystem takes existing coordinates and adds monomeric beads and/or \
 molecules to the system. The data for added components are read from a \
 FIELD-like file that have to contain species and molecule sections (the \
 same as for DL_MESO simulation program). \
-The new beads replace neutral monomeric beads with lowest indices \
+The new beads replace neutral monomeric beads with the lowest indices \
+(as written in the vsf file) \
 from the original system. The new beads \
 can be placed far from/near to beads of specified type; in case of molecules, \
-only the distance of the first bead of each molecule is checked for now. \
+the distance of the molecule's first bead or geometric centre can be checked. \
 Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
 \n\n");
   }
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input.vcf> <input add> ", cmd);
+  fprintf(ptr, "   %s <input> <input add> ", cmd);
   fprintf(ptr, "<out.vcf> <out.vsf> <options>\n\n");
 
-  fprintf(ptr, "   <input.vcf>       input filename (vcf or vtf format)\n");
+  fprintf(ptr, "   <input>           input filename (vcf or vtf format)\n");
   fprintf(ptr, "   <input add>       FIELD-like file with molecules to add\n");
   fprintf(ptr, "   <out.vcf>         output coordinate file (vcf format)\n");
   fprintf(ptr, "   <out.vsf>         output structure file (vsf format)\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -st <start>    number of timestep to start from\n");
+  fprintf(ptr, "      -st <int>      timestep to add new beads to\n");
   fprintf(ptr, "      -xyz <name>    output xyz file\n");
   fprintf(ptr, "      -ld <float>    specify lowest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -hd <float>    specify highest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -bt <name(s)>  specify bead types new beads should be far from/near to (default: none)\n");
-  fprintf(ptr, "      -gc            use molecule's geometric centre for its distance check instead of its first bead\n");
+  fprintf(ptr, "      -gc            use molecule's geometric centre for the distance check instead of its first bead\n");
   CommonHelp(error);
 } //}}}
 
@@ -146,8 +147,7 @@ int main(int argc, char *argv[]) {
       }
     }
     if (!bt) {
-      fprintf(stderr, "Error - if '-ld' and/or '-hd' is used, '-bt' must be specified as well\n\n");
-      fprintf(stderr, "  Use: -bt <name(s)>\n");
+      fprintf(stderr, "Error - if '-ld' and/or '-hd' is used, '-bt' must be specified as well\n");
       exit(1);
     }
   }
@@ -706,7 +706,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts_add.Beads; i++) {
     if (Bead_add[i].Molecule == -1) {
       // find what bead to rewrite //{{{
-      for (int j = count; j < Counts.Beads; j++) {
+      for (; count < Counts.Beads; count++) {
         if (Bead[count].Molecule == -1 && BeadType[Bead[count].Type].Charge == 0) {
           break;
         }
@@ -837,14 +837,15 @@ int main(int argc, char *argv[]) {
 
     for (int j = 0; j < MoleculeType_add[mol_type].nBeads; j++) {
       int id = Molecule_add[i].Bead[j];
-      for (int k = (count-1); k < Counts.Beads; k++) {
-        count++; // so that the for loop doesn't go through all beads every time
-        if (Bead[count].Molecule == -1 && BeadType[Bead[count].Type].Charge == 0) {
-          // move higher id beads one id down - dl_meso requires molecules are at the end
+      for (int k = count; k < Counts.Beads; k++) {
+        // find what to bead to exchange
+        if (Bead[k].Molecule == -1 && BeadType[Bead[k].Type].Charge == 0) {
+          // move all higher id beads one id down - dl_meso requires molecules are at the end
+          count = k;
           for (int l = count; l < (Counts.BeadsInVsf-1); l++) {
             Bead[l].Type = Bead[l+1].Type;
             Bead[l].Molecule = Bead[l+1].Molecule;
-            Bead[l].Index = l + 1;
+            Bead[l].Index = Bead[l+1].Index;
             Bead[l].Position.x = Bead[l+1].Position.x;
             Bead[l].Position.y = Bead[l+1].Position.y;
             Bead[l].Position.z = Bead[l+1].Position.z;
@@ -863,6 +864,7 @@ int main(int argc, char *argv[]) {
 
           k--;
 
+          // molecule is added, so get to the next one
           break;
         }
       }
