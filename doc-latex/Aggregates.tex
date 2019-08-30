@@ -1,11 +1,11 @@
 \section{Aggregates and Aggregates-NotSameBeads} \label{sec:Aggregates}
 
-These utilities determine which molecules belong to which aggregates
-according to a simple criterion: two molecules belong to the same aggregate
-if they share at least a specified number of contact pairs. A contact pair
-is a pair of two beads belonging to different molecules which are closer
-than a specified distance. The information is written in \texttt{agg}
-format described in Section~\ref{sec:AggFile}.
+These utilities determine which molecules belong to which aggregates (or a
+different compact structure) according to a simple criterion: two molecules
+belong to the same aggregate if they share at least a specified number of
+contact pairs. A contact pair is a pair of two beads belonging to different
+molecules which are closer than a specified distance. The information is
+written in \texttt{.agg} text file described in Section~\ref{sec:AggFile}.
 
 The number of contact pairs, the distance, and bead type(s) to use for
 aggregate determination are all arguments of the utilities.  Any molecule
@@ -13,7 +13,7 @@ type(s) can be excluded from aggregate determination (\texttt{-x <mol
 name(s)>} option); they are also excluded from the output \texttt{agg}
 file).  Moreover, any molecules close to specified molecule(s) can be
 excluded (\texttt{-xm <mol name(s)>} option); here, `close' means any of
-the bead types used aggregate determination is closer than
+the bead types used in aggregate determination is closer than
 \texttt{<distance>} to any bead of the specified molecule.
 
 Also, periodic boundary conditions can be removed from whole aggregates and
@@ -48,7 +48,7 @@ Usage:
     (thus constituting a contact pair) \\
   \texttt{<contacts>} & minimum number of contact pairs between two
     molecules to be in one aggregate \\
-  \texttt{<output.agg>} & output \texttt{agg} file (must end in
+  \texttt{<output.agg>} & output \texttt{agg} file (must end with
     \texttt{.agg}) with aggregate information \\
   \texttt{<bead type(s)>} & bead type name(s) to use for determining
     contact pairs (at least two for \texttt{Aggregates-NotSameBeads}) \\
@@ -59,7 +59,7 @@ Usage:
   \texttt{-x <mol name(s)>} & exclude specified molecule type(s) from
     aggregate determination (and from the output \texttt{agg} file) \\
   \texttt{-xm <mol name(s)>} & exclude molecules that are close to
-    specified molecule(s) \\
+    specified molecule type(s) \\
   \texttt{-j <output.vcf>} & output \texttt{vcf} file with coordinates of
     joined aggregates (i.e., without periodic boundary conditions) \\
   \bottomrule
