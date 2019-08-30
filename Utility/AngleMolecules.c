@@ -15,23 +15,23 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
     fprintf(stdout, "\
 AngleMolecules utility calculates angles \
-for specified beads (three beads per angel) in each molecule of specified \
-molecule type(s). The specified beads do not to be connected by bonds. \
+for specified beads (three beads per angle) for molecules of specified \
+type(s). The specified beads do not have to be connected by bonds. \
 \n\n");
   }
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
 
-  fprintf(ptr, "   <input>         input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <width>         width of a single bin in degrees\n");
-  fprintf(ptr, "   <output>        output file with distribution of dihedral angles\n");
-  fprintf(ptr, "   <mol name(s)>   molecule name(s) to calculate density for\n");
+  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <width>           width of a single bin in degrees\n");
+  fprintf(ptr, "   <output>          output file with distribution of angles\n");
+  fprintf(ptr, "   <mol name(s)>     molecule name(s) to calculate angles for\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      --joined     specify that <input> contains joined coordinates\n");
-  fprintf(ptr, "      -n <ints>    bead indices (multiple of 3 <ints>) for dihedral calculation (default: 1 2 3)\n");
-  fprintf(ptr, "      -a <name>    write angle of all molecules in all times to <name>\n");
-  fprintf(ptr, "      -st <int>    starting timestep for calculation\n");
+  fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "      -n <ints>      bead indices (multiple of 3 <ints>) for angle calculation (default: 1 2 3)\n");
+  fprintf(ptr, "      -a <name>      write angles of all molecules in all times to <name>\n");
+  fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -176,7 +176,11 @@ int main(int argc, char *argv[]) {
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (mol_type == -1) {
-      fprintf(stderr, "Error: molecule '%s' does not exist in FIELD\n\n", argv[count]);
+      fprintf(stderr, "Error: molecule '%s' is not included in %s!\n\n", argv[count], input_coor);
+      fprintf(stderr, "   Present molecule types:\n");
+      for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+        fprintf(stderr, "%s\n", MoleculeType[i].Name);
+      }
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -473,7 +477,7 @@ int main(int argc, char *argv[]) {
   // print molecule names & bead ids //{{{
   fprintf(out, "# angles between beads:");
   for (int j = 0; j < number_of_beads; j += beads_per_angle) {
-    fprintf(out, " (%d) %d-%d-%d;", j/beads_per_angle+1, bead[j], bead[j+1], bead[j+2]);
+    fprintf(out, " (%d) %d-%d-%d;", j/beads_per_angle+1, bead[j]+1, bead[j+1]+1, bead[j+2]+1);
   }
   putc('\n', out);
   fprintf(out, "# columns: (1) angle [deg];");

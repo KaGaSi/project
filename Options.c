@@ -457,10 +457,9 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts
 
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
         if (type == -1) { // is argv[i+1+j] in vsf?
-          fprintf(stderr, "Molecule '%s' does not exist in the provided coordinate file ('%s' option)!\n\n", argv[i+1+j], opt);
+          fprintf(stderr, "Error: molecule '%s' does not exist in the provided coordinate file ('%s' option)!\n\n", argv[i+1+j], opt);
           fprintf(stderr, "   Present molecule types:\n");
           for (int k = 0; k < Counts.TypesOfMolecules; k++) {
-            (*MoleculeType)[k].Name[0] = 'X';
             fprintf(stderr, "%s\n", (*MoleculeType)[k].Name);
           }
           return(true);
