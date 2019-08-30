@@ -198,5 +198,5 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts C
  * \return `true` or `false` for error
  */
 bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts Counts,
-                        MoleculeType **MoleculeType); //}}}
+                         MoleculeType **MoleculeType); //}}}
 #endif
