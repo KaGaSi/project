@@ -263,39 +263,39 @@ int main(int argc, char *argv[]) {
   double *Aspher_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
   struct Vector *eigen_sum = calloc(Counts.TypesOfMolecules, sizeof(struct Vector)); //}}}
 
-  // skip first start-1 steps //{{{
+//// skip first start-1 steps //{{{
   int test;
   count = 0;
-  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
-    ungetc(test, vcf);
+//for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
+//  ungetc(test, vcf);
 
-    count++;
+//  count++;
 
-    // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
-    } //}}}
+//  // print step? //{{{
+//  if (!silent) {
+//    if (script) {
+//      fprintf(stdout, "Discarding step: %6d\n", count);
+//    } else {
+//      fflush(stdout);
+//      fprintf(stdout, "\rDiscarding step: %6d", count);
+//    }
+//  } //}}}
 
-    if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
-      exit(1);
-    }
-  }
-  // print number of discarded steps? //{{{
-  if (!silent) {
-    if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
-    } else {
-      fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
-    }
-  } //}}}
-  //}}}
+//  if (SkipCoor(vcf, Counts, &stuff)) {
+//    fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+//    exit(1);
+//  }
+//}
+//// print number of discarded steps? //{{{
+//if (!silent) {
+//  if (script) {
+//    fprintf(stdout, "Discarded steps: %6d\n", count);
+//  } else {
+//    fflush(stdout);
+//    fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+//  }
+//} //}}}
+////}}}
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -376,15 +376,17 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // add values to sums //{{{
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      Rg_sum[i] += Rg_step[i];
-      sqrRg_sum[i] += sqrRg_step[i];
-      Anis_sum[i] += Anis_step[i];
-      Acyl_sum[i] += Acyl_step[i];
-      Aspher_sum[i] += Aspher_step[i];
-      eigen_sum[i].x += eigen_step[i].x;
-      eigen_sum[i].y += eigen_step[i].y;
-      eigen_sum[i].z += eigen_step[i].z;
+    if (count >= start) {
+      for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+        Rg_sum[i] += Rg_step[i];
+        sqrRg_sum[i] += sqrRg_step[i];
+        Anis_sum[i] += Anis_step[i];
+        Acyl_sum[i] += Acyl_step[i];
+        Aspher_sum[i] += Aspher_step[i];
+        eigen_sum[i].x += eigen_step[i].x;
+        eigen_sum[i].y += eigen_step[i].y;
+        eigen_sum[i].z += eigen_step[i].z;
+      }
     } //}}}
 
     // print shape descriptors to output file(s) //{{{
@@ -439,9 +441,42 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // calculate simple averages //{{{
+  // write simple averages to <output> //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(stdout, "%10s %lf\n", MoleculeType[i].Name, Rg_sum[i]/(count*MoleculeType[i].Number));
+    if (MoleculeType[i].Use) {
+      // open file //{{{
+      char str2[1050];
+      sprintf(str2, "%s-%s.txt", output, MoleculeType[i].Name);
+      FILE *out;
+      if ((out = fopen(str2, "a")) == NULL) {
+        ErrorFileOpen(str2, 'a');
+        exit(1);
+      } //}}}
+
+      // write legend line to output file //{{{
+      fprintf(out, "# %s\n", MoleculeType[i].Name);
+      fprintf(out, "# simple averages (from steps %d to %d): ", start, count);
+      int counter = 1;
+      fprintf(out, "(%d) <Rg>, ", counter++);
+      fprintf(out, "(%d) <Anis>, ", counter++);
+      fprintf(out, "(%d) <Acyl>, ", counter++);
+      fprintf(out, "(%d) <Aspher>", counter++);
+//    fprintf(out, "(%d) <eigen.x>, ", counter++);
+//    fprintf(out, "(%d) <eigen.y>, ", counter++);
+//    fprintf(out, "(%d) <eigen.z>, ", counter++);
+      putc('\n', out); //}}}
+
+      // write averages to output file //{{{
+      count -= start;
+      putc('#', out);
+      fprintf(out, " %lf", Rg_sum[i]/(count*MoleculeType[i].Number));
+      fprintf(out, " %lf", Anis_sum[i]/(count*MoleculeType[i].Number));
+      fprintf(out, " %lf", Acyl_sum[i]/(count*MoleculeType[i].Number));
+      fprintf(out, " %lf", Aspher_sum[i]/(count*MoleculeType[i].Number));
+      putc('\n', out); //}}}
+
+      fclose(out);
+    }
   } //}}}
 
   // free memory - to make valgrind happy //{{{
