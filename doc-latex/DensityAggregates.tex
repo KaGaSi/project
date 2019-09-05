@@ -1,6 +1,6 @@
 \section{DensityAggregates} \label{sec:DensityAggregates}
 
-This utility calculates radial density profiles (RDP, or radial number
+This utility calculates radial density profiles (RDPs, or radial number
 densities) for bead types in an aggregate with specified size (the number
 of molecules or aggregation number, $A_{\mathrm{S}}$) from its centre of
 mass.
@@ -8,13 +8,14 @@ mass.
 RDP$_i(r)$ of bead type $i$, where $r$ is distance from an aggregate's
 centre of mass, is the number of these beads in a spherical shell between
 the distances $r$ and $r+\mathrm{d}r$ (in \texttt{DensityAggregates},
-$\mathrm{d}r$ is the \texttt{<width>} argument) divided by the volume of
-this shell. The distance written in the output file is always
-$r+0.5\mathrm{d}r$. Besides RDP, the output file also contains radial
-number profiles (i.e., the number of beads in the spherical shell not
-divided by the shell's volume) and one-sigma errors for both RDP and radial
-number profiles. The output file also contains a header describing what is
-in each column.
+$\mathrm{d}r$ is the \texttt{<width>} argument) divided by the
+volume of this shell.
+%The distance written in the output file is always
+%$r+0.5\mathrm{d}r$. Besides RDP, the output file also contains radial
+%number profiles (i.e., the number of beads in the spherical shell not
+%divided by the shell's volume) and one-sigma errors for both RDP and radial
+%number profiles. The output file also contains a header describing what is
+%in each column.
 
 Instead of `true' aggregate size, a number of molecules of specific type(s)
 can be used (\texttt{-m} option). For example, an aggregate containg 1
@@ -64,7 +65,7 @@ size(s)> <options>}
   \midrule
   \texttt{<input>} & input coordinate file (either \texttt{vcf} or
     \texttt{vtf} format) \\
-  \texttt{<input.agg>} & input \texttt{agg} file \\
+  \texttt{<input.agg>} & input \texttt{.agg} file \\
   \texttt{<width>} & width of each bin of the distribution \\
   \texttt{<output.rho>} & output file(s) (one per aggregate size) with
     automatic \texttt{\#.rho} ending (\texttt{\#} is aggregate size) \\
@@ -106,6 +107,8 @@ Format of output files:
           \item the rest are for the calculated data: each number specifies
             the first column with data for the given bead type (i.e.,
             \texttt{rdp} column)
+          \item last line contains the total number of aggregates the
+            density was calculated for
         \end{itemize}
     \end{itemize}
 \end{enumerate}
