@@ -2,7 +2,11 @@
 
 This utility calculates number density for all bead types in the specified
 direction of the simulation box. The density is calculated from 0 to box
-length in the given direction.
+length in the given direction, that is, the box is 'sliced' into blocks
+with width \texttt{<width>} and numbers of different bead types are counted
+in each of the slices. The utility does not recognise molecules, so if one
+bead type is in more than one molecule type, it's density will be averaged
+over all molecule types it appears in.
 
 Usage:
 
