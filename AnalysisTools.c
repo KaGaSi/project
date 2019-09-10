@@ -754,33 +754,19 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     // go through all bonds in molecule type 'i'
     for (int j = 0; j < ((*MoleculeType)[i].nBonds-1); j++) {
-      int swap = 0;
+      bool swap = false;
       for (int k = 0; k < ((*MoleculeType)[i].nBonds-j-1); k++) {
-        // swap bonds if the first beads are in wrong order
-        if ((*MoleculeType)[i].Bond[k][0] > (*MoleculeType)[i].Bond[k+1][0]) {
-          swap = (*MoleculeType)[i].Bond[k][0];
-          (*MoleculeType)[i].Bond[k][0] = (*MoleculeType)[i].Bond[k+1][0];
-          (*MoleculeType)[i].Bond[k+1][0] = swap;
+        if ((*MoleculeType)[i].Bond[k][0] > (*MoleculeType)[i].Bond[k+1][0] || // swap bonds if the first beads are in wrong order
+            ((*MoleculeType)[i].Bond[k][0] == (*MoleculeType)[i].Bond[k+1][0] && // or if they're the same, but second ones are in wrong order
+             (*MoleculeType)[i].Bond[k][1] > (*MoleculeType)[i].Bond[k+1][1])) {
 
-          swap  = (*MoleculeType)[i].Bond[k][1];
-          (*MoleculeType)[i].Bond[k][1] = (*MoleculeType)[i].Bond[k+1][1];
-          (*MoleculeType)[i].Bond[k+1][1] = swap;
-        // swap bonds if the first beads are the same,
-        // but second ones are in wrong order
-        } else if ((*MoleculeType)[i].Bond[k][0] == (*MoleculeType)[i].Bond[k+1][0] &&
-                   (*MoleculeType)[i].Bond[k][1] > (*MoleculeType)[i].Bond[k+1][1]) {
-          swap = (*MoleculeType)[i].Bond[k][0];
-          (*MoleculeType)[i].Bond[k][0] = (*MoleculeType)[i].Bond[k+1][0];
-          (*MoleculeType)[i].Bond[k+1][0] = swap;
-
-          swap  = (*MoleculeType)[i].Bond[k][1];
-          (*MoleculeType)[i].Bond[k][1] = (*MoleculeType)[i].Bond[k+1][1];
-          (*MoleculeType)[i].Bond[k+1][1] = swap;
+          Swap(&(*MoleculeType)[i].Bond[k][0], &(*MoleculeType)[i].Bond[k+1][0]);
+          Swap(&(*MoleculeType)[i].Bond[k][1], &(*MoleculeType)[i].Bond[k+1][1]);
         }
+        swap = true;
       }
-
       // if no swap was made, the array is sorted
-      if (swap == 0)
+      if (!swap)
         break;
     }
   } //}}}
@@ -1012,6 +998,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
         strcpy((*MoleculeType)[count].Name, (*MoleculeType)[i].Name);
         (*MoleculeType)[count].Number = (*MoleculeType)[i].Number;
         (*MoleculeType)[count].nBeads = (*MoleculeType)[i].nBeads;
+        for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+          (*MoleculeType)[count].Bead[j] = (*MoleculeType)[i].Bead[j];
+        }
         (*MoleculeType)[count].nBonds = (*MoleculeType)[i].nBonds;
         for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
           (*MoleculeType)[count].Bond[j][0] = (*MoleculeType)[i].Bond[j][0];
@@ -1034,7 +1023,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   } //}}}
 
   // remove unused beads from bonds in molecules //{{{
-  int mol_type[(*Counts).TypesOfMolecules]; // helper array //{{{
+  // helper array indicating if a given type was already changed //{{{
+  int mol_type[(*Counts).TypesOfMolecules];
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     mol_type[i] = -1;
   } //}}}
@@ -1044,8 +1034,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
     // is this molecule type done?
     if (mol_type[mtype] == -1) {
       count = 0;
-      // go through all bonds //{{{
+      // go through all bonds and also find initial minimal id //{{{
+      int min1 = 1000000;
       for (int j = 0; j < (*MoleculeType)[mtype].nBonds; j++) {
+        if ((*MoleculeType)[mtype].Bond[j][0] < min1) {
+          min1 = (*MoleculeType)[mtype].Bond[j][0];
+        }
         int id1 = (*Molecule)[i].Bead[(*MoleculeType)[mtype].Bond[j][0]];
         int btype1 = (*Bead)[id1].Type;
         int id2 = (*Molecule)[i].Bead[(*MoleculeType)[mtype].Bond[j][1]];
@@ -1056,17 +1050,28 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
           count++;
         }
       } //}}}
+      // change number of bonds
+      (*MoleculeType)[mtype].nBonds = count;
       // find minimum id in Bond array //{{{
-      int min = 1000000;
+      int min2 = 1000000;
       for (int j = 0; j < (*MoleculeType)[mtype].nBonds; j++) {
-        if ((*MoleculeType)[mtype].Bond[j][0] < min) {
-          min = (*MoleculeType)[mtype].Bond[j][0];
+        if ((*MoleculeType)[mtype].Bond[j][0] < min2) {
+          min2 = (*MoleculeType)[mtype].Bond[j][0];
         }
       } //}}}
       // minimize ids in Bond array //{{{
       for (int j = 0; j < (*MoleculeType)[mtype].nBonds; j++) {
-        (*MoleculeType)[mtype].Bond[j][0] -= min;
-        (*MoleculeType)[mtype].Bond[j][1] -= min;
+        (*MoleculeType)[mtype].Bond[j][0] += min1 - min2;
+        (*MoleculeType)[mtype].Bond[j][1] += min1 - min2;
+      } //}}}
+      // go through all beads to correct MoleculeType[].Bead array //{{{
+      count = 0;
+      for (int j = 0; j < (*MoleculeType)[mtype].nBeads; j++) {
+        int btype = (*MoleculeType)[mtype].Bead[j];
+        if ((*BeadType)[btype].Use) {
+          (*MoleculeType)[mtype].Bead[count] = (*MoleculeType)[mtype].Bead[j];
+          count++;
+        }
       } //}}}
       // mark this molecule type as done
       mol_type[mtype] = i;
@@ -1128,13 +1133,20 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   } //}}}
 
   // copy bead type names //{{{
+  // first, free name[] ...to prevent memory leak
+  for (int i = 0; i < moltype_alloced; i++) {
+    free(name[i]);
+  }
+  // second, realloc name
   int beadtype_alloced = (*Counts).TypesOfBeads;
   name = realloc(name, beadtype_alloced*sizeof(char *));
+  // third, calloc name[]
   for (int i = 0; i < beadtype_alloced; i++) {
     name[i] = calloc(16, sizeof(char));
   }
-  for (int i = 0; i < beadtype_alloced; i++) {
-    strcpy(name[i], (*BeadType)[i].Name);
+  // fourth, copy names
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    strcpy(name[i], (*MoleculeType)[i].Name);
   } //}}}
 
   // remove unused bead types from BeadType struct and molecule bonds //{{{
@@ -1149,6 +1161,11 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
           for (int k = 0; k < (*MoleculeType)[j].nBTypes; k++) {
             if ((*MoleculeType)[j].BType[k] == i) {
               (*MoleculeType)[j].BType[k] = count;
+            }
+          }
+          for (int k = 0; k < (*MoleculeType)[j].nBeads; k++) {
+            if ((*MoleculeType)[j].Bead[k] == i) {
+              (*MoleculeType)[j].Bead[k] = count;
             }
           }
         }
@@ -2238,6 +2255,17 @@ Vector Sort3(Vector in) {
 
   return out;
 } //}}}
+
+// Swap() //{{{
+/** 
+ * Swap two integers.
+ */
+void Swap(int *a, int *b) {
+  int swap = *a;
+  *a = *b;
+  *b = swap;
+}
+// }}}
 
 // FreeBead() //{{{
 /**
