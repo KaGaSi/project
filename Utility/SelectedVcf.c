@@ -427,29 +427,30 @@ int main(int argc, char *argv[]) {
           // join molecules? //{{{
           if (join) {
             RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-          } else { // if rounding leads to BoxLength, move it bead to other side of box
-            for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
-              char check[8];
-              char box[8];
-              // x direction
-              sprintf(check, "%.3f", Bead[i].Position.x);
-              sprintf(box, "%.3f", BoxLength.x);
-              if (strcmp(check, box) == 0) {
-                Bead[i].Position.x = 0;
-              }
-              // y direction
-              sprintf(check, "%.3f", Bead[i].Position.y);
-              sprintf(box, "%.3f", BoxLength.y);
-              if (strcmp(check, box) == 0) {
-                Bead[i].Position.y = 0;
-              }
-              // z direction
-              sprintf(check, "%.3f", Bead[i].Position.z);
-              sprintf(box, "%.3f", BoxLength.z);
-              if (strcmp(check, box) == 0) {
-                Bead[i].Position.z = 0;
-              }
-            }
+// some old, stupid stuff
+//        } else { // if rounding leads to BoxLength, move it bead to other side of box
+//          for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
+//            char check[8];
+//            char box[8];
+//            // x direction
+//            sprintf(check, "%.3f", Bead[i].Position.x);
+//            sprintf(box, "%.3f", BoxLength.x);
+//            if (strcmp(check, box) == 0) {
+//              Bead[i].Position.x = 0;
+//            }
+//            // y direction
+//            sprintf(check, "%.3f", Bead[i].Position.y);
+//            sprintf(box, "%.3f", BoxLength.y);
+//            if (strcmp(check, box) == 0) {
+//              Bead[i].Position.y = 0;
+//            }
+//            // z direction
+//            sprintf(check, "%.3f", Bead[i].Position.z);
+//            sprintf(box, "%.3f", BoxLength.z);
+//            if (strcmp(check, box) == 0) {
+//              Bead[i].Position.z = 0;
+//            }
+//          }
           } //}}}
 
           // open output .vcf file for appending //{{{
