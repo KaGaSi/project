@@ -21,14 +21,14 @@ autocorrelation time (tau). Empty lines and lines beginning with '#' are \
 skipped. The program prints to standart output 4 values: <n_blocks> \
 <simple average> <statistical error> <estimate of tau>.\n\n");
     fprintf(stdout, "\
-A way to estimate \
-the 'real' value of tau is to use a wide range of <n_blocks> and then plot \
+A way to get \
+tau estimate is to use a wide range of <n_blocks> and then plot \
 <tau> as a function of <n_blocks>. Since the number of data points in a \
-block has to be larger than tau (say, 10 times larger), plotting \
+block has to be larger than tau (e.g., ten times larger), plotting \
 <number of data lines>/10/<n_blocks> vs. <n_blocks> will produce an \
 exponential function that will intersect the plotted <tau>. A value of tau \
 near the intersection (but to the left where the exponential is above <tau>) \
-can be considered a good estimate for tau.\n\n");
+can be considered a safe estimate for tau.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -36,7 +36,7 @@ can be considered a good estimate for tau.\n\n");
 
   fprintf(ptr, "   <input>           input filename\n");
   fprintf(ptr, "   <column>          column number in the file to analyse\n");
-  fprintf(ptr, "   <discard>         number of rows discard (from the file beginning)\n");
+  fprintf(ptr, "   <discard>         number of data lines to discard from the file beginning\n");
   fprintf(ptr, "   <n_blocks>        number of blocks for binning\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -h             print this help and exit\n");

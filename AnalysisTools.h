@@ -266,6 +266,16 @@ double Max3(double x, double y, double z); //}}}
  */
 Vector Sort3(Vector in); //}}}
 
+// Swap() //{{{
+/**
+ * \brief Function to swap two integers.
+ *
+ * \param [in] a   first integer to swap
+ * \param [in] b   second integer to swap
+ */
+void Swap(int *a, int *b);
+// }}}
+
 // FreeBead() //{{{
 /**
  * \brief Free memory allocated for Bead struct array.

@@ -17,7 +17,7 @@ void Help(char cmd[50], bool error) { //{{{
     fprintf(stdout, "\
 Aggregates utility determines which molecules belong to which aggregate on the \
 basis of given parameters - the minimum distance at which a pair of beads from \
-different molecules is considered a contact and the minimum number of such \
+different molecules is considered in contact and the minimum number of such \
 contacts between two molecules to consider them as belonging to the same \
 aggregate. Only distances between specified bead types are considered. \
 Information about aggregates in each timestep is written to '.agg' file (see \
@@ -31,13 +31,13 @@ indexed timesteps).\n\n");
   fprintf(ptr, "<output.agg> <bead name(s)> <options>\n\n");
 
   fprintf(ptr, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <distance>            minimum distance for contact for aggregate check\n");
-  fprintf(ptr, "   <contacts>            minimum number of contacts for aggregate check\n");
-  fprintf(ptr, "   <output.agg>          output filename (agg format)\n");
+  fprintf(ptr, "   <distance>            minimum distance for beads to be considered in contact\n");
+  fprintf(ptr, "   <contacts>            minimum number of contacts\n");
+  fprintf(ptr, "   <output.agg>          output filename with .agg ending\n");
   fprintf(ptr, "   <bead name(s)>        names of bead types for closeness calculation\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
-  fprintf(ptr, "      -xm <mol name(s)>  exclude molecule close to specified molecule(s)\n");
+  fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule type(s)\n");
+  fprintf(ptr, "      -xm <mol name(s)>  exclude molecules close to specified molecule type(s)\n");
   fprintf(ptr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
   CommonHelp(error);
 } //}}}
@@ -115,9 +115,8 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     if (xm_mols[(*Molecule)[i].Type]) {
       (*xm_use_mol)[i] = false;
     }
-  } //}}}
+  }
 
-  // disqualify molecules via '-xm' option //{{{
   for (int c1z = 0; c1z < n_cells.z; c1z++) {
     for (int c1y = 0; c1y < n_cells.y; c1y++) {
       for (int c1x = 0; c1x < n_cells.x; c1x++) {
