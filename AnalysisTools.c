@@ -538,11 +538,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       }
     } //}}}
   } //}}}
-//for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
-//  if ((*Bead)[i].Molecule != -1) {
-//    printf("i=%d Bead[i].Type=%d Bead[i].Molecule=%d BeadType[Bead[i].Type].Name=|%s|\n", i, (*Bead)[i].Type, (*Bead)[i].Molecule, (*BeadType)[(*Bead)[i].Type].Name); // default beads aren't in molecules
-//  }
-//}
 
   // assign 'type_default' to default beads //{{{
   int count = 0;
@@ -634,13 +629,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   } //}}}
 
   fclose(vsf);
-
-//for (int i = 0; i < (*Counts).Molecules; i++) {
-//  int type = (*Molecule)[i].Type;
-//  for (int j = 0; j < (*MoleculeType)[type].nBonds; j++) {
-//    printf("bonds %2d (%5d): %5d (%5d) %5d (%5d)\n", i, j, (*Molecule)[i].Bead[(*MoleculeType)[type].Bond[j][0]], (*MoleculeType)[type].Bond[j][0], (*Molecule)[i].Bead[(*MoleculeType)[type].Bond[j][1]], (*MoleculeType)[type].Bond[j][1]);
-//  }
-//}
 
   // fourth, go through vsf and assign bead ids to molecules //{{{
   // open vsf structure file //{{{
@@ -796,16 +784,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
         break;
     }
   } //}}}
-
-//for (int i = 0; i < (*Counts).Molecules; i++) {
-//  int type = (*Molecule)[i].Type;
-//  for (int j = 0; j < (*MoleculeType)[type].nBeads; j++) {
-//    printf("beads %2d: %5d (%5d)\n", i, (*Molecule)[i].Bead[j], j);
-//  }
-//  for (int j = 0; j < (*MoleculeType)[type].nBonds; j++) {
-//    printf("bonds %2d (%5d): %5d (%5d) %5d (%5d)\n", i, j, (*Molecule)[i].Bead[(*MoleculeType)[type].Bond[j][0]], (*MoleculeType)[type].Bond[j][0], (*Molecule)[i].Bead[(*MoleculeType)[type].Bond[j][1]], (*MoleculeType)[type].Bond[j][1]);
-//  }
-//}
 
   // fill BTypes array //{{{
   // allocate & initialize arrays //{{{
@@ -1055,18 +1033,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
     (*Molecule)[i].Type = FindMoleculeType(name[type], *Counts, *MoleculeType);
   } //}}}
 
-  // free name array //{{{
-  for (int i = 0; i < moltype_alloced; i++) {
-    free(name[i]);
-  }
-  free(name); //}}}
-
-//for (int i = 0; i < (*Counts).Molecules; i++) {
-//  for (int j = 0; j < (*MoleculeType)[(*Molecule)[i].Type].nBeads; j++) {
-//    printf("%6d %6d %6d\n", i, j, (*Bead)[(*Molecule)[i].Bead[j]].Index);
-//  }
-//}
-
   // remove unused beads from bonds in molecules //{{{
   int mol_type[(*Counts).TypesOfMolecules]; // helper array //{{{
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
@@ -1163,7 +1129,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
 
   // copy bead type names //{{{
   int beadtype_alloced = (*Counts).TypesOfBeads;
-  name = calloc(beadtype_alloced, sizeof(char *));
+  name = realloc(name, beadtype_alloced*sizeof(char *));
   for (int i = 0; i < beadtype_alloced; i++) {
     name[i] = calloc(16, sizeof(char));
   }
@@ -1872,7 +1838,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
   // go through all aggregates larger than unimers
   for (int i = 0; i < Counts.Aggregates; i++) {
 
-    // negate moved array, while first molecule is not to move //{{{
+    // negate moved array, but the first molecule is not to move //{{{
     for (int j = 1; j < Counts.Molecules; j++) {
       moved[j] = false;
     }
@@ -1905,7 +1871,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                   dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
                   // move 'mol2' (or 'k') if 'bead1' and 'bead2' are in contact
-                  if (dist.x < distance) {
+                  if (dist.x <= distance) {
 
                     // distance vector between 'bead1' and 'bead2' //{{{
                     dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
