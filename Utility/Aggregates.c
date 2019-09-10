@@ -115,9 +115,8 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     if (xm_mols[(*Molecule)[i].Type]) {
       (*xm_use_mol)[i] = false;
     }
-  } //}}}
+  }
 
-  // disqualify molecules via '-xm' option //{{{
   for (int c1z = 0; c1z < n_cells.z; c1z++) {
     for (int c1y = 0; c1y < n_cells.y; c1y++) {
       for (int c1x = 0; c1x < n_cells.x; c1x++) {
