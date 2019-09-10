@@ -14,14 +14,15 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(ptr, "\
-DensityAggregates utility calculates bead density for aggregates of given \
-size(s) from \
-their centre of mass. Beside unbonded beads it takes into account only beads \
-from the current aggregate, not from any other aggregate. \
-Care must be taken with beadtype names in molecule types, because if \
-one beadtype appears in more molecule types, the resulting density for that \
-beadtype will be averaged without regard for the various types of molecule it \
-comes from (in that case, use -x option with SelectedVcf utility).\n\n");
+DensityAggregates utility calculates radial bead density for aggregates \
+of given size(s) from their centre of mass. For beads in molecules, \
+it takes into account only beads from the current aggregate, not from \
+any other aggregate. The utility does not check what molecule type a \
+given bead belongs to, therefore if the same bead type appears in \
+more molecule types, the resulting density for that bead type will be \
+averaged without regard for the various types of molecule it comes from \
+(i.e., if 'mol1' and 'mol2' both both contain bead 'A', there will not be \
+a separate column for 'A' from 'mol1' and from 'mol2').\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -30,7 +31,7 @@ comes from (in that case, use -x option with SelectedVcf utility).\n\n");
   fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <input.agg>       input agg file\n");
   fprintf(ptr, "   <width>           width of a single bin of the distribution\n");
-  fprintf(ptr, "   <output.rho>      output density file with '#.rho' ending (# is aggregate size)\n");
+  fprintf(ptr, "   <output>          output density file with automatic '#.rho' ending (# is aggregate size)\n");
   fprintf(ptr, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      --joined       specify that aggregates with joined coordinates are used\n");

@@ -9,13 +9,15 @@ replace neutral unbonded ones with the lowest indices (as ordered in the
 utility generates \texttt{vcf} and \texttt{vsf} files for the new system.
 
 \texttt{AddToSystem} does not check whether there are enough unbonded
-neutral beads to be replaced by the new beads.
+neutral beads to be replaced by the new beads; the utility will most likely
+not show an error, but the resulting \texttt{vcf} and \texttt{vsf} files
+won't be right.
 
-The coordinates of the new unbonded beads are ruled by the \texttt{-ld},
-\texttt{-hd}, and \texttt{-bt} options; the first bead of the new molecules
-obey these options. The coordinates of the remaining beads in a molecule
-are governed by the provided coordinates. The molecules are added with a
-random orientation.
+Coordinates of the new unbonded beads are ruled by the \texttt{-ld},
+\texttt{-hd}, and \texttt{-bt} options (either the first bead or the
+geometric centre of the new molecules obey these options). The coordinates
+of the remaining beads in a molecule are governed by the provided
+coordinates. The molecules are added with a random orientation.
 
 If \texttt{-ld} and/or \texttt{-hd} options are used, they must accompanied
 by the \texttt{-bt} option.
@@ -33,7 +35,7 @@ properties:
 \end{verbatim}
 The first line must start with \texttt{species} keyword followed by the
 number of bead types. For each bead type a single line must contain the name of
-the bead, their mass and charge, and a number of these beads that are not
+the bead, its mass and charge, and a number of these beads that are not
 in a molecule (i.e., monomeric beads).
 
 The \texttt{molecule} section that must be behind the \texttt{species}
@@ -42,19 +44,19 @@ added:
 
 \noindent
 \begin{longtable}{ll}
-  \texttt{molecule <int>} & number of types of molecules \\
-  \texttt{<name>} & name of the first molecule type \\
-  \texttt{nummols <int>} & number of these molecules \\
-  \texttt{beads <int>} & number of beads in these molecules \\
-  \texttt{<bead name> <float> <float> <float>} & a line for each of the \texttt{<int>} beads \\
-  \texttt{...} & \ \ \ \ specifying bead name and \\
+  \texttt{molecule <int>} & Number of types of molecules \\
+  \texttt{<name>} & Name of the first molecule type \\
+  \texttt{nummols <int>} & Number of these molecules \\
+  \texttt{beads <int>} & Number of beads in these molecules \\
+  \texttt{<bead name> <float> <float> <float>} & One line for each of the \texttt{<int>} beads \\
+  \texttt{...} & \ \ \ \ specifying bead name and its \\
   \texttt{<bead name> <float> <float> <float>} & \ \ \ \ Cartesian coordinates \\
-  \texttt{bonds <int>} & number of bonds in these molecule \\
-  \texttt{<string> <int> <int>} & a line for each of the \texttt{<int>} bonds \\
+  \texttt{bonds <int>} & Number of bonds in these molecules \\
+  \texttt{<string> <int> <int>} & One line for each of the \texttt{<int>} bonds \\
   \texttt{...} & \ \ \ \ containing arbitrary string and \\
   \texttt{<string> <int> <int>} & \ \ \ \ indices connected beads \\
-  \texttt{...} & anything beyond here is ignored \\
-  \texttt{finish} & description of a molecule is finished \\
+  \texttt{...} & Anything beyond here is ignored \\
+  \texttt{finish} & Description of a molecule is finished \\
 \end{longtable}
 
 The \texttt{molecule} keyword specifies the number of molecule types, that

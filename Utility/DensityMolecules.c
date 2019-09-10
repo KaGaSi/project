@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (mol_type == -1) {
-      fprintf(stderr, "\nError: molecule '%s' does not exist in FIELD\n\n", argv[count]);
+      fprintf(stderr, "\nError: molecule '%s' is not included in %s\n\n", argv[count], input_coor);
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;

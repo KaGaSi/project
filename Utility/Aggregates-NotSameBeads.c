@@ -16,7 +16,8 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
     fprintf(ptr, "\
 Aggregates-NotSameBeads utility works in the same way as Aggregates utility, \
-but does not calculate contacts between beads of the same type.\n\n");
+but it does not use contacts between beads of the same type; i.e., if bead \
+types 'A' and 'B' are given, it considers only 'A-B' pairs.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -24,10 +25,10 @@ but does not calculate contacts between beads of the same type.\n\n");
   fprintf(ptr, "<output.agg> <bead name(s)> <options>\n\n");
 
   fprintf(ptr, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <distance>            minimum distance for contact for aggregate check\n");
+  fprintf(ptr, "   <distance>            minimum distance for beads to be considered in contact\n");
   fprintf(ptr, "   <contacts>            minimum number of contacts for aggregate check\n");
-  fprintf(ptr, "   <output.agg>          output filename (agg format)\n");
-  fprintf(ptr, "   <bead name(s)>        names of bead types for closeness calculation\n");
+  fprintf(ptr, "   <output.agg>          output filename with '.agg' ending\n");
+  fprintf(ptr, "   <bead name(s)>        names of bead types for closeness calculation (at least two are required)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
   fprintf(ptr, "      -xm <mol name(s)>  exclude molecule close to specified molecule(s)\n");
