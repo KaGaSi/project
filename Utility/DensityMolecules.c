@@ -16,7 +16,7 @@ void Help(char cmd[50], bool error) { //{{{
     fprintf(stdout, "\
 DensityMolecules utility calculates number \
 density for all bead types from the \
-centre of mass (or specified bead number in a molecule) of specified molecules. \
+centre of mass (or any bead in a molecule) of specified molecules. \
 \n\n");
   }
 
@@ -26,7 +26,7 @@ centre of mass (or specified bead number in a molecule) of specified molecules. 
   fprintf(ptr, "   <input>            input filename (either vcf or vtf format)\n");
   fprintf(ptr, "   <width>            width of a single bin\n");
   fprintf(ptr, "   <output.rho>       output density file (automatic ending 'molecule_name.rho' added)\n");
-  fprintf(ptr, "   <mol name(s)>      molecule names to calculate density for\n");
+  fprintf(ptr, "   <mol name(s)>      molecule name(s) to calculate density for\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      --joined        specify that <input> contains joined coordinates\n");
   fprintf(ptr, "      -n <int>        number of bins to average\n");
