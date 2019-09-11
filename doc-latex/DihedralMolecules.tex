@@ -1,7 +1,7 @@
 \section{DihedralMolecules} \label{sec:DihedralMolecules}
 
 This utility calculates angles between specified planes in each molecule of
-specified molecule type(s). The planes in a molecule are arbitrary, so they
+provided molecule type(s). The planes in a molecule are arbitrary, so they
 can represent true dihedral angles or improper dihedrals.
 
 The angle is specified by six bead indices (according to the order of beads
@@ -12,20 +12,20 @@ example, assuming indices \texttt{1 2 3 4 5 6}, the first plane is
 specified by the first three beads in the molecule; second plane by the
 next three beads (beads \texttt{4 5 6}). The default indices
 (i.e., if \texttt{-n} option is not used) are \texttt{1 2 3 2 3 4}. More
-than one angle can be specified (i.e., a multiple of six numbers have to be
+than one angle can be specified (i.e., a multiple of six numbers can be
 supplied to the \texttt{-n} option.).
 
-The utility calculates distribution of angles for each specified trio of
-bead indices for each molecule type and prints overall averages at the end
-of \texttt{<output>} file. If \texttt{-a} option is used, it can also write
-all the angles for all individual molecules in each timestep (i.e., time
-evolution of the angle for each individual molecule).
+The utility calculates a distribution for each specified angle for each
+molecule type and prints overall averages at the end of \texttt{<output>}
+file. If \texttt{-a} option is used, it also writes all the angles for
+all individual molecules in each timestep (i.e., time evolution of the
+angle for each individual molecule).
 
 Usage:
 
 \vspace{1em}
 \noindent
-\texttt{DihedralMolecules <input> <mol name(s)> <options>}
+\texttt{DihedralMolecules <input> <width> <output> <mol name(s)> <options>}
 
 \noindent
 \begin{longtable}{p{0.235\textwidth}p{0.709\textwidth}}
@@ -34,6 +34,7 @@ Usage:
   \midrule
   \texttt{<input>} & input coordinate file (either \texttt{vcf} or
     \texttt{vtf} format) \\
+  \texttt{<width>} & width of each bin of the distribution (in degrees) \\
   \texttt{<output>} & output file for distribution \\
   \texttt{<mol name(s)>} & molecule name(s) to calculcate angles for \\
   \toprule
@@ -71,9 +72,11 @@ Format of output files:
             calculated angles for that particular molecule type and the
             order of angles is given by the second line
         \end{itemize}
-      \item last two lines: arithmetic means for each calculated angle
-        (last line) and headers (second to last line) that again give range
-        of columns in the last line for each molecule type
+      \item last three lines: arithmetic means for each calculated angle
+        (last line), headers (second to last line) that again give range
+        of columns in the last line for each molecule type, and calculated
+        angles (third to last line which is the same as the second line at
+        the file beginning)
     \end{itemize}
   \item \texttt{-a <file>} -- all angles for all molecules in all timesteps
   \begin{itemize}[nosep,leftmargin=5pt]
@@ -81,10 +84,10 @@ Format of output files:
     \item third lines: column headers
       \begin{itemize}[nosep,leftmargin=10pt]
         \item first is simulation timestep
-        \item the rest are the calculated data: the range for each molecule
-          type corresponds to the number of molecules of the given type
-          times the number of calculated angles; for each molecule the
-          angles are ordered according to the second line
+        \item the rest are the calculated data (in degreees): the range for
+          each molecule type corresponds to the number of molecules of the
+          given type times the number of calculated angles; for each
+          molecule the angles are ordered according to the second line
       \end{itemize}
   \end{itemize}
 \end{enumerate}
