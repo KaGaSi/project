@@ -210,11 +210,20 @@ int main(int argc, char *argv[]) {
     // Error - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && dihedral[i] >= MoleculeType[j].nBeads) {
-        fprintf(stderr, "\nError: '-a' option - %d is larger than the number of beads in molecule %s\n\n", dihedral[i], MoleculeType[j].Name);
+        fprintf(stderr, "\nError: '-n' option - %d is larger than the number of beads in molecule %s (%d beads)\n\n", dihedral[i]+1, MoleculeType[j].Name, MoleculeType[j].nBeads);
         Help(argv[0], true);
         exit(1);
       }
     } //}}}
+  }
+  // Error - same bead id used in specifying a plane
+  for (int i = 0; i < number_of_beads; i += (beads_per_angle/2)) {
+    if (dihedral[i] == dihedral[i+1] ||
+        dihedral[i] == dihedral[i+2] ||
+        dihedral[i+1] == dihedral[i+2]) {
+      fprintf(stderr, "\nError: '-n' option - a plane must be specified by three different beads (wrong trio: %d %d %d)\n", dihedral[i], dihedral[i+1], dihedral[i+2]);
+      exit(1);
+    }
   } //}}}
 
   // '-a' option - write angles for all molecules //{{{
@@ -241,7 +250,7 @@ int main(int argc, char *argv[]) {
     // print molecule names & bead ids //{{{
     fprintf(out, "# dihedral angles between planes specifief by:");
     for (int j = 0; j < number_of_beads; j += beads_per_angle) {
-      fprintf(out, " (%d) %d-%d-%d & %d-%d-%d;", j/beads_per_angle+1, dihedral[j], dihedral[j+1], dihedral[j+2], dihedral[j+3], dihedral[j+4], dihedral[j+5]);
+      fprintf(out, " (%d) %d-%d-%d & %d-%d-%d;", j/beads_per_angle+1, dihedral[j]+1, dihedral[j+1]+1, dihedral[j+2]+1, dihedral[j+3]+1, dihedral[j+4]+1, dihedral[j+5]+1);
     }
     putc('\n', out);
     fprintf(out, "# columns: (1) step;");
@@ -306,11 +315,17 @@ int main(int argc, char *argv[]) {
   if (verbose) {
     VerboseOutput(verbose2, input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
 
-    fprintf(stdout, "Chosen molecule types:");
+    fprintf(stdout, "\nChosen molecule types:");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {
         fprintf(stdout, " %s", MoleculeType[i].Name);
       }
+    }
+    putchar('\n');
+    fprintf(stdout, "\nPlanes for which to calculate angles:\n");
+    for (int i = 0; i < number_of_beads; i += beads_per_angle) {
+      fprintf(stdout, "  %d-%d-%d &", dihedral[i], dihedral[i+1], dihedral[i+2]);
+      fprintf(stdout, " %d-%d-%d\n", dihedral[i+3], dihedral[i+4], dihedral[i+5]);
     }
     putchar('\n');
   } //}}}
@@ -504,7 +519,7 @@ int main(int argc, char *argv[]) {
   // print molecule names & bead ids //{{{
   fprintf(out, "# dihedral angles between planes specifief by:");
   for (int j = 0; j < number_of_beads; j += beads_per_angle) {
-    fprintf(out, " (%d) %d-%d-%d & %d-%d-%d;", j/beads_per_angle+1, dihedral[j], dihedral[j+1], dihedral[j+2], dihedral[j+3], dihedral[j+4], dihedral[j+5]);
+    fprintf(out, " (%d) %d-%d-%d & %d-%d-%d;", j/beads_per_angle+1, dihedral[j]+1, dihedral[j+1]+1, dihedral[j+2]+1, dihedral[j+3]+1, dihedral[j+4]+1, dihedral[j+5]+1);
   }
   putc('\n', out);
   fprintf(out, "# columns: (1) angle [deg];");
@@ -537,7 +552,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // write to output average angles //{{{
-  fprintf(out, "# averages:");
+  fprintf(out, "# dihedral angles between planes specifief by:");
+  for (int j = 0; j < number_of_beads; j += beads_per_angle) {
+    fprintf(out, " (%d) %d-%d-%d & %d-%d-%d;", j/beads_per_angle+1, dihedral[j]+1, dihedral[j+1]+1, dihedral[j+2]+1, dihedral[j+3]+1, dihedral[j+4]+1, dihedral[j+5]+1);
+  }
+  putc('\n', out);
+  fprintf(out, "# simple averages:");
   j = 1;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
