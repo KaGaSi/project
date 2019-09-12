@@ -1,7 +1,8 @@
 \section{DistrAgg} \label{sec:DistrAgg}
 
 This utility calculates average aggregate mass and aggregation number for
-each timestep (i.e., time evolution) and the averages over all timesteps.
+each timestep (i.e., time evolution) and the averages over all timesteps
+from a supplied \texttt{agg} file (see Section~\ref{sec:AggFile} for its format).
 It calculates number, weight, and z averages. It also calculates
 distribution functions of aggregation sizes and volumes.
 
@@ -58,12 +59,12 @@ defined (assuming all beads have the same volume) as
 where $n_i$ is the number of beads in aggregate $i$ and $n$ is the total
 number of beads in all aggregates. If all beads have unit mass (as is often
 the case in dissipative particle dynamics), the volume distribution,
-$\phi(A_{\mathrm{S}})$, is the equal to the number distribution,
+$\phi(A_{\mathrm{S}})$, is equal to the number distribution,
 $F_{\mathrm{n}}(A_{\mathrm{S}})$.
-These distribution are written into the \texttt{<output distr>} file.
+All distributions are written into the \texttt{<output distr>} file.
 
 Lastly, \texttt{DistrAgg} can calculate number distribution of composition
-for aggregates with specified size(s) (\texttt{-c} option). This is a number
+for aggregates with specified size(s) (\texttt{-c} option), that is, the
 distribution of the numbers of different molecule types in the aggregate.
 For example, if the simulation box contains molecule types \texttt{Mol\_A}
 and \texttt{Mol\_B}, aggregates with the same size can contain different
@@ -75,29 +76,32 @@ types. The composition distribution is defined as
 \begin{equation} \label{eq:CompDistr}
   F_{\mathrm{n}}(\xi) = \frac{N_{\xi,A_{\mathrm{S}} }}{N_{A_{\mathrm{S}}} },
 \end{equation}
-where $N_{\xi,A_{\mathrm{S}} }$ is the number of aggregate with aggregate
+where $N_{\xi,A_{\mathrm{S}} }$ is the number of aggregates with aggregate
 size $A_{\mathrm{S}}$ and ratio $\xi$; $N_{A_{\mathrm{S}}}$ is the total
 number of aggregates with aggregate size $A_{\mathrm{S}}$.
+\textit{Unfortunatly, this option may not work correctly.}
 
 The definition of aggregate size is flexible. If none of \texttt{-m},
-\texttt{-x}, \texttt{--only} options is used, aggregate size is the `true'
-aggregation number, $A_{\mathrm{S}}$, i.e., the number of all molecules in
-the aggregate; if \texttt{-m} is used, aggregate size is the sum of only
-specified molecule type(s); if \texttt{-x} is used, aggregates containing
-only specified molecule type(s) are disregarded; if \texttt{--only} is
-used, only aggregates composed of the specified molecule type(s) are taken
-into account. For example, consider a system containing three aggregates
-composed of various numbers of three different molecule types:
-\noindent
-\begin{longtable}{l|l}
+\texttt{-x}, or \texttt{--only} options is used, aggregate size is the
+\say{true} aggregation number, $A_{\mathrm{S}}$, i.e., the number of all
+molecules in the aggregate; if \texttt{-m} is used, aggregate size is the
+sum of only specified molecule type(s); if \texttt{-x} is used, aggregates
+containing only specified molecule type(s) are disregarded; if
+\texttt{--only} is used, only aggregates composed of the specified molecule
+type(s) are taken into account. For example, consider a system containing
+three aggregates composed of various numbers of three different molecule
+types:
+
+\begin{longtable}{c|l}
   \toprule
-  Molecule types & Aggregate composition \\
+  Molecule types & \multicolumn{1}{c}{Aggregate composition} \\
   \midrule
   \texttt{Mol\_A} & \texttt{Agg\_1}: 1 \texttt{Mol\_A} $+2$ \texttt{Mol\_B} $+3$ \texttt{Mol\_C} $=6$ molecules \\
   \texttt{Mol\_B} & \texttt{Agg\_2}: 1 \texttt{Mol\_A} $+2$ \texttt{Mol\_B} $=3$ molecules \\
   \texttt{Mol\_C} & \texttt{Agg\_3}: 1 \texttt{Mol\_A} $=1$ molecule \\
   \bottomrule
 \end{longtable}
+
 \noindent
 Here is a list of some of the possibilities depending on the option(s)
 used:
@@ -119,18 +123,25 @@ used:
     detect only one aggregate with size: \texttt{Agg\_1} -- 6
   \item if \texttt{-x Mol\_A Mol\_B} is combined with \texttt{-m Mol\_A
     Mol\_B}, \texttt{DistrAgg} would again detect only \texttt{Agg\_1}, but
-    its size would be taken as 3
+    its size would be 3
   \item if \texttt{--only Mol\_A Mol\_B} is used, \texttt{Agg\_1} is not
     counted, because it contains a molecule not specified by
-    \texttt{--only}; \texttt{DistrAgg} would detect only two aggregates
+    \texttt{--only}; \texttt{DistrAgg} would detect two aggregates
     with sizes: \texttt{Agg\_2} -- 3; \texttt{Agg\_3} -- 1
   \item if \texttt{--only Mol\_A Mol\_B} is combined with \texttt{-m
     Mol\_A}, the two detected aggregates have sizes: \texttt{Agg\_2} -- 1;
     \texttt{Agg\_3} -- 1
   \item if \texttt{--only Mol\_A Mol\_B} is combined with \texttt{-x
-    Mol\_A}, only \texttt{Agg\_2} is detected as it is the only composed of
-    only \texttt{Mol\_A} and \texttt{Mol\_B} molecules
+    Mol\_A}, only \texttt{Agg\_2} is detected as it is the only one composed of
+    only \texttt{Mol\_A} and \texttt{Mol\_B} molecules and its size would
+    be 3
+  \item if \texttt{--only Mol\_A Mol\_B} and \texttt{-x Mol\_A} are combined
+    with \texttt{-m Mol\_A}, the size of the aggregate would be 1
 \end{enumerate}
+
+Moreover, only a specified range of aggregate sizes can be taken into
+account (\texttt{-n <int> <int>} option). These sizes are defined by the
+\texttt{-m}, \texttt{-x}, and \texttt{--only} options as well.
 
 Usage:
 
@@ -179,8 +190,9 @@ Format of output files:
           \item \texttt{<volume distribution>} is distribution according
             to Equation \eqref{eq:Fvol}
           \item next is the total number of aggregates with specified size
-          \item the remaining columns show average numbers of every molecule
-            type in an aggregate with the specified size
+          \item the remaining columns (\texttt{<mol name>\_n}) show average
+            numbers of every molecule type in an aggregate with the
+            specified size
         \end{itemize}
       \item second to last line: column headers for overall averages
         written in the last line
@@ -188,8 +200,7 @@ Format of output files:
           \item \texttt{<M>\_n}, \texttt{<M>\_w}, and \texttt{<M>\_z} are
             number, weight, and z averages, respectively, of aggregate
             masses (the averages are defined in Equation~\eqref{eq:Avg})
-          \item a column denoted \texttt{<mol name>\_n} shows an average
-            number of molecules named \texttt{mol name} in an aggregate
+          \item other column headers are the same as at the file beginning
         \end{itemize}
     \end{itemize}
   \item \texttt{<output avg>} -- per-timestep averages
@@ -202,7 +213,8 @@ Format of output files:
           average aggregate mass (\texttt{<M>\_n}, \texttt{<M>\_w}, and
           \texttt{<M>\_z}, respectively) and aggregate size
           (\texttt{<As>\_n}, \texttt{<As>\_w}, and \texttt{<As>\_z},
-          respectively)
+          respectively) and the last column is the number of aggregates in
+          the given step
       \end{itemize}
     \item the last two lines are the same as in \texttt{<output distr>}
   \end{itemize}
