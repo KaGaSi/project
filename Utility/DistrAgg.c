@@ -30,8 +30,8 @@ fractions of aggregates.\n\n");
   fprintf(ptr, "      -n <int> <int>      use aggregate sizes in a given range\n");
   fprintf(ptr, "      -m <name(s)>        use number of specified molecule(s) as aggrete size\n");
   fprintf(ptr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
-  fprintf(ptr, "      --only <name(s)>    use only aggregates composed of a specified molecule\n");
-  fprintf(ptr, "      -c <name> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
+  fprintf(ptr, "      --only <name(s)>    use only aggregates composed of specified molecule(s)\n");
+  fprintf(ptr, "      -c <name> <int(s)>  write composition distribution of aggregate size(s) to <name>\n");
   CommonHelp(error);
 } //}}}
 
