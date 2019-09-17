@@ -1706,6 +1706,7 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
     }
   } //}}}
 
+// type_def = -1; // uncomment if no default is to be in vsf (for debugging)
   // print default bead type //{{{
   if (type_def != -1) {
     fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
