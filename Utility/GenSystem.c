@@ -14,9 +14,17 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-GenVsf reads information from FIELD-like file and creates \
-vsf structure file and generates coordinates for all beads \
-(used, e.g., as initial configuration for a simulation).\n\n");
+Warning: This utility was not extensively tested and is \
+in fact not a very good generator of initial configuration.\n\n\
+GenVsf reads information from FIELD-like file to create \
+vsf structure file and generate coordinates for all beads \
+(used, e.g., as initial configuration for a simulation). \
+This utility only creates linear molecules no matter the \
+connectivity in the provided FIELD-like file. GenSystem \
+also lacks checking for errors in teh FIELD-like file so \
+if an incorrect file is provided, the utility will exhibit \
+undefined behaviour (it will freeze, crash, or produce wrong \
+results).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -144,9 +152,9 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "species") == 0 ||
-        strcmp(split, "Species") == 0 ||
-        strcmp(split, "SPECIES") == 0 ) {
+    if (strncmp(split, "species", 6) == 0 ||
+        strncmp(split, "Species", 6) == 0 ||
+        strncmp(split, "SPECIES", 6) == 0 ) {
       Counts.TypesOfBeads = atoi(strtok(NULL, " \t"));
       break;
     }
@@ -189,9 +197,9 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "molecule") == 0 ||
-        strcmp(split, "Molecule") == 0 ||
-        strcmp(split, "MOLECULE") == 0 ) {
+    if (strncmp(split, "molecules", 8) == 0 ||
+        strncmp(split, "Molecules", 8) == 0 ||
+        strncmp(split, "MOLECULES", 8) == 0 ) {
       Counts.TypesOfMolecules = atoi(strtok(NULL, " \t"));
       break;
     }
@@ -224,7 +232,8 @@ int main(int argc, char *argv[]) {
     // number of beads //{{{
     fgets(line, sizeof(line), fr);
     strtok(line, " \t ");
-    MoleculeType[i].nBeads = atoi(strtok(NULL, " \t")); //}}}
+    MoleculeType[i].nBeads = atoi(strtok(NULL, " \t"));
+    MoleculeType[i].Bead = calloc(MoleculeType[i].nBeads, sizeof(int)); //}}}
     // number of bonded beads
     Counts.Bonded += MoleculeType[i].Number * MoleculeType[i].nBeads;
     // realloc Bead and Molecule arrays //{{{
@@ -248,6 +257,7 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
+      MoleculeType[i].Bead[j] = type;
       if (!test) {
         MoleculeType[i].nBTypes++;
         MoleculeType[i].BType = realloc(MoleculeType[i].BType,MoleculeType[i].nBTypes*sizeof(int));
@@ -259,7 +269,7 @@ int main(int argc, char *argv[]) {
       for (int k = 0; k < MoleculeType[i].Number; k++) {
         int id = Counts.Beads + MoleculeType[i].nBeads * k + j;
         Bead[id].Type = type;
-        Bead[id].Molecule = k;
+        Bead[id].Molecule = Counts.Molecules + k;
         Bead[id].Index = id;
         Molecule[Counts.Molecules+k].Bead[j] = id;
       }
@@ -281,7 +291,6 @@ int main(int argc, char *argv[]) {
     Counts.Beads = Counts.Unbonded + Counts.Bonded;
     // total number of molecules
     Counts.Molecules = MoleculeType[i].Number;
-
     // skip till 'finish' //{{{
     while(fgets(line, sizeof(line), fr)) {
       char *split;
@@ -337,15 +346,16 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "molecule") == 0 ||
-        strcmp(split, "Molecule") == 0 ||
-        strcmp(split, "MOLECULE") == 0 ) {
+    if (strncmp(split, "molecules", 8) == 0 ||
+        strncmp(split, "Molecules", 8) == 0 ||
+        strncmp(split, "MOLECULES", 8) == 0 ) {
       Counts.TypesOfMolecules = atoi(strtok(NULL, " \t"));
       break;
     }
   } //}}}
 
   // read bond lenghts for all molecule types and create prototype molecules //{{{
+  printf("\nbox = (%lf, %lf, %lf)\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   double *prototype_z[Counts.TypesOfMolecules]; // prototype molecule z coordinate
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     // allocate array for bond lengths
@@ -356,14 +366,16 @@ int main(int argc, char *argv[]) {
     while(fgets(line, sizeof(line), fr)) {
       char *split;
       split = strtok(line, " \t");
-      if (strcmp(split, "bonds") == 0 ||
-          strcmp(split, "Bonds") == 0 ||
-          strcmp(split, "BONDS") == 0 ) {
+      if (strncmp(split, "bonds", 4) == 0 ||
+          strncmp(split, "Bonds", 4) == 0 ||
+          strncmp(split, "BONDS", 4) == 0 ) {
         break;
       }
     } //}}}
 
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+//  for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+    // if we assume linear molecule, there must be nBeads-1 bonds
+    for (int j = 0; j < (MoleculeType[i].nBeads-1); j++) {
       fgets(line, sizeof(line), fr);
       char *split;
       split = strtok(line, " \t"); // bond type
@@ -378,11 +390,12 @@ int main(int argc, char *argv[]) {
       prototype_z[i][j+1] = prototype_z[i][j] + length;
     }
 
-    printf("\nbox = (%lf, %lf, %lf)\n\nPrototype %s molecule (z coordinate):\n", BoxLength.x, BoxLength.y, BoxLength.z, MoleculeType[i].Name);
+    printf("Prototype %s molecule (z coordinate):\n", MoleculeType[i].Name);
     for (int j = 0; j < MoleculeType[i].nBeads; j++) {
-      printf("%2d: %lf\n", j, prototype_z[i][j]);
+      printf("%2d: %lf\n", j+1, prototype_z[i][j]);
     }
   } //}}}
+  fclose(fr);
 
   // longest molecule type //{{{
   int longest = -1;
@@ -608,7 +621,8 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     free(prototype_z[i]);
   }
-  free(input); //}}}
+  free(input);
+  free(output_vcf); //}}}
 
   return 0;
 }
