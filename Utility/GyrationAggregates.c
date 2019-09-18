@@ -14,13 +14,13 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-GyrationAggregates calculates radii of gyration, acylindricities, \
-asphericities and relative shape anisotropies during the simulation for all \
-aggregates izes. The shape descriptors are calculated from eigenvalues of \
-gyration tensor. It also prints averages to the stdout. Instead of aggregate \
-size, a number of specified molecular species in an aggregate can be used and \
-only specified bead types can be used for all calculations. Data can also be \
-saved in the per-size files (for analysis of autocorrelation).\n\n");
+GyrationAggregates calculates gyration tensor for aggregates and determines \
+shape descriptors like radius of gyration, acylindricity, asphericity, or \
+relative shape anisotropy. On default, it calculates per-timestep averages, \
+but per-size averages can also be determined. Overall averages are appended \
+to the output file. The definition of aggregate size is quite flexible and \
+the calculation can also be made only \
+for aggregate sizes in a given range. \n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -248,10 +248,21 @@ int main(int argc, char *argv[]) {
   putc('\n', out);
 
   // print legend line to output file
-  fprintf(out, "# column: (1) dt, (2) <Rg>_n, (3) <Rg>_w, (4) <Rg>_z,");
-  fprintf(out, " (5) <Rg^2>_n, (6) <Rg^2>_w (7) <Rg^2>_z,");
-  fprintf(out, " (8) <Anis>_n, (9) <Acyl>_n, (10) <Aspher>_n,");
-  fprintf(out, " (11) <eigen.x>_n (12) <eigen.y>_n, (13) <eigen.z>_n");
+  count = 1;
+  fprintf(out, "# column: ");
+  fprintf(out, "(%d) timestep", count++);
+  fprintf(out, ", (%d) <Rg>_n", count++);
+  fprintf(out, ", (%d) <Rg>_w", count++);
+  fprintf(out, ", (%d) <Rg>_z", count++);
+  fprintf(out, ", (%d) <Rg^2>_n", count++);
+  fprintf(out, ", (%d) <Rg^2>_w", count++);
+  fprintf(out, ", (%d) <Rg^2>_z", count++);
+  fprintf(out, ", (%d) <Anis>_n", count++);
+  fprintf(out, ", (%d) <Acyl>_n", count++);
+  fprintf(out, ", (%d) <Aspher>_n", count++);
+  fprintf(out, ", (%d) <eigen.x>_n", count++);
+  fprintf(out, ", (%d) <eigen.y>_n", count++);
+  fprintf(out, ", (%d) <eigen.z>_n", count++);
   putc('\n', out);
 
   fclose(out); //}}}
@@ -700,7 +711,7 @@ int main(int argc, char *argv[]) {
     }
     putc('\n', out); //}}}
 
-    fprintf(out, "# column: (1) As");
+    fprintf(out, "# column: (1) agg size");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       fprintf(out, " (%d) <%s>", i+2, MoleculeType[i].Name);
     }
@@ -784,24 +795,24 @@ int main(int argc, char *argv[]) {
   fprintf(out, "(%d) <eigen.y>, ", Counts.TypesOfMolecules+13);
   fprintf(out, "(%d) <eigen.z>, ", Counts.TypesOfMolecules+14);
   putc('\n', out);
-  fprintf(out, "# %8.3f", (double)(mass_sum[0][0])/agg_counts_sum[0]); //<M_As>_n
-  fprintf(out, " %8.3f", (double)(mass_sum[0][1])/mass_sum[0][0]); //<M_As>_w
+  fprintf(out, "# %lf", (double)(mass_sum[0][0])/agg_counts_sum[0]); //<M_As>_n
+  fprintf(out, " %lf", (double)(mass_sum[0][1])/mass_sum[0][0]); //<M_As>_w
   // molecule types
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, " %8.3f", (double)(molecules_sum)[0][i]/agg_counts_sum[0]);
+    fprintf(out, " %lf", (double)(molecules_sum)[0][i]/agg_counts_sum[0]);
   }
-  fprintf(out, " %8.3f", Rg_sum[0][0]/agg_counts_sum[0]); // <Rg>_n
-  fprintf(out, " %8.3f", Rg_sum[0][1]/mass_sum[0][0]); // <Rg>_w
-  fprintf(out, " %8.3f", Rg_sum[0][2]/mass_sum[0][1]); // <Rg>_z
-  fprintf(out, " %8.3f", sqrRg_sum[0][0]/agg_counts_sum[0]); // <Rg^2>_n
-  fprintf(out, " %8.3f", sqrRg_sum[0][1]/mass_sum[0][0]); // <Rg^2>_w
-  fprintf(out, " %8.3f", sqrRg_sum[0][2]/mass_sum[0][1]); // <Rg^2>_z
-  fprintf(out, " %8.3f", Anis_sum[0]/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", Acyl_sum[0]/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", Aspher_sum[0]/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", eigen_sum[0].x/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", eigen_sum[0].y/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", eigen_sum[0].z/agg_counts_sum[0]);
+  fprintf(out, " %lf", Rg_sum[0][0]/agg_counts_sum[0]); // <Rg>_n
+  fprintf(out, " %lf", Rg_sum[0][1]/mass_sum[0][0]); // <Rg>_w
+  fprintf(out, " %lf", Rg_sum[0][2]/mass_sum[0][1]); // <Rg>_z
+  fprintf(out, " %lf", sqrRg_sum[0][0]/agg_counts_sum[0]); // <Rg^2>_n
+  fprintf(out, " %lf", sqrRg_sum[0][1]/mass_sum[0][0]); // <Rg^2>_w
+  fprintf(out, " %lf", sqrRg_sum[0][2]/mass_sum[0][1]); // <Rg^2>_z
+  fprintf(out, " %lf", Anis_sum[0]/agg_counts_sum[0]);
+  fprintf(out, " %lf", Acyl_sum[0]/agg_counts_sum[0]);
+  fprintf(out, " %lf", Aspher_sum[0]/agg_counts_sum[0]);
+  fprintf(out, " %lf", eigen_sum[0].x/agg_counts_sum[0]);
+  fprintf(out, " %lf", eigen_sum[0].y/agg_counts_sum[0]);
+  fprintf(out, " %lf", eigen_sum[0].z/agg_counts_sum[0]);
   putc('\n', out);
 
   fclose(out); //}}}
