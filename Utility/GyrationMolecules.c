@@ -14,10 +14,10 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-GyrationAggregates calculates radii of gyration during the simulation for \
-given molecule(s). The radius of gyration is calculated from eigenvalues \
-of gyration tensor. It also prints average radii of gyration to the screen. \
-Bead types to be used for calculation can be specified.\n\n");
+GyrationMolecules calculates the gyration tensor for molecules and determines \
+shape descriptors like the radius of gyration, acylindricity, asphericity, or \
+relative shape anisotropy. It writes per-timestep averages to the output file \
+and appends overall averages to that file.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
