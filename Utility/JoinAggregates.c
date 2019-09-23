@@ -17,7 +17,7 @@ void Help(char cmd[50], bool error) { //{{{
 JoinAggregates removes periodic boundary conditions from aggregates. It is \
 meant as a replacement of '-j' option in Aggregates utility when this option is \
 omitted, but later the joined coordinates are required. Distance and beadtypes \
-for aggregate check are read from input.agg file.\n\n");
+for aggregate check are read from <input.agg> file.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
