@@ -32,8 +32,8 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   fprintf(ptr, "      --join         join molecules (remove pbc)\n");
   fprintf(ptr, "      -st1 <int>     starting timestep from 1st run\n");
   fprintf(ptr, "      -st2 <int>     starting timestep from 2nd run\n");
-  fprintf(ptr, "      -sk1 <int>     skip every <int> steps from 1st run\n");
-  fprintf(ptr, "      -sk2 <int>     skip every <int> steps from 2nd run\n");
+  fprintf(ptr, "      -sk1 <int>     leave out every <int> steps from 1st run\n");
+  fprintf(ptr, "      -sk2 <int>     leave out every <int> steps from 2st run\n");
   CommonHelp(error);
 } //}}}
 
@@ -145,13 +145,6 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\n\n");
   } //}}}
   //}}}
-
-  // print command to stdout //{{{
-  if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
-  } //}}}
 
   count = 0; // count mandatory arguments
 
@@ -334,6 +327,9 @@ int main(int argc, char *argv[]) {
   int test;
   // first run
   count = 0;
+  if (!silent) {
+    fprintf(stdout, "Discarded from 2nd coordinate file: %6d", count);
+  }
   for (int i = 1; i < start_1; i++) {
     count++;
 
@@ -348,7 +344,6 @@ int main(int argc, char *argv[]) {
 
     SkipCoor(vcf_1, Counts, &stuff);
   }
-
   putchar('\n'); //}}}
 
   // main loop - 1st run //{{{
@@ -365,7 +360,7 @@ int main(int argc, char *argv[]) {
     count++;
     if (!silent) {
       if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
+        fprintf(stdout, "Step from 1st run: %6d\n", count);
       } else {
         fflush(stdout);
         fprintf(stdout, "\rStep from 1st run: %6d", count);
@@ -436,15 +431,74 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     fflush(stdout);
-    fprintf(stdout, "\rLast Step from first run: %6d\n", count);
+    fprintf(stdout, "\rLast Step from 1st run: %6d\n", count);
   }
 
   fclose(vcf_1); //}}}
 
+  // connect Bead2 with Bead1 via Index arrays //{{{
+  printf("Connecting bead indices from the two runs (this may take a long time)\n");
+  bool used[Counts.Beads];
+  for (int i = 0; i < Counts.Beads; i++) {
+    used[i] = false;
+  }
+
+  for (int i = 0; i < Counts.Beads; i++) {
+    if (Bead1[i].Molecule == -1) { // monomer bead
+      for (int j = 0; j < Counts.Beads; j++) {
+        if (Bead1[i].Molecule == -1 && Bead2[i].Molecule == -1 &&
+            strcmp(BeadType2[Bead2[j].Type].Name, BeadType1[Bead1[i].Type].Name) == 0 &&
+            !used[j]) {
+          Index1[Bead1[i].Index] = Index2[Bead2[j].Index];
+
+          used[j] = true;
+
+          break;
+        }
+      }
+    } else { // molecular bead
+      for (int j = 0; j < Counts.Beads; j++) {
+        if (Bead2[j].Molecule != -1) {
+          // mol from run 1
+          int mol_id_1 = Bead1[i].Molecule;
+          int mol_type_1 = Molecule1[mol_id_1].Type;
+          // mol from run 2
+          int mol_id_2 = Bead2[j].Molecule;
+          int mol_type_2 = Molecule2[mol_id_2].Type;
+
+          if (!used[j] && strcmp(MoleculeType1[mol_type_1].Name, MoleculeType2[mol_type_2].Name) == 0) {
+            test = -1;
+            // find where exactly in the molecule the bead is
+            for (int k = 0; k <= MoleculeType2[mol_type_2].nBeads; k++) {
+              if (j == Molecule2[mol_id_2].Bead[k]) {
+                test = k;
+                break;
+              }
+            }
+            test = Bead1[Molecule1[mol_id_1].Bead[test]].Index;
+            Index1[test] = Index2[Bead2[j].Index];
+            used[j] = true;
+            break;
+          }
+        }
+      }
+    }
+    printf("\r%d. bead done", i);
+  }
+
+  printf("\rConnecting done\n");
+
+//    for (int i = 0; i < Counts.Beads; i++) {
+//      if (!used[i]) {
+//        fprintf(stdout, "ERROR - used[%d] = false\n", i);
+//      }
+//    } //}}}
+
   // start second run with start-th step //{{{
   count = 0;
-  if (!silent)
+  if (!silent) {
     fprintf(stdout, "\rDiscarded from 2nd coordinate file: %6d", count);
+  }
   for (int i = 1; i < start_2; i++) {
     count++;
 
@@ -455,7 +509,6 @@ int main(int argc, char *argv[]) {
 
     SkipCoor(vcf_2, Counts, &stuff);
   }
-
   putchar('\n'); //}}}
 
   // main loop - 2nd run //{{{
@@ -513,68 +566,13 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    // copy Bead2 coordinates to Bead1 //{{{
-    bool used[Counts.Beads];
     for (int i = 0; i < Counts.Beads; i++) {
-      used[i] = false;
+//    if (Bead1[i].Molecule == -1) {
+        Bead1[i].Position.x = Bead2[Index1[Bead1[i].Index]].Position.x;
+        Bead1[i].Position.y = Bead2[Index1[Bead1[i].Index]].Position.y;
+        Bead1[i].Position.z = Bead2[Index1[Bead1[i].Index]].Position.z;
+//    }
     }
-
-    for (int i = 0; i < Counts.Beads; i++) {
-      for (int j = 0; j < Counts.Beads; j++) {
-        if (Bead1[i].Molecule == -1 && Bead2[i].Molecule == -1 &&
-            strcmp(BeadType2[Bead2[j].Type].Name, BeadType1[Bead1[i].Type].Name) == 0 &&
-            !used[j]) {
-          Bead1[i].Position.x = Bead2[j].Position.x;
-          Bead1[i].Position.y = Bead2[j].Position.y;
-          Bead1[i].Position.z = Bead2[j].Position.z;
-
-          used[j] = true;
-
-          break;
-        }
-      }
-    }
-
-    // molecule beads
-    for (int i = 0; i < Counts.Beads; i++) {
-      if (Bead2[i].Molecule != -1) {
-        for (int j = 0; j < Counts.Beads; j++) {
-          // beads & mols from run 1
-          int mol_id_1 = Bead1[i].Molecule;
-          int mol_type_1 = Molecule1[mol_id_1].Type;
-
-          // beads & mols from run 2
-          int mol_id_2 = Bead2[j].Molecule;
-          int mol_type_2 = Molecule2[mol_id_2].Type;
-
-          if (!used[j] && mol_type_1 == mol_type_2) {
-            test = -1;
-            for (int k = 0; k <= MoleculeType2[mol_type_2].nBeads; k++) {
-              if (Bead2[j].Index == Bead2[Molecule2[mol_id_2].Bead[k]].Index) {
-                test = k;
-
-                break;
-              }
-            }
-
-            test = Bead1[Molecule1[mol_id_1].Bead[test]].Index;
-            Bead1[test].Position.x = Bead2[j].Position.x;
-            Bead1[test].Position.y = Bead2[j].Position.y;
-            Bead1[test].Position.z = Bead2[j].Position.z;
-
-            used[j] = true;
-
-            break;
-          }
-        }
-      }
-    }
-
-    for (int i = 0; i < Counts.Beads; i++) {
-      if (!used[i]) {
-        fprintf(stdout, "ERROR - used[%d] = false\n", i);
-      }
-    } //}}}
 
     // TODO: there probably shouldn't be Molecule(Type)1, but Molecule(Type)2
     // or something different -- this program isn't used anyway
