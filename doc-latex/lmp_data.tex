@@ -1,15 +1,16 @@
 \section{lmp\_data} \label{sec:lmp_data}
 
-This utility generate \texttt{data} file for the
+This simple utility generates \texttt{data} file for the
 \href{https://lammps.sandia.gov/}{lammps} simulation package (see
 \href{https://lammps.sandia.gov/doc/read_data.html}{lammps manual page} for
 details on the \texttt{data} file format).
 
-The utility reads information on system composition from \texttt{DL\_MESO}
-file (information on all beads and structure of molecules -- although it
-does not read dihedrals) and coordinates from \texttt{vcf} coordinate file.
-The utility ignores the interactions part from \texttt{FIELD}. The utility
-also ignore dihedrals.
+The utility reads system composition from \texttt{vsf} structure file,
+structure of molecules (numbers of bead/angle types and angles -- other
+informations are read from the \texttt{vsf} file) from \texttt{DL\_MESO}
+file, and coordinates from \texttt{vcf} coordinate file.  The utility
+ignores the \texttt{interactions} part from \texttt{FIELD}. The utility
+also ignores dihedrals; it only reads angles for now.
 
 Usage:
 
