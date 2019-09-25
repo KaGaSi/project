@@ -340,7 +340,8 @@ int main(int argc, char *argv[]) {
       mol_bond_types[i][j] = exist;
     } //}}}
 
-    // read till angle keyword (if present) //{{{
+    // read angles (if present) //{{{
+    angle_beads_n[i] = -1;
     exist = -1;
     while(fgets(line, sizeof(line), fr)) {
       split[0] = strtok(line, " \t ");
@@ -350,9 +351,9 @@ int main(int argc, char *argv[]) {
         split[0] = strtok(NULL, " \t"); // number of angles for the molecule
         exist = 1;
         break;
-      } else if (strcmp(split[0], "finish") == 0 ||
-                 strcmp(split[0], "Finish") == 0 ||
-                 strcmp(split[0], "FINISH") == 0 ) {
+      } else if (strncmp(split[0], "finish", 6) == 0 ||
+                 strncmp(split[0], "Finish", 6) == 0 ||
+                 strncmp(split[0], "FINISH", 6) == 0 ) {
         break;
       }
     } //}}}
@@ -374,13 +375,14 @@ int main(int argc, char *argv[]) {
         angle_beads[i][j][2] = atoi(split[0]) - 1;
         split[0] = strtok(NULL, " \t"); // spring strength
         split[1] = strtok(NULL, " \t"); // bond length
+        // find if the bond type alread exists
         exist = -1;
         for (int k = 0; k < count_angle_types; k++) {
-          if (angle_type[k][0] == atof(split[0]) && angle_type[k][1] == atof(split[1])){
+          if (angle_type[k][0] == atof(split[0]) && angle_type[k][1] == atof(split[1])) {
             exist = k;
           }
         }
-        if (exist == -1) {
+        if (exist == -1) { // add a new bond type if this doesn't exist
           count_angle_types++;
           angle_type = realloc(angle_type, count_angle_types*sizeof(double *));
           angle_type[count_angle_types-1] = malloc(2*sizeof(double));
@@ -397,7 +399,7 @@ int main(int argc, char *argv[]) {
   fclose(fr); //}}}
 
   // create lammps data file //{{{
-  // open output CONFIG file for writing //{{{
+  // open output file for writing //{{{
   FILE *out;
   if ((out = fopen(output, "w")) == NULL) {
     ErrorFileOpen(output, 'w');
@@ -468,35 +470,37 @@ int main(int argc, char *argv[]) {
   putc('\n', out); //}}}
 
   // print bond information //{{{
-  fprintf(out, "Bonds\n\n");
-  count = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
-
-    int type = Molecule[i].Type;
-    for (int j = 0; j < MoleculeType[type].nBonds; j++) {
-      count++;
-      int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
-      int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
-      fprintf(out, "%7d %3d %7d %7d\n", count, mol_bond_types[type][j]+1, id1+1, id2+1);
+  if (count_angle_types != 0) {
+    fprintf(out, "Bonds\n\n");
+    count = 0;
+    for (int i = 0; i < Counts.Molecules; i++) {
+      int type = Molecule[i].Type;
+      for (int j = 0; j < MoleculeType[type].nBonds; j++) {
+        count++;
+        int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
+        int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
+        fprintf(out, "%7d %3d %7d %7d\n", count, mol_bond_types[type][j]+1, id1+1, id2+1);
+      }
     }
-  }
-  putc('\n', out); //}}}
+    putc('\n', out);
+  } //}}}
 
   // print angle information //{{{
   if (count_angle_types != 0) {
-  fprintf(out, "Angles\n\n");
-  count = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
+    fprintf(out, "Angles\n\n");
+    count = 0;
+    for (int i = 0; i < Counts.Molecules; i++) {
 
-    int type = Molecule[i].Type;
-    for (int j = 0; j < angle_beads_n[type]; j++) {
-      count++;
-      int id1 = Molecule[i].Bead[angle_beads[type][j][0]];
-      int id2 = Molecule[i].Bead[angle_beads[type][j][1]];
-      int id3 = Molecule[i].Bead[angle_beads[type][j][2]];
-      fprintf(out, "%7d %3d %7d %7d %7d\n", count, mol_angle_types[type][j]+1, id1+1, id2+1, id3+1);
+      int type = Molecule[i].Type;
+      for (int j = 0; j < angle_beads_n[type]; j++) {
+        count++;
+        int id1 = Molecule[i].Bead[angle_beads[type][j][0]];
+        int id2 = Molecule[i].Bead[angle_beads[type][j][1]];
+        int id3 = Molecule[i].Bead[angle_beads[type][j][2]];
+        fprintf(out, "%7d %3d %7d %7d %7d\n", count, mol_angle_types[type][j]+1, id1+1, id2+1, id3+1);
+      }
     }
-  } }//}}}
+  }//}}}
 
   fclose(out); //}}}
 
