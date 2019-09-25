@@ -2,11 +2,11 @@
 
 {\em This utility should be working, but it needs more testing.}
 
-This utility calculates electrostatic potential as a function of distance
-from the centre of mass of specified aggregate size(s). It places a virtual
-particle with charge $q=1$ at several places on the surface of ever
-increasing sphere and calculates electrostatic potential acting on that
-virtual particle.
+\texttt{PotentialAggregates} calculates electrostatic potential as a
+function of distance from the centre of mass of specified aggregate
+size(s). It places a virtual particle with charge $q=1$ at several places
+on the surface of an ever increasing sphere and calculates electrostatic
+potential acting on that virtual particle.
 
 At long range, the potential is calculated using Coulomb potential,
 \begin{equation} \label{eq:Coulomb}
@@ -30,9 +30,12 @@ the Bjerrum length is \texttt{bjerrum=1.1} (aqueous solution), cut-off is
 of periodic images of the simulation box is \texttt{images=5}. The
 parameters can be changed but the utility must then be recompiled.
 
-The aggregate size can be modified using \texttt{-m} options similarly to
+The aggregate size can be modified using \texttt{-m} option similarly to
 \texttt{Density}-\texttt{Aggregates}
 (Section~\ref{sec:DensityAggregates}).
+
+Be aware that the utility does not use any Ewald sum, so the calculation is
+extremely slow (depending on the number of charged particles in the system).
 
 Usage:
 
@@ -49,8 +52,7 @@ Usage:
     \texttt{vtf} format) \\
   \texttt{<input.agg>} & input \texttt{agg} file \\
   \texttt{<width>} & width of each bin of the distribution \\
-  \texttt{<output>} & output file(s) (one per aggregate size) with
-    automatic \texttt{agg\#.txt} ending (\texttt{\#} is aggregate size) \\
+  \texttt{<output>} & output file with electrostatic potential \\
   \texttt{<agg size(s)>} & aggregate size(s) for calculation of
   electrostatic potential \\
   \toprule
