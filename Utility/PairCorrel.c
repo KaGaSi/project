@@ -15,7 +15,7 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
     fprintf(stdout, " \
 PairCorrel utility calculates pair correlation function for specified \
-bead types. All pairs of bead types (including same pair) are calculated - \
+bead types. All pairs of bead types (including same type pairs) are calculated - \
 given A and B types, pcf between A-A, A-B and B-B are calculated.\n\n");
   }
 
