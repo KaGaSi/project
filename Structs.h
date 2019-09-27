@@ -78,6 +78,8 @@ typedef struct Bead {
       Index; ///< index of the bead according to .vsf file (needed for indexed timesteps)
 
   Vector Position; ///< cartesian coordinates of the bead
+
+  bool Flag; ///< some flag for, e.g., use/not use
 } Bead; //}}}
 
 // struct MoleculeType //{{{
