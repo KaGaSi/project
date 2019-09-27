@@ -337,7 +337,6 @@ int main(int argc, char *argv[]) {
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
     // calculate bond length //{{{
-
     // go through all molecules
     for (int i = 0; i < Counts.Molecules; i++) {
       int mtype = Molecule[i].Type;
@@ -361,8 +360,17 @@ int main(int argc, char *argv[]) {
           // warn if bond is too long //{{{
           if (bond.x > warn) {
             fprintf(stderr, "\nWarning: bond longer than %lf\n", warn);
-            fprintf(stderr, " Step: %d;", count);
-            fprintf(stderr, " Beads: %d (%s) %d (%s);", btype1, BeadType[btype1].Name, btype2, BeadType[btype2].Name);
+            fprintf(stderr, " Step: %d\n", count);
+            fprintf(stderr, " Beads: %6d (%s): %lf %lf %lf\n", Bead[id1].Index,
+                                                               BeadType[btype1].Name,
+                                                               Bead[id1].Position.x,
+                                                               Bead[id1].Position.y,
+                                                               Bead[id1].Position.z);
+            fprintf(stderr, "        %6d (%s): %lf %lf %lf\n", Bead[id2].Index,
+                                                               BeadType[btype2].Name,
+                                                               Bead[id2].Position.x,
+                                                               Bead[id2].Position.y,
+                                                               Bead[id2].Position.z);
             fprintf(stderr, " Bond length: %lf\n", bond.x);
           } //}}}
 

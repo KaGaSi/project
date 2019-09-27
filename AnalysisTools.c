@@ -530,29 +530,26 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
         (*MoleculeType)[mol_type].nBeads++;
         (*MoleculeType)[mol_type].Bead = realloc((*MoleculeType)[mol_type].Bead, (*MoleculeType)[mol_type].nBeads*sizeof(int));
         (*MoleculeType)[mol_type].Bead[(*MoleculeType)[mol_type].nBeads-1] = bead_type;
-
-//      printf(" bead_type=%2d (%3s), bead_id=%5d,", bead_type, (*BeadType)[bead_type].Name, bead_id);
-//      printf(" mol_type=%2d (%5s),", mol_type, (*MoleculeType)[mol_type].Name);
-//      printf(" mol_id=%3d", mol_id);
-//      putchar('\n');
       }
     } //}}}
   } //}}}
 
   // assign 'type_default' to default beads //{{{
-  int count = 0;
-  for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
-    if ((*Bead)[i].Type == -1) {
-      (*Index)[i] = i; // reverse of Bead[].Index
-      (*Bead)[i].Type = type_default;
-      (*Bead)[i].Index = i;
-      (*Bead)[i].Molecule = -1; // default beads aren't in molecules
-      count++;
-    } else if ((*Bead)[i].Type == type_default) { // default type beads explicitly specified by 'atom' line
-      count++;
+  if (type_default != -1) {
+    int count = 0;
+    for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
+      if ((*Bead)[i].Type == -1) {
+        (*Index)[i] = i; // reverse of Bead[].Index
+        (*Bead)[i].Type = type_default;
+        (*Bead)[i].Index = i;
+        (*Bead)[i].Molecule = -1; // default beads aren't in molecules
+        count++;
+      } else if ((*Bead)[i].Type == type_default) { // default type beads explicitly specified by 'atom' line
+        count++;
+      }
     }
-  }
-  (*BeadType)[type_default].Number = count; //}}}
+    (*BeadType)[type_default].Number = count;
+  } //}}}
 
   // calculate number of molecules/beads in each molecule type //{{{
   int max = 0; // the highest number of beads in a molecule - for memory allocation later
@@ -966,7 +963,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
 
   // remove unused molecules from Molecule struct  //{{{
   int mols_in_vcf = 0;
-  count = 0;
+  int count = 0;
   for (int i = 0; i < (*Counts).Molecules; i++) {
     int type = (*Molecule)[i].Type;
     if ((*MoleculeType)[type].Use) {
@@ -1829,15 +1826,40 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
 
   for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
-    for (int j = 0; j < MoleculeType[type].nBonds; j++) {
-      int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
-      int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
+    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+      (*Bead)[Molecule[i].Bead[j]].Flag = false;
+    }
+    (*Bead)[Molecule[i].Bead[MoleculeType[type].Bond[0][0]]].Flag = true;
+    bool done = false;
+    while (!done) {
+      for (int j = 0; j < MoleculeType[type].nBonds; j++) {
+        int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
+        int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
 
-      Vector dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
+        if (!(*Bead)[id1].Flag && (*Bead)[id2].Flag) {
+          Vector dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
 
-      (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
-      (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
-      (*Bead)[id2].Position.z = (*Bead)[id1].Position.z - dist.z;
+          (*Bead)[id1].Position.x = (*Bead)[id2].Position.x - dist.x;
+          (*Bead)[id1].Position.y = (*Bead)[id2].Position.y - dist.y;
+          (*Bead)[id1].Position.z = (*Bead)[id2].Position.z - dist.z;
+          (*Bead)[id1].Flag = true;
+        } else if ((*Bead)[id1].Flag && !(*Bead)[id2].Flag) {
+          Vector dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
+
+          (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
+          (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
+          (*Bead)[id2].Position.z = (*Bead)[id1].Position.z - dist.z;
+          (*Bead)[id2].Flag = true;
+        }
+      }
+
+      done = true;
+      for (int j = 1; j < MoleculeType[type].nBeads; j++) {
+        if (!(*Bead)[Molecule[i].Bead[j]].Flag) {
+          done = false;
+          break;
+        }
+      }
     }
   }
 } //}}}
