@@ -11,13 +11,6 @@
  */
 void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input_vsf) {
   fprintf(stderr, "\nError: %s - cannot read coordinates (bead %d; step %d - '%s')\n\n", input_vcf, bead, step, stuff);
-  fprintf(stderr, "Possibilities\n");
-  fprintf(stderr, "  1) error in '%s', e.g., wrong number of lines per timestep or columns per line, \
-incorrect blank lines\n", input_vcf);
-  fprintf(stderr, "  2) error in '%s', e.g., wrong number of beads which can cause a complete chaos in \
-internal bead numbering\n", input_vsf);
-  fprintf(stderr, "  3) used '-x' option in generating %s by SelectedVcf, but reading of systems \
-configuration works only if all beads of a given type are in a vcf file \n", input_vcf);
   putchar('\n');
 } //}}}
 
