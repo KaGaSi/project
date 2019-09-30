@@ -12,6 +12,12 @@ file, and coordinates from \texttt{vcf} coordinate file.  The utility
 ignores the \texttt{interactions} part from \texttt{FIELD}. The utility
 also ignores dihedrals; it only reads angles for now.
 
+Option \texttt{--srp} can be used to add one more bead type into the output
+file (i.e., increment number of atom types and add one more line for
+\texttt{Masses} section with a mass of 1.0). This is intended for cases
+when the segmental repulsive potential (srp) is used in lammps (srp
+prevents bond crossing in, e.g., the DPD simulation method).
+
 Usage:
 
 \vspace{1em}
@@ -29,6 +35,7 @@ Usage:
   \multicolumn{2}{l}{Options} \\
   \midrule
   \texttt{-f <name>} & FIELD file (default: FIELD)\\
+  \texttt{--srp} & add one bead type for srp\\
   \texttt{-st <int>} & coordinate timestep for creating the \texttt{data}
   file \\
   \bottomrule
