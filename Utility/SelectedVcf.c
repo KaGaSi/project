@@ -13,9 +13,13 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(ptr, "\
-SelectedVcf creates new <output.vcf> file from <input> containing only \
-selected bead types. Also <start> timesteps can be omitted and every <skip> \
-timestep can be left out.\n\n");
+SelectedVcf creates new <output.vcf> file (and possibly xyz file) from \
+<input> containing only selected bead types. Periodic boundary conditions \
+can be either stripped away or applied (which happens first if both '--join' \
+and '-w' options are used). \
+Also, specified molecules can be excluded. However, AnalysisTools utilities \
+can only read coordinate files containing all beads of any given type, the \
+usefulness is very limited (for, e.g., visualization using vmd).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");

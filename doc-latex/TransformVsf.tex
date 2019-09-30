@@ -1,8 +1,12 @@
 \section{TransformVsf} \label{sec:TransformVsf}
 
-This not-very-useful utility just rewrites \texttt{vsf} file for better
-visualization with \texttt{vmd}. The output \texttt{vsf} file contains not
-only bead name and index, but its charge and mass as well.
+This utility reads \texttt{FIELD} and \texttt{vsf} files to create a new
+structure file. Generally, this is useful only if \texttt{traject-v2\_5} or
+\texttt{traject-v2\_6} were used to generate the \texttt{dl\_meso.vsf}
+file. This file does not contain mass and charge of particles, whereas the
+one generated with \texttt{TransformVsf} (or with \texttt{traject.exe} from
+the dl\_meso version 2.7) does and therefore the original \texttt{FIELD}
+file is not needed for further analysis.
 
 Usage:
 

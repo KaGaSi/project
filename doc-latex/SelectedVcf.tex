@@ -1,11 +1,23 @@
 \section{SelectedVcf} \label{sec:SelectedVcf}
 
 This utility creates a new \texttt{vcf} coordinate file containing only
-beads of specified types with output \texttt{vcf} file. The selected bead
+beads of specified types. The selected bead
 types are printed as comments at the beginning of the output \texttt{vcf}
 file.
+An \texttt{xyz} coordinate file can also be created from the selected
+bead type(s).
 
-There is an option to remove periodic boundary conditions (i.e., to join
+Using \texttt{-r} switch, the bead types can also be specified in reverse,
+i.e., bead types to be excluded from the output file(s).
+
+Which timesteps are saved can be controlled using \texttt{-st} option for
+the first timestep to save and \texttt{-e} option for the last timestep to
+save; using \texttt{-sk <int>}, \texttt{<int>} steps are ignored per one
+step saved. If the option to save only specified timesteps (\texttt{-n}) is
+used, \texttt{-sk} is ignored. A maximum of 100 steps can be explicitly
+specified using the \texttt{-n} option.
+
+There is also an option to remove periodic boundary conditions (i.e., to join
 molecules). Conversely, the simualation box can be wrapped (i.e., the
 periodic boundary conditions applied). If both \texttt{--join} and
 \texttt{-w} options are used, the simuation box is first wrapped and then
@@ -14,10 +26,8 @@ the molecules are joined.
 Also, specified molecules can be excluded which is useful when the same
 bead type is shared between more molecule types. However, as of now, no
 utilities can read a \texttt{vcf} file that does not contain all beads of a
-given type, so this can be used only for vmd visualization.
-
-Lastly, \texttt{xyz} coordinate file can also be created from the selected
-bead type(s).
+given type, so this the \texttt{-x} option is right now fairly useless. It
+can nevertheless be used for, e.g., visualization via vmd.
 
 Usage:
 
