@@ -24,6 +24,7 @@ It assumes molecules have bonds and can also have angles, but no dihedrals.\n\n"
   fprintf(ptr, "   <out.data>        output lammps data file\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -f <name>      FIELD file (default: FIELD)\n");
+  fprintf(ptr, "      --srp          add one more bead type for srp");
   fprintf(ptr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
   CommonHelp(error);
 } //}}}
@@ -60,6 +61,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "--srp") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
@@ -97,12 +99,6 @@ int main(int argc, char *argv[]) {
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
-  // timestep to create CONFIG file from //{{{
-  int timestep = -1;
-  if (IntegerOption(argc, argv, "-st", &timestep)) {
-    exit(1);
-  } //}}}
-
   // custom FIELD file //{{{
   char *input = calloc(1024, sizeof(char));
   if (FileOption(argc, argv, "-f", &input)) {
@@ -110,6 +106,15 @@ int main(int argc, char *argv[]) {
   }
   if (input[0] == '\0') {
     strcpy(input, "FIELD");
+  } //}}}
+
+  // add srp bead type //{{{
+  bool srp = BoolOption(argc, argv, "--srp"); //}}}
+
+  // timestep to create CONFIG file from //{{{
+  int timestep = -1;
+  if (IntegerOption(argc, argv, "-st", &timestep)) {
+    exit(1);
   } //}}}
 
   // print command to stdout //{{{
@@ -413,7 +418,11 @@ int main(int argc, char *argv[]) {
   fprintf(out, "%7d atoms\n", Counts.BeadsInVsf);
   fprintf(out, "%7d bonds\n", count_bonds);
   fprintf(out, "%7d angles\n", count_angles);
-  fprintf(out, "%7d atom types\n", Counts.TypesOfBeads);
+  if (srp) { // an extra srp bead
+    fprintf(out, "%7d atom types\n", Counts.TypesOfBeads+1);
+  } else {
+    fprintf(out, "%7d atom types\n", Counts.TypesOfBeads);
+  }
   fprintf(out, "%7d bond types\n", count_bond_types);
   fprintf(out, "%7d angle types\n", count_angle_types);
   putc('\n', out); //}}}
@@ -428,6 +437,9 @@ int main(int argc, char *argv[]) {
   fprintf(out, "Masses\n\n");
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     fprintf(out, "%2d %lf # %s\n", i+1, BeadType[i].Mass, BeadType[i].Name);
+  }
+  if (srp) {
+    fprintf(out, "%2d %lf # for srp\n", Counts.TypesOfBeads+1, 1.0);
   }
   putc('\n', out); //}}}
 
