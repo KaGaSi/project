@@ -210,10 +210,10 @@ int main(int argc, char *argv[]) {
 
   // <agg sizes> - aggregate sizes for calculation //{{{
   int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
-  int *other_mols = malloc(Counts.Molecules*sizeof(int));
+  int **agg_mols = malloc(Counts.Molecules*sizeof(int *));
   for (int i = 0; i < Counts.Molecules; i++) {
     agg_sizes[i] = calloc(2,sizeof(int));
-    other_mols[i] = 0;
+    agg_mols[i] = calloc(Counts.TypesOfMolecules, sizeof(int));
   }
 
   int aggs = 0;
@@ -508,8 +508,6 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       if (correct_size != -1) {
-        other_mols[correct_size] += Aggregate[i].nMolecules - size;
-
         Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
         // free temporary density array //{{{
@@ -562,6 +560,11 @@ int main(int argc, char *argv[]) {
             rho_2[j][correct_size][k] += SQR(temp_rho[j][correct_size][k]);
           }
         } //}}}
+
+        // count mol types in the aggregate
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          agg_mols[correct_size][Molecule[Aggregate[i].Molecule[j]].Type]++;
+        }
       }
     } //}}}
 
@@ -638,19 +641,21 @@ int main(int argc, char *argv[]) {
       putc('\n',out);
     }
 
-    fprintf(out, "# %d molecules in aggregate (sum of", agg_sizes[i][0]);
-    int types = 0;
+    fprintf(out, "# (1) Number of aggregates; Average numbers of molecules:");
+    count = 2;
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (specific_moltype_for_size[j]) {
-        if (++types == 1) { // first mol type
-          fprintf(out, " %s", MoleculeType[j].Name);
-        } else { // second and higher mol type
-          fprintf(out, ", %s", MoleculeType[j].Name);
-        }
+      fprintf(out," (%d) %s", count++, MoleculeType[j].Name);
+      if (i < (Counts.TypesOfMolecules-1)) {
+        putc(';', out);
       }
     }
-    fprintf(out, ") and %.2f other molecules", (double)(other_mols[i])/agg_sizes[i][1]);
-    fprintf(out, "(%d aggregates)\n", agg_sizes[i][1]);
+    putc('\n', out);
+    putc('#', out);
+    fprintf(out," %d", agg_sizes[i][1]);
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      fprintf(out," %lf", (double)(agg_mols[i][j])/agg_sizes[i][1]);
+    }
+    putc('\n', out);
 
     fclose(out);
   } //}}}
@@ -663,11 +668,12 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(stuff);
-  free(other_mols);
   for (int i = 0; i < Counts.Molecules; i++) {
     free(agg_sizes[i]);
+    free(agg_mols[i]);
   }
   free(agg_sizes);
+  free(agg_mols);
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     for (int j = 0; j < aggs; j++) {
       free(rho[i][j]);
