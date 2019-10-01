@@ -10,12 +10,15 @@ centre of mass, is the number of these beads in a spherical shell between
 the distances $r$ and $r+\mathrm{d}r$ (in \texttt{DensityAggregates},
 $\mathrm{d}r$ is the \texttt{<width>} argument) divided by the
 volume of this shell.
-%The distance written in the output file is always
-%$r+0.5\mathrm{d}r$. Besides RDP, the output file also contains radial
-%number profiles (i.e., the number of beads in the spherical shell not
-%divided by the shell's volume) and one-sigma errors for both RDP and radial
-%number profiles. The output file also contains a header describing what is
-%in each column.
+
+Composition of an aggregate with given size (i.e., average numbers of
+different types of molecules in that aggregate) is appended to the output
+file.
+%The distance written in the output file is always $r+0.5\mathrm{d}r$.
+%Besides RDP, the output file also contains radial number profiles (i.e.,
+%the number of beads in the spherical shell not divided by the shell's
+%volume) and one-sigma errors for both RDP and radial number profiles. The
+%output file also contains a header describing what is in each column.
 
 Instead of `true' aggregate size, a number of molecules of specific type(s)
 can be used (\texttt{-m} option). For example, an aggregate containg 1
@@ -110,5 +113,8 @@ Format of output files:
           \item last line contains the total number of aggregates the
             density was calculated for
         \end{itemize}
+      \item second to last line: column headers for average numbers of
+        different molecules in the given aggregate
+      \item last line: average numbers of the molecules
     \end{itemize}
 \end{enumerate}
