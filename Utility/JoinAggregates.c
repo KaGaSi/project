@@ -173,7 +173,17 @@ int main(int argc, char *argv[]) {
 
   // read minimum distance for closeness check (<distance> argument in Aggregates utility)
   double distance;
-  fscanf(agg, "%*s %*s %lf", &distance);
+  char coor_file_from_agg[128];
+  fscanf(agg, "%*s %s %lf", coor_file_from_agg, &distance);
+  // warn if a differently named vcf file is used than the one in agg file
+  if (strcmp(coor_file_from_agg, input_coor) != 0) {
+    fprintf(stderr, "\nWARNING: the coordinate file (%s) ", input_coor);
+    fprintf(stderr, "is different to the one in the aggregate file (%s).\n", coor_file_from_agg);
+    fprintf(stderr, "         Possible mismatch between beads present in both files can lead to undefined behaviour.\n\n");
+    fprintf(stdout, "\nWARNING: the coordinate file (%s) ", input_coor);
+    fprintf(stdout, "is different to the one in the aggregate file (%s).\n", coor_file_from_agg);
+    fprintf(stdout, "         Possible mismatch between beads present in both files can lead to undefined behaviour.\n\n");
+  }
 
   // skip <contacts> and <output.agg> in Aggregates command
   fscanf(agg, "%*s %*s");
@@ -284,11 +294,11 @@ int main(int argc, char *argv[]) {
     Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
   } //}}}
 
-  // print information - verbose output
+  // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(verbose2, input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
     fprintf(stdout, "\nDistance for closeness check:  %lf\n\n", distance);
-  }
+  } //}}}
 
   // skip first start-1 steps //{{{
   count = 0;
