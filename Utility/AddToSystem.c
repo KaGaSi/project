@@ -701,6 +701,26 @@ int main(int argc, char *argv[]) {
   // seed random number generator
   srand(time(0));
 
+  // count unbonded neutral beads
+  int can_be_exchanged = 0;
+  for (int i = 0; i < Counts.BeadsInVsf; i++) {
+    if (Bead[i].Molecule == -1 && BeadType[Bead[i].Type].Charge == 0) {
+      can_be_exchanged++;
+    }
+  }
+  // count beads to be added
+  int to_be_added = 0;
+  for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
+    to_be_added += BeadType[i].Number;
+  }
+  if (Counts_add.Beads > can_be_exchanged) {
+    fprintf(stderr, "\nError: there are more beads to be added than can be changed in the original system:\n");
+    fprintf(stderr, "     Number of unbonded neutral beads in the original system: %d\n", can_be_exchanged);
+    fprintf(stderr, "     Number of beads to be added: %d\n\n", Counts_add.Beads);
+    exit(1);
+  }
+
+
   // add monomeric beads //{{{
   count = 0;
   for (int i = 0; i < Counts_add.Beads; i++) {
