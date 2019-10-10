@@ -28,6 +28,7 @@ between any two beads in a molecule.\n\n");
   fprintf(ptr, "   <mole name(s)>          molecule name(s) to calculate bond lengths for\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -st <int>            starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   fprintf(ptr, "      -d <out> <ints>      write distribution of distances between specified beads in the molecule to file <out>\n");
   fprintf(ptr, "      -w <double>          warn if bond length exceeds <double> (default: half a box length)\n");
   CommonHelp(error);
@@ -66,6 +67,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-d") != 0 &&
         strcmp(argv[i], "-w") != 0) {
 
@@ -106,6 +108,18 @@ int main(int argc, char *argv[]) {
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -300,36 +314,38 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   }
-  // print number of discarded steps? //{{{
+  // print starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d  \n", start);
     }
   } //}}}
   //}}}
 
   // main loop //{{{
   count = 0;
+  int count_vcf = start - 1;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
+    count_vcf++;
     if (!silent) {
       if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count_vcf);
       } else {
         fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count_vcf);
       }
     }
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -360,7 +376,7 @@ int main(int argc, char *argv[]) {
           // warn if bond is too long //{{{
           if (bond.x > warn) {
             fprintf(stderr, "\nWarning: bond longer than %lf\n", warn);
-            fprintf(stderr, " Step: %d\n", count);
+            fprintf(stderr, " Step: %d\n", count_vcf);
             fprintf(stderr, " Beads: %6d (%s): %lf %lf %lf\n", Bead[id1].Index,
                                                                BeadType[btype1].Name,
                                                                Bead[id1].Position.x,
@@ -445,14 +461,17 @@ int main(int argc, char *argv[]) {
     // if -V option used, print comment at the beginning of a timestep
     if (verbose2)
       fprintf(stdout, "\n%s", stuff);
+
+    if (end == count_vcf)
+      break;
   }
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   }
 

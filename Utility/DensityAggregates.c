@@ -37,6 +37,7 @@ a separate column for 'A' from 'mol1' and from 'mol2').\n\n");
   fprintf(ptr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(ptr, "      -n <int>       number of bins to average\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
   CommonHelp(error);
@@ -78,6 +79,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 ) {
 
@@ -124,9 +126,21 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
   // number of bins to average //{{{
   int avg = 1;
   if (IntegerOption(argc, argv, "-n", &avg)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -429,28 +443,30 @@ int main(int argc, char *argv[]) {
   // print number of discarded steps? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d   \n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d\n", start);
     }
   } //}}}
   //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
+  int count_vcf = start - 1;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
+    count_vcf++;
 
     // print step? //{{{
     if (!silent) {
       if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count_vcf);
       } else {
         fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count_vcf);
       }
     } //}}}
 
@@ -460,15 +476,15 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
-      test = start - 1 + count; // total number of processed steps in agg file
-      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, test, stuff);
+      count_vcf--; // because last step isn't processed
+      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, count_vcf, stuff);
       break;
     } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -581,16 +597,19 @@ int main(int argc, char *argv[]) {
     if (verbose2) {
       fprintf(stdout, "\n%s", stuff);
     } //}}}
+
+    if (end == count_vcf)
+      break;
   }
   fclose(vcf);
   fclose(agg);
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   } //}}}
 
