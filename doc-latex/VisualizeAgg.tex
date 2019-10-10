@@ -1,0 +1,43 @@
+\section{VisualizeAgg} \label{sec:VisualizeAgg}
+
+This utility prints aggregates of given size to output \texttt{vcf} files
+(one file per aggregate size). The output files contain one aggregate per
+timestep regardless of how many aggregates of the given size are in the
+initial coordinate file.
+
+The definition of aggregate size is fairly flexible (similarly to
+\texttt{DensityAggregates} utility -- Section~\ref{sec:DensityAggregates}).
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{DensityAggregates <input> <input.agg> <width> <output> <agg \\
+size(s)> <options>}
+
+\noindent
+\begin{longtable}{p{0.24\textwidth}p{0.704\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input>} & input coordinate file (either \texttt{vcf} or
+    \texttt{vtf} format) \\
+  \texttt{<input.agg>} & input \texttt{.agg} file \\
+  \texttt{<width>} & width of each bin of the distribution \\
+  \texttt{<output>} & output file(s) (one per aggregate size) with
+    automatic \texttt{\#.vcf} ending (\texttt{\#} is aggregate size) \\
+  \texttt{<agg size(s)>} & aggregate size(s) to save \\
+  \toprule
+  \multicolumn{2}{l}{Non-standard options} \\
+  \midrule
+  \texttt{--joined} & specify that \texttt{<input>} contains joined
+    coordinates (i.e., periodic boundary conditions for aggregates do not
+    have to be removed) \\
+  \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-e <int>} & ending timestep for calculation (default: none) \\
+  \texttt{-m <mol name(s)>} & instead of `true' aggregate size, use the number
+    of specified molecule type(s) in an aggregate \\
+  \texttt{-x <mol name(s)>} & exclude specified molecule type(s) (i.e., do
+    not calculate density for beads in molecules \texttt{<mol name(s)>}) \\
+  \bottomrule
+\end{longtable}
