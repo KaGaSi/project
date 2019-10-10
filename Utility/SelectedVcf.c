@@ -379,13 +379,13 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   }
-  // print number of discarded steps? //{{{
+  // print starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d   \n", start);
     }
   } //}}}
 
@@ -399,27 +399,30 @@ int main(int argc, char *argv[]) {
   //}}}
 
   // main loop //{{{
-  int count_n_opt = 0;
+  int count_n_opt = 0; // count saved steps if -n option is used
+  count = 0; // count timesteps in the main loop
+  int count_vcf = start - 1; // count timesteps from the beginning
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
+    count_vcf++;
     if (!silent) {
       if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count_vcf);
       } else {
         fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count_vcf);
       }
     }
 
     if (number_of_steps != 0) {
       if (count_n_opt < number_of_steps) {
-        if (save_step[count_n_opt] == count) {
+        if (save_step[count_n_opt] == count_vcf) {
           // read coordinates //{{{
           if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
             // print newline to stdout if Step... doesn't end with one
-            ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+            ErrorCoorRead(input_vcf, test, count_vcf, stuff, input_vsf);
             exit(1);
           } //}}}
 
@@ -431,30 +434,6 @@ int main(int argc, char *argv[]) {
           // join molecules? //{{{
           if (join) {
             RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-// some old, stupid stuff
-//        } else { // if rounding leads to BoxLength, move it bead to other side of box
-//          for (int i = 0; i < (Counts.Bonded+Counts.Unbonded); i++) {
-//            char check[8];
-//            char box[8];
-//            // x direction
-//            sprintf(check, "%.3f", Bead[i].Position.x);
-//            sprintf(box, "%.3f", BoxLength.x);
-//            if (strcmp(check, box) == 0) {
-//              Bead[i].Position.x = 0;
-//            }
-//            // y direction
-//            sprintf(check, "%.3f", Bead[i].Position.y);
-//            sprintf(box, "%.3f", BoxLength.y);
-//            if (strcmp(check, box) == 0) {
-//              Bead[i].Position.y = 0;
-//            }
-//            // z direction
-//            sprintf(check, "%.3f", Bead[i].Position.z);
-//            sprintf(box, "%.3f", BoxLength.z);
-//            if (strcmp(check, box) == 0) {
-//              Bead[i].Position.z = 0;
-//            }
-//          }
           } //}}}
 
           // open output .vcf file for appending //{{{
@@ -495,7 +474,7 @@ int main(int argc, char *argv[]) {
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf, test, count, stuff, input_vsf);
+        ErrorCoorRead(input_vcf, test, count_vcf, stuff, input_vsf);
         exit(1);
       } //}}}
 
@@ -558,20 +537,24 @@ int main(int argc, char *argv[]) {
 
       // skip every 'skip' steps //{{{
       for (int i = 0; i < skip; i++) {
-        // test whether at vcf's eof //{{{
-        if ((test = getc(vcf)) == EOF) {
+        // test whether at vcf's eof or reached end due to -e option //{{{
+        if ((test = getc(vcf)) == EOF ||
+            end == count_vcf) {
           break;
         }
         ungetc(test, vcf); //}}}
 
+        count_vcf++;
+        count++;
         if (!silent) {
           fflush(stdout);
           if (script) {
-            fprintf(stdout, "Step: %6d\n", count);
+            fprintf(stdout, "Step: %6d\n", count_vcf);
           } else {
-            fprintf(stdout, "\rStep: %6d", ++count);
+            fprintf(stdout, "\rStep: %6d", count_vcf);
           }
         }
+
 
         if (SkipCoor(vcf, Counts, &stuff)) {
           fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
@@ -584,16 +567,16 @@ int main(int argc, char *argv[]) {
     if (verbose2)
       fprintf(stdout, "\n%s", stuff);
 
-    if (end == count)
+    if (end == count_vcf)
       break;
   }
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   }
 
