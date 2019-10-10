@@ -42,7 +42,8 @@ set(UTILS AddToSystem
           PairCorrel
           PotentialAggregates
           SelectedVcf
-          TransformVsf)
+          TransformVsf
+          VisualizeAgg)
         foreach(utility ${UTILS})
   add_executable(${utility} Utility/${utility}.c)
   target_link_libraries(${utility} ${LIBRARIES} m)
