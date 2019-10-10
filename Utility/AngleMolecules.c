@@ -32,6 +32,7 @@ type(s). The specified beads do not have to be connected by bonds. \
   fprintf(ptr, "      -n <ints>      bead indices (multiple of 3 <ints>) for angle calculation (default: 1 2 3)\n");
   fprintf(ptr, "      -a <name>      write angles of all molecules in all times to <name>\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   CommonHelp(error);
 } //}}}
 
@@ -72,6 +73,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-a") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
       ErrorOption(argv[i]);
@@ -114,6 +116,12 @@ int main(int argc, char *argv[]) {
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
     exit(1);
   } //}}}
   //}}}
@@ -188,20 +196,20 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-n' option - specify bead ids //{{{
-  int bead[100] = {0}, number_of_beads = 3, beads_per_angle = 3, test;
+  int bead[100] = {0}, number_of_beads = 3, beads_per_angle = 3, test = 0;
   bead[0] = 1; // default ids for angle
   bead[1] = 2;
   bead[2] = 3;
   if (MultiIntegerOption(argc, argv, "-n", &test, bead)) {
     exit(1);
   }
-  if (test != 0) { // -a is present
+  if (test != 0) { // -n is present
     number_of_beads = test;
   }
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
-    fprintf(stderr, "\nError: '-a' option - number of bead ids must be dividable by three.\n");
+    fprintf(stderr, "\nError: '-n' option - number of bead ids must be dividable by three.\n");
     exit(1);
   } //}}}
 
@@ -211,7 +219,7 @@ int main(int argc, char *argv[]) {
     // Error - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && bead[i] >= MoleculeType[j].nBeads) {
-        fprintf(stderr, "\nError: '-a' option - %d is larger than the number of beads in molecule %s\n\n", bead[i], MoleculeType[j].Name);
+        fprintf(stderr, "\nError: '-n' option - %d is larger than the number of beads in molecule %s\n\n", bead[i], MoleculeType[j].Name);
         Help(argv[0], true);
         exit(1);
       }
@@ -348,36 +356,38 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   }
-  // print number of discarded steps? //{{{
+  // print starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d   \n", start);
     }
   } //}}}
   //}}}
 
   // main loop //{{{
-  count = 0; // count timesteps
+  count = 0; // count calculated timesteps
+  int count_vcf = start - 1;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
+    count_vcf++;
     if (!silent) {
       if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
+        fprintf(stdout, "Step: %6d\n", count_vcf);
       } else {
         fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
+        fprintf(stdout, "\rStep: %6d", count_vcf);
       }
     }
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -430,7 +440,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
 
-      fprintf(out, "%6d", count);
+      fprintf(out, "%6d", count_vcf);
       for (int i = 0; i < Counts.Molecules; i++) {
         int mol_type_i = Molecule[i].Type;
         if (MoleculeType[mol_type_i].Use) {
@@ -448,15 +458,18 @@ int main(int argc, char *argv[]) {
     if (verbose2) {
       fprintf(stdout, "\n%s", stuff);
     } //}}}
+
+    if (end == count_vcf)
+      break;
   }
   fclose(vcf);
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   } //}}}
 
