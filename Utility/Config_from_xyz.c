@@ -128,13 +128,9 @@ int main(int argc, char *argv[]) {
     ungetc(test, xyz);
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count);
     }
 
     // skip remainder of number-of-beads line

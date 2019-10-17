@@ -171,14 +171,14 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_vcf[1024];
-  strcpy(input_vcf, argv[++count]);
+  char input_coor[1024];
+  strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vcf, ext, extension)) {
+  if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_vcf, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType);
 
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\nPresent bead types:\n", argv[count], input_vcf);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\nPresent bead types:\n", argv[count], input_coor);
       for (int i = 0; i < Counts.TypesOfBeads; i++) {
         fprintf(stderr, "   %s\n", BeadType[i].Name);
       }
@@ -284,7 +284,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(verbose2, input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "\n   Starting from %d. timestep\n", start);
     fprintf(stdout, "   Every %d. timestep used\n", skip+1);
@@ -307,8 +307,8 @@ int main(int argc, char *argv[]) {
 
   // open input coordinate file //{{{
   FILE *vcf;
-  if ((vcf = fopen(input_vcf, "r")) == NULL) {
-    ErrorFileOpen(input_vcf, 'r');
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
 
@@ -317,7 +317,7 @@ int main(int argc, char *argv[]) {
   // skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
       exit(1);
     }
   } while (strcmp(str, "pbc") != 0); //}}}
@@ -365,17 +365,13 @@ int main(int argc, char *argv[]) {
     count++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarding step: %6d", count);
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
       exit(1);
     }
   }
@@ -391,7 +387,7 @@ int main(int argc, char *argv[]) {
 
   // is the vcf file continuing? //{{{
   if ((test = getc(vcf)) == EOF) {
-    fprintf(stderr, "\nError: %s - number of discard steps is lower (or equal) to the total number of steps\n\n", input_vcf);
+    fprintf(stderr, "\nError: %s - number of discard steps is lower (or equal) to the total number of steps\n\n", input_coor);
     exit(1);
   } else {
     ungetc(test,vcf);
@@ -405,16 +401,19 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    // if -V option used, print comment at the beginning of a timestep //{{{
+    if (verbose2) {
+      fprintf(stdout, "\n%s", stuff);
+    } //}}}
+
     count++;
     count_vcf++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count_vcf);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count_vcf);
-      }
-    }
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count_vcf);
+    } //}}}
 
     if (number_of_steps != 0) {
       if (count_n_opt < number_of_steps) {
@@ -422,7 +421,7 @@ int main(int argc, char *argv[]) {
           // read coordinates //{{{
           if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
             // print newline to stdout if Step... doesn't end with one
-            ErrorCoorRead(input_vcf, test, count_vcf, stuff, input_vsf);
+            ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
             exit(1);
           } //}}}
 
@@ -463,7 +462,7 @@ int main(int argc, char *argv[]) {
           count_n_opt++;
         } else {
           if (SkipCoor(vcf, Counts, &stuff)) {
-            fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
+            fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
             exit(1);
           }
         }
@@ -474,7 +473,7 @@ int main(int argc, char *argv[]) {
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf, test, count_vcf, stuff, input_vsf);
+        ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
         exit(1);
       } //}}}
 
@@ -546,26 +545,17 @@ int main(int argc, char *argv[]) {
 
         count_vcf++;
         count++;
-        if (!silent) {
+        if (!silent && !script) {
           fflush(stdout);
-          if (script) {
-            fprintf(stdout, "Step: %6d\n", count_vcf);
-          } else {
-            fprintf(stdout, "\rStep: %6d", count_vcf);
-          }
+          fprintf(stdout, "\rStep: %6d", count_vcf);
         }
 
-
         if (SkipCoor(vcf, Counts, &stuff)) {
-          fprintf(stderr, "\nError: premature end of %s file\n\n", input_vcf);
+          fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
           exit(1);
         }
       } //}}}
     }
-
-    // if -V option used, print comment at the beginning of a timestep
-    if (verbose2)
-      fprintf(stdout, "\n%s", stuff);
 
     if (end == count_vcf)
       break;

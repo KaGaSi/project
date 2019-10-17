@@ -43,6 +43,11 @@ Similarly to \texttt{DistrAgg}, the definition of aggregate size is
 flexible -- see Section~\ref{sec:DistrAgg} for explanations of the
 \texttt{-m} and \texttt{-x} options.
 
+The starting step (\texttt{-st} option) and ending step (\texttt{-e}
+option) are used only for averages (both overall averages and per-size
+averages with \texttt{-ps} option). Per-timestep averages in the
+\texttt{<output>} file disregard \texttt{-st} and \texttt{-e} options.
+
 Usage:
 
 \vspace{1em}
@@ -72,6 +77,7 @@ Usage:
     molecule type(s) \\
   \texttt{-n <int> <int>} & use only aggregate sizes in given range \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-e <int>} & ending timestep for calculation (default: none) \\
   \bottomrule
 \end{longtable}
 

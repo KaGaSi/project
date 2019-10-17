@@ -193,13 +193,9 @@ int main(int argc, char *argv[]) {
     ungetc(test, vcf);
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count);
     }
 
     // save pointer position in file
@@ -229,10 +225,10 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "CONFIG Step: %6d\n", count);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\nConfig Step: %6d\n", count);
+      fprintf(stdout, "\nCCONFIG Step: %6d\n", count);
     }
   }
 

@@ -27,6 +27,7 @@ fractions of aggregates.\n\n");
   fprintf(ptr, "   <avg file>             output file with per-timestep averages\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -st <int>           starting timestep for calculation (default: 1)\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   fprintf(ptr, "      -n <int> <int>      use aggregate sizes in a given range\n");
   fprintf(ptr, "      -m <name(s)>        use number of specified molecule(s) as aggrete size\n");
   fprintf(ptr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
@@ -69,6 +70,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
@@ -112,6 +114,18 @@ int main(int argc, char *argv[]) {
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -284,11 +298,11 @@ int main(int argc, char *argv[]) {
     Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
   } //}}}
 
-  // print information - verbose output
+  // print information - verbose output //{{{
   if (verbose) {
     fprintf(stdout, "Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
     VerboseOutput(verbose2, null, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
+  } //}}}
 
   // arrays for distribution //{{{
   // number distribution
@@ -372,34 +386,27 @@ int main(int argc, char *argv[]) {
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
-    // print (or not) step number //{{{
     count_step++;
+
+    // print step? //{{{
     if (count_step < start) {
-      if (!silent) {
-        if (script) {
-          fprintf(stdout, "Discarding Step: %6d\n", count_step);
-        } else {
-          fflush(stdout);
-          fprintf(stdout, "\rDiscarding Step: %6d", count_step);
-        }
+      if (!silent && !script) {
+        fflush(stdout);
+        fprintf(stdout, "\rDiscarding Step: %6d", count_step);
       }
     } else if (count_step == start) {
       if (!silent) {
         if (script) {
-          fprintf(stdout, "Discarded Steps: %6d\n", count_step-1);
+          fprintf(stdout, "Starting step: %6d\n", start);
         } else {
           fflush(stdout);
-          fprintf(stdout, "\rDiscarded Steps: %6d\n", count_step-1);
+          fprintf(stdout, "\rStarting step: %6d   \n", start);
         }
       }
     } else {
-      if (!silent) {
-        if (script) {
-          fprintf(stdout, "Step: %6d\n", count_step);
-        } else {
-          fflush(stdout);
-          fprintf(stdout, "\rStep: %6d", count_step);
-        }
+      if (!silent && !script) {
+        fflush(stdout);
+        fprintf(stdout, "\rStep: %6d", count_step);
       }
     } //}}}
 
@@ -532,7 +539,7 @@ int main(int argc, char *argv[]) {
       aggs_step++;
 
       // start calculation of averages from specified 'start' timestep
-      if (count_step >= start) {
+      if (count_step >= start && (end == -1 || count_step <= end)) {
 
         // distribution //{{{
         ndistr[size-1]++;
@@ -613,6 +620,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(agg);
 
+  // print last step //{{{
   if (!silent) {
     if (script) {
       fprintf(stdout, "Last Step: %6d\n", count_step);
@@ -621,6 +629,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rLast Step: %6d\n", count_step);
     }
   } //}}}
+  //}}}
 
   // print the first two lines to output file with distributions //{{{
   if ((out = fopen(output_distr, "w")) == NULL) {
@@ -669,7 +678,12 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  count_step -= start - 1;
+  if (end == -1) {
+    count_step = count_step - start + 1;
+  } else {
+    count_step = count_step - (start - 1) - (end - 1);
+  }
+  printf("%d\n", count_step);
 
   // normalization factors
   long int ndistr_norm = 0, wdistr_norm[2] = {0}, zdistr_norm[2] = {0}, voldistr_norm[2] = {0};

@@ -883,15 +883,18 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    // print comment at the beginning of a timestep - detailed verbose output //{{{
+    if (verbose2) {
+      fprintf(stdout, "\n%s", stuff);
+    } //}}}
+
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
-    }
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count);
+    } //}}}
 
     for (int i = 0; i < Counts.Molecules; i++) {
       xm_use_mol[i] = true;
@@ -984,11 +987,6 @@ int main(int argc, char *argv[]) {
     }
 
     fclose(out); //}}}
-
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
   }
 
   fclose(vcf);

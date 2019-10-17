@@ -81,6 +81,11 @@ size $A_{\mathrm{S}}$ and ratio $\xi$; $N_{A_{\mathrm{S}}}$ is the total
 number of aggregates with aggregate size $A_{\mathrm{S}}$.
 \textit{Unfortunatly, this option may not work correctly.}
 
+The starting step (\texttt{-st} option) and the ending step (\texttt{-e}
+option) is taken into account only for overall averages. The \texttt{<avg
+file>} contains averages for all timesteps regardless of \texttt{-st} and
+\texttt{-e} options.
+
 The definition of aggregate size is flexible. If none of \texttt{-m},
 \texttt{-x}, or \texttt{--only} options is used, aggregate size is the
 \say{true} aggregation number, $A_{\mathrm{S}}$, i.e., the number of all
@@ -161,7 +166,8 @@ Usage:
   \toprule
   \multicolumn{2}{l}{Non-standard options} \\
   \midrule
-  \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-st <int>} & starting timestep for calculation of averages (default: 1) \\
+  \texttt{-e <int>} & ending timestep for calculation of averages (default: none) \\
   \texttt{-n <int> <int>} & use aggregate sizes in a given range \\
   \texttt{-m <mol name(s)>} & use number of specified molecule(s) as
     aggregate size \\

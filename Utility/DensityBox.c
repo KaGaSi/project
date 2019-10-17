@@ -304,13 +304,9 @@ int main(int argc, char *argv[]) {
     count++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarding step: %6d", count);
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
@@ -335,17 +331,18 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    // print comment at the beginning of a timestep - detailed verbose output //{{{
+    if (verbose2) {
+      fprintf(stdout, "\n%s", stuff);
+    } //}}}
+
     count++;
     count_vcf++;
 
     // write step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count_vcf);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count_vcf);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count_vcf);
     } //}}}
 
     // read coordinates //{{{
@@ -410,11 +407,6 @@ int main(int argc, char *argv[]) {
       free(temp_rho[i]);
     }
     free(temp_rho); //}}}
-
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
 
     if (end == count_vcf)
       break;
