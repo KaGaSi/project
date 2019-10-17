@@ -26,6 +26,7 @@ void Help(char cmd[50], bool error) { //{{{
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   CommonHelp(error);
 } //}}}
@@ -65,6 +66,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-m") != 0) {
 
       ErrorOption(argv[i]);
@@ -116,6 +118,18 @@ int main(int argc, char *argv[]) {
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -351,13 +365,9 @@ int main(int argc, char *argv[]) {
     count++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarding step: %6d", count);
     } //}}}
 
     if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
@@ -375,38 +385,41 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // print number of discarded steps? //{{{
+  // print number of starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d   \n", start);
     }
   } //}}}
   //}}}
 
-  // create array of bead indices
+  // create array of bead indices //{{{
   int *index = calloc(Counts.BeadsInVsf,sizeof(int));
   for (int i = 0; i < Counts.Beads; i++) {
     index[Bead[i].Index] = i;
-  }
+  } //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
+  int count_vcf = start - 1;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    // print comment at the beginning of a timestep - detailed verbose output //{{{
+    if (verbose2) {
+      fprintf(stdout, "\n%s", stuff);
+    } //}}}
+
     count++;
+    count_vcf++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count_vcf);
     } //}}}
 
     // read aggregates //{{{
@@ -415,15 +428,15 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
-      test = start - 1 + count; // total number of processed steps in agg file
-      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n", input_agg, test, stuff);
+      count_vcf--;
+      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n", input_agg, count_vcf, stuff);
       break;
     } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -778,20 +791,18 @@ int main(int argc, char *argv[]) {
       free(temp_elstat);
     } //}}}
 
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
+    if (end == count_vcf)
+      break;
   }
   fclose(vcf);
   fclose(agg);
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   } //}}}
 

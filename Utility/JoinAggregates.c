@@ -18,6 +18,9 @@ JoinAggregates removes periodic boundary conditions from aggregates. It is \
 meant as a replacement of '-j' option in Aggregates utility when this option is \
 omitted, but later the joined coordinates are required. Distance and beadtypes \
 for aggregate check are read from <input.agg> file.\n\n");
+    fprintf(stdout, "\
+If -st or -e options are used, <output.vcf> cannot be later used in conjuction \
+with the <input.agg> for further analysis.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -27,7 +30,9 @@ for aggregate check are read from <input.agg> file.\n\n");
   fprintf(ptr, "   <input.agg>       input agg file\n");
   fprintf(ptr, "   <output.vcf>      output file with joined coordinates (vcf format)\n");
   fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   CommonHelp(error);
 } //}}}
 
@@ -64,7 +69,9 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
-        strcmp(argv[i], "-st") != 0) {
+        strcmp(argv[i], "-sk") != 0 &&
+        strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0) {
 
       ErrorOption(argv[i]);
       Help(argv[0], true);
@@ -100,9 +107,27 @@ int main(int argc, char *argv[]) {
   bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
   // }}}
 
+  // number of steps to skip per one used //{{{
+  int skip = 0;
+  if (IntegerOption(argc, argv, "-sk", &skip)) {
+    exit(1);
+  } //}}}
+
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -297,7 +322,12 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(verbose2, input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-    fprintf(stdout, "\nDistance for closeness check:  %lf\n\n", distance);
+
+    fprintf(stdout, "\n   Starting from %d. timestep\n", start);
+    fprintf(stdout, "   Every %d. timestep used\n", skip+1);
+    if (end != -1) {
+      fprintf(stdout, "   Ending with %d. timestep\n", end);
+    }
   } //}}}
 
   // skip first start-1 steps //{{{
@@ -308,13 +338,9 @@ int main(int argc, char *argv[]) {
     count++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarding step: %6d", count);
     } //}}}
 
     if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
@@ -334,31 +360,36 @@ int main(int argc, char *argv[]) {
   if (test == '\0') {
     exit(1);
   }
-  // print number of discarded steps? //{{{
+  // print starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d   \n", start);
     }
   } //}}}
   //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
+  int count_vcf = start - 1;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    // print comment at the beginning of a timestep - detailed verbose output //{{{
+    if (verbose2) {
+      fprintf(stdout, "\n%s", stuff);
+    } //}}}
+
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
-    }
+    count_vcf++;
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count_vcf);
+    } //}}}
 
     // read aggregates //{{{
     if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
@@ -366,14 +397,15 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "\nError: premature end of %s file (%d. step - '%s')\n\n", input_agg, count, stuff);
+      count_vcf--; // because last step isn't processed
+      fprintf(stderr, "\nError: premature end of %s file (%d. step - '%s')\n\n", input_agg, count_vcf, stuff);
       break;
     } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -390,23 +422,50 @@ int main(int argc, char *argv[]) {
 
     fclose(out);
 
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
+    // skip every 'skip' steps //{{{
+    for (int i = 0; i < skip; i++) {
+      // test whether at vcf's eof or reached end due to -e option //{{{
+      if ((test = getc(vcf)) == EOF ||
+          end == count_vcf) {
+        break;
+      }
+      ungetc(test, vcf); //}}}
+
+      count++;
+      count_vcf++;
+      if (!silent && !script) {
+        fflush(stdout);
+        fprintf(stdout, "\rStep: %6d", count_vcf);
+      }
+
+      if (SkipCoor(vcf, Counts, &stuff)) {
+        fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+        exit(1);
+      }
+
+      // read aggregates //{{{
+      if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
+        count--; // because last step isn't processed
+        count_vcf--; // because last step isn't processed
+        fprintf(stderr, "\nError: premature end of %s file (%d. step - '%s')\n\n", input_agg, count_vcf, stuff);
+        break;
+      } //}}}
     } //}}}
   }
 
   fclose(vcf);
   fclose(agg);
 
+  // print last step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   } //}}}
+  //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);

@@ -9,6 +9,11 @@ utility reads \texttt{Aggregates} command from the \texttt{agg} file to
 determine distance and number of contact pairs for aggregate check (see
 Section \ref{sec:Aggregates} for details on \texttt{Aggregates} utility).
 
+Be warned that if \texttt{-sk}, \texttt{-st}, or \texttt{-e} options are
+used, \texttt{<output.vcf>} will not be in sync with \texttt{<input.agg>}
+and therefore these two files cannot be used in tandem for further analysis
+using any utilities calculating aggregate properties.
+
 Usage:
 
 \vspace{1em}
@@ -29,6 +34,8 @@ Usage:
   \toprule
   \multicolumn{2}{l}{Non-standard options} \\
   \midrule
+  \texttt{-sk <int>} & number of steps skip per one used (default: 0) \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-e <int>} & ending timestep for calculation (default: none) \\
   \bottomrule
 \end{longtable}

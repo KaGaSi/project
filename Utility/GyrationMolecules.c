@@ -30,6 +30,7 @@ and appends overall averages to that file.\n\n");
   fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
   fprintf(ptr, "      -bt            specify bead types to be used for calculation (default is all)\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   CommonHelp(error);
 } //}}}
 
@@ -68,7 +69,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--joined") &&
         strcmp(argv[i], "-bt") != 0 &&
-        strcmp(argv[i], "-st") != 0) {
+        strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0) {
 
       ErrorOption(argv[i]);
       Help(argv[0], true);
@@ -110,6 +112,18 @@ int main(int argc, char *argv[]) {
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -250,10 +264,10 @@ int main(int argc, char *argv[]) {
     stuff[i] = '\0';
   } //}}}
 
-  // print information - verbose output
+  // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(verbose2, input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
+  } //}}}
 
   // allocate memory for sums of shape descriptors //{{{
   double *Rg_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
@@ -263,54 +277,24 @@ int main(int argc, char *argv[]) {
   double *Aspher_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
   struct Vector *eigen_sum = calloc(Counts.TypesOfMolecules, sizeof(struct Vector)); //}}}
 
-//// skip first start-1 steps //{{{
-  int test;
-  count = 0;
-//for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
-//  ungetc(test, vcf);
-
-//  count++;
-
-//  // print step? //{{{
-//  if (!silent) {
-//    if (script) {
-//      fprintf(stdout, "Discarding step: %6d\n", count);
-//    } else {
-//      fflush(stdout);
-//      fprintf(stdout, "\rDiscarding step: %6d", count);
-//    }
-//  } //}}}
-
-//  if (SkipCoor(vcf, Counts, &stuff)) {
-//    fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
-//    exit(1);
-//  }
-//}
-//// print number of discarded steps? //{{{
-//if (!silent) {
-//  if (script) {
-//    fprintf(stdout, "Discarded steps: %6d\n", count);
-//  } else {
-//    fflush(stdout);
-//    fprintf(stdout, "\rDiscarded steps: %6d\n", count);
-//  }
-//} //}}}
-////}}}
-
   // main loop //{{{
   count = 0; // count timesteps
+  int test;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
+    // print comment at the beginning of a timestep - detailed verbose output //{{{
+    if (verbose2) {
+      fprintf(stdout, "\n%s", stuff);
+    } //}}}
+
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
-    }
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count);
+    } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
@@ -376,7 +360,7 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // add values to sums //{{{
-    if (count >= start) {
+    if (count >= start && (end == -1 || count <= end)) {
       for (int i = 0; i < Counts.TypesOfMolecules; i++) {
         Rg_sum[i] += Rg_step[i];
         sqrRg_sum[i] += sqrRg_step[i];
@@ -416,11 +400,6 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
-
     // free memory //{{{
     free(agg_counts_step);
     free(Rg_step);
@@ -432,6 +411,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(vcf);
 
+  // print last step? //{{{
   if (!silent) {
     if (script) {
       fprintf(stdout, "Last Step: %6d\n", count);
@@ -440,8 +420,12 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
+  //}}}
 
   // write simple averages to <output> //{{{
+  if (end != -1) {
+    count = end - start + 1;
+  }
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       // open file //{{{
@@ -455,7 +439,7 @@ int main(int argc, char *argv[]) {
 
       // write legend line to output file //{{{
       fprintf(out, "# %s\n", MoleculeType[i].Name);
-      fprintf(out, "# simple averages (from steps %d to %d): ", start, count);
+      fprintf(out, "# simple averages (from steps %d to %d): ", start, start+count);
       int counter = 1;
       fprintf(out, "(%d) <Rg>, ", counter++);
       fprintf(out, "(%d) <Anis>, ", counter++);
@@ -467,7 +451,6 @@ int main(int argc, char *argv[]) {
       putc('\n', out); //}}}
 
       // write averages to output file //{{{
-      count -= start;
       putc('#', out);
       fprintf(out, " %lf", Rg_sum[i]/(count*MoleculeType[i].Number));
       fprintf(out, " %lf", Anis_sum[i]/(count*MoleculeType[i].Number));
