@@ -291,13 +291,9 @@ int main(int argc, char *argv[]) {
     count++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarding step: %6d", count);
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
@@ -308,10 +304,10 @@ int main(int argc, char *argv[]) {
   // print number of discarded steps? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d   \n", start);
     }
   } //}}}
 
@@ -701,7 +697,7 @@ int main(int argc, char *argv[]) {
   // seed random number generator
   srand(time(0));
 
-  // count unbonded neutral beads
+  // count unbonded neutral beads //{{{
   int can_be_exchanged = 0;
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
     if (Bead[i].Molecule == -1 && BeadType[Bead[i].Type].Charge == 0) {
@@ -718,8 +714,7 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "     Number of unbonded neutral beads in the original system: %d\n", can_be_exchanged);
     fprintf(stderr, "     Number of beads to be added: %d\n\n", Counts_add.Beads);
     exit(1);
-  }
-
+  } //}}}
 
   // add monomeric beads //{{{
   count = 0;
@@ -768,21 +763,23 @@ int main(int argc, char *argv[]) {
       Bead[count].Type = Counts.TypesOfBeads + Bead_add[i].Type;
       Bead_add[i].Index = Bead[count].Index;
       count++;
+
       // print number of placed beads? //{{{
-      if (!silent) {
-        if (script) {
-          fprintf(stdout, "Monomer beads placed: %4d\n", i+1);
-        } else {
-          fflush(stdout);
-          fprintf(stdout, "\rMonomer beads placed: %3d", i+1);
-        }
+      if (!silent && !script) {
+        fflush(stdout);
+        fprintf(stdout, "\rMonomer beads placed: %3d", count);
       } //}}}
     }
   }
 
-  // print number of placed beads? //{{{
+  // print total number of placed beads? //{{{
   if (!silent) {
-    fprintf(stdout, "\n");
+    if (script) {
+      fprintf(stdout, "Monomer beads placed: %3d", count);
+    } else {
+      fprintf(stdout, "\n");
+      fprintf(stdout, "\rMonomer beads placed: %3d", count);
+    }
   } //}}}
   //}}}
 
@@ -891,19 +888,20 @@ int main(int argc, char *argv[]) {
     }
 
     // print number of placed molecules? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Molecules placed: %3d\n", i+1);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rMolecules placed: %3d", i+1);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rMolecules placed: %3d", i+1);
     } //}}}
   }
 
   // print number of placed beads? //{{{
   if (!silent) {
-    fprintf(stdout, "\n");
+    if (script) {
+      fprintf(stdout, "Molecules placed: %3d", Counts_add.Molecules);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rMolecules placed: %3d", Counts_add.Molecules);
+    }
   } //}}}
   //}}}
 

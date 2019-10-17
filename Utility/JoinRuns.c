@@ -32,6 +32,8 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   fprintf(ptr, "      --join         join molecules (remove pbc)\n");
   fprintf(ptr, "      -st1 <int>     starting timestep from 1st run\n");
   fprintf(ptr, "      -st2 <int>     starting timestep from 2nd run\n");
+  fprintf(ptr, "      -e1 <end>      number of timestep to end with on the 1st run\n");
+  fprintf(ptr, "      -e2 <end>      number of timestep to end with on the 2st runh\n");
   fprintf(ptr, "      -sk1 <int>     leave out every <int> steps from 1st run\n");
   fprintf(ptr, "      -sk2 <int>     leave out every <int> steps from 2st run\n");
   CommonHelp(error);
@@ -73,6 +75,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--join") != 0 &&
         strcmp(argv[i], "-st1") != 0 &&
         strcmp(argv[i], "-st2") != 0 &&
+        strcmp(argv[i], "-e1") != 0 &&
+        strcmp(argv[i], "-e2") != 0 &&
         strcmp(argv[i], "-sk1") != 0 &&
         strcmp(argv[i], "-sk2") != 0) {
 
@@ -126,6 +130,15 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (IntegerOption(argc, argv, "-st2", &start_2)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end_1 = -1, end_2 = -1;
+  if (IntegerOption(argc, argv, "-e", &end_1)) {
+    exit(1);
+  }
+  if (IntegerOption(argc, argv, "-e", &end_2)) {
     exit(1);
   } //}}}
 
@@ -327,28 +340,35 @@ int main(int argc, char *argv[]) {
   int test;
   // first run
   count = 0;
-  if (!silent) {
-    fprintf(stdout, "Discarded from 2nd coordinate file: %6d", count);
-  }
   for (int i = 1; i < start_1; i++) {
     count++;
 
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarded from 1st coordinate file: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarded from 1st coordinate file: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarded from 1st coordinate file: %6d", count);
     }
 
     SkipCoor(vcf_1, Counts, &stuff);
   }
-  putchar('\n'); //}}}
+
+  if (!silent) {
+    if (script) {
+      fprintf(stdout, "Starting step for 2nd coordinate file: %6d", count);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rStarting step for 2nd coordinate file: %6d", count);
+    }
+  } //}}}
 
   // main loop - 1st run //{{{
+  int count_vcf = start_1 - 1;
   while ((test = getc(vcf_1)) != EOF) {
     ungetc(test, vcf_1);
+
+    // if -V option used, print comment at the beginning of a timestep //{{{
+    if (verbose2) {
+      fprintf(stdout, "\n%s", stuff);
+    } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
@@ -358,41 +378,17 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step from 1st run: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep from 1st run: %6d", count);
-      }
-    }
+    count_vcf++;
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep from 1st run: %6d", count_vcf);
+    } //}}}
 
     // join molecules? //{{{
     if (join) {
       RemovePBCMolecules(Counts, BoxLength, BeadType1, &Bead1, MoleculeType1, Molecule1);
-    } else { // if rounding leads to BoxLength, move it bead to other side of box
-      for (int i = 0; i < Counts.Beads; i++) {
-        char check[8];
-        char box[8];
-        // x direction
-        sprintf(check, "%.3f", Bead1[i].Position.x);
-        sprintf(box, "%.3f", BoxLength.x);
-        if (strcmp(check, box) == 0) {
-          Bead1[i].Position.x = 0;
-        }
-        // y direction
-        sprintf(check, "%.3f", Bead1[i].Position.y);
-        sprintf(box, "%.3f", BoxLength.y);
-        if (strcmp(check, box) == 0) {
-          Bead1[i].Position.y = 0;
-        }
-        // z direction
-        sprintf(check, "%.3f", Bead1[i].Position.z);
-        sprintf(box, "%.3f", BoxLength.z);
-        if (strcmp(check, box) == 0) {
-          Bead1[i].Position.z = 0;
-        }
-      }
     } //}}}
 
     // open output .vcf file for appending //{{{
@@ -413,31 +409,37 @@ int main(int argc, char *argv[]) {
       }
       ungetc(test, vcf_1); //}}}
 
-      fflush(stdout);
-      fprintf(stdout, "\rStep from 1st run: %6d", ++count);
+      count++;
+      count_vcf++;
 
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
+        ErrorCoorRead(input_vcf_1, test, count_vcf, stuff, input_vsf_1);
         exit(1);
       } //}}}
     } //}}}
 
-    // if -V option used, print comment at the beginning of a timestep
-    if (verbose2)
-      fprintf(stdout, "\n%s", stuff);
+    if (end_1 == count_vcf)
+      break;
   }
 
+  // print last step? //{{{
   if (!silent) {
-    fflush(stdout);
-    fprintf(stdout, "\rLast Step from 1st run: %6d\n", count);
-  }
+    if (script) {
+      fprintf(stdout, "Last Step from 1st run: %6d\n", count_vcf);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rLast Step from 1st run: %6d\n", count_vcf);
+    }
+  } //}}}
 
   fclose(vcf_1); //}}}
 
   // connect Bead2 with Bead1 via Index arrays //{{{
-  printf("Connecting bead indices from the two runs (this may take a long time)\n");
+  if (!silent && !script) {
+    fprintf(stdout, "\nWarning: connecting bead indices from the two runs (this may take a long time)\n");
+  }
   bool used[Counts.Beads];
   for (int i = 0; i < Counts.Beads; i++) {
     used[i] = false;
@@ -483,81 +485,68 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    printf("\r%d. bead done", i);
+    if (!silent && !script) {
+      fflush(stdout);
+      printf("\r%d. bead done", i);
+    }
   }
 
-  printf("\rConnecting done\n");
-
-//    for (int i = 0; i < Counts.Beads; i++) {
-//      if (!used[i]) {
-//        fprintf(stdout, "ERROR - used[%d] = false\n", i);
-//      }
-//    } //}}}
+  if (!silent && !script) {
+    fflush(stdout);
+    printf("\rConnecting done\n");
+  } //}}}
 
   // start second run with start-th step //{{{
   count = 0;
-  if (!silent) {
-    fprintf(stdout, "\rDiscarded from 2nd coordinate file: %6d", count);
-  }
   for (int i = 1; i < start_2; i++) {
     count++;
 
-    if (!silent) {
+    if (!silent && !script) {
       fflush(stdout);
       fprintf(stdout, "\rDiscarded from 2nd coordinate file: %6d", count);
     }
 
     SkipCoor(vcf_2, Counts, &stuff);
   }
-  putchar('\n'); //}}}
+
+  if (!silent) {
+    if (script) {
+      fprintf(stdout, "Starting step for 2nd coordinate file: %6d", start_1);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rStarting step for 2nd coordinate file: %6d", start_1);
+    }
+  } //}}}
 
   // main loop - 2nd run //{{{
+  count_vcf = 0;
   while ((test = getc(vcf_2)) != EOF) {
     ungetc(test, vcf_2);
+
+    // if -V option used, print comment at the beginning of a timestep //{{{
+    if (verbose2) {
+      fprintf(stdout, "\n%s", stuff);
+    } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf_2, test, count, stuff, input_vsf_2);
+      ErrorCoorRead(input_vcf_2, test, count_vcf, stuff, input_vsf_2);
       exit(1);
     } //}}}
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step from 2nd run: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep from 2nd run: %6d", count);
-      }
-    }
+    count_vcf++;
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep from 2nd run: %6d", count_vcf);
+    } //}}}
 
     // join molecules? //{{{
     if (join) {
       RemovePBCMolecules(Counts, BoxLength, BeadType2, &Bead2, MoleculeType2, Molecule2);
-    } else { // if rounding leads to BoxLength, move it bead to other side of box
-      for (int i = 0; i < Counts.Beads; i++) {
-        char check[8];
-        char box[8];
-        // x direction
-        sprintf(check, "%.3f", Bead2[i].Position.x);
-        sprintf(box, "%.3f", BoxLength.x);
-        if (strcmp(check, box) == 0) {
-          Bead2[i].Position.x = 0;
-        }
-        // y direction
-        sprintf(check, "%.3f", Bead2[i].Position.y);
-        sprintf(box, "%.3f", BoxLength.y);
-        if (strcmp(check, box) == 0) {
-          Bead2[i].Position.y = 0;
-        }
-        // z direction
-        sprintf(check, "%.3f", Bead2[i].Position.z);
-        sprintf(box, "%.3f", BoxLength.z);
-        if (strcmp(check, box) == 0) {
-          Bead2[i].Position.z = 0;
-        }
-      }
     } //}}}
 
     // open output .vcf file for appending //{{{
@@ -588,28 +577,32 @@ int main(int argc, char *argv[]) {
       }
       ungetc(test, vcf_2); //}}}
 
-      fflush(stdout);
-      fprintf(stdout, "\rStep from 2st run: %6d", ++count);
+      count++;
+      count_vcf++;
 
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf_2, test, count, stuff, input_vsf_2);
+        ErrorCoorRead(input_vcf_2, test, count_vcf, stuff, input_vsf_2);
         exit(1);
       } //}}}
     } //}}}
 
-    // if -V option used, print comment at the beginning of a timestep
-    if (verbose2)
-      fprintf(stdout, "\n%s", stuff);
+    if (end_2 == count_vcf)
+      break;
   }
+  fclose(vcf_2);
 
+  // print last step? //{{{
   if (!silent) {
-    fflush(stdout);
-    fprintf(stdout, "\rLast Step from 2nd run: %6d\n", count);
-  }
-
-  fclose(vcf_2); //}}}
+    if (script) {
+      fprintf(stdout, "Last Step from 2nd run: %6d\n", count_vcf);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rLast Step from 2nd run: %6d\n", count_vcf);
+    }
+  } //}}}
+  //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType1);
