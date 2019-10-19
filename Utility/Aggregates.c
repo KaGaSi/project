@@ -973,7 +973,6 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < Counts.Aggregates; i++) {
 
       if (Aggregate[i].Use) {
-
         // go through all molecules in aggregate 'i'
         fprintf(out, "%d :", Aggregate[i].nMolecules);
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
