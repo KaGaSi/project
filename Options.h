@@ -192,8 +192,8 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts C
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
  * \param [in]  opt          option switch (e.g. array containing `-n`)
- * \param [in]  Counts       numbers of beads, molecules, etc.
  * \param [out] moltype      array for the molecule type
+ * \param [in]  Counts       numbers of beads, molecules, etc.
  * \param [in]  MoleculeType information about molecule types
  * \return `true` or `false` for error
  */

@@ -1551,10 +1551,10 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
       // read monomeric beads in Aggregate 'i' //{{{
       int count;
       fscanf(agg_file, "%d :", &count);
-      (*Aggregate)[i].nMonomers = 0;
-      for (int j = 0; j < (*Aggregate)[i].nMonomers; j++) {
+      for (int j = 0; j < count; j++) {
         int id;
         fscanf(agg_file, "%d", &id); // monomer index from vsf file
+        (*Aggregate)[i].nMonomers = 0; // their number will be counted according to which beads are in vcf
         if (Index[id] > -1) {
           (*Aggregate)[i].nMonomers++;
           (*Aggregate)[i].Monomer[j] = id;
@@ -1881,7 +1881,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
   bool *moved = malloc(Counts.Molecules*sizeof(bool));
 
-  // go through all aggregates larger than unimers
+  // go through all aggregates larger than unimers and put all molecules together //{{{
   for (int i = 0; i < Counts.Aggregates; i++) {
 
     // negate moved array, but the first molecule is not to move //{{{
@@ -1991,7 +1991,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
         }
       } //}}}
     }
-  }
+  } //}}}
 
   // put aggregates' centre of mass into the simulation box //{{{
   for (int i = 0; i < Counts.Aggregates; i++) {
@@ -2019,6 +2019,70 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
       (*Bead)[bead].Position.x -= move.x * BoxLength.x;
       (*Bead)[bead].Position.y -= move.y * BoxLength.y;
       (*Bead)[bead].Position.z -= move.z * BoxLength.z;
+    }
+  } //}}}
+
+  // put monomeric beads in contact with their aggregates //{{{
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    // go through monomeric beads in the aggregate
+    for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+      int id1 = Aggregate[i].Monomer[j], id_move_to = -1;
+      double min_dist = 1000000;
+      // find smallest distance between th monomeric bead and bonded beads //{{{
+      for (int k = 0; k < Aggregate[i].nBeads; k++) {
+        int id2 = Aggregate[i].Bead[k];
+
+        // distance between the beads, including pbc
+        Vector dist;
+        dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+        dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+        dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+        dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+
+        if (dist.x < min_dist) {
+          min_dist = dist.x;
+          id_move_to = id2;
+        }
+      } //}}}
+
+      // move monomer if it's too far from aggregate
+      if (min_dist > distance) {
+
+        // distance between the beads, including pbc
+        Vector dist;
+        dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
+        dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
+        dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
+
+        // move id1 bead? //{{{
+        // x direction
+        while (dist.x > (BoxLength.x/2)) {
+          (*Bead)[id1].Position.x -= BoxLength.x;
+          dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
+        }
+        while (dist.x <= -(BoxLength.x/2)) {
+          (*Bead)[id1].Position.x += BoxLength.x;
+          dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
+        }
+        // y direction
+        while (dist.y > (BoxLength.y/2)) {
+          (*Bead)[id1].Position.y -= BoxLength.y;
+          dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
+        }
+        while (dist.y <= -(BoxLength.y/2)) {
+          (*Bead)[id1].Position.y += BoxLength.y;
+          dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
+        }
+        // z direction
+        while (dist.z > (BoxLength.z/2)) {
+          (*Bead)[id1].Position.z -= BoxLength.z;
+          dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
+        }
+        while (dist.z <= -(BoxLength.z/2)) {
+          (*Bead)[id1].Position.z += BoxLength.z;
+          dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
+        } //}}}
+      }
     }
   } //}}}
 

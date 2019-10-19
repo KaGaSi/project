@@ -33,6 +33,7 @@ fractions of aggregates.\n\n");
   fprintf(ptr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
   fprintf(ptr, "      --only <name(s)>    use only aggregates composed of specified molecule(s)\n");
   fprintf(ptr, "      -c <name> <int(s)>  write composition distribution of aggregate size(s) to <name>\n");
+  fprintf(ptr, "      -nc <name> <name>   two molecule names for composition calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -75,6 +76,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
         strcmp(argv[i], "--only") != 0 &&
+        strcmp(argv[i], "-nc") != 0 &&
         strcmp(argv[i], "-c") != 0 ) {
 
       ErrorOption(argv[i]);
@@ -241,9 +243,10 @@ int main(int argc, char *argv[]) {
   // count total number of excluded aggs
   long int exclude_count_agg = 0; //}}}
 
-  // '-c' option - aggregate sizes //{{{
+  // '-c' option - aggregate sizes (may be complemented by '-nc' option) //{{{
   int multiply = 1000;
-  int composition[100] = {0}, comp_number_of_sizes = 0,
+  int composition[100] = {0}, // list of agg sizes
+      comp_number_of_sizes = 0, // number of agg sizes
       types[2][2] = {{-1},{-1}}; // [x][0]: mol type; [x][1]: number of mols
   char output_comp[1024];
   if (FileIntsOption(argc, argv, "-c", composition, &comp_number_of_sizes, output_comp)) {
@@ -268,6 +271,39 @@ int main(int argc, char *argv[]) {
       composition[i]+=0;
     }
   } //}}}
+//printf("%d %s\n%d %s\n", types[0][0], MoleculeType[types[0][0]].Name, types[1][0], MoleculeType[types[1][0]].Name);
+
+  // '-nc' option must be complemented by '-c' option //{{{
+  int *composition_mol_names = calloc(Counts.TypesOfMolecules,sizeof(int *));
+  if (MoleculeTypeOption2(argc, argv, "-nc", &composition_mol_names, Counts, &MoleculeType)) {
+    exit(1);
+  }
+  // check number of provided names
+  count = 0;
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (composition_mol_names[i] == 1) {
+      count++;
+    }
+  }
+  // error if wrong number of names
+  printf("count=%d\n", count);
+  if (count != 0 && count != 2) {
+    fprintf(stderr, "\nError: '-nc' option - exactly two molecule names are required\n\n");
+    exit(1);
+  }
+  // assign provided molecule names
+  if (count == 2) {
+    printf("%d %d\n", composition_mol_names[0], composition_mol_names[1]);
+    printf("%s %s\n", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
+    types[0][0] = composition_mol_names[0];
+    types[1][0] = composition_mol_names[1];
+    printf("%s %s\n", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
+  }
+  // warning if -nc is used, but not -c
+  if (count == 2 && comp_number_of_sizes == 0 && !silent) {
+    fprintf(stdout, "\nWarning: '-nc' option has no effect if '-c' option is not present\n\n");
+  }
+  //}}}
 
   // '--only' option //{{{
   int *only_specific_moltype_aggregates = calloc(Counts.TypesOfMolecules,sizeof(int));
@@ -314,7 +350,7 @@ int main(int argc, char *argv[]) {
   // [][0] = volume of mols according to options; [][1] = volume of whole agg
   long double voldistr[Counts.Molecules][2];
   // number distribution of agg composition
-  long double *ndistr_comp[Counts.Molecules];
+  long int *ndistr_comp[Counts.Molecules];
   for (int i = 0; i < Counts.Molecules; i++) {
     ndistr_comp[i] = malloc((multiply*Counts.Molecules)*sizeof(long int));
   }
@@ -489,15 +525,16 @@ int main(int argc, char *argv[]) {
       // if '-c' is used, calculate composition distribution //{{{
       if (comp_number_of_sizes > 0) {
         // use the size?
-        bool use_size_comp = false;
+        int use_size_comp = -1;
         for (int j = 0; j < comp_number_of_sizes; j++) {
           if (size == composition[j]) {
-            use_size_comp = true;
+            use_size_comp = j;
             break;
           }
         }
 
-        if (use_size_comp) {
+        // TODO: ndistr_comp array size (should be number of provided sizes)
+        if (use_size_comp != -1) {
           // count numbers of the two mol types in aggregate 'i'
           types[0][1] = 0;
           types[1][1] = 0;
@@ -517,6 +554,9 @@ int main(int argc, char *argv[]) {
             ratio = (double)(types[0][1]) / types[1][1];
           }
           ndistr_comp[size-1][(int)(ratio*multiply)]++;
+          printf("%d / %d = %lf; ndistr_comp[%d][%d] = %ld\n", types[0][1], types[1][1], ratio,
+                                                               size-1, (int)(ratio*multiply),
+                                                               ndistr_comp[size-1][(int)(ratio*multiply)]);
         }
       } //}}}
 
@@ -957,6 +997,7 @@ int main(int argc, char *argv[]) {
         fprintf(out, "%10.5f", (double)(i)/multiply);
         for (int j = 0; j < comp_number_of_sizes; j++) {
           if (ndistr_comp[composition[j]-1][i] != 0) {
+            printf("%ld %ld\n", ndistr_comp[composition[j]-1][i], sum[composition[j]-1]);
             fprintf(out, " %7.5f", (double)(ndistr_comp[composition[j]-1][i])/sum[composition[j]-1]);
           } else {
             fprintf(out, "       ?");
@@ -984,7 +1025,8 @@ int main(int argc, char *argv[]) {
     free(molecules_sum[i]);
     free(ndistr_comp[i]);
   }
-  free(molecules_sum); //}}}
+  free(molecules_sum);
+  free(composition_mol_names); //}}}
 
   return 0;
 }
