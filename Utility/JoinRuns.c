@@ -27,8 +27,9 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   fprintf(ptr, "   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
   fprintf(ptr, "   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
   fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
-  fprintf(ptr, "   <type names>      names of bead types to save\n");
+  fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
   fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
   fprintf(ptr, "      --join         join molecules (remove pbc)\n");
   fprintf(ptr, "      -st1 <int>     starting timestep from 1st run\n");
   fprintf(ptr, "      -st2 <int>     starting timestep from 2nd run\n");
@@ -56,7 +57,11 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  if (count < req_args) {
+  // reverse bead type selection? ...do now to check correct number of arguments
+  bool reverse = BoolOption(argc, argv, "-r");
+
+  // possible to omit <type name(s)> if '-r' is used
+  if (count < (req_args-1) || (count == (req_args-1) && !reverse)) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
     exit(1);
@@ -72,6 +77,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "--join") != 0 &&
         strcmp(argv[i], "-st1") != 0 &&
         strcmp(argv[i], "-st2") != 0 &&
@@ -135,10 +141,20 @@ int main(int argc, char *argv[]) {
 
   // ending timestep //{{{
   int end_1 = -1, end_2 = -1;
-  if (IntegerOption(argc, argv, "-e", &end_1)) {
+  if (IntegerOption(argc, argv, "-e1", &end_1)) {
     exit(1);
   }
-  if (IntegerOption(argc, argv, "-e", &end_2)) {
+  if (IntegerOption(argc, argv, "-e2", &end_2)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end_1 != -1 && start_1 > end_1) {
+    fprintf(stderr, "\nError: For the first run, starting step (%d) is higher than ending step (%d)\n", start_1, end_1);
+    exit(1);
+  }
+  if (end_2 != -1 && start_2 > end_2) {
+    fprintf(stderr, "\nError: For the first run, starting step (%d) is higher than ending step (%d)\n", start_2, end_2);
     exit(1);
   } //}}}
 
@@ -254,6 +270,17 @@ int main(int argc, char *argv[]) {
     BeadType1[type].Write = true;
   } //}}}
 
+  // if '-r' is used, switch Write bools for all bead types //{{{
+  if (reverse) {
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      if (BeadType1[i].Write) {
+        BeadType1[i].Write = false;
+      } else {
+        BeadType1[i].Write = true;
+      }
+    }
+  } //}}}
+
   // print selected bead type names to output .vcf file //{{{
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
@@ -345,7 +372,7 @@ int main(int argc, char *argv[]) {
 
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded from 1st coordinate file: %6d", count);
+      fprintf(stdout, "\rDiscarded from 1st run: %6d", count);
     }
 
     SkipCoor(vcf_1, Counts, &stuff);
@@ -353,10 +380,10 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Starting step for 2nd coordinate file: %6d", count);
+      fprintf(stdout, "Starting step for 1st run: %6d\n", start_1);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rStarting step for 2nd coordinate file: %6d", count);
+      fprintf(stdout, "\rStarting step for 1st run: %6d\n", start_1);
     }
   } //}}}
 
@@ -427,10 +454,10 @@ int main(int argc, char *argv[]) {
   // print last step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step from 1st run: %6d\n", count_vcf);
+      fprintf(stdout, "Last step from 1st run: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step from 1st run: %6d\n", count_vcf);
+      fprintf(stdout, "\rLast step from 1st run: %6d\n", count_vcf);
     }
   } //}}}
 
@@ -489,11 +516,6 @@ int main(int argc, char *argv[]) {
       fflush(stdout);
       printf("\r%d. bead done", i);
     }
-  }
-
-  if (!silent && !script) {
-    fflush(stdout);
-    printf("\rConnecting done\n");
   } //}}}
 
   // start second run with start-th step //{{{
@@ -503,7 +525,7 @@ int main(int argc, char *argv[]) {
 
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded from 2nd coordinate file: %6d", count);
+      fprintf(stdout, "\rDiscarded from 2nd run: %6d", count);
     }
 
     SkipCoor(vcf_2, Counts, &stuff);
@@ -511,15 +533,15 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Starting step for 2nd coordinate file: %6d", start_1);
+      fprintf(stdout, "Starting step for 2nd run: %6d\n", start_2);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rStarting step for 2nd coordinate file: %6d", start_1);
+      fprintf(stdout, "\rStarting step for 2nd run: %6d\n", start_2);
     }
   } //}}}
 
   // main loop - 2nd run //{{{
-  count_vcf = 0;
+  count_vcf = start_2 - 1;
   while ((test = getc(vcf_2)) != EOF) {
     ungetc(test, vcf_2);
 
@@ -556,15 +578,12 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     for (int i = 0; i < Counts.Beads; i++) {
-//    if (Bead1[i].Molecule == -1) {
         Bead1[i].Position.x = Bead2[Index1[Bead1[i].Index]].Position.x;
         Bead1[i].Position.y = Bead2[Index1[Bead1[i].Index]].Position.y;
         Bead1[i].Position.z = Bead2[Index1[Bead1[i].Index]].Position.z;
-//    }
     }
 
-    // TODO: there probably shouldn't be Molecule(Type)1, but Molecule(Type)2
-    // or something different -- this program isn't used anyway
+    // Molecule(Type)1 and Bead(Type)1 are used, because *2 were copied to them
     WriteCoorIndexed(out, Counts, BeadType1, Bead1, MoleculeType1, Molecule1, stuff);
 
     fclose(out);
@@ -596,10 +615,10 @@ int main(int argc, char *argv[]) {
   // print last step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step from 2nd run: %6d\n", count_vcf);
+      fprintf(stdout, "Last step from 2nd run: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step from 2nd run: %6d\n", count_vcf);
+      fprintf(stdout, "\rLast step from 2nd run: %6d\n", count_vcf);
     }
   } //}}}
   //}}}
