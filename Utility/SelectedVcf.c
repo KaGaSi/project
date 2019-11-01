@@ -59,11 +59,10 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  // reverse bead type selection? ...do now to check correct number of arguments //{{{
+  // reverse bead type selection? ...do now to check correct number of arguments
   bool reverse = BoolOption(argc, argv, "-r");
-  // }}}
 
-  // possible to exclude <type name(s)> if '-r' is used
+  // possible to omit <type name(s)> if '-r' is used
   if (count < (req_args-1) || (count == (req_args-1) && !reverse)) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
@@ -80,9 +79,9 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "--join") != 0 &&
         strcmp(argv[i], "-w") != 0 &&
-        strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-sk") != 0 &&
