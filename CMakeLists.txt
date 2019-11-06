@@ -39,6 +39,7 @@ set(UTILS AddToSystem
           JoinAggregates
           JoinRuns
           lmp_data
+          lmp_vtf
           PairCorrel
           PotentialAggregates
           SelectedVcf
