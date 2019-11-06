@@ -99,9 +99,9 @@ int main(int argc, char *argv[]) {
   char output[1024];
   strcpy(output, argv[++count]);
 
-  // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)
+  // test if <output.vsf> filename ends with '.vsf' (required by VMD)
   int ext = 1;
-  char extension[2][5];
+  char extension[1][5];
   strcpy(extension[0], ".vsf");
   if (!ErrorExtension(output, ext, extension)) {
     Help(argv[0], true);

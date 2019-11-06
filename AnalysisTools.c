@@ -190,57 +190,61 @@ void VerboseOutput(bool Verbose2, char *input_vcf, Counts Counts,
                    MoleculeType *MoleculeType, Molecule *Molecule) {
 
 //if (input_vcf[0] != '\0')
-  printf("Counts.{");
-  printf("TypesOfBeads = %d, ", Counts.TypesOfBeads);
-  printf("Bonded = %d, ", Counts.Bonded);
-  printf("Unbonded = %d, ", Counts.Unbonded);
-  printf("Beads = %d, ", Counts.Beads);
-  printf("BeadsInVsf = %d, ", Counts.BeadsInVsf);
-  printf("TypesOfMolecules = %d, ", Counts.TypesOfMolecules);
-  printf("Molecules = %d}\n", Counts.Molecules);
-  printf("\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
+  fprintf(stdout, "Counts.{");
+  fprintf(stdout, "TypesOfBeads = %d, ", Counts.TypesOfBeads);
+  fprintf(stdout, "Bonded = %d, ", Counts.Bonded);
+  fprintf(stdout, "Unbonded = %d, ", Counts.Unbonded);
+  fprintf(stdout, "Beads = %d, ", Counts.Beads);
+  fprintf(stdout, "BeadsInVsf = %d, ", Counts.BeadsInVsf);
+  fprintf(stdout, "TypesOfMolecules = %d, ", Counts.TypesOfMolecules);
+  fprintf(stdout, "Molecules = %d}\n", Counts.Molecules);
+  fprintf(stdout, "\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
 
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    printf("BeadType[%2d].{", i);
-    printf("Name =%10s, ", BeadType[i].Name);
-    printf("Number =%7d, ", BeadType[i].Number);
-    printf("Charge =%6.2f, ", BeadType[i].Charge);
-    printf("Mass =%5.2f}\n", BeadType[i].Mass);
-//  printf("Use = %3s, ", BeadType[i].Use? "Yes":"No");
-//  printf("Write = %3s}\n", BeadType[i].Write? "Yes":"No");
+    fprintf(stdout, "BeadType[%2d].{", i);
+    fprintf(stdout, "Name =%10s, ", BeadType[i].Name);
+    fprintf(stdout, "Number =%7d, ", BeadType[i].Number);
+    fprintf(stdout, "Charge =%9.5f, ", BeadType[i].Charge);
+    fprintf(stdout, "Mass = %.5f}\n", BeadType[i].Mass);
+//  fprintf(stdout, "Use = %3s, ", BeadType[i].Use? "Yes":"No");
+//  fprintf(stdout, "Write = %3s}\n", BeadType[i].Write? "Yes":"No");
   }
   putchar('\n');
 
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf("MoleculeType[%2d].{\n", i);
-    printf("  Name    = %s\n", MoleculeType[i].Name);
-    printf("  Number  = %d\n", MoleculeType[i].Number);
-    printf("  nBeads  = %d\n  Bead    = {", MoleculeType[i].nBeads);
-    printf("%s", BeadType[MoleculeType[i].Bead[0]].Name);
-    for (int j = 1; j < MoleculeType[i].nBeads; j++) {
-      printf(", %s", BeadType[MoleculeType[i].Bead[j]].Name);
+    fprintf(stdout, "MoleculeType[%2d].{\n", i);
+    fprintf(stdout, "  Name    = %s\n", MoleculeType[i].Name);
+    fprintf(stdout, "  Number  = %d\n", MoleculeType[i].Number);
+    fprintf(stdout, "  nBeads  = %d\n  Bead    = {", MoleculeType[i].nBeads);
+    for (int j = 0; j < MoleculeType[i].nBeads; j++) {
+      if (j != 0) {
+        fprintf(stdout, ", ");
+      }
+      fprintf(stdout, "%s", BeadType[MoleculeType[i].Bead[j]].Name);
     }
-    printf("}\n  nBonds  = %d\n  Bond    = {", MoleculeType[i].nBonds);
-    printf("%d-%d", MoleculeType[i].Bond[0][0]+1, MoleculeType[i].Bond[0][1]+1);
-    for (int j = 1; j < MoleculeType[i].nBonds; j++) {
-      printf(", %d-%d", MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
+    fprintf(stdout, "}\n  nBonds  = %d\n  Bond    = {", MoleculeType[i].nBonds);
+    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+      if (j != 0) {
+        fprintf(stdout, ", ");
+      }
+      fprintf(stdout, "%d-%d", MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
     }
-    printf("}\n  nBTypes = %d\n  BType   = {", MoleculeType[i].nBTypes);
-    printf("%s", BeadType[MoleculeType[i].BType[0]].Name);
+    fprintf(stdout, "}\n  nBTypes = %d\n  BType   = {", MoleculeType[i].nBTypes);
+    fprintf(stdout, "%s", BeadType[MoleculeType[i].BType[0]].Name);
     for (int j = 1; j < MoleculeType[i].nBTypes; j++) {
-      printf(", %s", BeadType[MoleculeType[i].BType[j]].Name);
+      fprintf(stdout, ", %s", BeadType[MoleculeType[i].BType[j]].Name);
     }
-    printf("}\n  Mass    = %.5f}\n", MoleculeType[i].Mass);
+    fprintf(stdout, "}\n  Mass    = %.5f}\n", MoleculeType[i].Mass);
   }
 
   // print bead ids of all molecules if '-V' option is used
   for (int i = 0; Verbose2 && i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
-    printf("Molecule %3d (%s):\n", i+1, MoleculeType[type].Name);
+    fprintf(stdout, "Molecule %3d (%s):\n", i+1, MoleculeType[type].Name);
     for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      printf(" %d (%d)", Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
+      fprintf(stdout, " %d (%d)", Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
     }
-    printf("\n");
+    fprintf(stdout, "\n");
   }
 } //}}}
 
@@ -1606,9 +1610,6 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
       }
     } //}}}
   }
-//for (int i = 0; i < (*Counts).Beads; i++) {
-//  printf("%7d %7d %7d %7d %7d\n", (*Bead)[i].Index, (*Bead)[i].Molecule, (*Bead)[i].Aggregate[0], (*Bead)[i].nAggregates, Index[(*Bead)[i].Index]);
-//}
   return error;
 } //}}}
 
@@ -1631,13 +1632,11 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
   fprintf(vcf_file, "indexed\n");
 
   for (int i = 0; i < Counts.Beads; i++) {
-    int type_b = Bead[i].Type;
-    if (BeadType[type_b].Write) {
-
+    int btype = Bead[i].Type;
+    if (BeadType[btype].Write) {
       if (Bead[i].Molecule != -1) { // bead in a molecule
-
-        int mol_type = Molecule[Bead[i].Molecule].Type;
-        if (MoleculeType[mol_type].Write) {
+        int mtype = Molecule[Bead[i].Molecule].Type;
+        if (MoleculeType[mtype].Write) {
           fprintf(vcf_file, "%8d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                        Bead[i].Position.x,
                                                        Bead[i].Position.y,
@@ -2350,7 +2349,7 @@ Vector Sort3(Vector in) {
 } //}}}
 
 // Swap() //{{{
-/** 
+/**
  * Swap two integers.
  */
 void Swap(int *a, int *b) {
@@ -2359,6 +2358,21 @@ void Swap(int *a, int *b) {
   *b = swap;
 }
 // }}}
+
+// ZeroCounts() //{{{
+/**
+ * Zeroize Counts struct
+ */
+void ZeroCounts(Counts *Counts) {
+  (*Counts).TypesOfBeads = 0;
+  (*Counts).TypesOfMolecules = 0;
+  (*Counts).Beads = 0;
+  (*Counts).Bonded = 0;
+  (*Counts).Unbonded = 0;
+  (*Counts).BeadsInVsf = 0;
+  (*Counts).Molecules = 0;
+  (*Counts).Aggregates = 0;
+} //}}}
 
 // FreeBead() //{{{
 /**

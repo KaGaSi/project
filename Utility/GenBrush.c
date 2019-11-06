@@ -39,6 +39,7 @@ on a square grid with specified distance between anchoring points.\n\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -s <float> <float>  spacing in x and y directions (default: 1 1)\n");
   fprintf(ptr, "      -n <int>            total number of beads (default: 3*volume_box)\n");
+  fprintf(ptr, "      -g <float>          gap between walls and the molecules\n");
   fprintf(ptr, "      -f <name>           FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      -v                  verbose output\n");
   fprintf(ptr, "      -V                  more verbose output\n");
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "-g") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-V") != 0 &&
@@ -106,6 +108,12 @@ int main(int argc, char *argv[]) {
   // '-n' option - custom total number of beads //{{{
   int number_of_beads = 0;
   if (IntegerOption(argc, argv, "-n", &number_of_beads)) {
+    exit(1);
+  } //}}}
+
+  // '-g' option - custom total number of beads //{{{
+  double gap = 0;
+  if (DoubleOption(argc, argv, "-g", &gap)) {
     exit(1);
   } //}}}
 
@@ -361,7 +369,7 @@ int main(int argc, char *argv[]) {
     BeadType[i].Write = true;
   } //}}}
 
-  // put unbonded beads in the middle of the box - just for the fun of it //{{{
+  // put unbonded beads in the middle of the box - they have to be somewhere //{{{
   for (int i = 0; i < Counts.Unbonded; i++) {
     Bead[i].Position.x = BoxLength.x / 2;
     Bead[i].Position.y = BoxLength.y / 2;
@@ -378,7 +386,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < mols[0]; i++) {
     for (int j = 0; j < mols[1]; j++) {
       Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
-      Bead[count].Position.y = spacing[0] / 2 + spacing[0] * j;
+      Bead[count].Position.y = spacing[1] / 2 + spacing[1] * j;
       Bead[count].Position.z = 0;
       Bead[count].Index = count;
       Bead[count].Type = MoleculeType[0].Bead[0];
@@ -398,7 +406,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < mols[0]; i++) {
     for (int j = 0; j < mols[1]; j++) {
       Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
-      Bead[count].Position.y = spacing[0] / 2 + spacing[0] * j;
+      Bead[count].Position.y = spacing[1] / 2 + spacing[1] * j;
       Bead[count].Position.z = BoxLength.z;
       Bead[count].Index = count;
       Bead[count].Type = MoleculeType[0].Bead[0];
@@ -432,6 +440,19 @@ int main(int argc, char *argv[]) {
 
   // write output vsf file
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
+
+  // adjust for gap value
+  for (int i = 0; i < Counts.Molecules; i++) {
+    int mtype = Molecule[i].Type;
+    for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
+      int id = Molecule[i].Bead[j];
+      if (i < (Counts.Molecules/2)) {
+        Bead[id].Position.z += gap;
+      } else {
+        Bead[id].Position.z -= gap;
+      }
+    }
+  }
 
   // write output vcf file
   // pbc
