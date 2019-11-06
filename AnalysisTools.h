@@ -276,6 +276,14 @@ Vector Sort3(Vector in); //}}}
 void Swap(int *a, int *b);
 // }}}
 
+// ZeroCounts() //{{{
+/**
+ * \brief Zeroize Counts structure.
+ *
+ * \param[in] Counts   Counts structure to zeroize
+ */
+void ZeroCounts(Counts *Counts);
+
 // FreeBead() //{{{
 /**
  * \brief Free memory allocated for Bead struct array.
