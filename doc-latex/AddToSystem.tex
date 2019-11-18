@@ -10,22 +10,28 @@ replace neutral unbonded ones with the lowest indices (as ordered in the
 The utility generates \texttt{vcf} and \texttt{vsf} files for the new
 system.
 
-If there aren't enought neutral unbonded beads in the original system to be
+If there aren't enough neutral unbonded beads in the original system to be
 replaced, \texttt{AddToSystem} exits with an error.
 
-Coordinates of the new unbonded beads are ruled by the \texttt{-ld},
-\texttt{-hd}, and \texttt{-bt} options (either the first bead or the
-geometric centre of the new molecules obey these options). The coordinates
-of the remaining beads in a molecule are governed by the provided
-coordinates. The molecules are added with a random orientation.
+The utility has two modes: by default, it reads what is to be added from a
+\texttt{FIELD}-like file (see below) and places the new beads and molecules
+randomly; if, however, \texttt{-vtf} option is used, the utility reads
+provided \texttt{vtf} file(s) and keeps the coordinates from the coordinate
+file.
 
-If \texttt{-ld} and/or \texttt{-hd} options are used, they must accompanied
-by the \texttt{-bt} option.
+If the new beads and molecules are added randomly, their coordinates are
+either completely random within the simulation box or ruled by the
+\texttt{-ld}, \texttt{-hd}, and \texttt{-bt} options (either the first bead
+or the geometric centre of the new molecules obey these options). The
+coordinates of the remaining beads in a molecule are governed by the
+coordinates provided in the \texttt{FIELD}-like file. Molecules are added
+with a random orientation.  If \texttt{-ld} and/or \texttt{-hd} options are
+used, they must accompanied by the \texttt{-bt} option.
 
-The structure and number of added molecules and monomeric beads are read
-from a \texttt{FIELD}-like file. This file must contain \texttt{species}
-section followed by \texttt{molecule} section as described in the DL\_MESO
-simulation package.
+As hinted above, the structure and number of added molecules and monomeric
+beads are read from a \texttt{FIELD}-like file. This file must contain
+\texttt{species} section followed by \texttt{molecule} section as described
+in the DL\_MESO simulation package.
 
 The \texttt{species} section contains the number of bead types and their
 properties:
@@ -111,6 +117,16 @@ molecules contain three beads and two bonds each. The part starting with
 \texttt{angles} and ending with \texttt{finish} is ignored. All in all, 80
 beads are added -- 30 \texttt{CI}, 30 \texttt{A}, and 20 \texttt{B} beads.
 
+If \texttt{-vtf} option is used, provided \texttt{vsf} and \texttt{vcf}
+files are read instead of a \texttt{FIELD}-like file. \texttt{AddToSystem}
+incorporates the beads and molecules from these files, using the provided
+coordinates instead of generating new ones. Therefore options \texttt{-ld},
+\texttt{-hd}, and \texttt{-bt} also have no effect.
+
+The \texttt{-vtf} option has priority over default behaviour, that is, if
+it is present, the utility ignores any \texttt{FIELD}-like file (either
+\texttt{FIELD} itself or a file provided via \texttt{-f} option).
+
 The utility creates the \texttt{vcf} and \texttt{vsf} files with the new
 system and can also write the coordinates into a \texttt{xyz} file.
 
@@ -134,10 +150,12 @@ Usage:
   \toprule
   \multicolumn{2}{l}{Non-standard options} \\
   \midrule
-  \texttt{-f <name>} & FIELD-like file specifying additions to the system
-    (default: \texttt{FIELD}) \\
+  \texttt{-f <name>} & \texttt{FIELD}-like file specifying additions to the
+    system (default: \texttt{FIELD}) \\
+  \texttt{-vtf <vsf> <vcf>} & add ready-made system from \texttt{vtf} files
+    instead of randomly placing beads read from \texttt{FIELD}-like file \\
   \texttt{-st <int>} & timestep to add new beads to (default: 1) \\
-  \texttt{-xyz <name>} & save coordinates to \texttt{xyz} file \\
+  \texttt{-xyz <name>} & also save coordinates to \texttt{xyz} file \\
   \texttt{-ld <float>} & lowest distance from beads specified by
     \texttt{-bt} option \\
   \texttt{-hd <float>} & highest distance from beads specified by
