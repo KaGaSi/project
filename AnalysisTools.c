@@ -89,95 +89,9 @@ void CommonHelp(bool error) {
   fprintf(ptr, "      -i <name>      use input .vsf file different from traject.vsf\n");
 //fprintf(ptr, "      -b <name>      file containing bond alternatives to FIELD\n");
   fprintf(ptr, "      -v             verbose output\n");
-  fprintf(ptr, "      -V             more verbose output\n");
-  fprintf(ptr, "      -s             no output (overrides verbose options)\n");
+  fprintf(ptr, "      -s             no output (overrides verbose option)\n");
   fprintf(ptr, "      -h             print this help and exit\n");
-  fprintf(ptr, "      --script       do not reprint line (useful when output goes to file)\n");
-} //}}}
-
-// CommonOptions() //{{{
-/**
- * Function for options common to most of the utilities.
- */
-bool CommonOptions(int argc, char **argv, char **vsf_file,
-                   bool *verbose, bool *verbose2, bool *silent, bool *script) {
-
-  bool error = false;
-
-  // -i <name> option - filename of input structure file //{{{
-  (*vsf_file)[0] = '\0'; // check if -i option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-i") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-i' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
-
-        error = true;
-        break;
-      }
-
-      // check if .vsf ending is present
-      char *vsf = strrchr(argv[i+1], '.');
-      if (!vsf || strcmp(vsf, ".vsf")) {
-        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
-        error = true;
-      }
-
-      strcpy(*vsf_file, argv[i+1]);
-    }
-  }
-
-  // -i option is not used
-  if ((*vsf_file)[0] == '\0') {
-    strcpy(*vsf_file, "traject.vsf");
-  } //}}}
-
-  // -v option - verbose output //{{{
-  *verbose = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") == 0) {
-      *verbose = true;
-
-      break;
-    }
-  } //}}}
-
-  // -V option - verbose output with comments from input .vcf file //{{{
-  *verbose2 = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-V") == 0) {
-      *verbose = true;
-      *verbose2 = true;
-
-      break;
-    }
-  } //}}}
-
-  // -s option - silent mode //{{{
-  *silent = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-s") == 0) {
-      *verbose = false;
-      *verbose2 = false;
-      *silent = true;
-
-      break;
-    }
-  } //}}}
-
-  // --script  option - meant for when output is routed to file, so don't use flush & \r //{{{
-  *script = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--script") == 0) {
-      *script = true;
-
-      break;
-    }
-  } //}}}
-
-  return error;
+  fprintf(ptr, "      --script       no progress output (useful if output is routed to a file)\n");
 } //}}}
 
 // VerboseOutput() //{{{
@@ -185,11 +99,22 @@ bool CommonOptions(int argc, char **argv, char **vsf_file,
  * Function providing standard verbose output (for cases when verbose
  * option is used). It prints most of the information about used system.
  */
-void VerboseOutput(bool Verbose2, char *input_vcf, Counts Counts,
+void VerboseOutput(char *input_vcf, Counts Counts,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule) {
 
-//if (input_vcf[0] != '\0')
+  putchar('\n');
+  PrintCounts(Counts);
+  PrintBeadType(Counts, BeadType);
+  PrintMoleculeType(Counts, BeadType, MoleculeType);
+  putchar('\n');
+} //}}}
+
+// PrintCounts()  //{{{
+/**
+ * Function printing Counts structure.
+ */
+void PrintCounts(Counts Counts) {
   fprintf(stdout, "Counts.{");
   fprintf(stdout, "TypesOfBeads = %d, ", Counts.TypesOfBeads);
   fprintf(stdout, "Bonded = %d, ", Counts.Bonded);
@@ -199,7 +124,13 @@ void VerboseOutput(bool Verbose2, char *input_vcf, Counts Counts,
   fprintf(stdout, "TypesOfMolecules = %d, ", Counts.TypesOfMolecules);
   fprintf(stdout, "Molecules = %d}\n", Counts.Molecules);
   fprintf(stdout, "\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
+} //}}}
 
+// PrintBeadType()  //{{{
+/**
+ * Function printing BeadType structure.
+ */
+void PrintBeadType(Counts Counts, BeadType *BeadType) {
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     fprintf(stdout, "BeadType[%2d].{", i);
     fprintf(stdout, "Name =%10s, ", BeadType[i].Name);
@@ -210,7 +141,13 @@ void VerboseOutput(bool Verbose2, char *input_vcf, Counts Counts,
 //  fprintf(stdout, "Write = %3s}\n", BeadType[i].Write? "Yes":"No");
   }
   putchar('\n');
+} //}}}
 
+// PrintMoleculeType()  //{{{
+/**
+ * Function printing MoleculeType structure.
+ */
+void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *MoleculeType) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     fprintf(stdout, "MoleculeType[%2d].{\n", i);
     fprintf(stdout, "  Name    = %s\n", MoleculeType[i].Name);
@@ -236,9 +173,32 @@ void VerboseOutput(bool Verbose2, char *input_vcf, Counts Counts,
     }
     fprintf(stdout, "}\n  Mass    = %.5f}\n", MoleculeType[i].Mass);
   }
+} //}}}
 
-  // print bead ids of all molecules if '-V' option is used
-  for (int i = 0; Verbose2 && i < Counts.Molecules; i++) {
+// PrintBead() //{{{
+/**
+ * Function printing Bead structure useful for debugging.
+ */
+void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
+  fprintf(stdout, "Beads\n");
+  for (int i = 0; i < Counts.Beads; i++) {
+    int type = Bead[i].Type;
+    fprintf(stdout, "   %6d (%6d; %6d) %8s molecule: ", i, Bead[i].Index, Index[i], BeadType[type].Name);
+    if (Bead[i].Molecule == -1) {
+      fprintf(stdout, "None\n");
+    } else {
+      fprintf(stdout, "%6d\n", Bead[i].Molecule+1);
+    }
+  }
+} //}}}
+
+// PrintMolecule() //{{{
+/**
+ * Function printing Molecule structure useful for debugging.
+ */
+void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType) {
+  fprintf(stdout, "Molecules\n");
+  for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
     fprintf(stdout, "Molecule %3d (%s):\n", i+1, MoleculeType[type].Name);
     for (int j = 0; j < MoleculeType[type].nBeads; j++) {
@@ -763,12 +723,13 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
 
           Swap(&(*MoleculeType)[i].Bond[k][0], &(*MoleculeType)[i].Bond[k+1][0]);
           Swap(&(*MoleculeType)[i].Bond[k][1], &(*MoleculeType)[i].Bond[k+1][1]);
+          swap = true;
         }
-        swap = true;
       }
       // if no swap was made, the array is sorted
-      if (!swap)
+      if (!swap) {
         break;
+      }
     }
   } //}}}
 
@@ -2354,6 +2315,28 @@ Vector Sort3(Vector in) {
  */
 void Swap(int *a, int *b) {
   int swap = *a;
+  *a = *b;
+  *b = swap;
+}
+// }}}
+
+// SwapDouble() //{{{
+/**
+ * Swap two doubles.
+ */
+void SwapDouble(double *a, double *b) {
+  double swap = *a;
+  *a = *b;
+  *b = swap;
+}
+// }}}
+
+// SwapBool() //{{{
+/**
+ * Swap two booleans.
+ */
+void SwapBool(bool *a, bool *b) {
+  bool swap = *a;
   *a = *b;
   *b = swap;
 }

@@ -123,13 +123,10 @@ int main(int argc, char *argv[]) {
 
   // vsf file is not needed anymore
   free(input_vsf);
-//for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//  printf("%d\n", MoleculeType[i].nBTypes);
-//}
 
   // print information - verbose option
   if (verbose) {
-    VerboseOutput(false, null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
   }
 
   // create & fill output vsf file
