@@ -7,40 +7,50 @@
 #include "AnalysisTools.h"
 #include "Errors.h"
 
-// VerboseLongOption() //{{{
+// CommonOptions() //{{{
 /**
- * Option whether to print detailed data to stdout. Data are printed via
- * VerboseOutput() function (and possibly some in-program code). Argument:
- * `-V`
+ * Function for options common to most of the utilities.
  */
-void VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2) {
+void CommonOptions(int argc, char **argv, char **vsf_file,
+                   bool *verbose, bool *silent, bool *script) {
 
-  *verbose2 = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-V") == 0) {
-      *verbose = true;
-      *verbose2 = true;
-
-      break;
-    }
+  // -i <name> option - filename of input structure file //{{{
+  if (FileOption(argc, argv, "-i", vsf_file)) {
+    exit(1);
   }
+  // default name
+  if (*vsf_file[0] == '\0') {
+    strcpy(*vsf_file, "traject.vsf");
+  }
+  // test if structure file ends with '.vsf' or '.vtf'
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(*vsf_file, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+  // -v option - verbose output
+  *verbose = BoolOption(argc, argv, "-v");
+  // -s option - silent mode
+  SilentOption(argc, argv, verbose, silent);
+  // --script - meant for when output is routed to file, so don't use flush & \r
+  *script = BoolOption(argc, argv, "--script"); // do not use \r & co.
 } //}}}
 
 // SilentOption() //{{{
 /**
  * Option to not print anything to stdout (or at least no system
- * definitions and no Step: #). Overrides VerboseShortOption and
- * VerboseLongOption. Argument: `-s`
+ * definitions and no Step: #). Overrides verbose option. Argument: `-s`
  */
-void SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
-                  bool *silent) {
+void SilentOption(int argc, char **argv, bool *verbose, bool *silent) {
 
   *silent = false;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-s") == 0) {
       *verbose = false;
-      *verbose2 = false;
       *silent = true;
 
       break;

@@ -608,9 +608,8 @@ int main(int argc, char *argv[]) {
   // print information - verbose option //{{{
   if (verbose) {
     char null[1] = {'\0'};
-    putchar('\n');
-    putchar('\n');
-    VerboseOutput(false, null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    fprintf(stdout, "\n\n");
+    VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // free memory - to make valgrind happy //{{{

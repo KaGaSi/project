@@ -587,7 +587,6 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
@@ -602,24 +601,11 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf)) {
-    exit(1);
-  }
-  if (input_vsf[0] == '\0') {
-    strcpy(input_vsf, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
+  bool silent;
+  bool verbose;
+  char *input_vsf = calloc(1024,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // save coordinates of joined aggregates //{{{
   char joined_vcf[1024];
@@ -628,7 +614,8 @@ int main(int argc, char *argv[]) {
   }
 
   // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
-  ext = 1;
+  int ext = 1;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   if (joined_vcf[0] != '\0') {
     if (!ErrorExtension(joined_vcf, ext, extension)) {
@@ -636,14 +623,6 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   } //}}}
-
-  // output verbosity //{{{
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  bool verbose2, silent;
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
   //}}}
 
   // print command to stdout //{{{
@@ -853,7 +832,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "\n   Distance for closeness check: %lf\n", distance);
     fprintf(stdout, "   Number of needed contacts for aggregate check: %d\n", contacts);
@@ -873,11 +852,6 @@ int main(int argc, char *argv[]) {
   int test;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
-
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
 
     count++;
 

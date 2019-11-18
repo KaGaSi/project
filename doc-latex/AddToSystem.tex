@@ -5,13 +5,13 @@ and \texttt{vsf} structure files and adds new beads into it. The new beads
 replace neutral unbonded ones with the lowest indices (as ordered in the
 \texttt{vsf} file) from the original system. If molecules are added,
 \texttt{AddToSystem} places them at the end (for the sake of
-\texttt{DL\_MESO} which requires molecules to be after unbonded beads). The
-utility generates \texttt{vcf} and \texttt{vsf} files for the new system.
+\texttt{DL\_MESO} which requires molecules to be after unbonded beads).
 
-\texttt{AddToSystem} does not check whether there are enough unbonded
-neutral beads to be replaced by the new beads; the utility will most likely
-not show an error, but the resulting \texttt{vcf} and \texttt{vsf} files
-won't be right.
+The utility generates \texttt{vcf} and \texttt{vsf} files for the new
+system.
+
+If there aren't enought neutral unbonded beads in the original system to be
+replaced, \texttt{AddToSystem} exits with an error.
 
 Coordinates of the new unbonded beads are ruled by the \texttt{-ld},
 \texttt{-hd}, and \texttt{-bt} options (either the first bead or the
@@ -118,7 +118,7 @@ Usage:
 
 \vspace{1em}
 \noindent
-\texttt{AddToSystem <input.vcf> <input add> <out.vcf> <out.vsf> <options>}
+\texttt{AddToSystem <input.vcf> <out.vsf> <out.vcf> <options>}
 
 \vspace{1em}
 \noindent
@@ -128,13 +128,14 @@ Usage:
   \midrule
   \texttt{<input>} & input coordinate file (either \texttt{vcf} or
     \texttt{vtf} format) \\
-  \texttt{<input add>} & FIELD-like file specifying additions to the system \\
+  \texttt{<out.vsf>} & output \texttt{vsf} structure file for the new system \\
   \texttt{<out.vcf>} & output \texttt{vcf} coordinate file for the new
   system \\
-  \texttt{<out.vsf>} & output \texttt{vsf} structure file for the new system \\
   \toprule
   \multicolumn{2}{l}{Non-standard options} \\
   \midrule
+  \texttt{-f <name>} & FIELD-like file specifying additions to the system
+    (default: \texttt{FIELD}) \\
   \texttt{-st <int>} & timestep to add new beads to (default: 1) \\
   \texttt{-xyz <name>} & save coordinates to \texttt{xyz} file \\
   \texttt{-ld <float>} & lowest distance from beads specified by

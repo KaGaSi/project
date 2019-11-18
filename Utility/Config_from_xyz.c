@@ -66,9 +66,9 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
+  bool verbose, silent;
+  SilentOption(argc, argv, &verbose, &silent);
+  bool script = BoolOption(argc, argv, "--script");
 
   // timestep to create CONFIG file from //{{{
   int timestep = -1;
