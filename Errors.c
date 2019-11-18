@@ -51,7 +51,7 @@ bool ErrorExtension(char *file, int number, char extension[][5]) {
     }
   }
 
-  fprintf(stderr, "Error: '%s' does not have a correct extension (", file);
+  fprintf(stderr, "\nError: '%s' does not have a correct extension (", file);
   for (int i = 0; i < number; i++) {
     if (i < (number-1)) {
       fprintf(stderr, "'%s', ", extension[i]);
@@ -74,7 +74,8 @@ void ErrorFileOpen(char *file, char mode) {
   } else if (mode == 'a') {
     fprintf(stderr, "appending\n");
   } else {
-    fprintf(stderr, "...well it seems you found a completely new thing to do with a file!\n");
+    fprintf(stderr, "...well, it seems you found something new to do with a file!\n");
+    fprintf(stderr, "Use r(ead), w(rite), or a(ppend).");
   }
   putchar('\n');
 } //}}}

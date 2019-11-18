@@ -42,7 +42,6 @@ on a square grid with specified distance between anchoring points.\n\n");
   fprintf(ptr, "      -g <float>          gap between walls and the molecules\n");
   fprintf(ptr, "      -f <name>           FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      -v                  verbose output\n");
-  fprintf(ptr, "      -V                  more verbose output\n");
   fprintf(ptr, "      -h                  print this help and exit\n");
 } //}}}
 
@@ -77,7 +76,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-g") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-h") != 0) {
 
       ErrorOption(argv[i]);
@@ -117,13 +115,8 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // output verbosity //{{{
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  bool verbose2; // silent;
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-//SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-//bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
+  // output verbosity
+  bool verbose = BoolOption(argc, argv, "-v");
 
   // FIELD-like file //{{{
   char *input = calloc(1024, sizeof(char *));
@@ -467,7 +460,7 @@ int main(int argc, char *argv[]) {
     char null[1] = {'\0'};
     putchar('\n');
     putchar('\n');
-    VerboseOutput(verbose2, null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
     // molecule prototypes
     putchar('\n');
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {

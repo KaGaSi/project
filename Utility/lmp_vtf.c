@@ -57,7 +57,6 @@ int main(int argc, char *argv[]) {
 //  if (argv[i][0] == '-' &&
 //      strcmp(argv[i], "-i") != 0 &&
 //      strcmp(argv[i], "-v") != 0 &&
-//      strcmp(argv[i], "-V") != 0 &&
 //      strcmp(argv[i], "-s") != 0 &&
 //      strcmp(argv[i], "-h") != 0 &&
 //      strcmp(argv[i], "--script") != 0 &&
@@ -603,10 +602,9 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   bool verbose = true;
-  bool verbose2 = false;
   if (verbose) {
     fprintf(stdout, "Box = (%lf, %lf, %lf)\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
-    VerboseOutput(verbose2, "\0", Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput("\0", Counts, BeadType, Bead, MoleculeType, Molecule);
     fprintf(stdout, "\nMolecular prototypes:\n");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       fprintf(stdout, "   %s\n", MoleculeType[i].Name);

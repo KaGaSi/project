@@ -66,7 +66,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-i") != 0 &&
         strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
@@ -86,32 +85,11 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf)) {
-    exit(1);
-  }
-  if (input_vsf[0] == '\0') {
-    strcpy(input_vsf, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf'
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
+  bool silent;
+  bool verbose;
+  char *input_vsf = calloc(1024,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // starting timestep //{{{
   int start = 1;
@@ -146,7 +124,8 @@ int main(int argc, char *argv[]) {
   strcpy(input_agg, argv[++count]);
 
   // test if <output.agg> filename ends with '.agg' (required by VMD)
-  ext = 1;
+  int ext = 1;
+  char extension[2][5];
   strcpy(extension[0], ".agg");
   if (!ErrorExtension(input_agg, ext, extension)) {
     Help(argv[0], true);
@@ -286,7 +265,6 @@ int main(int argc, char *argv[]) {
     }
   }
   // error if wrong number of names
-  printf("count=%d\n", count);
   if (count != 0 && count != 2) {
     fprintf(stderr, "\nError: '-nc' option - exactly two molecule names are required\n\n");
     exit(1);
@@ -337,7 +315,7 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     fprintf(stdout, "Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
-    VerboseOutput(verbose2, null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // arrays for distribution //{{{
@@ -447,26 +425,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
-
-    // print info about aggregates if '-V' is used //{{{
-    if (verbose2) {
-      for (int i = 0; i < Counts.Aggregates; i++) {
-        fprintf(stdout, "\nAggregate[%3d].{Mass = %6.2f,\nnMolecules = %3d:", i+1, Aggregate[i].Mass, Aggregate[i].nMolecules);
-        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          fprintf(stdout, " %d", Aggregate[i].Molecule[j]+1);
-        }
-        fprintf(stdout, ",\n nBeads = %4d:", Aggregate[i].nBeads);
-        for (int j = 0; j < Aggregate[i].nBeads; j++) {
-          fprintf(stdout, " %d", Aggregate[i].Bead[j]);
-        }
-        fprintf(stdout, ",\n nMonomers = %4d:", Aggregate[i].nMonomers);
-        for (int j = 0; j < Aggregate[i].nMonomers; j++) {
-          fprintf(stdout, " %d", Aggregate[i].Monomer[j]);
-        }
-        fprintf(stdout, "}\n");
-      }
-      putchar('\n');
-    } //}}}
 
     // go through all aggregates
     int aggs_step = 0; // number of eligible aggregates per step
@@ -723,7 +681,6 @@ int main(int argc, char *argv[]) {
   } else {
     count_step = count_step - (start - 1) - (end - 1);
   }
-  printf("%d\n", count_step);
 
   // normalization factors
   long int ndistr_norm = 0, wdistr_norm[2] = {0}, zdistr_norm[2] = {0}, voldistr_norm[2] = {0};

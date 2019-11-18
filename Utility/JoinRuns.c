@@ -73,7 +73,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-i") != 0 &&
 //      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
@@ -93,39 +92,18 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
+  bool silent;
+  bool verbose;
+  char *input_vsf_1 = calloc(1024,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf_1, &verbose, &silent, &script);
+
   // save coordinates of joined aggregates //{{{
   char joined_vcf[1024];
   bool error = JoinCoorOption(argc, argv, joined_vcf);
   if (error) {
     exit(1);
   } //}}}
-
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf_1 = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf_1)) {
-    exit(1);
-  }
-  if (input_vsf_1[0] == '\0') {
-    strcpy(input_vsf_1, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf'
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf_1, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
 
   // should output coordinates be joined? //{{{
   bool join = BoolOption(argc, argv, "--join"); //}}}
@@ -182,7 +160,8 @@ int main(int argc, char *argv[]) {
   strcpy(input_vcf_1, argv[++count]);
 
   // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf_1, ext, extension)) {
@@ -298,7 +277,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_vcf_1, Counts, BeadType1, Bead1, MoleculeType1, Molecule1);
+    VerboseOutput(input_vcf_1, Counts, BeadType1, Bead1, MoleculeType1, Molecule1);
     fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
     fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
   } //}}}
@@ -391,11 +370,6 @@ int main(int argc, char *argv[]) {
   int count_vcf = start_1 - 1;
   while ((test = getc(vcf_1)) != EOF) {
     ungetc(test, vcf_1);
-
-    // if -V option used, print comment at the beginning of a timestep //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
@@ -544,11 +518,6 @@ int main(int argc, char *argv[]) {
   count_vcf = start_2 - 1;
   while ((test = getc(vcf_2)) != EOF) {
     ungetc(test, vcf_2);
-
-    // if -V option used, print comment at the beginning of a timestep //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {

@@ -21,7 +21,6 @@ void CommonHelp(bool error); //}}}
  * \brief Function printing basic information about system if `-v` or `-V`
  * option is provided
  *
- * \param [in] Verbose2      print extra information if 'true'
  * \param [in] input_vcf     .vcf coordinate file
  * \param [in] Counts        numbers of beads, molecules, etc.
  * \param [in] BeadType      information about bead types
@@ -29,9 +28,49 @@ void CommonHelp(bool error); //}}}
  * \param [in] MoleculeType  information about molecule types
  * \param [in] Molecule      information about individual molecules
  */
-void VerboseOutput(bool Verbose2, char *input_vcf, Counts Counts,
+void VerboseOutput(char *input_vcf, Counts Counts,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
+// PrintCounts()  //{{{
+/**
+ * \brief Function printing Counts structure.
+ *
+ * \param [in] Counts   numbers of beads, molecules, etc.
+ */
+void PrintCounts(Counts Counts);
+//}}}
+
+// PrintBeadType() //{{{
+/**
+ * \brief Function printing Counts structure.
+ *
+ * \param [in] Counts     numbers of beads, molecules, etc.
+ * \param [in] BeadType   information about bead types
+ */
+void PrintBeadType(Counts Counts, BeadType *BeadType); //}}}
+
+// PrintMoleculeTypeType()  //{{{
+/**
+ * \brief Function printing MoleculeType structure.
+ *
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BeadType      information about bead types
+ * \param [in] MoleculeType  information about molecule types
+ */
+void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *MoleculeType); //}}}
+
+// PrintBead() //{{{
+/**
+ * Function printing Bead structure.
+ */
+void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead); //}}}
+
+// PrintMolecule() //{{{
+/**
+ * Function printing Molecule structure.
+ */
+void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType); //}}}
 
 // ReadStructure() //{{{
 /**
@@ -274,6 +313,26 @@ Vector Sort3(Vector in); //}}}
  * \param [in] b   second integer to swap
  */
 void Swap(int *a, int *b);
+// }}}
+
+// SwapDouble() //{{{
+/**
+ * \brief Function to swap two doubles.
+ *
+ * \param [in] a   first integer to swap
+ * \param [in] b   second integer to swap
+ */
+void SwapDouble(double *a, double *b);
+// }}}
+
+// SwapBool() //{{{
+/**
+ * \brief Function to swap two booleans.
+ *
+ * \param [in] a   first integer to swap
+ * \param [in] b   second integer to swap
+ */
+void SwapBool(bool *a, bool *b);
 // }}}
 
 // ZeroCounts() //{{{
