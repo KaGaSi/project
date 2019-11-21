@@ -43,6 +43,9 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   fprintf(ptr, "      -ld <float>      specify lowest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -hd <float>      specify highest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -bt <name(s)>    specify bead types new beads should be far from/near to (default: none)\n");
+  fprintf(ptr, "      -cx <int> <int2> constrain x coordinate of randomly added beads to interaval (int,int2)\n");
+  fprintf(ptr, "      -cy <int> <int2> constrain y coordinate of randomly added beads to interaval (int,int2)\n");
+  fprintf(ptr, "      -cz <int> <int2> constrain z coordinate of randomly added beads to interaval (int,int2)\n");
   fprintf(ptr, "      -gc              use molecule's geometric centre for the distance check instead of its first bead\n");
   CommonHelp(error);
 } //}}}
@@ -85,6 +88,9 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "-ld") != 0 &&
         strcmp(argv[i], "-hd") != 0 &&
+        strcmp(argv[i], "-cx") != 0 &&
+        strcmp(argv[i], "-cy") != 0 &&
+        strcmp(argv[i], "-cz") != 0 &&
         strcmp(argv[i], "-gc") != 0) {
       ErrorOption(argv[i]);
       Help(argv[0], true);
@@ -187,6 +193,61 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   } //}}}
+
+  // coordinate constraints //{{{
+  // x direcion //{{{
+  int test = 2;
+  double range[2] = {0, 0};
+  if (MultiDoubleOption(argc, argv, "-cx", &test, range)) {
+    exit(1);
+  }
+  if (test != 2) {
+    fprintf(stderr, "\nError: option '-cx' requires two numeric arguments\n\n");
+    exit(1);
+  }
+  // make sure first number is smaller
+  if (range[0] > range[1]) {
+    SwapDouble(&range[0], &range[1]);
+  }
+  Vector constraint[2];
+  constraint[0].x = range[0];
+  constraint[1].x = range[1]; //}}}
+  // y direcion //{{{
+  test = 2;
+  range[0] = range[1] = 0;
+  if (MultiDoubleOption(argc, argv, "-cy", &test, range)) {
+    exit(1);
+  }
+  if (test != 2) {
+    fprintf(stderr, "\nError: option '-cy' requires two numeric arguments\n\n");
+    exit(1);
+  }
+  // make sure first number is smaller
+  if (range[0] > range[1]) {
+    SwapDouble(&range[0], &range[1]);
+  }
+  constraint[0].y = range[0];
+  constraint[1].y = range[1]; //}}}
+  // z direcion //{{{
+  test = 2;
+  range[0] = range[1] = 0;
+  if (MultiDoubleOption(argc, argv, "-cz", &test, range)) {
+    exit(1);
+  }
+  if (test != 2) {
+    fprintf(stderr, "\nError: option '-cz' requires two numeric arguments\n\n");
+    exit(1);
+  }
+  // make sure first number is smaller
+  if (range[0] > range[1]) {
+    SwapDouble(&range[0], &range[1]);
+  }
+  constraint[0].z = range[0];
+  constraint[1].z = range[1]; //}}}
+  //}}}
+  printf("x: %lf %lf\n", constraint[0].x, constraint[1].x);
+  printf("y: %lf %lf\n", constraint[0].y, constraint[1].y);
+  printf("z: %lf %lf\n", constraint[0].z, constraint[1].z);
 
   // use centre of mass instead of the first bead for distance check of new molecules //{{{
   bool com = BoolOption(argc, argv, "-gc"); //}}}
@@ -305,6 +366,24 @@ int main(int argc, char *argv[]) {
   BoxLength.z = atof(split[2]); //}}}
   //}}}
 
+  // define box size using constraints (-c{x,y,z} options)//{{{
+  Vector new_box;
+  if (constraint[1].x != 0) {
+    new_box.x = constraint[1].x - constraint[0].x;
+  } else {
+    new_box.x = BoxLength.x;
+  }
+  if (constraint[1].y != 0) {
+    new_box.y = constraint[1].y - constraint[0].y;
+  } else {
+    new_box.y = BoxLength.y;
+  }
+  if (constraint[1].z != 0) {
+    new_box.z = constraint[1].z - constraint[0].z;
+  } else {
+    new_box.z = BoxLength.z;
+  } //}}}
+
   // print pbc if verbose output //{{{
   if (verbose) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
@@ -316,7 +395,6 @@ int main(int argc, char *argv[]) {
 
   // skip first start-1 steps //{{{
   count = 0;
-  int test;
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
 
@@ -467,7 +545,7 @@ int main(int argc, char *argv[]) {
     // added molecule types
     MoleculeType_add = malloc(Counts_add.TypesOfMolecules*sizeof(struct MoleculeType));
     // coordinates of a prototype molecule
-    prototype = calloc(Counts_add.TypesOfMolecules, sizeof(Vector *));
+    prototype = calloc((Counts_add.TypesOfMolecules+Counts.TypesOfMolecules), sizeof(Vector *));
     // added molecules (to be realloc'd later)
     Molecule_add = malloc(1*sizeof(struct Molecule)); //}}}
 
@@ -1023,11 +1101,12 @@ int main(int argc, char *argv[]) {
 
       if (add_vsf[0] == '\0') { // randomly place monomers if FIELD-like file is used
         double min_dist;
-        if (lowest_dist != -1 || highest_dist != -1) {
+        if (lowest_dist != -1 || highest_dist != -1) { // ||
+//          constraint[0].x != -1 || constraint[0].y != -1 || constraint[0].z != -1) {
           do {
-            random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
-            random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
-            random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+            random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
+            random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
+            random.z = (double)rand() / ((double)RAND_MAX + 1) * new_box.z + constraint[0].z;
 
             min_dist = SQR(BoxLength.x * 100);
             for (int j = 0; j < Counts.Beads; j++) {
@@ -1050,9 +1129,9 @@ int main(int argc, char *argv[]) {
           } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
                    (highest_dist != -1 && highest_dist <= min_dist));
         } else {
-          random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
-          random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
-          random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+          random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
+          random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
+          random.z = (double)rand() / ((double)RAND_MAX + 1) * new_box.z + constraint[0].z;
         }
       } else { // place them according to add_vcf file if '-vtf' option is used
         random.x = Bead_add[count].Position.x;
@@ -1160,9 +1239,9 @@ int main(int argc, char *argv[]) {
       double min_dist;
       if (lowest_dist != -1 || highest_dist != -1) {
         do {
-          random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
-          random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
-          random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+          random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
+          random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
+          random.z = (double)rand() / ((double)RAND_MAX + 1) * new_box.z + constraint[0].z;
 
           min_dist = SQR(BoxLength.x * 100);
           for (int j = 0; j < Counts.Beads; j++) {
@@ -1180,9 +1259,9 @@ int main(int argc, char *argv[]) {
         } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
                  (highest_dist != -1 && highest_dist <= min_dist));
       } else { // no '-ld' or '-hd' options
-        random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
-        random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
-        random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+        random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
+        random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
+        random.z = (double)rand() / ((double)RAND_MAX + 1) * new_box.z + constraint[0].z;
       } //}}}
     }
 
