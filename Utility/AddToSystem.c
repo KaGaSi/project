@@ -686,6 +686,17 @@ int main(int argc, char *argv[]) {
         }
       }
     }
+
+    // write all bead types and molecules
+    for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
+      BeadType_add[i].Use = true;
+      BeadType_add[i].Write = true;
+    }
+    for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
+      MoleculeType_add[i].InVcf = true;
+      MoleculeType_add[i].Use = true;
+      MoleculeType_add[i].Write = true;
+    }
   } //}}}
 
   // if '-gc' is used, change molecular prototypes to have geometric centre (0,0,0) //{{{
@@ -887,8 +898,8 @@ int main(int argc, char *argv[]) {
       BeadType_new[type].Number--;
       int old_type = Bead_add[count].Type;
       int new_type = FindBeadType(BeadType_add[old_type].Name, Counts_new, BeadType_new);
-      Bead_new[count].Type = new_type;
-      Bead_new[count].Flag = true; // exchange this bead
+      Bead_new[i].Type = new_type;
+      Bead_new[i].Flag = true; // exchange this bead
       count++;
     }
     if (count == Counts_add.Unbonded) {
@@ -898,8 +909,8 @@ int main(int argc, char *argv[]) {
   // copy bonded beads from Bead to Bead_new //{{{
   count = Counts_new.Unbonded;
   for (int i = 0; i < Counts.Beads; i++) {
+    int old_type = Bead[i].Type;
     if (Bead[i].Molecule != -1) {
-      int old_type = Bead[i].Type;
       int new_type = FindBeadType(BeadType[old_type].Name, Counts_new, BeadType_new);
       Bead_new[count].Type = new_type;
       Bead_new[count].Molecule = Bead[i].Molecule;
@@ -949,7 +960,7 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
   // put _add molecules into _new struct //{{{
-  count = Counts.Unbonded - 1;
+  count = Counts_new.Unbonded - 1;
   for (int i = 0; i < Counts_add.Molecules; i++) {
     int old_type = Molecule_add[i].Type;
     int new_type = FindMoleculeType(MoleculeType_add[old_type].Name, Counts_new, MoleculeType_new);
@@ -957,7 +968,7 @@ int main(int argc, char *argv[]) {
     Molecule_new[new_i].Type = new_type;
     Molecule_new[new_i].Bead = calloc(MoleculeType_new[new_type].nBeads, sizeof(int));
     for (int j = 0; j < MoleculeType_new[new_type].nBeads; j++) {
-      while (Bead_new[++count].Molecule != new_i)
+      while (count < Counts_new.Beads && Bead_new[++count].Molecule != new_i)
         ;
       Molecule_new[new_i].Bead[j] = count;
     }
@@ -1021,6 +1032,7 @@ int main(int argc, char *argv[]) {
             min_dist = SQR(BoxLength.x * 100);
             for (int j = 0; j < Counts.Beads; j++) {
               int btype = Bead[j].Type;
+              // TODO: is that thing below true? ...anyway, use Counts_new now
               // j can be added monomeric bead, so it's type can be higher than the number of types
               if (btype < Counts.TypesOfBeads && BeadType[btype].Use) {
                 Vector dist;
@@ -1030,8 +1042,11 @@ int main(int argc, char *argv[]) {
                   min_dist = dist.x;
                 }
               }
+              if ((lowest_dist != -1 && lowest_dist >= min_dist) ||
+                  (highest_dist != -1 && highest_dist <= min_dist)) {
+                break;
+              }
             }
-
           } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
                    (highest_dist != -1 && highest_dist <= min_dist));
         } else {
@@ -1080,83 +1095,96 @@ int main(int argc, char *argv[]) {
     int i_nbeads = MoleculeType_new[mtype].nBeads;
 
     Vector random;
-    // rotate the prototype molecule randomly (only used when FIELD is used) //{{{
-    // random rotation axis
-    double dist;
-    do {
+    // if read from FIELD, find rotated
+    Vector rotated[i_nbeads];
+    if (add_vsf[0] == '\0') {
+      // rotate the prototype molecule randomly (only used when FIELD is used) //{{{
+      // random rotation axis
       random.x = (double)rand() / ((double)RAND_MAX) * 2 - 1; // random number <-1,1>
       random.y = (double)rand() / ((double)RAND_MAX) * 2 - 1;
       random.z = (double)rand() / ((double)RAND_MAX) * 2 - 1;
-      dist = sqrt(SQR(random.x)+SQR(random.y)+SQR(random.z));
-    } while (dist > 1.00001 || dist < 0.99999);
-    // random rotation angle
-    double angle = (double)rand() / ((double)RAND_MAX) * PI;
-    // create rotation matrix
-    struct Tensor {
-      Vector x, y, z;
-    } rot;
-    rot.x.x = cos(angle) + SQR(random.x) * (1 - cos(angle));
-    rot.x.y = random.x * random.y * (1 - cos(angle)) - random.z * sin(angle);
-    rot.x.z = random.x * random.z * (1 - cos(angle)) + random.y * sin(angle);
+      double dist = sqrt(SQR(random.x)+SQR(random.y)+SQR(random.z));
+      random.x /= dist;
+      random.y /= dist;
+      random.z /= dist;
+//    printf("%lf %lf %lf %lf\n", random.x, random.y, random.z, sqrt(SQR(random.x)+SQR(random.y)+SQR(random.z)));
+//    // TODO: old - test if the new is really good
+//    double dist;
+//    do {
+//      random.x = (double)rand() / ((double)RAND_MAX) * 2 - 1; // random number <-1,1>
+//      random.y = (double)rand() / ((double)RAND_MAX) * 2 - 1;
+//      random.z = (double)rand() / ((double)RAND_MAX) * 2 - 1;
+//      random.z = sqrt(1-SQR(random.x)-SQR(random.y));
+//      dist = sqrt(SQR(random.x)+SQR(random.y)+SQR(random.z));
+//    } while (dist > 1.00001 || dist < 0.99999);
+      // random rotation angle
+      double angle = (double)rand() / ((double)RAND_MAX) * PI;
+      // create rotation matrix
+      struct Tensor {
+        Vector x, y, z;
+      } rot;
+      rot.x.x = cos(angle) + SQR(random.x) * (1 - cos(angle));
+      rot.x.y = random.x * random.y * (1 - cos(angle)) - random.z * sin(angle);
+      rot.x.z = random.x * random.z * (1 - cos(angle)) + random.y * sin(angle);
 
-    rot.y.x = random.x * random.y * (1 - cos(angle)) + random.z * sin(angle);
-    rot.y.y = cos(angle) + SQR(random.y) * (1 - cos(angle));
-    rot.y.z = random.y * random.z * (1 - cos(angle)) - random.x * sin(angle);
+      rot.y.x = random.x * random.y * (1 - cos(angle)) + random.z * sin(angle);
+      rot.y.y = cos(angle) + SQR(random.y) * (1 - cos(angle));
+      rot.y.z = random.y * random.z * (1 - cos(angle)) - random.x * sin(angle);
 
-    rot.z.x = random.x * random.z * (1 - cos(angle)) - random.y * sin(angle);
-    rot.z.y = random.y * random.z * (1 - cos(angle)) + random.x * sin(angle);
-    rot.z.z = cos(angle) + SQR(random.z) * (1 - cos(angle));
-    // transform the prototype molecule (rotation matrix x coordinates)
-    Vector rotated[i_nbeads];
-    int number;
-    for (int j = Counts_add.Unbonded; j < Counts_add.Beads; j++) {
-      if (Molecule_add[Bead_add[j].Molecule].Type == Molecule_add[i-Counts.Molecules].Type) {
-        number = j;
-        break;
+      rot.z.x = random.x * random.z * (1 - cos(angle)) - random.y * sin(angle);
+      rot.z.y = random.y * random.z * (1 - cos(angle)) + random.x * sin(angle);
+      rot.z.z = cos(angle) + SQR(random.z) * (1 - cos(angle));
+      // transform the prototype molecule (rotation matrix x coordinates)
+      int number;
+      for (int j = Counts_add.Unbonded; j < Counts_add.Beads; j++) {
+        if (Molecule_add[Bead_add[j].Molecule].Type == Molecule_add[i-Counts.Molecules].Type) {
+          number = j;
+          break;
+        }
       }
-    }
-    for (int j = 0; j < i_nbeads; j++) {
-      rotated[j].x = rot.x.x * Bead_add[number].Position.x
-                   + rot.x.y * Bead_add[number].Position.y
-                   + rot.x.z * Bead_add[number].Position.z;
-      rotated[j].y = rot.y.x * Bead_add[number].Position.x
-                   + rot.y.y * Bead_add[number].Position.y
-                   + rot.y.z * Bead_add[number].Position.z;
-      rotated[j].z = rot.z.x * Bead_add[number].Position.x
-                   + rot.z.y * Bead_add[number].Position.y
-                   + rot.z.z * Bead_add[number].Position.z;
-      number++;
-    } //}}}
+      for (int j = 0; j < i_nbeads; j++) {
+        rotated[j].x = rot.x.x * Bead_add[number].Position.x
+                     + rot.x.y * Bead_add[number].Position.y
+                     + rot.x.z * Bead_add[number].Position.z;
+        rotated[j].y = rot.y.x * Bead_add[number].Position.x
+                     + rot.y.y * Bead_add[number].Position.y
+                     + rot.y.z * Bead_add[number].Position.z;
+        rotated[j].z = rot.z.x * Bead_add[number].Position.x
+                     + rot.z.y * Bead_add[number].Position.y
+                     + rot.z.z * Bead_add[number].Position.z;
+        number++;
+      } //}}}
 
-    // first bead's distance from specified bead typtes is checked (only used when FIELD is used) //{{{
-    // first bead can have coordinates [0,0,0] or such that the molecule's geometric centre is [0,0,0] (if -gc is used)
-    double min_dist;
-    if (lowest_dist != -1 || highest_dist != -1) {
-      do {
+      // first bead's distance from specified bead typtes is checked (only used when FIELD is used) //{{{
+      // first bead can have coordinates [0,0,0] or such that the molecule's geometric centre is [0,0,0] (if -gc is used)
+      double min_dist;
+      if (lowest_dist != -1 || highest_dist != -1) {
+        do {
+          random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
+          random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
+          random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
+
+          min_dist = SQR(BoxLength.x * 100);
+          for (int j = 0; j < Counts.Beads; j++) {
+            int btype_j = Bead[j].Type;
+            // j can be added monomeric bead, so it's type can be higher than the number of types
+            if (btype_j < Counts.TypesOfBeads && BeadType[btype_j].Use) {
+              Vector dist;
+              dist = Distance(Bead[j].Position, random, BoxLength);
+              dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
+              if (dist.x < min_dist) {
+                min_dist = dist.x;
+              }
+            }
+          }
+        } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
+                 (highest_dist != -1 && highest_dist <= min_dist));
+      } else { // no '-ld' or '-hd' options
         random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
         random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
         random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
-
-        min_dist = SQR(BoxLength.x * 100);
-        for (int j = 0; j < Counts.Beads; j++) {
-          int btype_j = Bead[j].Type;
-          // j can be added monomeric bead, so it's type can be higher than the number of types
-          if (btype_j < Counts.TypesOfBeads && BeadType[btype_j].Use) {
-            Vector dist;
-            dist = Distance(Bead[j].Position, random, BoxLength);
-            dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
-            if (dist.x < min_dist) {
-              min_dist = dist.x;
-            }
-          }
-        }
-      } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
-               (highest_dist != -1 && highest_dist <= min_dist));
-    } else { // no '-ld' or '-hd' options
-      random.x = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.x; // random number <0,BoxLength)
-      random.y = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.y;
-      random.z = (double)rand() / ((double)RAND_MAX + 1) * BoxLength.z;
-    } //}}}
+      } //}}}
+    }
 
     for (int j = 0; j < MoleculeType_new[mtype].nBeads; j++) {
       int id = Molecule_add[i-Counts.Molecules].Bead[j];
@@ -1195,87 +1223,6 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
   //}}}
-
-//// join _add structs to original structs - add bonded beads at the end //{{{
-//Counts.TypesOfBeads += Counts_add.TypesOfBeads;
-//Counts.TypesOfMolecules += Counts_add.TypesOfMolecules;
-//Counts.Molecules += Counts_add.Molecules;
-//// realloc structs
-//BeadType = realloc(BeadType, Counts.TypesOfBeads*sizeof(struct BeadType));
-//MoleculeType = realloc(MoleculeType, Counts.TypesOfMolecules*sizeof(struct MoleculeType));
-//Bead = realloc(Bead, Counts.Beads*sizeof(struct Bead));
-//Molecule = realloc(Molecule, Counts.Molecules*sizeof(struct Molecule));
-//// bead types //{{{
-//for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
-//  int new = Counts.TypesOfBeads - Counts_add.TypesOfBeads + i;
-//  strcpy(BeadType[new].Name, BeadType_add[i].Name);
-//  BeadType[new].Number = BeadType_add[i].Number;
-//  BeadType[new].Charge = BeadType_add[i].Charge;
-//  BeadType[new].Mass = BeadType_add[i].Mass;
-//  BeadType[new].Write = true;
-//  BeadType[new].Use = true;
-//} //}}}
-//// molecule types //{{{
-//for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
-//  int new = Counts.TypesOfMolecules - Counts_add.TypesOfMolecules + i;
-//  strcpy(MoleculeType[new].Name, MoleculeType_add[i].Name);
-//  MoleculeType[new].Number = MoleculeType_add[i].Number;
-//  MoleculeType[new].nBeads = MoleculeType_add[i].nBeads;
-//  MoleculeType[new].Bead = calloc(MoleculeType[new].nBeads, sizeof(int));
-//  MoleculeType[new].nBonds = MoleculeType_add[i].nBonds;
-//  MoleculeType[new].Bond = malloc(MoleculeType[new].nBonds*sizeof(int *));
-//  for (int j = 0; j < MoleculeType[new].nBonds; j++) {
-//    MoleculeType[new].Bond[j] = calloc(2,sizeof(int));
-//    MoleculeType[new].Bond[j][0] = MoleculeType_add[i].Bond[j][0];
-//    MoleculeType[new].Bond[j][1] = MoleculeType_add[i].Bond[j][1];
-//  }
-//  MoleculeType[new].nBTypes = MoleculeType_add[i].nBTypes;
-//  MoleculeType[new].BType = malloc(MoleculeType[new].nBTypes*sizeof(int));
-//  for (int j = 0; j < MoleculeType[new].nBTypes; j++) {
-//    MoleculeType[new].BType[j] = Counts.TypesOfBeads - Counts_add.TypesOfBeads + MoleculeType_add[i].BType[j];
-//  }
-//  MoleculeType[new].Mass = MoleculeType_add[i].Mass;
-//  MoleculeType[new].InVcf = true; // some of those flags are useless (and not just here)
-//  MoleculeType[new].Write = true;
-//  MoleculeType[new].Use = true;
-//} //}}}
-//// molecules //{{{
-//for (int i = 0; i < Counts_add.Molecules; i++) {
-//  int new = Counts.Molecules - Counts_add.Molecules + i;
-//  Molecule[new].Type = Counts.TypesOfMolecules - Counts_add.TypesOfMolecules + Molecule_add[i].Type;
-//  int m_new_t = Molecule[new].Type;
-//  Molecule[new].Bead = malloc(MoleculeType[m_new_t].nBeads*sizeof(int));
-//  for (int j = 0; j < MoleculeType[m_new_t].nBeads; j++) {
-//    int bid_j = Molecule_add[i].Bead[j];
-//    Molecule[new].Bead[j] = Bead_add[bid_j].Index;
-//  }
-//  Molecule[new].Aggregate = 0; // probably useless here
-//} //}}}
-////}}}
-
-//// recount bonded & unbonded beads //{{{
-//Counts.Unbonded = 0;
-//Counts.Bonded = 0;
-//for (int i = 0; i < Counts.Beads; i++) {
-//  if (Bead[i].Molecule == -1) {
-//    Counts.Unbonded++;
-//  } else {
-//    Counts.Bonded++;
-//  }
-//} //}}}
-
-//// correct indices of beads in molecules in Molecule[].Bead[] arrays //{{{
-//count = Counts.Unbonded;
-//for (int i = 0; i < Counts.Molecules; i++) {
-//  int mtype = Molecule[i].Type;
-//  for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
-//    Molecule[i].Bead[j] = count;
-//    count++;
-//  }
-//}
-//for (int i = 0; i < Counts.BeadsInVsf; i++) {
-//  Bead[i].Index = i;
-//} //}}}
 
   // open output .vcf file //{{{
   FILE *out;
@@ -1335,7 +1282,7 @@ int main(int argc, char *argv[]) {
   free(input_add);
   free(add_vsf);
   free(add_vcf);
-  for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
+  for (int i = 0; i < Counts_new.TypesOfMolecules; i++) {
     free(prototype[i]);
   }
   free(prototype);
