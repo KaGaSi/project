@@ -20,13 +20,26 @@ provided \texttt{vtf} file(s) and keeps the coordinates from the coordinate
 file.
 
 If the new beads and molecules are added randomly, their coordinates are
-either completely random within the simulation box or ruled by the
-\texttt{-ld}, \texttt{-hd}, and \texttt{-bt} options (either the first bead
-or the geometric centre of the new molecules obey these options). The
-coordinates of the remaining beads in a molecule are governed by the
-coordinates provided in the \texttt{FIELD}-like file. Molecules are added
-with a random orientation.  If \texttt{-ld} and/or \texttt{-hd} options are
-used, they must accompanied by the \texttt{-bt} option.
+either completely randomly within the simulation box or ruled by
+constraining options; either the first bead (default behaviour) or the
+geometric centre (\texttt{-gc} option) of the new molecules obey these
+options. The coordinates of the remaining beads in a molecule are governed
+by the coordinates provided in the \texttt{FIELD}-like file. Therefore, not
+all the molecular beads necessarily obey the constraining rules. Molecules
+are added with a random orientation.
+
+There are two types of constraining options (that can be combined): place
+new beads either specified distance from other beads or in a specified
+interval in x, y, or z directions. The first case uses otions \texttt{-ld}
+and \texttt{-hd} which, if present, must be accompanied by \texttt{-bt}
+option.  Then, the new beads are placed at least \texttt{-ld <float>} and
+at most \texttt{-hd <float>} distance from beads specified by the
+\texttt{-bt} option. The second case uses options \texttt{-cx},
+\texttt{-cy}, and \texttt{-cz} that basically change the box size for the
+added beads. All these options can be combined, but note that
+\texttt{AddToSystem} doesn't perform any sanity checks, that is, if any
+combination of the provided options is impossible to achieve, the utility
+will run forever.
 
 As hinted above, the structure and number of added molecules and monomeric
 beads are read from a \texttt{FIELD}-like file. This file must contain
@@ -162,5 +175,12 @@ Usage:
     \texttt{-bt} option \\
   \texttt{-bt <bead names>} & bead types to use in conjunction with
     \texttt{-ld} and/or \texttt{-hd} options \\
+  \texttt{-cx <num> <num2>} & constrain x coordinate to interval
+    $\langle num, num2)$ \\
+  \texttt{-cy <num> <num2>} & constrain y coordinate to interval
+    $\langle num, num2)$ \\
+  \texttt{-cz <num> <num2>} & constrain z coordinate to interval
+    $\langle num, num2)$ \\
+  \texttt{-gc} & use molecule's geometric centre for distance check \\
   \bottomrule
 \end{longtable}
