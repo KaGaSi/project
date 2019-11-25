@@ -39,6 +39,7 @@ on a square grid with specified distance between anchoring points.\n\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -s <float> <float>  spacing in x and y directions (default: 1 1)\n");
   fprintf(ptr, "      -n <int>            total number of beads (default: 3*volume_box)\n");
+  fprintf(ptr, "      -nm <int>           total number molecules per side (rewrites spacing to fit)\n");
   fprintf(ptr, "      -g <float>          gap between walls and the molecules\n");
   fprintf(ptr, "      -f <name>           FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      -v                  verbose output\n");
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "-nm") != 0 &&
         strcmp(argv[i], "-g") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
@@ -109,7 +111,13 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // '-g' option - custom total number of beads //{{{
+  // '-nm' option - custom total number of chains //{{{
+  int number_of_mols = 0;
+  if (IntegerOption(argc, argv, "-nm", &number_of_mols)) {
+    exit(1);
+  } //}}}
+
+  // '-g' option - gap from both sides of the box in z direction //{{{
   double gap = 0;
   if (DoubleOption(argc, argv, "-g", &gap)) {
     exit(1);
@@ -182,27 +190,32 @@ int main(int argc, char *argv[]) {
   BoxLength.y = atof(box[1]);
   BoxLength.z = atof(box[2]); //}}}
 
-  // assumes number bead density equal to 3
+  // assumes number bead density equal to 3 for number of beads (if '-n' isn't used) //{{{
   if (number_of_beads > 0) {
     Counts.BeadsInVsf = number_of_beads;
   } else {
     Counts.BeadsInVsf = 3 * BoxLength.x * BoxLength.y * BoxLength.z;
   }
-  Counts.Beads = Counts.BeadsInVsf;
-  Bead = malloc(Counts.Beads*sizeof(struct Bead));
+  Counts.Beads = Counts.BeadsInVsf; //}}}
 
-  // allocate Bead Aggregate array - needed only to free() //{{{
-  for (int i = 0; i < Counts.Beads; i++) {
-    Bead[i].Aggregate = calloc(1,sizeof(double));
-    Bead[i].nAggregates = 0;
+  // number of molecules in x and y directions //{{{
+  int mols[2];
+  if (number_of_mols == 0) {
+    mols[0] = round(BoxLength.x / spacing[0]);
+    mols[1] = round(BoxLength.y / spacing[1]);
+    Counts.Molecules = mols[0] * mols[1] * 2;
+  } else {
+    double mols_sqrt = sqrt(number_of_mols);
+    mols[0] = (int)(mols_sqrt);
+    mols[1] = mols[0] + (number_of_mols - SQR(mols[0])) / mols[0];
+    if ((mols[0]*mols[1]-number_of_mols) != 0) {
+      mols[0]++;
+    }
+    spacing[0] = BoxLength.x / mols[0];
+    spacing[1] = BoxLength.y / mols[1];
+    Counts.Molecules = 2 * number_of_mols;
   } //}}}
 
-  // number of molecules in x and y directions
-  int mols[2];
-  mols[0] = round(BoxLength.x / spacing[0]);
-  mols[1] = round(BoxLength.y / spacing[1]);
-
-  Counts.Molecules = mols[0] * mols[1] * 2;
   Molecule = calloc(Counts.Molecules, sizeof(struct Molecule));
 
   // read number of bead types //{{{
@@ -336,13 +349,28 @@ int main(int argc, char *argv[]) {
   } //}}}
   fclose(fr);
 
+  // TODO: generalize for more moltypes
   // fill arrays - based on a single molecule type for now //{{{
   Counts.Bonded = 0;
   int i = 0; // at some point, there will be more molecule types
   MoleculeType[i].Number = Counts.Molecules;
-  Counts.Bonded += MoleculeType[i].Number * MoleculeType[i].nBeads;
+  Counts.Bonded += MoleculeType[i].Number * MoleculeType[i].nBeads; //}}}
+
+  // increase number of beads if too small (-n option or default number) //{{{
+  if (Counts.Bonded > Counts.Beads) {
+    Counts.Beads = Counts.BeadsInVsf = Counts.Bonded;
+    fprintf(stderr, "\nWARNING: too few beads to fit the required number of molecules!\n");
+    fprintf(stderr, "   Number of beads increased to %d\n", Counts.Beads);
+  } //}}}
+
+  // allocate Bead array //{{{
+  Bead = malloc(Counts.Beads*sizeof(struct Bead));
+  for (int i = 0; i < Counts.Beads; i++) {
+    Bead[i].Aggregate = calloc(1,sizeof(double));
+  } //}}}
+
+  // fill Molecule array and Bead[].Molecule //{{{
   Counts.Unbonded = Counts.Beads - Counts.Bonded;
-//printf("%d %d %d\n", Counts.Beads, Counts.Bonded, Counts.Unbonded);
   count = Counts.Unbonded;
   for (int j = 0; j < Counts.Molecules; j++) {
     Molecule[j].Bead = calloc(MoleculeType[i].nBeads, sizeof(int));
@@ -352,9 +380,9 @@ int main(int argc, char *argv[]) {
       Bead[count].Molecule = j;
       count++;
     }
-  }
+  } //}}}
 
-  // write all molecules & beads
+  // set all molecules & beads to write //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = true;
   }
@@ -374,8 +402,8 @@ int main(int argc, char *argv[]) {
 
   // generate brush on the grid & fill remaining Bead[] array //{{{
   count = Counts.Unbonded;
+  int count_mols = 0;
   // z=0
-//printf("%d\n", count);
   for (int i = 0; i < mols[0]; i++) {
     for (int j = 0; j < mols[1]; j++) {
       Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
@@ -383,19 +411,24 @@ int main(int argc, char *argv[]) {
       Bead[count].Position.z = 0;
       Bead[count].Index = count;
       Bead[count].Type = MoleculeType[0].Bead[0];
-//    printf("\n%7d %d %s\n", count, Bead[count].Type, BeadType[Bead[count].Type].Name);
       for (int k = 1; k < MoleculeType[0].nBeads; k++) {
         Bead[count+k].Position.x = Bead[count].Position.x + prototype[0][k].x;
         Bead[count+k].Position.y = Bead[count].Position.y + prototype[0][k].y;
         Bead[count+k].Position.z = Bead[count].Position.z + prototype[0][k].z;
         Bead[count+k].Index = count + k;
         Bead[count+k].Type = MoleculeType[0].Bead[k];
-//      printf("%7d %d %s\n", count+k, Bead[count+k].Type, BeadType[Bead[count+k].Type].Name);
       }
       count += MoleculeType[0].nBeads;
+      if (++count_mols == number_of_mols) {
+        break;
+      }
+    }
+    if (count_mols == number_of_mols) {
+      break;
     }
   }
   // z=BoxLength
+  count_mols = 0;
   for (int i = 0; i < mols[0]; i++) {
     for (int j = 0; j < mols[1]; j++) {
       Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
@@ -403,16 +436,20 @@ int main(int argc, char *argv[]) {
       Bead[count].Position.z = BoxLength.z;
       Bead[count].Index = count;
       Bead[count].Type = MoleculeType[0].Bead[0];
-//    printf("\n%7d %d %s\n", count, Bead[count].Type, BeadType[Bead[count].Type].Name);
       for (int k = 1; k < MoleculeType[0].nBeads; k++) {
         Bead[count+k].Position.x = Bead[count].Position.x - prototype[0][k].x;
         Bead[count+k].Position.y = Bead[count].Position.y - prototype[0][k].y;
         Bead[count+k].Position.z = Bead[count].Position.z - prototype[0][k].z;
         Bead[count+k].Index = count + k;
         Bead[count+k].Type = MoleculeType[0].Bead[k];
-//      printf("%7d %d %s\n", count+k, Bead[count+k].Type, BeadType[Bead[count+k].Type].Name);
       }
       count += MoleculeType[0].nBeads;
+      if (++count_mols == number_of_mols) {
+        break;
+      }
+    }
+    if (count_mols == number_of_mols) {
+      break;
     }
   } //}}}
 
@@ -456,7 +493,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose option //{{{
   if (verbose) {
-    fprintf(stdout, "\nGrid of %d x %d molecules on each wall", mols[0], mols[1]);
+    fprintf(stdout, "\nGrid of %d x %d (%d molecules) molecules on each wall", mols[0], mols[1], number_of_mols);
     char null[1] = {'\0'};
     putchar('\n');
     putchar('\n');
