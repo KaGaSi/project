@@ -245,9 +245,6 @@ int main(int argc, char *argv[]) {
   constraint[0].z = range[0];
   constraint[1].z = range[1]; //}}}
   //}}}
-  printf("x: %lf %lf\n", constraint[0].x, constraint[1].x);
-  printf("y: %lf %lf\n", constraint[0].y, constraint[1].y);
-  printf("z: %lf %lf\n", constraint[0].z, constraint[1].z);
 
   // use centre of mass instead of the first bead for distance check of new molecules //{{{
   bool com = BoolOption(argc, argv, "-gc"); //}}}
