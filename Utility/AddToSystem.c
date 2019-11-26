@@ -47,6 +47,7 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   fprintf(ptr, "      -cy <int> <int2> constrain y coordinate of randomly added beads to interaval (int,int2)\n");
   fprintf(ptr, "      -cz <int> <int2> constrain z coordinate of randomly added beads to interaval (int,int2)\n");
   fprintf(ptr, "      -gc              use molecule's geometric centre for the distance check instead of its first bead\n");
+  fprintf(ptr, "      -xb <name(s)>    specify bead types to exchange new beads for (must be unbonded beads)\n");
   CommonHelp(error);
 } //}}}
 
@@ -91,7 +92,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-cx") != 0 &&
         strcmp(argv[i], "-cy") != 0 &&
         strcmp(argv[i], "-cz") != 0 &&
-        strcmp(argv[i], "-gc") != 0) {
+        strcmp(argv[i], "-gc") != 0 &&
+        strcmp(argv[i], "-xb") != 0) {
       ErrorOption(argv[i]);
       Help(argv[0], true);
       exit(1);
@@ -310,17 +312,18 @@ int main(int argc, char *argv[]) {
   // vsf file is not needed anymore
   free(input_vsf);
 
-  // -bt <name(s)> - specify what bead types to use //{{{
-  if (BeadTypeOption(argc, argv, false, Counts, &BeadType)) {
+  // -xb <name(s)> - specify what bead types to exchange //{{{
+  if (BeadTypeOption(argc, argv, "-xb", true, Counts, &BeadType)) {
     exit(0);
-  } //}}}
-
-  // all beads & molecules are to be written //{{{
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    BeadType[i].Write = true;
   }
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    MoleculeType[i].Write = true;
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    BeadType[i].Write = BeadType[i].Use; // use Write flag to decide which bead types to use
+    BeadType[i].Use = false;
+  }//}}}
+
+  // -bt <name(s)> - specify what bead types to use //{{{
+  if (BeadTypeOption(argc, argv, "-bt", false, Counts, &BeadType)) {
+    exit(0);
   } //}}}
 
   // print original system //{{{
@@ -409,7 +412,7 @@ int main(int argc, char *argv[]) {
     }
   }
   // print number of discarded steps? //{{{
-  if (!silent) {
+  if (!silent && start > 1) {
     if (script) {
       fprintf(stdout, "Starting step: %6d\n", start);
     } else {
@@ -828,10 +831,10 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     strcpy(BeadType_new[i].Name, BeadType[i].Name);
     BeadType_new[i].Number = BeadType[i].Number;
-    BeadType_new[i].Use = BeadType[i].Use;
-    BeadType_new[i].Write = BeadType[i].Write;
     BeadType_new[i].Charge = BeadType[i].Charge;
     BeadType_new[i].Mass = BeadType[i].Mass;
+    BeadType_new[i].Use = BeadType[i].Use;
+    BeadType_new[i].Write = BeadType[i].Write;
   } //}}}
   // add new bead types - check if their the same based only on Name //{{{
   for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
@@ -926,11 +929,12 @@ int main(int argc, char *argv[]) {
   } //}}}
   Bead_new = calloc(Counts_new.Beads, sizeof(struct Bead));
   Index_new = calloc(Counts_new.Beads, sizeof(int));
-  // copy charged unbonded beads to the beginning of Bead_new //{{{
+  // copy beads that aren't to be exchanged to the start of Bead_new //{{{
   count = 0; // counts copied beads
   for (int i = 0; i < Counts.Beads; i++) {
     int type = Bead[i].Type;
-    if (BeadType[type].Charge != 0 && Bead[i].Molecule == -1) {
+    if (!BeadType[type].Write && // for '-xb' option
+        Bead[i].Molecule == -1) {
       int new_type = FindBeadType(BeadType[type].Name, Counts_new, BeadType_new);
       Bead_new[count].Type = new_type;
       Bead_new[count].Molecule = -1;
@@ -945,10 +949,11 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
   // copy uncharged unbonded beads beyond the charged Bead_new //{{{
-  // here, count == number of unbonded charged beads in the original system
+  // here, count == number of beads in the original system not to rewrite
   for (int i = 0; i < Counts.Beads; i++) {
     int type = Bead[i].Type;
-    if (BeadType[type].Charge == 0 && Bead[i].Molecule == -1) {
+    if (BeadType[type].Write && // for '-xb' option
+        Bead[i].Molecule == -1) {
       int new_type = FindBeadType(BeadType[type].Name, Counts_new, BeadType_new);
       Bead_new[count].Type = new_type;
       Bead_new[count].Molecule = -1;
@@ -969,7 +974,9 @@ int main(int argc, char *argv[]) {
   count = 0; // counts added beads
   for (int i = 0; i < Counts_new.Unbonded; i++) {
     int type = Bead_new[i].Type;
-    if (BeadType_new[type].Charge == 0) {
+    if (count != Counts_add.Unbonded &&
+        BeadType_new[type].Write && // for '-xb' option
+        Bead_new[i].Molecule == -1) {
       BeadType_new[type].Number--;
       int old_type = Bead_add[count].Type;
       int new_type = FindBeadType(BeadType_add[old_type].Name, Counts_new, BeadType_new);
@@ -1003,7 +1010,8 @@ int main(int argc, char *argv[]) {
   count = Counts_add.Beads;
   for (int i = (Counts.Beads-1); i >= 0; i--) {
     int type = Bead[i].Type;
-    if (Bead[i].Molecule == -1 && BeadType[type].Charge == 0) {
+    if (BeadType[type].Write && // for '-xb' option
+        Bead[i].Molecule == -1 && BeadType[type].Charge == 0) {
       count--;
       int new_count = Counts_new.Beads - (Counts_add.Beads - count);
       int new_type = FindBeadType(BeadType[type].Name, Counts_new, BeadType_new);
@@ -1073,8 +1081,8 @@ int main(int argc, char *argv[]) {
   // count unbonded neutral beads //{{{
   int can_be_exchanged = 0;
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
-    int b_i_t = Bead[i].Type;
-    if (Bead[i].Molecule == -1 && BeadType[b_i_t].Charge == 0) {
+    int btype = Bead[i].Type;
+    if (Bead[i].Molecule == -1 && BeadType[btype].Charge == 0) {
       can_be_exchanged++;
     }
   }
@@ -1099,7 +1107,6 @@ int main(int argc, char *argv[]) {
       if (add_vsf[0] == '\0') { // randomly place monomers if FIELD-like file is used
         double min_dist;
         if (lowest_dist != -1 || highest_dist != -1) { // ||
-//          constraint[0].x != -1 || constraint[0].y != -1 || constraint[0].z != -1) {
           do {
             random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
             random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
@@ -1328,8 +1335,16 @@ int main(int argc, char *argv[]) {
 
   fprintf(out, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z); //}}}
 
-  // print coordinates to output .vcf file
-  WriteCoorIndexed(out, Counts_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new, stuff);
+  // print coordinates to output .vcf file //{{{
+  // write all beads (Write flag was used with '-xb' option)
+  for (int i = 0; i < Counts_new.TypesOfBeads; i++) {
+    BeadType_new[i].Write = true;
+  }
+  // write all molecules (basically just to make sure)
+  for (int i = 0; i < Counts_new.TypesOfMolecules; i++) {
+    MoleculeType_new[i].Write = true;
+  }
+  WriteCoorIndexed(out, Counts_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new, stuff); //}}}
 
   // close output files //{{{
   fclose(out);
