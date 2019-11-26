@@ -149,19 +149,19 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
  * is absent, all bead types are switched to `Use = true`. Argument: `-bt
  * <name(s)>`
  */
-bool BeadTypeOption(int argc, char **argv, bool use,
+bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
                     Counts Counts, BeadType **BeadType) {
 
   // specify what bead types to use - either specified by '-bt' option or all
   int types = -1;
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-bt") == 0) {
+    if (strcmp(argv[i], opt) == 0) {
       types = i; // positon of the '-bt' argument in command
       // <type names> - names of bead types to save
       while (++types < argc && argv[types][0] != '-') {
         int type = FindBeadType(argv[types], Counts, *BeadType);
         if (type == -1) {
-          fprintf(stderr, "Bead type '%s' does not exist in structure file ('-bt' option)!\n", argv[types]);
+          fprintf(stderr, "Bead type '%s' does not exist in structure file ('%s' option)!\n", argv[types], opt);
           return(true);
         }
 

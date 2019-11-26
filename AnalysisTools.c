@@ -123,7 +123,7 @@ void PrintCounts(Counts Counts) {
   fprintf(stdout, "BeadsInVsf = %d, ", Counts.BeadsInVsf);
   fprintf(stdout, "TypesOfMolecules = %d, ", Counts.TypesOfMolecules);
   fprintf(stdout, "Molecules = %d}\n", Counts.Molecules);
-  fprintf(stdout, "\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
+  fprintf(stdout, "total number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
 } //}}}
 
 // PrintBeadType()  //{{{
