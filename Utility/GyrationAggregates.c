@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
   long int exclude_count_agg = 0; //}}}
 
   // -bt <name(s)> - specify what bead types to use //{{{
-  if (BeadTypeOption(argc, argv, true, Counts, &BeadType)) {
+  if (BeadTypeOption(argc, argv, "-bt", true, Counts, &BeadType)) {
     exit(0);
   } //}}}
 
