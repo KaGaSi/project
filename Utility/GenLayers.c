@@ -437,8 +437,8 @@ int main(int argc, char *argv[]) {
       Bead[count].Index = count;
       Bead[count].Type = MoleculeType[0].Bead[0];
       for (int k = 1; k < MoleculeType[0].nBeads; k++) {
-        Bead[count+k].Position.x = Bead[count].Position.x - prototype[0][k].x;
-        Bead[count+k].Position.y = Bead[count].Position.y - prototype[0][k].y;
+        Bead[count+k].Position.x = Bead[count].Position.x + prototype[0][k].x;
+        Bead[count+k].Position.y = Bead[count].Position.y + prototype[0][k].y;
         Bead[count+k].Position.z = Bead[count].Position.z - prototype[0][k].z;
         Bead[count+k].Index = count + k;
         Bead[count+k].Type = MoleculeType[0].Bead[k];
@@ -468,10 +468,27 @@ int main(int argc, char *argv[]) {
   }
   strcat(stuff, "\n"); //}}}
 
+  // TODO: redo so that the None type is added only if needed
+  // remove None bead type if there are no extra beads //{{{
+  if (Counts.Bonded == Counts.Beads) {
+    for (int i = 1; i < Counts.TypesOfBeads; i++) {
+      strcpy(BeadType[i-1].Name, BeadType[i].Name);
+      BeadType[i-1].Number = BeadType[i].Number;
+      BeadType[i-1].Use = BeadType[i].Use;
+      BeadType[i-1].Write = BeadType[i].Write;
+      BeadType[i-1].Charge = BeadType[i].Charge;
+      BeadType[i-1].Mass = BeadType[i].Mass;
+    }
+    for (int i = 0; i < Counts.Beads; i++) {
+      Bead[i].Type--;
+    }
+    Counts.TypesOfBeads--;
+  } //}}}
+
   // write output vsf file
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
 
-  // adjust for gap value
+  // adjust for gap value (-g option) //{{{
   for (int i = 0; i < Counts.Molecules; i++) {
     int mtype = Molecule[i].Type;
     for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
@@ -482,18 +499,22 @@ int main(int argc, char *argv[]) {
         Bead[id].Position.z -= gap;
       }
     }
-  }
+  } //}}}
 
-  // write output vcf file
+  // write output vcf file //{{{
   // pbc
   fprintf(out, "pbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
   // coordinates
   WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
-  fclose(out);
+  fclose(out); //}}}
 
   // print information - verbose option //{{{
   if (verbose) {
-    fprintf(stdout, "\nGrid of %d x %d (%d molecules) molecules on each wall", mols[0], mols[1], number_of_mols);
+    fprintf(stdout, "\nGrid of %d x %d ", mols[0], mols[1]);
+    if (number_of_mols != 0) {
+      fprintf(stdout, "(%d molecules) ", number_of_mols);
+    }
+    fprintf(stdout, "molecules on each wall");
     char null[1] = {'\0'};
     putchar('\n');
     putchar('\n');

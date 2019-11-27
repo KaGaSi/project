@@ -124,10 +124,10 @@ int main(int argc, char *argv[]) {
   // vsf file is not needed anymore
   free(input_vsf);
 
-  // print information - verbose option
+  // print information - verbose option //{{{
   if (verbose) {
     VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
+  } //}}}
 
   // create & fill output vsf file
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
