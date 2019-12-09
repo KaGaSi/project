@@ -7,13 +7,16 @@ contact pairs. A contact pair is a pair of two beads belonging to different
 molecules which are closer than a specified distance. The information is
 written in \texttt{.agg} text file described in Section~\ref{sec:AggFile}.
 
+Note that throughout \texttt{AnalysisTools}, an aggregate refers to any
+structure formed from molecules.
+
 The number of contact pairs, the distance, and bead type(s) to use for
 aggregate determination are all arguments of the utilities.  Any molecule
 type(s) can be excluded from aggregate determination (\texttt{-x <mol
 name(s)>} option); they are also excluded from the output \texttt{agg}
 file).  Moreover, any molecules close to specified molecule(s) can be
-excluded (\texttt{-xm <mol name(s)>} option); here, `close' means any of
-the bead types used in aggregate determination is closer than
+excluded (\texttt{-xm <mol name(s)>} option); here, \enquote{close} means
+any of the bead types used in aggregate determination is closer than
 \texttt{<distance>} to any bead of the specified molecule.
 
 Also, periodic boundary conditions can be removed from whole aggregates and
@@ -33,8 +36,9 @@ Usage:
 
 \noindent
 \vspace{1em}
-\texttt{Aggregates} (or \texttt{Aggregates-NotSameBeads}) \texttt{<input>
-<distance> <contacts> <output.agg> <bead type name(s)> <options>}
+\texttt{Aggregates} (or \texttt{Aggregates-NotSameBeads})
+\texttt{<input> <distance> <contacts> <output.agg> <bead type name(s)>
+<options>}
 
 \vspace{1em}
 \noindent

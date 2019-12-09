@@ -2,9 +2,9 @@
 
 {\em This utility should be working, but it needs more testing.}
 
-\texttt{PotentialAggregates} calculates electrostatic potential as a
-function of distance from the centre of mass of specified aggregate
-size(s). It places a virtual particle with charge $q=1$ at several places
+\texttt{PotentialAggregates} calculates electrostatic potential for
+aggregates of specified size(s) as a function of distance from their centre
+of mass.  It places a virtual particle with charge $q=1$ at several places
 on the surface of an ever increasing sphere and calculates electrostatic
 potential acting on that virtual particle.
 
@@ -20,7 +20,7 @@ charges with exponentially decreasing charge density,
   U_{ij}^{\mathrm{short}} = U_{ij}^{\mathrm{long}}\left[1 - \left(1 + \beta
   r_{ij}\right) \mathrm{e}^{-2\beta r_{ij}}\right],
 \end{equation}
-where $\beta=\frac{5r_{\mathrm{c}}}{8\lambda}$ ($r_{\mathrm{c}}$ is cut off
+where $\beta=\frac{5r_{\mathrm{c}}}{8\lambda}$ ($r_{\mathrm{c}}$ is cut-off
 distance and $\lambda$ is smearing constant). The utility takes into
 account periodic images of the simulation box.
 
@@ -28,20 +28,25 @@ For now, parameters for the potential are hard coded in the source code:
 the Bjerrum length is \texttt{bjerrum=1.1} (aqueous solution), cut-off is
 \texttt{r\_c=3}, charge smearing constant \texttt{lambda=0.2}, and number
 of periodic images of the simulation box is \texttt{images=5}. The
-parameters can be changed but the utility must then be recompiled.
+parameters can be changed in the source code (around line 20), and the
+utility can then be recompiled.
 
 The aggregate size can be modified using \texttt{-m} option similarly to
-\texttt{Density}-\texttt{Aggregates}
-(Section~\ref{sec:DensityAggregates}).
+\texttt{Density}-\texttt{Aggregates} (Section~\ref{sec:DensityAggregates}).
 
-Be aware that the utility does not use any Ewald sum, so the calculation is
-extremely slow (depending on the number of charged particles in the system).
+Be aware that the utility does not use any Ewald sum-based algorithm, but
+simple \enquote{brute force} approach, so the calculation is extremely slow
+(depending on the number of charged particles in the system).
 
 Usage:
 
 \vspace{1em}
 \noindent
-\texttt{PotentialAggregates <input> <input.agg> <width> <output> <agg size(s)> <options>}
+\texttt{PotentialAggregates <input> <input.agg> <width> <output> <agg
+size(s)> <options>}
+
+\textcolor{white}{.} % why's this? if not present, the table is on the next
+\vspace{-1em}        % page, leaving the command on the top of a blank page
 
 \noindent
 \begin{longtable}{p{0.24\textwidth}p{0.704\textwidth}}
@@ -63,7 +68,7 @@ Usage:
     have to be removed) \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
   \texttt{-e <int>} & ending timestep for calculation (default: none) \\
-  \texttt{-m <mol name(s)>} & instead of `true' aggregate size, use the number
-    of specified molecule type(s) in an aggregate \\
+  \texttt{-m <mol name(s)>} & instead of \enquote{true} aggregate size, use
+    the number of specified molecule type(s) in an aggregate \\
   \bottomrule
 \end{longtable}

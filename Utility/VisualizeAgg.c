@@ -24,14 +24,14 @@ analysis using AnalysisTools utilities.\n\n");
 
   fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <input.agg>       input agg file\n");
-  fprintf(ptr, "   <output>          output vcf file(s) - one per aggregate size (with ending <size>.vcf)\n");
+  fprintf(ptr, "   <output>          output vcf file(s) - one per aggregate size (automatic ending <size>.vcf)\n");
   fprintf(ptr, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
   fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(ptr, "      -x <name(s)>   exclude aggregates containing only specified molecule(s)\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -62,7 +62,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -103,7 +102,7 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
-    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -269,7 +268,7 @@ int main(int argc, char *argv[]) {
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Error: cannot read pbc from %s\n\n", input_coor);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
     exit(1);
   }
 

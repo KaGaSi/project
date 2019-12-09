@@ -23,9 +23,9 @@ It assumes molecules have bonds and can also have angles, but no dihedrals.\n\n"
   fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <out.data>        output lammps data file\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -f <name>      FIELD file (default: FIELD)\n");
+  fprintf(ptr, "      -f <name>      FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      --srp          add one more bead type for srp");
-  fprintf(ptr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
+  fprintf(ptr, "      -st <step>     timestep for creating the output file (default: last)\n");
   CommonHelp(error);
 } //}}}
 
@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
     fgetpos(vcf, &pos);
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\n\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
       pos = pos_old;
       count--;
     }

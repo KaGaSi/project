@@ -32,7 +32,7 @@ with the <input.agg> for further analysis.\n\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -63,7 +63,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -105,7 +104,7 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
-    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -184,9 +183,6 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\nWARNING: the coordinate file (%s) ", input_coor);
     fprintf(stderr, "is different to the one in the aggregate file (%s).\n", coor_file_from_agg);
     fprintf(stderr, "         Possible mismatch between beads present in both files can lead to undefined behaviour.\n\n");
-    fprintf(stdout, "\nWARNING: the coordinate file (%s) ", input_coor);
-    fprintf(stdout, "is different to the one in the aggregate file (%s).\n", coor_file_from_agg);
-    fprintf(stdout, "         Possible mismatch between beads present in both files can lead to undefined behaviour.\n\n");
   }
 
   // skip <contacts> and <output.agg> in Aggregates command
@@ -327,12 +323,12 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
       test = '\0';
       break;
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
       exit(1);
     }
   }

@@ -1173,6 +1173,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
     if ((*BeadType)[i].Charge == 1000 || (*BeadType)[i].Mass == 1000) {
       charge_mass = false;
+      break;
     }
   }
   if (!charge_mass) {

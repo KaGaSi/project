@@ -8,11 +8,15 @@ initial coordinate file.
 The definition of aggregate size is fairly flexible (similarly to
 \texttt{DensityAggregates} utility -- Section~\ref{sec:DensityAggregates}).
 
+As the output file(s) do not necessarily contain all beads of a bead
+type, these \texttt{vcf} files cannot be used for further analysis via
+\texttt{AnalysisTools}.
+
 Usage:
 
 \vspace{1em}
 \noindent
-\texttt{DensityAggregates <input> <input.agg> <width> <output> <agg \\
+\texttt{VisualizeAgg <input> <input.agg> <output> <agg \\
 size(s)> <options>}
 
 \noindent
@@ -23,7 +27,6 @@ size(s)> <options>}
   \texttt{<input>} & input coordinate file (either \texttt{vcf} or
     \texttt{vtf} format) \\
   \texttt{<input.agg>} & input \texttt{.agg} file \\
-  \texttt{<width>} & width of each bin of the distribution \\
   \texttt{<output>} & output file(s) (one per aggregate size) with
     automatic \texttt{\#.vcf} ending (\texttt{\#} is aggregate size) \\
   \texttt{<agg size(s)>} & aggregate size(s) to save \\
@@ -35,9 +38,9 @@ size(s)> <options>}
     have to be removed) \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
   \texttt{-e <int>} & ending timestep for calculation (default: none) \\
-  \texttt{-m <mol name(s)>} & instead of `true' aggregate size, use the number
-    of specified molecule type(s) in an aggregate \\
-  \texttt{-x <mol name(s)>} & exclude specified molecule type(s) (i.e., do
-    not calculate density for beads in molecules \texttt{<mol name(s)>}) \\
+  \texttt{-m <mol name(s)>} & instead of \enquote{true} aggregate size, use
+    the number of specified molecule type(s) in an aggregate \\
+  \texttt{-x <mol name(s)>} & exclude aggregates containing only specified
+    molecule type(s) \\
   \bottomrule
 \end{longtable}

@@ -16,23 +16,24 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
 
     fprintf(ptr, "\
-AddToSystem takes existing coordinates and adds monomeric beads and/or \
-molecules to the system. The data for added components are read from a \
-FIELD-like file that have to contain species and molecule sections (the \
-same as for DL_MESO simulation program). \
-The new beads replace neutral monomeric beads with the lowest indices \
-(as written in the vsf file) \
-from the original system. The new beads \
-can be placed far from/near to beads of specified type; in case of molecules, \
-the distance of the molecule's first bead or geometric centre can be checked. \
-Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
-\n\n");
+AddToSystem takes existing coordinates and adds unbonded beads and/or \
+molecules to the system. The data for added components is read either \
+from a FIELD-like file that has to contain species and molecule sections \
+(the same as for DL_MESO simulation program) or from a vsf/vcf files \
+(-vtf option). In the first case, new molecules and beads are added \
+randomly, while in the second case, the provided coordinates are used. \
+The new beads replace either neutral unbonded beads with the lowest \
+indices (as written in the vsf file) or option-specified unbonded beads. \
+Constraints can be placed on x, y, or z coordinates, as well as on \
+distance of the added beads from other specified beads. The constraints \
+are ignored for -vtf option. Options -ld and/or -hd must be used in \
+accompanied by -bt option.\n\n");
   }
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> ", cmd);
+  fprintf(ptr, "   %s <input.vcf> ", cmd);
   fprintf(ptr, "<out.vcf> <out.vsf> <options>\n\n");
 
-  fprintf(ptr, "   <input>             input filename (vcf or vtf format)\n");
+  fprintf(ptr, "   <input.vcf>         input filename (vcf or vtf format)\n");
   fprintf(ptr, "   <out.vsf>           output structure file (vsf format)\n");
   fprintf(ptr, "   <out.vcf>           output coordinate file (vcf format)\n");
   fprintf(ptr, "   <options>\n");
@@ -43,9 +44,9 @@ Options '-ld' and/or '-hd' must be used in conjunction with '-bt' option. \
   fprintf(ptr, "      -ld <float>      specify lowest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -hd <float>      specify highest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -bt <name(s)>    specify bead types new beads should be far from/near to (default: none)\n");
-  fprintf(ptr, "      -cx <int> <int2> constrain x coordinate of randomly added beads to interaval (int,int2)\n");
-  fprintf(ptr, "      -cy <int> <int2> constrain y coordinate of randomly added beads to interaval (int,int2)\n");
-  fprintf(ptr, "      -cz <int> <int2> constrain z coordinate of randomly added beads to interaval (int,int2)\n");
+  fprintf(ptr, "      -cx <num> <num2> constrain x coordinate of randomly added beads to interaval (int,int2)\n");
+  fprintf(ptr, "      -cy <num> <num2> constrain y coordinate of randomly added beads to interaval (int,int2)\n");
+  fprintf(ptr, "      -cz <num> <num2> constrain z coordinate of randomly added beads to interaval (int,int2)\n");
   fprintf(ptr, "      -gc              use molecule's geometric centre for the distance check instead of its first bead\n");
   fprintf(ptr, "      -xb <name(s)>    specify bead types to exchange new beads for (must be unbonded beads)\n");
   CommonHelp(error);
@@ -191,7 +192,7 @@ int main(int argc, char *argv[]) {
       }
     }
     if (!bt) {
-      fprintf(stderr, "Error - if '-ld' and/or '-hd' is used, '-bt' must be specified as well\n");
+      fprintf(stderr, "\nError: if '-ld' and/or '-hd' is used, '-bt' must be specified as well\n\n");
       exit(1);
     }
   } //}}}
@@ -330,7 +331,9 @@ int main(int argc, char *argv[]) {
   if (verbose) {
     fprintf(stdout, "\nORIGINAL SYSTEM\n");
     VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-    fprintf(stdout, "\n   Starting from %d. timestep\n", start);
+    if (start > 1) {
+      fprintf(stdout, "\n   Using %d. timestep\n", start);
+    }
   } //}}}
 
   // open input coordinate file //{{{
@@ -446,7 +449,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
   } else {
-    fprintf(stderr, "\nWarning - using last step in %s (%d)\n", input_coor, count);
+    fprintf(stderr, "\nWarning: using last step in %s (%d)\n", input_coor, count);
   }
   fclose(vcf); //}}}
 
@@ -1190,16 +1193,6 @@ int main(int argc, char *argv[]) {
       random.x /= dist;
       random.y /= dist;
       random.z /= dist;
-//    printf("%lf %lf %lf %lf\n", random.x, random.y, random.z, sqrt(SQR(random.x)+SQR(random.y)+SQR(random.z)));
-//    // TODO: old - test if the new is really good
-//    double dist;
-//    do {
-//      random.x = (double)rand() / ((double)RAND_MAX) * 2 - 1; // random number <-1,1>
-//      random.y = (double)rand() / ((double)RAND_MAX) * 2 - 1;
-//      random.z = (double)rand() / ((double)RAND_MAX) * 2 - 1;
-//      random.z = sqrt(1-SQR(random.x)-SQR(random.y));
-//      dist = sqrt(SQR(random.x)+SQR(random.y)+SQR(random.z));
-//    } while (dist > 1.00001 || dist < 0.99999);
       // random rotation angle
       double angle = (double)rand() / ((double)RAND_MAX) * PI;
       // create rotation matrix

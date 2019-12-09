@@ -18,11 +18,11 @@ DensityAggregates utility calculates radial bead density for aggregates \
 of given size(s) from their centre of mass. For beads in molecules, \
 it takes into account only beads from the current aggregate, not from \
 any other aggregate. The utility does not check what molecule type a \
-given bead belongs to, therefore if the same bead type appears in \
+given bead belongs to; therefore, if the same bead type appears in \
 more molecule types, the resulting density for that bead type will be \
 averaged without regard for the various types of molecule it comes from \
-(i.e., if 'mol1' and 'mol2' both both contain bead 'A', there will not be \
-a separate column for 'A' from 'mol1' and from 'mol2').\n\n");
+(i.e., if 'mol1' and 'mol2' both both contain bead 'A', there will be \
+only one column for 'A' bead type).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -37,7 +37,7 @@ a separate column for 'A' from 'mol1' and from 'mol2').\n\n");
   fprintf(ptr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(ptr, "      -n <int>       number of bins to average\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
   CommonHelp(error);
@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -283,7 +282,7 @@ int main(int argc, char *argv[]) {
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", name, input_coor);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s coordinate file\n\n", name, input_coor);
       exit(1);
     }
 
@@ -405,12 +404,12 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
       test = '\0';
       exit(1);
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
       exit(1);
     }
   }
@@ -513,8 +512,6 @@ int main(int argc, char *argv[]) {
           int moltype = Molecule[mol].Type;
 
           if (MoleculeType[moltype].Use) {
-//          fprintf(stdout, "%s: %d\n", MoleculeType[moltype].Name, MoleculeType[moltype].Use);
-
             Vector dist = Distance(Bead[Aggregate[i].Bead[j]].Position, com, BoxLength);
             dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
@@ -619,7 +616,6 @@ int main(int argc, char *argv[]) {
         temp_number_err = sqrt(temp_number_err - temp_number);
 
         // print average value to output file
-//      fprintf(out, " %10f", temp_rdp/avg);
         fprintf(out, " %10f %10f", temp_rdp/avg, temp_rdp_err/avg);
         fprintf(out, " %10f %10f", temp_number/avg, temp_number_err/avg);
       }

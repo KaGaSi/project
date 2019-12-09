@@ -1,18 +1,19 @@
 \section{JoinAggregates} \label{sec:JoinAggregates}
 
 This utility is meant for cases when non-standard option \texttt{-j} is
-omitted from \texttt{Aggrega}-\texttt{tes} (or \texttt{Aggregates-NotSameBeads})
-command. \texttt{JoinAggregates} uses the provided \texttt{vcf} and
-\texttt{agg} files to join aggregates, i.e., to remove their periodic boundary
-conditions and save the new coordinates into a \texttt{vcf} file. The
-utility reads \texttt{Aggregates} command from the \texttt{agg} file to
-determine distance and number of contact pairs for aggregate check (see
-Section \ref{sec:Aggregates} for details on \texttt{Aggregates} utility).
+omitted from \texttt{Aggrega}-\texttt{tes} (or
+\texttt{Aggregates-NotSameBeads}) command. \texttt{JoinAggregates} uses the
+provided \texttt{vcf} and \texttt{agg} files to join aggregates, i.e., to
+remove their periodic boundary conditions and save the new coordinates into
+a \texttt{vcf} file. The utility reads \texttt{Aggregates} command from the
+\texttt{agg} file to determine distance and number of contact pairs for
+aggregate check (see Section \ref{sec:Aggregates} for details on
+\texttt{Aggregates} utility).
 
 Be warned that if \texttt{-sk}, \texttt{-st}, or \texttt{-e} options are
 used, \texttt{<output.vcf>} will not be in sync with \texttt{<input.agg>}
-and therefore these two files cannot be used in tandem for further analysis
-using any utilities calculating aggregate properties.
+and, therefore, these two files cannot be used in tandem for further
+analysis via \texttt{AnalysisTools}.
 
 Usage:
 

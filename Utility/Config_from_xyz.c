@@ -15,7 +15,8 @@ void Help(char cmd[50], bool error) { //{{{
     fprintf(ptr, "\
 Config_from_xyz generates dl_meso CONFIG file from given step of a xyz file. \
 If the given timestep is larger than the number of steps the coordinate file, \
-the last step is used.\n\n");
+the last step is used. Note that box dimensions must be added manually to the \
+resulting CONFIG file, as xyz file does not contain box size.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");

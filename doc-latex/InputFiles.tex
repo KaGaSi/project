@@ -11,13 +11,15 @@ All system information is read from the \texttt{vsf} structure file
 (Section~\ref{sec:CoordinateVcf}). One \texttt{vtf} file containing a
 structure and coordinate sections can also be used.
 The \texttt{FIELD} file is only used when bead charge
-and/or mass is missing from the \texttt{vsf} structure file.
+and/or mass is missing from the \texttt{vsf} structure file or for
+generation (or modification) of configurations.
 The utilities consider only bead types that are present in the \texttt{vcf}
 coordinate file (i.e., bead types present in the \texttt{vsf} file but not
-in the \texttt{vcf} file are not seen by the utilities). A description of
-how the system data are read is shown in Chapter~\ref{chap:ReadData}.
+in the \texttt{vcf} file are not seen by the utilities).
+Chapter~\ref{chap:ReadData} briefly describes how the data are read.
 
-Both \texttt{vsf} and \texttt{vcf} files can be generated using a
+Both \texttt{vsf} and \texttt{vcf} files can be generated from the
+\texttt{DL\_MESO HISTORY} file using a
 \texttt{traject} utility provided by the DL\_MESO simulation package
 (\texttt{traject-v2\_5} and \texttt{traject-v2\_6} provided here are
 modified versions from earlier DL\_MESO simulation package versions).  Both
@@ -105,7 +107,8 @@ and 7, 8 and 9.
 
 Blank lines and comments (lines beginning with \texttt{\#}) are allowed in
 both parts of the \texttt{vsf} file. Instead of a separate \texttt{vsf}
-file, a \texttt{vtf} file can be used.
+file, a \texttt{vtf} file can be used (via \texttt{-i <name.vtf>} command
+line option).
 
 \section{\texttt{vcf} coordinate file} \label{sec:CoordinateVcf}
 
@@ -122,10 +125,9 @@ contain a line before every timestep specifying the file type --
 \texttt{timestep ordered} or \texttt{timestep indexed} (the keyword
 \texttt{timestep} can be omitted).  In both ordered and indexed
 \texttt{vcf} files, the size of the simulation box is given by a line
-\texttt{pbc <float> <float> <float>} which is located before the first
-coordinate block. Only \texttt{timestep} and \texttt{pbc} lines are read
-before the first coordinates (everything else is ignored), so \texttt{vtf}
-file can be used instead of a \texttt{vcf} file.
+\texttt{pbc <float> <float> <float>}. Because everything up to the first
+\texttt{timestep} or \texttt{pbc} line is ignored, \texttt{vtf} file can be
+used instead of a \texttt{vcf} file.
 
 The \texttt{vcf} file may contain comment lines (beginning with
 \texttt{\#}) and blank lines between timesteps, but the coordinate block
@@ -162,12 +164,14 @@ beads with indices 0 and 1 (as defined in the \texttt{vsf} file).
 
 \subsection{Indexed coordinate file} \label{ssec:IndexedVcf}
 
-Indexed coordinate files contains not only Cartesian coordinates, but also
-bead indices (preceding the coordinates). Therefore an
-indexed timestep does not have to contain all beads in the \texttt{vsf}
-structure file. Moreover, the beads do not have to be ordered according to
-their ascending indices.  The following is an example of an ordered
-\texttt{vcf} file:
+Indexed coordinate file contains not only Cartesian coordinates, but also
+bead indices (preceding the coordinates). Therefore, an indexed timestep
+does not have to contain all beads in the \texttt{vsf} structure file;
+however, \texttt{AnalysisTools} utilities work with whole sets of beads,
+that is, when one bead of a specific type is missing, all beads of that
+type (i.e., beads with the same name) must be missing as well. Also, the
+beads do not have to be ordered according to their ascending indices.  The
+following is an example of an ordered \texttt{vcf} file:
 
 \begin{verbatim}
    # any number of comments or blank lines
@@ -192,12 +196,12 @@ beads have indices 2 and 21 instead of 0 and 1. %}}}
 \section{Aggregate file (\texttt{agg})} \label{sec:AggFile} %{{{
 
 The aggregate file with \texttt{agg} extension is generated using
-\texttt{Aggregates} utility. The file
-contains information about the number of aggregates in each timestep and
-which molecules and monomeric beads belong to which aggregate. It serves as
-an additional input file for utilities that calculate properties of whole
-aggregates -- \texttt{agg} file is therefore linked to the \texttt{vcf} file
-that was used to generate it.
+\texttt{Aggregates} (or \texttt{Aggregates -NotSameBeads}) utility. The
+file contains information about the number of aggregates in each timestep
+and which molecules and monomeric (i.e., unbonded) beads belong to which
+aggregate. It serves as an additional input file for utilities that
+calculate aggregate properties; \texttt{agg} file is, therefore, linked to
+the \texttt{vcf} file that was used to generate it.
 
 The \texttt{agg} file is a simple text file. The first line contains the
 command used to generate it -- parts of this command can be necessary for
@@ -213,15 +217,17 @@ rules:
   \item there are two lines for each aggregate:
   \begin{enumerate}[topsep=0pt,itemsep=0pt]
     \item number of molecules in the aggregate followed by their indices
-      taken from the \texttt{vsf} file
+      taken from the \texttt{vsf} file (\texttt{resid} indices)
     \item number of monomeric beads in the aggregate followed by their
-      indices taken from the \texttt{vsf} file
+      indices taken from the \texttt{vsf} file (\texttt{atom} indices)
   \end{enumerate}
   \item no blank or comment lines are allowed inside the aggregate block
-  \item all molecules present in the \texttt{vcf} file used to generate
-    this file must be present in every timestep; here, aggregate can also
-    refer to dissolved molecules (i.e., single chains).
+  \item not all molecules present in the \texttt{vcf} file used to generate
+    this file must be present in every timestep
 \end{itemize}
+
+Note that the term aggregate also refers to free chains (i.e., fully
+dissolve dchains).
 
 When the keyword \texttt{Last} is present instead of \texttt{Step}, it
 signalises the end of the \texttt{agg} file; no utility will read anything
@@ -247,17 +253,19 @@ Following is an example of an \texttt{agg} file:
      4 : 10 20 100 2000
 
    Last Step: 2
+
+   Step: 3 is ignored as is anything below
 \end{verbatim}
 
 In this example, command \texttt{Aggregates in.vcf 1 1 out.agg A} was used
 to generate the file (see Section \ref{sec:Aggregates} for details about
 this utility). There are two timesteps here -- the first contains two
 aggregates (although one of them is a free, dissolved molecule) and the
-second a single aggregate.  As an example, the aggregate in the second step
-contains three molecules with indices 1, 2, and 3 (taken from the
-\texttt{vsf} file) and four monomeric beads (i.e., solvent or counterions)
-with indices 10, 20, 100, and 2000 (again, taken from the \texttt{vsf}
-file).
+second an aggregate comprised of two molecules (i.e., a dimer). As an
+example, the aggregate in the second step contains three molecules with
+indices 1, 2, and 3 (taken from the \texttt{vsf} file) and four monomeric
+beads (i.e., solvent or counterions) with indices 10, 20, 100, and 2000
+(again, taken from the \texttt{vsf} file).
 
 Besides using this file for further analysis using other utilities, the
 indices can be used in vmd to visualize, e.g., only a specific aggregate by

@@ -23,7 +23,6 @@ visualisation tool.\n\n");
   fprintf(ptr, "   <output.vsf>    output structure file (*.vsf)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -i <name>  use input .vsf file different from traject.vsf\n");
-//fprintf(ptr, "      -b <name>  file containing bond alternatives to FIELD\n");
   fprintf(ptr, "      -v         verbose output\n");
   fprintf(ptr, "      -h         print this help and exit\n");
 } //}}}
@@ -55,7 +54,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-        strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0) {
 
       ErrorOption(argv[i]);
