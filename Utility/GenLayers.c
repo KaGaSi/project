@@ -7,16 +7,6 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-/* Takes FIELD with box dimensions on the first line, with species section
- * containing beads in molecules, and with molecule section containing 1
- * molecule type as well as nummols 1. It uses the coordinates from
- * molecule section as a prototype for the brush and creates a brush on z-
- * sides of the box with given brush density. It is assumed that the total
- * number of beads is 3*(box volume). Brush molecules are placed at the end
- * of the vsf file and remaining beads are neutral monomeric beads with
- * mass 0 and name None.
- */
-
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -24,18 +14,19 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-GenBrushWall reads information from a FIELD-like file and creates \
-vsf structure file and generates coordinates for all beads. \
-It creates a simulation box with molecules attached wall in xy planes \
-(i.e., with z coordinates of the first bead of each molecule equal to \
-0 or the box size in the z direction). The molecules are generated \
-on a square grid with specified distance between anchoring points.\n\n");
+GenLayers reads information from a FIELD-like file and generates two \
+mirror monolayers in xy planes of the simulation box specified distance \
+from edges of the box (in z direction). Only the first molecule type in \
+the FIELD-like file is used to construct the layers. The molecules are \
+generated on a square grid with distance between anchoring points specified \
+either explicitly or implicitly (by specifying the number of molecules per \
+layer).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <out.vsf> <out.vcf> <options>\n\n", cmd);
-  fprintf(ptr, "   <out.vsf>              output structure file (*.vsf)\n");
-  fprintf(ptr, "   <out.vcf>              output coordinate file (*.vcf)\n");
+  fprintf(ptr, "   <out.vsf>              output structure file (vsf format)\n");
+  fprintf(ptr, "   <out.vcf>              output coordinate file (vcf format)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -s <float> <float>  spacing in x and y directions (default: 1 1)\n");
   fprintf(ptr, "      -n <int>            total number of beads (default: 3*volume_box)\n");
@@ -289,8 +280,7 @@ int main(int argc, char *argv[]) {
     strcpy(MoleculeType[i].Name, strtok(line, " \t")); //}}}
     // number of molecules - irrelevant, decided by spacing //{{{
     fgets(line, sizeof(line), fr);
-    strtok(line, " \t ");
-//  MoleculeType[i].Number = atoi(strtok(NULL, " \t")); //}}}
+    strtok(line, " \t "); //}}}
     // number of beads //{{{
     fgets(line, sizeof(line), fr);
     strtok(line, " \t ");

@@ -14,10 +14,10 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-DensityMolecules utility calculates number \
-density for all bead types from the \
-centre of mass (or any bead in a molecule) of specified molecules. \
-\n\n");
+DensityMolecules utility calculates number density for all bead types from \
+the centre of mass (or any bead in a molecule) of specified molecules \
+similarly to how DensityAggregates calculates the density for \
+aggregates.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -31,7 +31,7 @@ centre of mass (or any bead in a molecule) of specified molecules. \
   fprintf(ptr, "      --joined        specify that <input> contains joined coordinates\n");
   fprintf(ptr, "      -n <int>        number of bins to average\n");
   fprintf(ptr, "      -st <int>       starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>        ending timestep for calculation\n");
   fprintf(ptr, "      -c <name> <int> use <int>-th molecule bead instead of centre of mass\n");
   CommonHelp(error);
 } //}}}
@@ -63,7 +63,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -209,7 +208,6 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // -c option - specify which bead to use as a molecule centre //{{{
-
   // array for considering whether to use COM or specified bead number //{{{
   int centre[Counts.TypesOfMolecules];
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -240,8 +238,8 @@ int main(int argc, char *argv[]) {
 
           // Error - too high bead number //{{{
           if (centre[mol_type] > MoleculeType[mol_type].nBeads) {
-            fprintf(stderr, "Error: incorrect number in '-c' option (%dth bead in molecule "
-              "%s containing only %d beads)\n", centre[mol_type]+1, MoleculeType[mol_type].Name,
+            fprintf(stderr, "\nError: incorrect number in '-c' option (%dth bead in molecule "
+              "%s containing only %d beads)\n\n", centre[mol_type]+1, MoleculeType[mol_type].Name,
               MoleculeType[mol_type].nBeads);
             exit(1);
           } //}}}
@@ -270,7 +268,7 @@ int main(int argc, char *argv[]) {
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_coor);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
     exit(1);
   }
 

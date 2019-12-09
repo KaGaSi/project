@@ -11,30 +11,33 @@ ones are closest to each other). The layers are placed in $z$ direction
 
 The first beads of the molecules are arranged on a square lattice defined
 either by given spacing in $x$ and $y$ directions (\texttt{-s} option) or
-by the number of molecules per layer (\texttt{-nm} option). By default,
-\texttt{GenLayers} places the two mirror layers at the edges of a
-simulation box, but using the \texttt{-g} option, a gap from box edge can
-be in introduced. Therefore, this utility can generate, for example,
-polymer brushes at box edges or a double layer (such as a biological
-membrane) in the middle of the box.
+by the number of molecules per layer (\texttt{-nm} option). The rest of the
+beads of each molecule are placed based on the coordinates in the
+\texttt{FIELD}-like file. By default, \texttt{GenLayers} places the two
+mirror layers at the edges of a simulation box, but using the \texttt{-g}
+option, a gap from box edge can be introduced. Therefore, this utility
+can generate, for example, polymer brushes at box edges or a double layer
+(such as a biological membrane) in the middle of the box.
 
 By default, the total number of beads in generated system is equal to three
 times the box volume, that is, the typical number of beads in dissipative
 particle dynamics simulations. Beads that are not in the molecules, are put
-at the beginning of the output file with coordinates of the box centre and
-name \texttt{None}. The idea is that once the layers are generated,
-\texttt{AddToSystem} utility (see Section~\ref{sec:AddToSystem}) can be
-used to exchange these excess beads for different species. The \texttt{-n}
-option changes the total number of beads. If the number is lower than the
-total number of beads needed to construct the two layers of molecules, it
-is adjusted to exactly that number.
+at the beginning of the output files (i.e., they have lower indices) with
+coordinates of the box centre, and name \texttt{None}. The idea is that
+once the layers are generated, \texttt{AddToSystem} utility (see
+Section~\ref{sec:AddToSystem}) can be used to exchange these excess beads
+for different species. The \texttt{-n} option changes the total number of
+beads. If the number is lower than the total number of beads needed to
+construct the two layers of molecules, it is adjusted to exactly that
+number.
 
 The input \texttt{FIELD}-like file must contain \texttt{species} and
-\texttt{molecule} sections, but the \texttt{interaction} section is ignored
-(see \texttt{DL\_MESO} manual for details on the \texttt{FIELD} file). The
-first line of \texttt{FIELD} that is ignored by \texttt{DL\_MESO} must
-start with box dimensions, i.e., with three numbers (the rest of the file
-is ignored).
+\texttt{molecule} sections (although, only the first molecule is considered
+and \texttt{nummols} is disregarded), but the \texttt{interaction} section
+is ignored (see \texttt{DL\_MESO} manual for details on the \texttt{FIELD}
+file or below for a simple example). The first line of the
+\texttt{FIELD}-like file, that is ignored by \texttt{DL\_MESO}, must start
+with box dimensions, i.e., with three numbers.
 
 This utility does not have error checking for the provided
 \texttt{FIELD}-like file. If the file is not correct, \texttt{GenLayers}
@@ -42,17 +45,18 @@ will exhibit undefined behaviour, that is, it will either freeze, crash, or
 run without errors, producing bad output files.
 
 The following snapshot is an example output using command \texttt{GenLayers
-out.vsf out.vcf -n 1 -nm 50 -g 1} (the transparent squares are just a
-visual aid) with the provided \texttt{FIELD}-like file:
+out.vsf out.vcf -n 1 -nm 50 -g 1} and the provided \texttt{FIELD}-like file
+(the transparent squares are just a visual aid):
 
 \hfill
 \begin{minipage}{0.4\textwidth}
 
   \includegraphics[width=\textwidth]{GenLayers-478ctac.jpg}
 \end{minipage}
-\begin{minipage}{0.5\textwidth}
+\hfill
+\begin{minipage}{0.3\textwidth}
   \centering
-  \texttt{FIELD}
+  \texttt{FIELD}-like file
   \vspace{-1em}
 
 \begin{verbatim}
@@ -80,7 +84,7 @@ Usage (\texttt{GenLayers} does not use standard options):
 
 \vspace{1em}
 \noindent
-\texttt{GenSystem <out.vsf> <out.vcf> <options>}
+\texttt{GenLayers <out.vsf> <out.vcf> <options>}
 
 \noindent
 \begin{longtable}{p{0.15\textwidth}p{0.794\textwidth}}
@@ -92,7 +96,12 @@ Usage (\texttt{GenLayers} does not use standard options):
   \toprule
   \multicolumn{2}{l}{Options} \\
   \midrule
-  \texttt{-f <name>} & FIELD-like file (default: FIELD)\\
+  \texttt{-s <x> <y>} & spacing of molecules in $x$ and $y$ directions
+    (default: 1 1) \\
+  \texttt{-n <int>} & \\
+  \texttt{-nm <int>} & \\
+  \texttt{-g <float>} & \\
+  \texttt{-f <name>} & \texttt{FIELD}-like file (default: \texttt{FIELD}) \\
   \texttt{-v}        & verbose output that provides information about all
     bead and molecule types \\
   \texttt{-h}        & print help and exit \\

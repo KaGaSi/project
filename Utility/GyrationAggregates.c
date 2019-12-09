@@ -16,11 +16,11 @@ void Help(char cmd[50], bool error) { //{{{
     fprintf(stdout, "\
 GyrationAggregates calculates gyration tensor for aggregates and determines \
 shape descriptors like radius of gyration, acylindricity, asphericity, or \
-relative shape anisotropy. On default, it calculates per-timestep averages, \
+relative shape anisotropy. By default, it calculates per-timestep averages, \
 but per-size averages can also be determined. Overall averages are appended \
 to the output file. The definition of aggregate size is quite flexible and \
-the calculation can also be made only \
-for aggregate sizes in a given range. \n\n");
+the calculation can also be made only for aggregate sizes in a given \
+range.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -37,7 +37,7 @@ for aggregate sizes in a given range. \n\n");
   fprintf(ptr, "      -ps <file>     save per-size averages to a file\n");
   fprintf(ptr, "      -n <int> <int> calculate for aggregate sizes in given range\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -68,7 +68,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -118,7 +117,7 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
-    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -365,7 +364,6 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // allocate memory for sum of various things //{{{
-
   // numbers of aggregates of all possibe sizes
   int *agg_counts_sum = calloc(Counts.Molecules,sizeof(int *));
   // total radius of gyration: [size][0] normal sum, [size][1] sum of Rg*mass, [size][2] Rg*mass^2
@@ -453,7 +451,6 @@ int main(int argc, char *argv[]) {
           size++;
         }
       }
-      // TODO: IS THIS STILL NEEDED? I DON'T THINKS SO!
       // is 'size' agg size in provided list?
       int correct_size = -1;
       for (int j = 0; j < Counts.Molecules; j++) {

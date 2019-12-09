@@ -14,23 +14,21 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-Warning: This utility was not extensively tested and is \
-in fact not a very good generator of initial configuration.\n\n\
-GenVsf reads information from FIELD-like file to create \
-vsf structure file and generate coordinates for all beads \
-(used, e.g., as initial configuration for a simulation). \
-This utility only creates linear molecules no matter the \
-connectivity in the provided FIELD-like file. GenSystem \
-also lacks checking for errors in teh FIELD-like file so \
-if an incorrect file is provided, the utility will exhibit \
-undefined behaviour (it will freeze, crash, or produce wrong \
-results).\n\n");
+Warning: This utility was not extensively tested and is in fact not a \
+very good generator of initial configuration.\n\n\
+GenSystem reads information from a FIELD-like file to create vsf \
+structure file and generate coordinates for all beads (used, e.g., as \
+initial configuration for a simulation). This utility only creates linear \
+molecules no matter the connectivity in the provided FIELD-like file. \
+GenSystem also lacks checking for errors in the FIELD-like file so if an \
+incorrect file is provided, the utility will exhibit undefined behaviour \
+(it will freeze, crash, or produce wrong results).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <out.vsf> <out.vcf> <options>\n\n", cmd);
-  fprintf(ptr, "   <out.vsf>     output structure file (*.vsf)\n");
-  fprintf(ptr, "   <out.vcf>     output coordinate file (*.vcf)\n");
+  fprintf(ptr, "   <out.vsf>     output structure file (vsf format)\n");
+  fprintf(ptr, "   <out.vcf>     output coordinate file (vcf format)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -f <name>  FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      -v         verbose output\n");
@@ -485,7 +483,6 @@ int main(int argc, char *argv[]) {
     Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
     Bead[count_free].Position.y = (y % y_n) * dist + 0.1;
     Bead[count_free].Position.z = z;
-//  printf("%d %lf %lf %lf\n", count_free, Bead[count_free].Position.x, Bead[count_free].Position.y, Bead[count_free].Position.z);
     z += dist;
     if (z >= BoxLength.z) {
       z = 0.1;
@@ -506,7 +503,6 @@ int main(int argc, char *argv[]) {
   z = 0.1; // coordinates that are incrementally increased
   double y_coor = 0.1;
   count_free = 0; // count number of unbonded beads that are placed
-//printf("y_dist = %lf\n", y_dist);
 
   // molecules layers with solvent layers in between //{{{
   for (int i = 0; i < Counts.Molecules; i++) {
@@ -570,7 +566,6 @@ int main(int argc, char *argv[]) {
     Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
     Bead[count_free].Position.y = y_coor;
     Bead[count_free].Position.z = z;
-//  printf("%d %lf %lf %lf\n", count_free, Bead[count_free].Position.x, Bead[count_free].Position.y, Bead[count_free].Position.z);
     z += dist;
     if (z >= BoxLength.z) {
       z = 0.1;

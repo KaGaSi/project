@@ -14,10 +14,9 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-DihedralMolecules utility calculates dihedral angle \
-between planes specified by beads in each molecule of specified molecule \
-type(s). \
-\n\n");
+DihedralMolecules utility calculates angle between planes specified by beads \
+in each molecule of specified molecule type(s). Each plane can be specified \
+by an arbitrary trio of beads in the molecules.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -32,7 +31,7 @@ type(s). \
   fprintf(ptr, "      -n <ints>    bead indices (multiple of 6 <ints>) for dihedral calculation (default: 1 2 3 2 3 4)\n");
   fprintf(ptr, "      -a <name>    write angle of all molecules in all times to <name>\n");
   fprintf(ptr, "      -st <int>    starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>     ending timestep for the calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -64,7 +63,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&

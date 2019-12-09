@@ -24,10 +24,10 @@ periodic boundary conditions applied). If both \texttt{--join} and
 the molecules are joined.
 
 Also, specified molecules can be excluded which is useful when the same
-bead type is shared between more molecule types. However, as of now, no
-utilities can read a \texttt{vcf} file that does not contain all beads of a
-given type, so this the \texttt{-x} option is right now fairly useless. It
-can nevertheless be used for, e.g., visualization via vmd.
+bead type is shared between more molecule types. However, no utilities can
+read a \texttt{vcf} file that does not contain all beads of a given type,
+so the \texttt{-x} option is useful only for visualization, e.g., using
+vmd.
 
 Usage:
 
@@ -60,7 +60,7 @@ Usage:
   \texttt{-sk <int>} & number of steps skip per one used (default: 0) \\
   \texttt{-n <int(s)>} & save only specified timesteps \\
   \texttt{-x <name(s)>} & exclude molecules of specified name(s) -- do not
-    use if \texttt{output.vcf} is further analysed \\
+    use if \texttt{<output.vcf>} is further analysed \\
   \texttt{-xyz <name>} & save coordinates to \texttt{xyz} file -- does not
     take into account \texttt{-x} option \\
   \bottomrule

@@ -23,12 +23,12 @@ between any two beads in a molecule.\n\n");
   fprintf(ptr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
 
   fprintf(ptr, "   <input>                 input filename (vcf or vtf format)\n");
-  fprintf(ptr, "   <width>                 width of a single bin\n");
+  fprintf(ptr, "   <width>                 width of a single distribution bin\n");
   fprintf(ptr, "   <output>                output file with distribution of bond lengths\n");
   fprintf(ptr, "   <mole name(s)>          molecule name(s) to calculate bond lengths for\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -st <int>            starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>             ending timestep for calculation\n");
   fprintf(ptr, "      -d <out> <ints>      write distribution of distances between specified beads in the molecule to file <out>\n");
   fprintf(ptr, "      -w <double>          warn if bond length exceeds <double> (default: half a box length)\n");
   CommonHelp(error);
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
-    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
 
   count = 0; // count mandatory arguments
 
-  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
+  // <input> - filename of input vcf file (must end with .vcf) //{{{
   char input_coor[1024];
   strcpy(input_coor, argv[++count]);
 
@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
     int type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (type == -1) {
-      fprintf(stderr, "Error: molecule type '%s' is not in %s file\n\n", argv[count], input_coor);
+      fprintf(stderr, "\nError: molecule type '%s' is not in %s file\n\n", argv[count], input_coor);
       exit(1);
     }
 
@@ -181,7 +181,7 @@ int main(int argc, char *argv[]) {
 
   // Error: wrong number of integers //{{{
   if (output_d[0] != '\0' && (number_of_beads%2) != 0) {
-    fprintf(stderr, "\nError: '-d' option - number of bead ids must be even\n");
+    fprintf(stderr, "\nError: '-d' option - number of bead ids must be even\n\n");
     exit(1);
   } //}}}
 
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "Error: cannot read a string from '%s' file\n\n", input_coor);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
       exit(1);
     }
   } while (strcmp(str, "pbc") != 0);
@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Error: cannot read pbc from %s\n\n", input_coor);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
     exit(1);
   }
 
@@ -318,7 +318,6 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}

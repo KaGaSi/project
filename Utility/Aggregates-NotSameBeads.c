@@ -24,14 +24,14 @@ types 'A' and 'B' are given, it considers only 'A-B' pairs.\n\n");
   fprintf(ptr, "   %s <input> <distance> <contacts> ", cmd);
   fprintf(ptr, "<output.agg> <bead name(s)> <options>\n\n");
 
-  fprintf(ptr, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <distance>            minimum distance for beads to be considered in contact\n");
   fprintf(ptr, "   <contacts>            minimum number of contacts for aggregate check\n");
   fprintf(ptr, "   <output.agg>          output filename with '.agg' ending\n");
   fprintf(ptr, "   <bead name(s)>        names of bead types for closeness calculation (at least two are required)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
-  fprintf(ptr, "      -xm <mol name(s)>  exclude molecule close to specified molecule(s)\n");
+  fprintf(ptr, "      -xm <mol name(s)>  exclude molecules close to specified molecule(s)\n");
   fprintf(ptr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
   CommonHelp(error);
 } //}}}
@@ -917,7 +917,7 @@ int main(int argc, char *argv[]) {
 
     // are all molecules accounted for? //{{{
     if (test_count != Counts.Molecules) {
-      fprintf(stderr, "Error: not all molecules were assigned to aggregates\n");
+      fprintf(stderr, "\nError: not all molecules were assigned to aggregates\n");
       fprintf(stderr, "       Counts.Molecules = %5d; Molecules in aggregates: %d\n\n", Counts.Molecules, test_count);
       exit(1);
     } //}}}

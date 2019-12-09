@@ -13,13 +13,13 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(ptr, "\
-SelectedVcf creates new <output.vcf> file (and possibly xyz file) from \
-<input> containing only selected bead types. Periodic boundary conditions \
-can be either stripped away or applied (which happens first if both '--join' \
-and '-w' options are used). \
-Also, specified molecules can be excluded. However, AnalysisTools utilities \
-can only read coordinate files containing all beads of any given type, the \
-usefulness is very limited (for, e.g., visualization using vmd).\n\n");
+SelectedVcf creates new <output.vcf> file (and possibly xyz file) from <input> \
+containing only selected bead types. Periodic boundary conditions can be either \
+stripped away or applied (which happens first if both '--join' and '-w' options \
+are used). Also, specified molecules can be excluded. However, AnalysisTools \
+utilities can only read coordinate files containing all beads of any given \
+type, so the usefulness is very limited (for, e.g., visualization using \
+vmd).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -33,8 +33,8 @@ usefulness is very limited (for, e.g., visualization using vmd).\n\n");
   fprintf(ptr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
   fprintf(ptr, "      --join         join molecules (remove pbc)\n");
   fprintf(ptr, "      -w             wrap coordinates (i.e., apply pbc)\n");
-  fprintf(ptr, "      -st <start>    number of timestep to start from\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -st <start>    starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   fprintf(ptr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(ptr, "      -n <int(s)>    save only specified timesteps\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
@@ -73,7 +73,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&

@@ -14,9 +14,13 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-DistrAgg calculates weight and number average aggregation numbers during the \
-simulation run as well as overall weight and number distributions and volume \
-fractions of aggregates.\n\n");
+DistrAgg calculates average aggregation numbers and aggregate masses during \
+the simulation run (i.e., time evolution) as well as overall distributions \
+and volume fractions of aggregates. The definition of aggregate size is quite \
+flexible and only a specified range can be used. Also, this utility can \
+fanalyse composition of specified aggreget size(s) and write compositition \
+distribution (i.e., distribution of numbers of different molecules in over \
+all aggregates with given size).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -27,7 +31,7 @@ fractions of aggregates.\n\n");
   fprintf(ptr, "   <avg file>             output file with per-timestep averages\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -st <int>           starting timestep for calculation (default: 1)\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>            ending timestep for calculation (default: none)\n");
   fprintf(ptr, "      -n <int> <int>      use aggregate sizes in a given range\n");
   fprintf(ptr, "      -m <name(s)>        use number of specified molecule(s) as aggrete size\n");
   fprintf(ptr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
@@ -250,7 +254,6 @@ int main(int argc, char *argv[]) {
       composition[i]+=0;
     }
   } //}}}
-//printf("%d %s\n%d %s\n", types[0][0], MoleculeType[types[0][0]].Name, types[1][0], MoleculeType[types[1][0]].Name);
 
   // '-nc' option must be complemented by '-c' option //{{{
   int *composition_mol_names = calloc(Counts.TypesOfMolecules,sizeof(int *));
@@ -328,7 +331,7 @@ int main(int argc, char *argv[]) {
   // [][0] = volume of mols according to options; [][1] = volume of whole agg
   long double voldistr[Counts.Molecules][2];
   // number distribution of agg composition
-  long int *ndistr_comp[Counts.Molecules];
+  long int *ndistr_comp[Counts.Molecules]; // TODO: should have size of the number of provided sizes
   for (int i = 0; i < Counts.Molecules; i++) {
     ndistr_comp[i] = malloc((multiply*Counts.Molecules)*sizeof(long int));
   }
@@ -536,7 +539,7 @@ int main(int argc, char *argv[]) {
 
       aggs_step++;
 
-      // start calculation of averages from specified 'start' timestep
+      // start calculation of averages and distributions from specified 'start' timestep
       if (count_step >= start && (end == -1 || count_step <= end)) {
 
         // distribution //{{{
@@ -772,7 +775,6 @@ int main(int argc, char *argv[]) {
     fprintf(out, " (%d) <M>_w,", count++);
     fprintf(out, " (%d) <M>_z,", count++);
   }
-//count++;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     fprintf(out, " (%d) <%s>_n", i+count, MoleculeType[i].Name);
     if (i != (Counts.TypesOfMolecules-1) && !only) {
@@ -800,19 +802,12 @@ int main(int argc, char *argv[]) {
     fprintf(out2, " (%d) <M>_w,", count++);
     fprintf(out2, " (%d) <M>_z,", count++);
   }
-//count++;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     fprintf(out2, " (%d) <%s>_n", i+count, MoleculeType[i].Name);
     if (i != (Counts.TypesOfMolecules-1) && !only) {
       putc(',', out2);
     }
   }
-//if (only) {
-//  // distr file
-//  fprintf(out, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+count);
-//  // avg file
-//  fprintf(out2, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+count);
-//}
   putc('\n', out);
   putc('\n', out2); //}}}
 
@@ -873,31 +868,6 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     fprintf(out2, " %lf", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
   }
-
-//if (only) {
-//  int only_molecules_sum = 0;
-//  int only_moltype_number = 0;
-//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//    if (only_specific_moltype_aggregates[i]) {
-//      only_molecules_sum += molecules_sum[0][i];
-//      only_moltype_number += MoleculeType[i].Number;
-//    }
-//  }
-//  // distr file
-//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//    if (only_specific_moltype_aggregates[i]) {
-//      fprintf(out, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
-//    }
-//  }
-//  fprintf(out, " %10.3f", (double)(only_count_chains)/(count_step*only_moltype_number));
-//  // avg file
-//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//    if (only_specific_moltype_aggregates[i]) {
-//      fprintf(out2, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
-//    }
-//  }
-//  fprintf(out2, " %10.3f", (double)(only_count_chains)/(count_step*only_moltype_number));
-//}
 
   putc('\n', out);
   putc('\n', out2); //}}}

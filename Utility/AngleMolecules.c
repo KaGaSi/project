@@ -14,16 +14,15 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-AngleMolecules utility calculates angles \
-for specified beads (three beads per angle) for molecules of specified \
-type(s). The specified beads do not have to be connected by bonds. \
-\n\n");
+AngleMolecules utility calculates angles for specified beads (three beads per \
+angle) for molecules of specified type(s). The specified beads do not have \
+to be connected by bonds.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <input>       input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <width>           width of a single bin in degrees\n");
   fprintf(ptr, "   <output>          output file with distribution of angles\n");
   fprintf(ptr, "   <mol name(s)>     molecule name(s) to calculate angles for\n");
@@ -32,7 +31,7 @@ type(s). The specified beads do not have to be connected by bonds. \
   fprintf(ptr, "      -n <ints>      bead indices (multiple of 3 <ints>) for angle calculation (default: 1 2 3)\n");
   fprintf(ptr, "      -a <name>      write angles of all molecules in all times to <name>\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -64,7 +63,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -163,11 +161,12 @@ int main(int argc, char *argv[]) {
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (mol_type == -1) {
-      fprintf(stderr, "Error: molecule '%s' is not included in %s!\n\n", argv[count], input_coor);
+      fprintf(stderr, "\nError: molecule '%s' is not included in %s\n", argv[count], input_coor);
       fprintf(stderr, "   Present molecule types:\n");
       for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-        fprintf(stderr, "%s\n", MoleculeType[i].Name);
+        fprintf(stderr, "     %s\n", MoleculeType[i].Name);
       }
+      putc('\n', stderr);
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -188,7 +187,7 @@ int main(int argc, char *argv[]) {
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
-    fprintf(stderr, "\nError: '-n' option - number of bead ids must be dividable by three.\n");
+    fprintf(stderr, "\nError: '-n' option - number of bead ids must be dividable by three\n\n");
     exit(1);
   } //}}}
 
@@ -399,7 +398,7 @@ int main(int argc, char *argv[]) {
           if (k < bins) {
             distr[mol_type_i][j/beads_per_angle][k]++;
           } else {
-            fprintf(stdout, "\nWarning - weird angle: %lf degrees\n", angle[i][j/beads_per_angle]);
+            fprintf(stdout, "\nWarning: weird angle: %lf degrees\n", angle[i][j/beads_per_angle]);
           }
         }
       }
