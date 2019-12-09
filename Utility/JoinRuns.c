@@ -33,8 +33,8 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   fprintf(ptr, "      --join         join molecules (remove pbc)\n");
   fprintf(ptr, "      -st1 <int>     starting timestep from 1st run\n");
   fprintf(ptr, "      -st2 <int>     starting timestep from 2nd run\n");
-  fprintf(ptr, "      -e1 <end>      number of timestep to end with on the 1st run\n");
-  fprintf(ptr, "      -e2 <end>      number of timestep to end with on the 2st runh\n");
+  fprintf(ptr, "      -e1 <end>      ending timestep from the 1st run\n");
+  fprintf(ptr, "      -e2 <end>      ending timestep from the 2st runh\n");
   fprintf(ptr, "      -sk1 <int>     leave out every <int> steps from 1st run\n");
   fprintf(ptr, "      -sk2 <int>     leave out every <int> steps from 2st run\n");
   CommonHelp(error);
@@ -71,7 +71,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -373,7 +372,6 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
       exit(1);
     } //}}}
@@ -415,7 +413,6 @@ int main(int argc, char *argv[]) {
 
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
         ErrorCoorRead(input_vcf_1, test, count_vcf, stuff, input_vsf_1);
         exit(1);
       } //}}}
@@ -439,7 +436,7 @@ int main(int argc, char *argv[]) {
 
   // connect Bead2 with Bead1 via Index arrays //{{{
   if (!silent && !script) {
-    fprintf(stdout, "\nWarning: connecting bead indices from the two runs (this may take a long time)\n");
+    fprintf(stdout, "\nWarning: connecting bead indices from the two runs may take a long time\n");
   }
   bool used[Counts.Beads];
   for (int i = 0; i < Counts.Beads; i++) {
@@ -570,7 +567,6 @@ int main(int argc, char *argv[]) {
 
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
         ErrorCoorRead(input_vcf_2, test, count_vcf, stuff, input_vsf_2);
         exit(1);
       } //}}}

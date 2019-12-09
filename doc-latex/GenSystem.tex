@@ -1,25 +1,24 @@
 \section{GenSystem} \label{sec:GenSystem}
 
 \textit{This utility was not extensively tested and is not a good generator
-of initial configuration. It will not be updated.}
+of initial configuration.}
 
 This simple utility uses modified \texttt{FIELD} file to create
 \texttt{vsf} structure file and to generate coordinates that could be used
 as an initial configuration. The utility assumes linear chains (no matter
 the connectivity in the provided \texttt{FIELD} file; it looks at exactly
-the first $n-1$ bonds, where $n$ is the number of beads in a molecule). For
-each molecule type, it uses equilibrium bond length (or 0.7 if a bond
-length is 0) to construct a prototype molecule that is fully stretched in
-$z$-direction.  The utility then creates layers of molecules that are
-separated by layers of unbonded beads (if there are any). The utility
-should fill the whole box with given beads.
+the first $n-1$ bonds to get bond lengths, where $n$ is the number of beads
+in a molecule). For each molecule type, it uses equilibrium bond length (or
+0.7 if the bond length is 0) to construct a prototype molecule that is
+fully stretched in $z$-direction. The utility then creates layers of
+molecules that are separated by layers of unbonded beads (if there are
+any). The utility should fill the whole box with given beads.
 
 The input \texttt{FIELD} file must contain \texttt{species} and
 \texttt{molecule} sections, but the \texttt{interaction} section is ignored
 (see \texttt{DL\_MESO} manual for details on the \texttt{FIELD} file). The
 first line of \texttt{FIELD} that is ignored by \texttt{DL\_MESO} must
-start with box dimensions, i.e., with three numbers (the rest of the file
-is ignored).
+start with box dimensions, i.e., with three numbers.
 
 This utility does not have error checking for the provided \texttt{FIELD}
 file. If the file is not correct, \texttt{GenSystem} will exhibit

@@ -15,8 +15,9 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
     fprintf(stdout, " \
 PairCorrel utility calculates pair correlation function for specified \
-bead types. All pairs of bead types (including same type pairs) are calculated - \
-given A and B types, pcf between A-A, A-B and B-B are calculated.\n\n");
+bead types. All pairs of bead types (including same type pairs) are \
+calculated - given A and B types, pcf between A-A, A-B and B-B are \
+calculated.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -28,8 +29,8 @@ given A and B types, pcf between A-A, A-B and B-B are calculated.\n\n");
   fprintf(ptr, "   <bead type(s)>   bead type name(s) for pcf calculation\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -n <int>      number of bins to average\n");
-  fprintf(ptr, "      -st <int>     starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -st <int>     starting timestep for calculation (default: 1)\n");
+  fprintf(ptr, "      -e <end>      ending timestep for calculation (default: none)\n");
   CommonHelp(error);
 } //}}}
 
@@ -60,7 +61,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -308,7 +308,6 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}

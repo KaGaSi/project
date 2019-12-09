@@ -15,29 +15,28 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-Aggregates utility determines which molecules belong to which aggregate on the \
-basis of given parameters - the minimum distance at which a pair of beads from \
-different molecules is considered in contact and the minimum number of such \
-contacts between two molecules to consider them as belonging to the same \
+Aggregates utility determines which molecules belong to which aggregate on \
+the basis of given parameters - the minimum distance at which a pair of beads \
+from different molecules is considered in contact and the minimum number of \
+such contacts between two molecules to consider them as belonging to the same \
 aggregate. Only distances between specified bead types are considered. \
 Information about aggregates in each timestep is written to '.agg' file (see \
-documentation for the format of this file). \
-Coordinates of joined aggregates can be written to an output '.vcf' file (with \
-indexed timesteps).\n\n");
+documentation for the format of this file). Coordinates of joined aggregates \
+can be written to an output '.vcf' file (with indexed timesteps).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <distance> <contacts> ", cmd);
   fprintf(ptr, "<output.agg> <bead name(s)> <options>\n\n");
 
-  fprintf(ptr, "   <input.vcf>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <input>               input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <distance>            minimum distance for beads to be considered in contact\n");
   fprintf(ptr, "   <contacts>            minimum number of contacts for aggregate check\n");
   fprintf(ptr, "   <output.agg>          output filename with '.agg' ending\n");
   fprintf(ptr, "   <bead name(s)>        names of bead types for closeness calculation\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
-  fprintf(ptr, "      -xm <mol name(s)>  exclude molecule close to specified molecule(s)\n");
+  fprintf(ptr, "      -xm <mol name(s)>  exclude molecules close to specified molecule(s)\n");
   fprintf(ptr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
   CommonHelp(error);
 } //}}}
@@ -922,7 +921,7 @@ int main(int argc, char *argv[]) {
 
     // are all molecules accounted for? //{{{
     if (test_count != Counts.Molecules) {
-      fprintf(stderr, "Error: not all molecules were assigned to aggregates\n");
+      fprintf(stderr, "\nError: not all molecules were assigned to aggregates\n");
       fprintf(stderr, "       Counts.Molecules = %5d; Molecules in aggregates: %d\n\n", Counts.Molecules, test_count);
       exit(1);
     } //}}}

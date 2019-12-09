@@ -16,19 +16,18 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
     fprintf(stdout, "\
 Average uses binning method to analyse data stored in a supplied file. It \
-prints average, statistical error and estimate of integrated \
-autocorrelation time (tau). Empty lines and lines beginning with '#' are \
-skipped. The program prints to standart output 4 values: <n_blocks> \
-<simple average> <statistical error> <estimate of tau>.\n\n");
+prints average, statistical error and estimate of integrated autocorrelation \
+time (tau). Empty lines and lines beginning with '#' are skipped. The program \
+prints to standart output 4 values: <n_blocks> <simple average> <statistical \
+error> <estimate of tau>.\n\n");
     fprintf(stdout, "\
-A way to get \
-tau estimate is to use a wide range of <n_blocks> and then plot \
-<tau> as a function of <n_blocks>. Since the number of data points in a \
-block has to be larger than tau (e.g., ten times larger), plotting \
-<number of data lines>/10/<n_blocks> vs. <n_blocks> will produce an \
-exponential function that will intersect the plotted <tau>. A value of tau \
-near the intersection (but to the left where the exponential is above <tau>) \
-can be considered a safe estimate for tau.\n\n");
+A way to get a reasonable tau estimate is to use a wide range of <n_blocks> \
+and then plot <tau> as a function of <n_blocks>. Since the number of data \
+points in a block has to be larger than tau (e.g., ten times larger), \
+plotting <number of data lines>/10/<n_blocks> vs. <n_blocks> will produce an \
+exponential function that intersects the plotted <tau>. A value of tau near \
+the intersection (but to the left where the exponential is above <tau>) can \
+be considered a safe estimate for tau.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -119,11 +118,6 @@ int main ( int argc, char** argv ) {
     exit(1);
   }
 
-//fprintf(stdout, "input=\"%s\", ", input);
-//fprintf(stdout, "column=%d, ", column);
-//fprintf(stdout, "discard=%d, ", discard);
-//fprintf(stdout, "n_blocks=%d\n", n_blocks);
-
   int test, lines = 0, all_lines = 0;
   while ((test = getc(fr)) != EOF) {
     ungetc(test, fr);
@@ -162,7 +156,7 @@ int main ( int argc, char** argv ) {
 
         // error - insufficient number of columns //{{{
         if (split == NULL) {
-          fprintf(stderr, "Only %d columns in %s on line %d (data line %d)!\n", col, input, all_lines, lines);
+          fprintf(stderr, "\nError: nnly %d columns in %s on line %d (data line %d)\n\n", col, input, all_lines, lines);
           exit(1);
         } //}}}
       } //}}}
@@ -179,7 +173,7 @@ int main ( int argc, char** argv ) {
 
   // error - <discard> is too large //{{{
   if (discard >= lines) {
-    fprintf(stderr, "Error: <discard> parameter is too large (%d) - ", discard);
+    fprintf(stderr, "\nError: <discard> parameter is too large (%d) - ", discard);
     fprintf(stderr, "there are only %d data lines in %s\n\n", lines, input);
     Help(argv[0], true);
     exit(1);

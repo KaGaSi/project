@@ -1,32 +1,30 @@
 \section{AddToSystem} \label{sec:AddToSystem}
 
 This utility takes an existing system specified by \texttt{vcf} coordinate
-and \texttt{vsf} structure files and adds new beads into it. The new beads
-replace neutral unbonded ones with the lowest indices (as ordered in the
-\texttt{vsf} file) from the original system. If molecules are added,
-\texttt{AddToSystem} places them at the end (for the sake of
-\texttt{DL\_MESO} which requires molecules to be after unbonded beads).
+and \texttt{vsf} structure files and adds new beads into it placing them
+either randomly or using provided coordinates.
 
-The utility generates \texttt{vcf} and \texttt{vsf} files for the new
-system.
-
-If there aren't enough neutral unbonded beads in the original system to be
-replaced, \texttt{AddToSystem} exits with an error.
+The new beads replace either neutral unbonded ones with the lowest indices
+(as ordered in the \texttt{vsf} file) from the original system or
+option-specified unbonded beads. Right now, molecular beads cannot be
+exchanged. If molecules are added, \texttt{AddToSystem} places them at the
+end (for the sake of \texttt{DL\_MESO} which requires molecules to be after
+unbonded beads). If there are not enough of the beads in the original system
+replace, \texttt{AddToSystem} exits with an error.
 
 The utility has two modes: by default, it reads what is to be added from a
 \texttt{FIELD}-like file (see below) and places the new beads and molecules
 randomly; if, however, \texttt{-vtf} option is used, the utility reads
-provided \texttt{vtf} file(s) and keeps the coordinates from the coordinate
-file.
+provided \texttt{vsf} and \texttt{vcf} files and uses these coordinates.
 
 If the new beads and molecules are added randomly, their coordinates are
-either completely randomly within the simulation box or ruled by
-constraining options; either the first bead (default behaviour) or the
-geometric centre (\texttt{-gc} option) of the new molecules obey these
-options. The coordinates of the remaining beads in a molecule are governed
-by the coordinates provided in the \texttt{FIELD}-like file. Therefore, not
-all the molecular beads necessarily obey the constraining rules. Molecules
-are added with a random orientation.
+either completely random within the simulation box or ruled by constraining
+options; either the first bead (default behaviour) or the geometric centre
+(\texttt{-gc} option) of the new molecules obey these options. The
+coordinates of the remaining beads in a molecule are governed by the
+coordinates in the \texttt{FIELD}-like file. Therefore, not all the
+molecular beads necessarily obey the constraining rules. Molecules are
+added with a random orientation.
 
 There are two types of constraining options (that can be combined): place
 new beads either specified distance from other beads or in a specified
@@ -36,8 +34,9 @@ option.  Then, the new beads are placed at least \texttt{-ld <float>} and
 at most \texttt{-hd <float>} distance from beads specified by the
 \texttt{-bt} option. The second case uses options \texttt{-cx},
 \texttt{-cy}, and \texttt{-cz} that basically change the box size for the
-added beads. All these options can be combined, but note that
-\texttt{AddToSystem} doesn't perform any sanity checks, that is, if any
+added beads; for example, \texttt{-cx 5 9} would generate x coordinates
+only in the interval $\langle5,9)$. All these options can be combined, but note that
+\texttt{AddToSystem} does not perform any sanity checks, that is, if any
 combination of the provided options is impossible to achieve, the utility
 will run forever.
 
@@ -53,13 +52,13 @@ properties:
   <name>  <mass> <charge> <number of unbonded beads>
 \end{verbatim}
 The first line must start with \texttt{species} keyword followed by the
-number of bead types. For each bead type a single line must contain the name of
-the bead, its mass and charge, and a number of these beads that are not
-in a molecule (i.e., monomeric beads).
+number of bead types. For each bead type, a single line must contain the
+name of the bead, its mass and charge, and a number of these beads that are
+not in a molecule (i.e., monomeric or unbonded beads).
 
-The \texttt{molecule} section that must be behind the \texttt{species}
-section contains information about structure and numbers of molecules to be
-added:
+The \texttt{molecule} section, which must be behind the \texttt{species}
+section, contains information about structure and numbers of molecules to
+be added:
 
 \noindent
 \begin{longtable}{ll}
@@ -73,7 +72,7 @@ added:
   \texttt{bonds <int>} & Number of bonds in these molecules \\
   \texttt{<string> <int> <int>} & One line for each of the \texttt{<int>} bonds \\
   \texttt{...} & \ \ \ \ containing arbitrary string and \\
-  \texttt{<string> <int> <int>} & \ \ \ \ indices connected beads \\
+  \texttt{<string> <int> <int>} & \ \ \ \ indices of connected beads \\
   \texttt{...} & Anything beyond here is ignored \\
   \texttt{finish} & Description of a molecule is finished \\
 \end{longtable}
@@ -87,7 +86,7 @@ package, where the \texttt{<string>} specifies a type of bond). The indices
 in \texttt{bond} lines run from 1 to the number of beads in the molecules and are
 ordered according to the \texttt{beads} part of the section. Because
 \texttt{molecule} section in the \texttt{FIELD} file from \texttt{DL\_MESO}
-can also include bond angles and dihedral angles, anything beyond the last
+can also include bond and dihedral angles, anything beyond the last
 bond line is ignored (until the \texttt{finish} keyword is read).
 
 If no molecules are to be added, the line \texttt{molecule 0} must be still
@@ -133,8 +132,8 @@ beads are added -- 30 \texttt{CI}, 30 \texttt{A}, and 20 \texttt{B} beads.
 If \texttt{-vtf} option is used, provided \texttt{vsf} and \texttt{vcf}
 files are read instead of a \texttt{FIELD}-like file. \texttt{AddToSystem}
 incorporates the beads and molecules from these files, using the provided
-coordinates instead of generating new ones. Therefore options \texttt{-ld},
-\texttt{-hd}, and \texttt{-bt} also have no effect.
+coordinates instead of generating new ones. Therefore, above-described
+constraining options have no effect.
 
 The \texttt{-vtf} option has priority over default behaviour, that is, if
 it is present, the utility ignores any \texttt{FIELD}-like file (either
@@ -155,7 +154,7 @@ Usage:
   \toprule
   \multicolumn{2}{l}{Mandatory arguments} \\
   \midrule
-  \texttt{<input>} & input coordinate file (either \texttt{vcf} or
+  \texttt{<input.vcf>} & input coordinate file (either \texttt{vcf} or
     \texttt{vtf} format) \\
   \texttt{<out.vsf>} & output \texttt{vsf} structure file for the new system \\
   \texttt{<out.vcf>} & output \texttt{vcf} coordinate file for the new
@@ -166,8 +165,9 @@ Usage:
   \texttt{-f <name>} & \texttt{FIELD}-like file specifying additions to the
     system (default: \texttt{FIELD}) \\
   \texttt{-vtf <vsf> <vcf>} & add ready-made system from \texttt{vtf} files
-    instead of randomly placing beads read from \texttt{FIELD}-like file \\
-  \texttt{-st <int>} & timestep to add new beads to (default: 1) \\
+    instead of randomly placing beads read from the \texttt{FIELD}-like file \\
+  \texttt{-st <int>} & \texttt{<input.vcf>} timestep to add new beads
+    to (default: 1) \\
   \texttt{-xyz <name>} & also save coordinates to \texttt{xyz} file \\
   \texttt{-ld <float>} & lowest distance from beads specified by
     \texttt{-bt} option \\

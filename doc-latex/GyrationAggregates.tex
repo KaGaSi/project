@@ -2,7 +2,7 @@
 
 This utility calculates the gyration tensor and its eigenvalues (or the
 roots of the tensor's characteristic polynomial) for all aggregates. Using
-the eigenvalues, the utility determines shape descriptors:
+these eigenvalues, the utility determines shape descriptors:
 radius of gyration, asphericity, acylindricity, and relative shape
 anisotropy.
 
@@ -23,8 +23,8 @@ respectively, as
   \mbox{ \ \ and \ \ }
   c = \lambda_y^2 - \lambda_x^2.
 \end{equation}
-The relative shape anisotropy is defined in terms of the other descriptors
-as
+The relative shape anisotropy, $\kappa$, is defined in terms of the other
+descriptors as
 \begin{equation} \label{eq:anis}
   \kappa^2 = \frac{b^2 + 0.75 c^2}{R_{\mathrm{G}}^4}
 \end{equation}
@@ -71,8 +71,8 @@ Usage:
     have to be removed) \\
   \texttt{-bt <bead name(s)>} & bead type(s) used for calculation \\
   \texttt{-ps <name>} & output file with per-size averages \\
-  \texttt{-m <mol name(s)>} & instead of `true' aggregate size, use the number
-    of specified molecule type(s) in an aggregate \\
+  \texttt{-m <mol name(s)>} & instead of \enquote{true} aggregate size, use
+    the number of specified molecule type(s) in an aggregate \\
   \texttt{-x <mol name(s)>} & exclude aggregates containing only specified
     molecule type(s) \\
   \texttt{-n <int> <int>} & use only aggregate sizes in given range \\
@@ -90,7 +90,7 @@ Usage:
           \item first is timestep
           \item rest are for calculated data: number, weight, and z
             averages (denoted by \texttt{\_n}, \texttt{\_w}, and
-            \texttt{\_z} respectively) of radius of gyration and square of
+            \texttt{\_z}, respectively) of radius of gyration and square of
             radius of gyration (\texttt{Rg} and \texttt{Rg\^{}2},
             respectively -- Equation~\eqref{eq:R_G}); number averages of
             relative shape anisotropy (\texttt{Anis} --

@@ -13,6 +13,14 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stderr;
   } else {
     ptr = stdout;
+    fprintf(ptr, "\
+PotentialAggregates calculates electrostatic potential for aggregates of \
+specified size from their centre of mass. It uses Coulomb potential beyond \
+short-ranged cut-off and a potential for exponentially smeared charged \
+clouds for shorter distances. Parameters for the potential are hard-coded \
+in the source code for now. The utility takes into account periodic images \
+of the simulation box. Note that the calculation is extremely slow, \
+because the utility does not use any Ewald sum-based method.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -58,7 +66,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -296,11 +303,9 @@ int main(int argc, char *argv[]) {
   double max_dist = (0.5 + images) * Min3(BoxLength.x, BoxLength.y, BoxLength.z);
 
   // allocate memory for density arrays //{{{
-//double **elstat = malloc(aggs*sizeof(double *));
   double **elstat_potential = malloc(aggs*sizeof(double *));
   double **elstat_potential_sqr = malloc(aggs*sizeof(double *));
   for (int i = 0; i < aggs; i++) {
-//  elstat[i] = calloc(bins,sizeof(double));
     elstat_potential[i] = calloc(bins,sizeof(double));
     elstat_potential_sqr[i] = calloc(bins,sizeof(double));
   } //}}}
@@ -409,7 +414,6 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
@@ -444,8 +448,6 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       if (correct_size != -1) {
-//      printf("\nAggregate[%d]\n", i);
-
         // zeroize temporary array //{{{
         for (int j = 0; j < bins; j++) {
           temp_elstat[j] = 0;
@@ -490,6 +492,10 @@ int main(int argc, char *argv[]) {
                 point.z = r * cos(angle1);
                 N_count++;
 
+                // TODO: the calculation goes over all beads; how much quicker
+                // would it be, if an array of only charged beads was used? Not
+                // much, as the slow part is the calculation itself? Then
+                // again, this loop is inside other loops.
                 for (int l = 0; l < Counts.Beads; l++) {
                   if (BeadType[Bead[l].Type].Charge != 0) {
                     Vector dist;

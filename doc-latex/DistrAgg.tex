@@ -28,7 +28,7 @@ averages are appended as comments (with commented legend) to both
 
 Number, weight, and z distribution functions of aggregate sizes,
 $F_{\text{n}}(A_{\text{S}})$, $F_{\text{w}}(A_{\text{S}})$, and
-$F_{\text{z}}(A_{\text{S}})$ respectively, are defined as
+$F_{\text{z}}(A_{\text{S}})$, respectively, are defined as
 \begin{equation} \label{eq:Fnwz}
   \arraycolsep=1.4pt\def\arraystretch{2.5}
   \begin{array}{>{\displaystyle}rc>{\displaystyle}l}
@@ -83,14 +83,13 @@ composition calculation.
 
 The \texttt{-nc} option has no effect if used without the \texttt{-c}.
 
-The starting step (\texttt{-st} option) and the ending step (\texttt{-e}
-option) is taken into account only for overall averages. The \texttt{<avg
-file>} contains averages for all timesteps regardless of \texttt{-st} and
-\texttt{-e} options.
+The \texttt{<avg file>} contains averages for all timesteps regardless of
+\texttt{-st} and \texttt{-e} options; that is, the starting step
+(\texttt{-st} option) and ending step (\texttt{-e} option) are ignored.
 
 The definition of aggregate size is flexible. If none of \texttt{-m},
 \texttt{-x}, or \texttt{--only} options is used, aggregate size is the
-\say{true} aggregation number, $A_{\text{S}}$, i.e., the number of all
+\enquote{true} aggregation number, $A_{\text{S}}$, i.e., the number of all
 molecules in the aggregate; if \texttt{-m} is used, aggregate size is the
 sum of only specified molecule type(s); if \texttt{-x} is used, aggregates
 containing only specified molecule type(s) are disregarded; if
@@ -168,8 +167,8 @@ Usage:
   \toprule
   \multicolumn{2}{l}{Non-standard options} \\
   \midrule
-  \texttt{-st <int>} & starting timestep for calculation of averages (default: 1) \\
-  \texttt{-e <int>} & ending timestep for calculation of averages (default: none) \\
+  \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-e <int>} & ending timestep for calculation (default: none) \\
   \texttt{-n <int> <int>} & use aggregate sizes in a given range \\
   \texttt{-m <mol name(s)>} & use number of specified molecule(s) as
     aggregate size \\
@@ -238,7 +237,7 @@ Format of output files:
         \item in the data, only ratios that are non-zero for at least one
           aggregate size are written; in case of more than one aggregate
           size specified by \texttt{-a} option, if the ratio does not exist
-          for some aggregate size(s), `?' is displayed instead of zero
+          for some aggregate size(s), \enquote{?} is displayed instead of zero
       \end{itemize}
   \end{itemize}
 \end{enumerate}

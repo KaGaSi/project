@@ -14,10 +14,11 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-GyrationMolecules calculates the gyration tensor for molecules and determines \
-shape descriptors like the radius of gyration, acylindricity, asphericity, or \
-relative shape anisotropy. It writes per-timestep averages to the output file \
-and appends overall averages to that file.\n\n");
+GyrationMolecules calculates the gyration tensor for molecules and \
+determines their shape descriptors like the radius of gyration, \
+acylindricity, asphericity, or relative shape anisotropy. It writes \
+per-timestep averages to the output file and appends overall averages to \
+that file.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -30,7 +31,7 @@ and appends overall averages to that file.\n\n");
   fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
   fprintf(ptr, "      -bt            specify bead types to be used for calculation (default is all)\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -61,7 +62,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
-    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -272,7 +272,6 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
       exit(1);
     } //}}}

@@ -8,19 +8,16 @@ mass.
 RDP$_i(r)$ of bead type $i$, where $r$ is distance from an aggregate's
 centre of mass, is the number of these beads in a spherical shell between
 the distances $r$ and $r+\mathrm{d}r$ (in \texttt{DensityAggregates},
-$\mathrm{d}r$ is the \texttt{<width>} argument) divided by the
-volume of this shell.
+$\mathrm{d}r$ is the \texttt{<width>} argument) divided by the volume of
+this shell. The utility also prints radial number profile (RNP$_i(r)$), or
+the number of beads in each shell without dividing it by its volume. In
+addition, it prints one-$\sigma$ error for both RDP and RNP.
 
 Composition of an aggregate with given size (i.e., average numbers of
 different types of molecules in that aggregate) is appended to the output
 file.
-%The distance written in the output file is always $r+0.5\mathrm{d}r$.
-%Besides RDP, the output file also contains radial number profiles (i.e.,
-%the number of beads in the spherical shell not divided by the shell's
-%volume) and one-sigma errors for both RDP and radial number profiles. The
-%output file also contains a header describing what is in each column.
 
-Instead of `true' aggregate size, a number of molecules of specific type(s)
+Instead of \enquote{true} aggregate size, a number of molecules of specific type(s)
 can be used (\texttt{-m} option). For example, an aggregate containg 1
 \texttt{Mol\_A} molecule and 2 \texttt{Mol\_B} molecules (i.e., three
 molecules in all) can be specified in several ways:
@@ -69,7 +66,7 @@ size(s)> <options>}
   \texttt{<input>} & input coordinate file (either \texttt{vcf} or
     \texttt{vtf} format) \\
   \texttt{<input.agg>} & input \texttt{.agg} file \\
-  \texttt{<width>} & width of each bin of the distribution \\
+  \texttt{<width>} & width of a single distribution bin \\
   \texttt{<output>} & output file(s) (one per aggregate size) with
     automatic \texttt{\#.rho} ending (\texttt{\#} is aggregate size) \\
   \texttt{<agg size(s)>} & aggregate size(s) (the number of molecules in an
