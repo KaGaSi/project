@@ -212,7 +212,7 @@ rules:
 \begin{itemize}[topsep=0pt,itemsep=0pt]
   \item each timestep starts with \texttt{Step: <int>} (only \texttt{Step}
     keyword is read by the utilities)
-  \item the second line contains the number of aggregates in the given
+  \item the second line is the number of aggregates in the given
     timestep and is followed by a blank line
   \item there are two lines for each aggregate:
   \begin{enumerate}[topsep=0pt,itemsep=0pt]
@@ -254,7 +254,7 @@ Following is an example of an \texttt{agg} file:
 
    Last Step: 2
 
-   Step: 3 is ignored as is anything below
+   anything from here on is ignored
 \end{verbatim}
 
 In this example, command \texttt{Aggregates in.vcf 1 1 out.agg A} was used
@@ -267,7 +267,7 @@ indices 1, 2, and 3 (taken from the \texttt{vsf} file) and four monomeric
 beads (i.e., solvent or counterions) with indices 10, 20, 100, and 2000
 (again, taken from the \texttt{vsf} file).
 
-Besides using this file for further analysis using other utilities, the
+Besides using this file for further analysis by other utilities, the
 indices can be used in vmd to visualize, e.g., only a specific aggregate by
 using \texttt{resid 1 2 3} in the \texttt{Selected Atoms} box in vmd.
  %}}}
