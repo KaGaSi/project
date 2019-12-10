@@ -1206,6 +1206,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   // allocate Bead[].Aggregate array //{{{
   for (int i = 0; i < (*Counts).Beads; i++) {
     (*Bead)[i].Aggregate = calloc(1, sizeof(int));
+    (*Bead)[i].Aggregate[0] = -1;
+  } //}}}
+
+  // fill Molecule[].Aggregate //{{{
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    (*Molecule)[i].Aggregate = -1;
   } //}}}
 
   // set all molecule & bead types to be unused //{{{
@@ -1506,9 +1512,12 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
       // read molecules in Aggregate 'i' //{{{
       fscanf(agg_file, "%d :", &(*Aggregate)[i].nMolecules);
       for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
-        fscanf(agg_file, "%d", &(*Aggregate)[i].Molecule[j]);
+        int mol;
+        fscanf(agg_file, "%d", &mol);
+        mol--; // in agg file the numbers correspond to vmd
 
-        (*Aggregate)[i].Molecule[j]--; // in agg file the numbers correspond to vmd
+        (*Aggregate)[i].Molecule[j] = mol;
+        (*Molecule)[mol].Aggregate = i;
       }
 
       while (getc(agg_file) != '\n')
