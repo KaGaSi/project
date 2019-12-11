@@ -20,13 +20,12 @@ lmp_vsf takes lammps data file and transforms it into vcf and vsf files. \n\n");
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <out.vsf> <out.vcf> <options>\n\n", cmd);
 
-//fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
-//fprintf(ptr, "   <out.data>        output lammps data file\n");
-//fprintf(ptr, "   <options>\n");
-//fprintf(ptr, "      -f <name>      FIELD file (default: FIELD)\n");
-//fprintf(ptr, "      --srp          add one more bead type for srp");
-//fprintf(ptr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
-//CommonHelp(error);
+  fprintf(ptr, "   <input>           input lammps data file\n");
+  fprintf(ptr, "   <out.vsf>         output vsf structure file\n");
+  fprintf(ptr, "   <out.vsf>         output vcf coordinate file\n");
+  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -v             verbose output\n");
+  fprintf(ptr, "      -h             print this help and exit\n");
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -52,23 +51,20 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-//// test if options are given correctly //{{{
-//for (int i = 1; i < argc; i++) {
-//  if (argv[i][0] == '-' &&
-//      strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-v") != 0 &&
-//      strcmp(argv[i], "-s") != 0 &&
-//      strcmp(argv[i], "-h") != 0 &&
-//      strcmp(argv[i], "--script") != 0 &&
-//      strcmp(argv[i], "--srp") != 0 &&
-//      strcmp(argv[i], "-f") != 0 &&
-//      strcmp(argv[i], "-st") != 0) {
+  // test if options are given correctly //{{{
+  for (int i = 1; i < argc; i++) {
+    if (argv[i][0] == '-' &&
+        strcmp(argv[i], "-v") != 0 &&
+        strcmp(argv[i], "-h") != 0) {
 
-//    ErrorOption(argv[i]);
-//    Help(argv[0], true);
-//    exit(1);
-//  }
-//} //}}}
+      ErrorOption(argv[i]);
+      Help(argv[0], true);
+      exit(1);
+    }
+  } //}}}
+
+  // verbose output (-v option)
+  bool verbose = BoolOption(argc, argv, "-v");
 
   // print command to stdout //{{{
   bool silent = false;
@@ -117,7 +113,6 @@ int main(int argc, char *argv[]) {
   Vector box_lo; // {x,y,z}lo from data file to place beads in (0, BoxLength>
   ZeroCounts(&Counts);
   int bonds = 0; // total number of bonds
-//int bond_types = 0; // number of bond types
   int angles = 0; // total number of angles //}}}
 
   // open <input> //{{{
@@ -186,10 +181,6 @@ int main(int argc, char *argv[]) {
           (i+1) < count && strcmp(split[i+1], "types") == 0) {
         Counts.TypesOfBeads = atoi(split[0]);
       }
-//    if (strcmp(split[i], "bond") == 0 &&
-//        (i+1) < count && strcmp(split[i+1], "types") == 0) {
-//      bond_types = atoi(split[0]);
-//    }
       if (strcmp(split[i], "xlo") == 0 &&
           (i+1) < count && strcmp(split[i+1], "xhi") == 0) {
         BoxLength.x = atof(split[1]) - atof(split[0]);
@@ -242,6 +233,13 @@ int main(int argc, char *argv[]) {
   Bead *Bead = calloc(Counts.Beads, sizeof(struct Bead));
   for (int i = 0; i < Counts.Beads; i++) {
     Bead[i].Aggregate = calloc(1, sizeof(int));
+  } //}}}
+
+  // allocate 2D array for all bonds //{{{
+  int **all_bonds = calloc(bonds, sizeof(int *));
+  for (int i = 0; i < bonds; i++) {
+    // [0] & [1] ... bonded beads; [2] molecule the bond belongs to
+    all_bonds[i] = calloc(3, sizeof(int));
   } //}}}
 
   // read body of data file //{{{
@@ -503,10 +501,12 @@ int main(int argc, char *argv[]) {
       } //}}}
     } //}}}
 
-    // bonds //{{{
+    // bonds section //{{{
     if (strcmp(split[0], "Bonds") == 0) {
       // skip one line (mandatory in lammps data format)
       fgets(line, sizeof(line), fr);
+
+      // read all bonds into all_bonds array //{{{
       for (int i = 0; i < bonds; i++) {
         fgets(line, sizeof(line), fr);
         // trim whitespace in line //{{{
@@ -536,7 +536,30 @@ int main(int argc, char *argv[]) {
         while (split[count] != NULL && count < 29 && split[count][0] != '#') {
           split[++count] = strtok(NULL, " \t");
         } //}}}
+
+        all_bonds[i][0] = atoi(split[2]) - 1; // in lammps, atom ids start at 1
+        all_bonds[i][1] = atoi(split[3]) - 1;
+        // error when the two atoms are in different molecules //{{{
+        if (Bead[all_bonds[i][0]].Molecule != Bead[all_bonds[i][1]].Molecule) {
+          fprintf(stderr, "\nError in bond #%d in %s: ", atoi(split[0]), input);
+          fprintf(stderr, "atoms %d and %d are in different molecules ", all_bonds[i][0], all_bonds[i][1]);
+          fprintf(stderr, "(%d and %d)\n\n", Bead[all_bonds[i][0]].Molecule, Bead[all_bonds[i][1]].Molecule);
+          exit(1);
+        } //}}}
+
+        // assign molecule to the bond
+        all_bonds[i][2] = Bead[all_bonds[i][0]].Molecule;
+      } //}}}
+
+      // go through all the bonds and get number of bonds for each molecule
+      int *mol_bonds = calloc(bonds, sizeof(int));
+      for (int i = 0; i < bonds; i++) {
+        mol_bonds[all_bonds[i][2]]++;
       }
+
+      // minimize bead ids for bonds in each molecule
+      // ... over Counts.Molecules; find lowest bead id and minus it from all beads in the molecule
+      free(mol_bonds);
     } //}}}
 
     // ignore angles //{{{
@@ -601,28 +624,9 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // print information - verbose output //{{{
-  bool verbose = true;
   if (verbose) {
     fprintf(stdout, "Box = (%lf, %lf, %lf)\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
     VerboseOutput("\0", Counts, BeadType, Bead, MoleculeType, Molecule);
-    fprintf(stdout, "\nMolecular prototypes:\n");
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      fprintf(stdout, "   %s\n", MoleculeType[i].Name);
-      for (int j = 0; j < Counts.Molecules; j++) {
-        if (Molecule[j].Type == i) {
-          int id0 = Molecule[j].Bead[0];
-          fprintf(stdout, "     0.000000 0.000000 0.000000\n");
-          for (int k = 1; k < MoleculeType[i].nBeads; k++) {
-            int id = Molecule[j].Bead[k];
-            fprintf(stdout, "     %lf %lf %lf\n", Bead[id].Position.x-Bead[id0].Position.x,
-                                                  Bead[id].Position.y-Bead[id0].Position.y,
-                                                  Bead[id].Position.z-Bead[id0].Position.z);
-          }
-          putchar('\n');
-          break;
-        }
-      }
-    }
   } //}}}
 
   // write out.vcf file //{{{
@@ -651,6 +655,10 @@ int main(int argc, char *argv[]) {
   WriteVsf(output_vsf, Counts, BeadType, Bead, MoleculeType, Molecule);
 
   // free memory (to make valgrind happy) //{{{
+  for (int i = 0; i < bonds; i++) {
+    free(all_bonds[i]);
+  }
+  free(all_bonds);
   free(BeadType);
   FreeBead(Counts, &Bead);
   FreeMoleculeType(Counts, &MoleculeType);
