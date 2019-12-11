@@ -30,6 +30,7 @@ density for all bead types in the direction of specified axis (x, y, or z).\
   fprintf(ptr, "      -n <int>       number of bins to average\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
   CommonHelp(error);
 } //}}}
 
@@ -60,14 +61,14 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
-        strcmp(argv[i], "-st") != 0) {
+        strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-x") != 0) {
 
       ErrorOption(argv[i]);
       Help(argv[0], true);
@@ -156,6 +157,11 @@ int main(int argc, char *argv[]) {
 
   // vsf file is not needed anymore
   free(input_vsf);
+
+  // '-x' option //{{{
+  if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
+    exit(1);
+  } //}}}
 
   // <axis> - x, y, or z //{{{
   char axis = 'x';
@@ -356,15 +362,23 @@ int main(int argc, char *argv[]) {
 
     // calculate densities //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-      if (axis == 'x') {
-        int j = Bead[i].Position.x / width;
-        temp_rho[Bead[i].Type][j]++;
-      } else if (axis == 'y') {
-        int j = Bead[i].Position.y / width;
-        temp_rho[Bead[i].Type][j]++;
-      } else {
-        int j = Bead[i].Position.z / width;
-        temp_rho[Bead[i].Type][j]++;
+      bool use = true;
+      int mol = Bead[i].Molecule;
+      if (mol != -1) {
+        int mtype = Molecule[mol].Type;
+        use = MoleculeType[mtype].Use;
+      }
+      if (use) {
+        if (axis == 'x') {
+          int j = Bead[i].Position.x / width;
+          temp_rho[Bead[i].Type][j]++;
+        } else if (axis == 'y') {
+          int j = Bead[i].Position.y / width;
+          temp_rho[Bead[i].Type][j]++;
+        } else {
+          int j = Bead[i].Position.z / width;
+          temp_rho[Bead[i].Type][j]++;
+        }
       }
     } //}}}
 
