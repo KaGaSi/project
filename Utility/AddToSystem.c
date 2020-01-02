@@ -141,7 +141,9 @@ int main(int argc, char *argv[]) {
       for (int i = 1; i < argc; i++) { // if *.vsf file, read next file
         if (strcmp(argv[i], "-vtf") == 0) {
           if (argc >= (i+3)) { // is there another cli argument behind '.vsf' file?
-            strcpy(argv[i+1], argv[i+2]);
+            char temp[1024];
+            strcpy(temp, argv[i+1]); // save vsf filename
+            strcpy(argv[i+1], argv[i+2]); // copy vcf filename to vsf - required by FileOption()
             ext = 1;
             strcpy(extension[0], ".vcf");
             if (FileOption(argc, argv, "-vtf", &add_vcf)) {
@@ -152,6 +154,7 @@ int main(int argc, char *argv[]) {
               Help(argv[0], true);
               exit(1);
             }
+            strcpy(argv[i+1], temp); // restore vsf filename
             break;
           } else { // there's no more cli arguments
             fprintf(stderr, "\nError: option -vtf is missing second filename!\n");
