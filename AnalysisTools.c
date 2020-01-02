@@ -180,7 +180,7 @@ void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *Molecule
  * Function printing Bead structure useful for debugging.
  */
 void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
-  fprintf(stdout, "Beads\n");
+  fprintf(stdout, "Beads - <i> (<Bead[i].Index>; <Index[i]>)\n");
   for (int i = 0; i < Counts.Beads; i++) {
     int type = Bead[i].Type;
     fprintf(stdout, "   %6d (%6d; %6d) %8s molecule: ", i, Bead[i].Index, Index[i], BeadType[type].Name);
