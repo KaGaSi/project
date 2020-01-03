@@ -644,26 +644,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   }
   free(beads); //}}}
 
-//// bubble sort the bead arrays - useless as the beads must be in ascending order in vsf //{{{
-//for (int i = 0; i < (*Counts).Molecules; i++) {
-//  // go through all besds in the molecule
-//  int type = (*Molecule)[i].Type;
-//  for (int j = 0; j < ((*MoleculeType)[type].nBeads-1); j++) {
-//    int swap = -1;
-//    for (int k = 0; k < ((*MoleculeType)[type].nBeads-j-1); k++) {
-//      if ((*Molecule)[i].Bead[k] > (*Molecule)[i].Bead[k+1]) {
-//        swap = (*Molecule)[i].Bead[k];
-//        (*Molecule)[i].Bead[k] = (*Molecule)[i].Bead[k+1];
-//        (*Molecule)[i].Bead[k+1] = swap;
-//      }
-//    }
-
-//    // if no swap was made, the array is sorted
-//    if (swap == -1)
-//      break;
-//  }
-//} //}}}
-
   // fifth, go again through the bonds and assign ids of bonded beads //{{{
   // initialize helper arrays //{{{
   int *count_bonds;
@@ -711,26 +691,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   free(count_bonds);
   fclose(vsf); //}}}
 
-  // bubble sort the Bond arrays //{{{
+  // sort the Bond arrays //{{{
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-    // go through all bonds in molecule type 'i'
-    for (int j = 0; j < ((*MoleculeType)[i].nBonds-1); j++) {
-      bool swap = false;
-      for (int k = 0; k < ((*MoleculeType)[i].nBonds-j-1); k++) {
-        if ((*MoleculeType)[i].Bond[k][0] > (*MoleculeType)[i].Bond[k+1][0] || // swap bonds if the first beads are in wrong order
-            ((*MoleculeType)[i].Bond[k][0] == (*MoleculeType)[i].Bond[k+1][0] && // or if they're the same, but second ones are in wrong order
-             (*MoleculeType)[i].Bond[k][1] > (*MoleculeType)[i].Bond[k+1][1])) {
-
-          Swap(&(*MoleculeType)[i].Bond[k][0], &(*MoleculeType)[i].Bond[k+1][0]);
-          Swap(&(*MoleculeType)[i].Bond[k][1], &(*MoleculeType)[i].Bond[k+1][1]);
-          swap = true;
-        }
-      }
-      // if no swap was made, the array is sorted
-      if (!swap) {
-        break;
-      }
-    }
+    SortBonds((*MoleculeType)[i].Bond, (*MoleculeType)[i].nBonds);
   } //}}}
 
   // fill BTypes array //{{{
@@ -2351,6 +2314,95 @@ void SwapBool(bool *a, bool *b) {
   *b = swap;
 }
 // }}}
+
+// SortArray() //{{{
+/**
+ * Sort an array using the bubble sort algorithm. If mode = 0, sort
+ * ascendingly; if mode = 1, sort descendingly.
+ */
+void SortArray(int **array, int length, int mode) {
+  if (mode != 0 && mode != 1) {
+    fprintf(stderr, "\nError - SortArray(): use 0 or 1 for sorting mode\n");
+    exit(1);
+  }
+  for (int i = 0 ; i < (length-1); i++) {
+    bool done = true;
+    for (int j = 0 ; j < (length-i-1); j++) {
+      if (mode == 0 && (*array)[j] > (*array)[j+1]) {
+        Swap(&(*array)[j], &(*array)[j+1]);
+        done = false;
+      }
+      if (mode == 1 && (*array)[j] < (*array)[j+1]) {
+        Swap(&(*array)[j], &(*array)[j+1]);
+        done = false;
+      }
+    }
+    if (done)
+      break;
+  }
+} //}}}
+
+// SortAggStruct() //{{{
+/**
+ * Sort an Aggregate struct using the bubble sort algorithm. The resulting
+ * struct is arranged so that aggregates with the first molecule's lower id
+ * come first.
+ */
+void SortAggStruct(Aggregate **Aggregate, Counts Counts) {
+  for (int i = 0; i < (Counts.Aggregates-1); i++) {
+    bool done = true;
+    for (int j = 0; j < (Counts.Aggregates-i-1); j++) {
+      if ((*Aggregate)[j].Molecule[0] > (*Aggregate)[j+1].Molecule[0]) {
+        Swap(&(*Aggregate)[j].nMolecules, &(*Aggregate)[j+1].nMolecules);
+        // switch the whole Aggregate[].Molecule array
+        int mols; // number of molecules in the larger aggregate
+        if ((*Aggregate)[j].nMolecules > (*Aggregate)[j+1].nMolecules) {
+          mols = (*Aggregate)[j].nMolecules;
+        } else {
+          mols = (*Aggregate)[j+1].nMolecules;
+        }
+        for (int k = 0; k < mols; k++) {
+          Swap(&(*Aggregate)[j].Molecule[k], &(*Aggregate)[j+1].Molecule[k]);
+        }
+        done = false;
+      }
+    }
+    if (done)
+      break;
+  }
+} //}}}
+
+// SortBonds() //{{{
+/**
+ * Function to sort a bond array. As each bond contains a 2-member array, first
+ * check that first bead id is lower than the second. Then sort the bonds
+ * according to the index of the first bead in each bond.
+ */
+void SortBonds(int **bond, int length) {
+  // first, check order in every bond
+  for (int j = 0; j < length; j++) {
+    if (bond[j][0] > bond[j][1]) {
+      Swap(&bond[j][0], &bond[j][1]);
+    }
+  }
+  // second, bubble sort bonds
+  for (int j = 0; j < (length-1); j++) {
+    bool swap = false;
+    for (int k = 0; k < (length-j-1); k++) {
+      if ((bond[k][0] > bond[k+1][0]) || // swap if first beads are in wrong order
+          (bond[k][0] == bond[k+1][0] && // or if they're the same, but second ones are in wrong order
+          bond[k][1] > bond[k+1][1])) {
+        Swap(&bond[k][0], &bond[k+1][0]);
+        Swap(&bond[k][1], &bond[k+1][1]);
+        swap = true;
+      }
+    }
+    // if no swap was made, the array is sorted
+    if (!swap) {
+      break;
+    }
+  }
+} //}}}
 
 // ZeroCounts() //{{{
 /**

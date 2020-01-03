@@ -335,6 +335,34 @@ void SwapDouble(double *a, double *b);
 void SwapBool(bool *a, bool *b);
 // }}}
 
+// SortArray() //{{{
+/**
+ * \brief Function to sort an integer array.
+ *
+ * \param [out] array   integer array to sort
+ * \param [in]  length  array length
+ * \param [in]  mode    0 for ascending order, 1 for descending order
+ */
+void SortArray(int **array, int length, int mode); //}}}
+
+// SortAggStruct() //{{{
+/**
+ * \brief Function to sort Aggregate struct.
+ *
+ * \param [out] Aggregate  Aggregate struct to sort
+ * \param [in]  Counts     numbers of beads, molecules, etc.
+ */
+void SortAggStruct(Aggregate **Aggregate, Counts Counts); //}}}
+
+// SortBonds() //{{{
+/**
+ * \brief Function to sort 2D array of bonds.
+ *
+ * \param [out] bond    2D array of bonds
+ * \param [in]  length  number of bonds
+ */
+void SortBonds(int **bond, int length); //}}}
+
 // ZeroCounts() //{{{
 /**
  * \brief Zeroize Counts structure.

@@ -396,20 +396,8 @@ int main(int argc, char *argv[]) {
           for (int j = 0; j < mols[i]; j++) {
             bead_mols[count][j] = bead_mols[i][j];
           }
-          // bubble sort bead_mols[count][]
-          for (int j = 0; j < (mols[i]-1); j++) {
-            bool swap = false;
-            for (int k = 0; k < (mols[i]-j-1); k++) {
-              if (bead_mols[count][k] > bead_mols[count][k+1]) {
-                Swap(&bead_mols[count][k], &bead_mols[count][k+1]);
-                swap = true;
-              }
-            }
-            // if no swap was made, the array is sorted
-            if (!swap) {
-              break;
-            }
-          }
+          // sort molecules in bead_mols[count][] according to ascending id
+          SortArray(&bead_mols[count], mols[i], 1);
           count++;
         }
       }
@@ -505,31 +493,9 @@ int main(int argc, char *argv[]) {
         mol_bonds[mol][bond-1][1] = bead2;
       } //}}}
 
-      // sort mol_bonds array //{{{
-      for (int i = 0; i < Counts.Molecules; i++) { // first, check order in ever bond
-        for (int j = 0; j < bonds_per_mol[i]; j++) {
-          if (mol_bonds[i][j][0] > mol_bonds[i][j][1]) {
-            Swap(&mol_bonds[i][j][0], &mol_bonds[i][j][1]);
-          }
-        }
-      }
-      for (int i = 0; i < Counts.Molecules; i++) { // second, bubble sort bonds
-        for (int j = 0; j < (bonds_per_mol[i]-1); j++) {
-          bool swap = false;
-          for (int k = 0; k < (bonds_per_mol[i]-j-1); k++) {
-            if ((mol_bonds[i][k][0] > mol_bonds[i][k+1][0]) || // swap if first beads are in wrong order
-                (mol_bonds[i][k][0] == mol_bonds[i][k+1][0] && // or if they're the same, but second ones are in wrong order
-                mol_bonds[i][k][1] > mol_bonds[i][k+1][1])) {
-              Swap(&mol_bonds[i][k][0], &mol_bonds[i][k+1][0]);
-              Swap(&mol_bonds[i][k][1], &mol_bonds[i][k+1][1]);
-              swap = true;
-            }
-          }
-          // if no swap was made, the array is sorted
-          if (!swap) {
-            break;
-          }
-        }
+      // sort bonds according to the id of the first bead in a bond //{{{
+      for (int i = 0; i < Counts.Molecules; i++) {
+        SortBonds(mol_bonds[i], bonds_per_mol[i]);
       } //}}}
 
       // minimize mol_bonds based on lowest id in each molecule //{{{

@@ -367,37 +367,13 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   } //}}}
   //}}}
 
-  // bubble sort molecules in aggregates according to ascending ids //{{{
+  // sort molecules in aggregates according to ascending ids //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
-    for (int j = 0 ; j < ((*Aggregate)[i].nMolecules-1); j++) {
-      bool done = true;
-      for (int k = 0 ; k < ((*Aggregate)[i].nMolecules-j-1); k++) {
-        if ((*Aggregate)[i].Molecule[k] > (*Aggregate)[i].Molecule[k+1]) {
-          Swap(&(*Aggregate)[i].Molecule[k], &(*Aggregate)[i].Molecule[k+1]);
-          done = false;
-        }
-      }
-      if (done)
-        break;
-    }
+    SortArray(&(*Aggregate)[i].Molecule, (*Aggregate)[i].nMolecules, 0);
   } //}}}
 
-  // bubble sort aggregates according to ascending ids of first molecules //{{{
-  for (int i = 0; i < ((*Counts).Aggregates-1); i++) {
-    bool done = true;
-    for (int j = 0; j < ((*Counts).Aggregates-i-1); j++) {
-      if ((*Aggregate)[j].Molecule[0] > (*Aggregate)[j+1].Molecule[0]) {
-        Swap(&(*Aggregate)[j].nMolecules, &(*Aggregate)[j+1].nMolecules);
-        // switch the whole Aggregate[].Molecule array (no idea which aggregate contains more molecules)
-        for (int k = 0; k < (*Counts).Molecules; k++) {
-          Swap(&(*Aggregate)[j].Molecule[k], &(*Aggregate)[j+1].Molecule[k]);
-        }
-        done = false;
-      }
-    }
-    if (done)
-      break;
-  } //}}}
+  // sort aggregates according to ascending ids of first molecules
+  SortAggStruct(&(*Aggregate), *Counts);
 
   // assign bonded beads to Aggregate struct //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
@@ -533,20 +509,9 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     }
   } //}}}
 
-  // bubble sort monomers in aggregates according to ascending ids //{{{
+  // sort monomers in aggregates according to ascending ids //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
-    int mono_i = (*Aggregate)[i].nMonomers;
-    for (int j = 0 ; j < (mono_i-1); j++) {
-      bool done = true;
-      for (int k = 0 ; k < (mono_i-j-1); k++) {
-        if ((*Aggregate)[i].Monomer[k] > (*Aggregate)[i].Monomer[k+1]) {
-          Swap(&(*Aggregate)[i].Monomer[k], &(*Aggregate)[i].Monomer[k+1]);
-          done = false;
-        }
-      }
-      if (done)
-        break;
-    }
+    SortArray(&(*Aggregate)[i].Monomer, (*Aggregate)[i].nMonomers, 0);
   } //}}}
 
   // free memory //{{{
