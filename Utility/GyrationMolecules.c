@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(1024,sizeof(char));
+  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <output> - filename with shape descriptors //{{{
-  char output[1024];
+  char output[LINE];
   strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -234,14 +234,8 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = malloc(1024*sizeof(int));
-
-  // initialize the array
-  for (int i = 0; i < 1024; i++) {
-    stuff[i] = '\0';
-  } //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // print information - verbose output //{{{
   if (verbose) {

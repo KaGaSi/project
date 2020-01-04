@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(1024,sizeof(char));
+  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input.agg> - input agg file //{{{
-  char input_agg[1024];
+  char input_agg[LINE];
   strcpy(input_agg, argv[++count]);
 
   // test if <output.agg> filename ends with '.agg' (required by VMD)
@@ -149,11 +149,11 @@ int main(int argc, char *argv[]) {
     ; //}}}
 
   // <output distr file> - filename with weight and number distributions //{{{
-  char output_distr[1024];
+  char output_distr[LINE];
   strcpy(output_distr, argv[++count]); //}}}
 
   // <output avg file> - filename with weight and number average aggregation numbers //{{{
-  char output_avg[1024];
+  char output_avg[LINE];
   strcpy(output_avg, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -231,7 +231,7 @@ int main(int argc, char *argv[]) {
   int composition[100] = {0}, // list of agg sizes
       comp_number_of_sizes = 0, // number of agg sizes
       types[2][2] = {{-1},{-1}}; // [x][0]: mol type; [x][1]: number of mols
-  char output_comp[1024];
+  char output_comp[LINE];
   if (FileIntsOption(argc, argv, "-c", composition, &comp_number_of_sizes, output_comp)) {
     exit(1);
   }

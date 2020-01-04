@@ -563,12 +563,12 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(1024,sizeof(char));
+  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // save coordinates of joined aggregates //{{{
-  char joined_vcf[1024];
+  char joined_vcf[LINE];
   if (JoinCoorOption(argc, argv, joined_vcf)) {
     exit(1);
   }
@@ -595,7 +595,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - filename of input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> ends with '.vcf' or '.vtf' (required by VMD)
@@ -626,7 +626,7 @@ int main(int argc, char *argv[]) {
   int contacts = atoi(argv[count]); //}}}
 
   // <output.agg> - filename of output agg file (must end with .agg) //{{{
-  char output_agg[1024];
+  char output_agg[LINE];
   strcpy(output_agg, argv[++count]);
 
   // test if <output.agg> ends with '.agg'
@@ -717,7 +717,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -770,14 +770,8 @@ int main(int argc, char *argv[]) {
     fclose(joined);
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = malloc(1024*sizeof(int));
-
-  // initialize the array
-  for (int i = 0; i < 1024; i++) {
-    stuff[i] = '\0';
-  } //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));

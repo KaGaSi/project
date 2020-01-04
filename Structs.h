@@ -8,6 +8,8 @@
 
 #define PI 3.141593 ///< value of pi
 
+#define LINE 1024 ///< maximum length of an array (for strings)
+
 #define SQR(x) ((x)*(x)) ///< macro for algebraic square
 #define CUBE(x) ((x)*(x)*(x)) ///< macro for algebraic cube
 

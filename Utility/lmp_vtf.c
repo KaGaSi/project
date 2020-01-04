@@ -82,11 +82,11 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input[1024];
+  char input[LINE];
   strcpy(input, argv[++count]); //}}}
 
   // <out.vsf> - output structure file //{{{
-  char output_vsf[1024];
+  char output_vsf[LINE];
   strcpy(output_vsf, argv[++count]);
 
   // test if <out.vsf> filename ends with '.vsf' (required by VMD)
@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <out.vcf> - output structure file //{{{
-  char output_vcf[1024];
+  char output_vcf[LINE];
   strcpy(output_vcf, argv[++count]);
 
   // test if <out.vcf> filename ends with '.vcf' (required by VMD)
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // ignore first line (comment) //{{{
-  char line[1024];
+  char line[LINE];
   fgets(line, sizeof(line), fr); //}}}
 
   // read data file header //{{{
@@ -142,27 +142,7 @@ int main(int argc, char *argv[]) {
          (line[0] >= '0' && line[0] <= '9')) { // positive number
     // read one line
     fgets(line, sizeof(line), fr);
-    // trim whitespace in line //{{{
-    // 1) trailing whitespace
-    int length = strlen(line);
-    while (length >= 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      // last string character needs to be '\0'
-      line[length-1] = '\0';
-      length--;
-    }
-    // 2) preceding whitespace
-    while (length > 1 &&
-           (line[0] == ' ' ||
-            line[0] == '\n' ||
-            line[0] == '\t')) {
-      for (int i = 0; i < length; i++) { // line[length] contains '\0'
-        line[i] = line[i+1];
-      }
-      length--;
-    } //}}}
+    strcpy(line, TrimLine(line)); // trim excess whitespace
 
     count = 0; // number of strings in a line (except for trailing comment)
     // split line //{{{
@@ -256,27 +236,7 @@ int main(int argc, char *argv[]) {
       fgets(line, sizeof(line), fr);
       for (int i = 0; i < Counts.TypesOfBeads; i++) {
         fgets(line, sizeof(line), fr);
-        // trim whitespace in line //{{{
-        // 1) trailing whitespace
-        int length = strlen(line);
-        while (length >= 1 &&
-               (line[length-1] == ' ' ||
-                line[length-1] == '\n' ||
-                line[length-1] == '\t')) {
-          // last string character needs to be '\0'
-          line[length-1] = '\0';
-          length--;
-        }
-        // 2) preceding whitespace
-        while (length > 1 &&
-               (line[0] == ' ' ||
-                line[0] == '\n' ||
-                line[0] == '\t')) {
-          for (int i = 0; i < length; i++) { // line[length] contains '\0'
-            line[i] = line[i+1];
-          }
-          length--;
-        } //}}}
+        strcpy(line, TrimLine(line)); // trim excess whitespace
         // split line //{{{
         split[0] = strtok(line, " \t");
         count = 0; // number of strings in a line (except for trailing comment)
@@ -315,27 +275,7 @@ int main(int argc, char *argv[]) {
       fgetpos(fr, &pos); // save file pointer
       for (int i = 0; i < Counts.Beads; i++) {
         fgets(line, sizeof(line), fr);
-        // trim whitespace in line //{{{
-        // 1) trailing whitespace
-        int length = strlen(line);
-        while (length >= 1 &&
-               (line[length-1] == ' ' ||
-                line[length-1] == '\n' ||
-                line[length-1] == '\t')) {
-          // last string character needs to be '\0'
-          line[length-1] = '\0';
-          length--;
-        }
-        // 2) preceding whitespace
-        while (length > 1 &&
-               (line[0] == ' ' ||
-                line[0] == '\n' ||
-                line[0] == '\t')) {
-          for (int i = 0; i < length; i++) { // line[length] contains '\0'
-            line[i] = line[i+1];
-          }
-          length--;
-        } //}}}
+        strcpy(line, TrimLine(line)); // trim excess whitespace
         // split line //{{{
         split[0] = strtok(line, " \t");
         count = 0; // number of strings in a line (except for trailing comment)
@@ -441,27 +381,7 @@ int main(int argc, char *argv[]) {
       // read all bonds //{{{
       for (int i = 0; i < bonds; i++) {
         fgets(line, sizeof(line), fr);
-        // trim whitespace in line //{{{
-        // 1) trailing whitespace
-        int length = strlen(line);
-        while (length >= 1 &&
-               (line[length-1] == ' ' ||
-                line[length-1] == '\n' ||
-                line[length-1] == '\t')) {
-          // last string character needs to be '\0'
-          line[length-1] = '\0';
-          length--;
-        }
-        // 2) preceding whitespace
-        while (length > 1 &&
-               (line[0] == ' ' ||
-                line[0] == '\n' ||
-                line[0] == '\t')) {
-          for (int i = 0; i < length; i++) { // line[length] contains '\0'
-            line[i] = line[i+1];
-          }
-          length--;
-        } //}}}
+        strcpy(line, TrimLine(line)); // trim excess whitespace
         // split line //{{{
         split[0] = strtok(line, " \t");
         count = 0; // number of strings in a line (except for trailing comment)
@@ -610,27 +530,7 @@ int main(int argc, char *argv[]) {
 
     // read and split next line //{{{
     fgets(line, sizeof(line), fr);
-    // trim whitespace in line //{{{
-    // 1) trailing whitespace
-    int length = strlen(line);
-    while (length >= 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      // last string character needs to be '\0'
-      line[length-1] = '\0';
-      length--;
-    }
-    // 2) preceding whitespace
-    while (length > 1 &&
-           (line[0] == ' ' ||
-            line[0] == '\n' ||
-            line[0] == '\t')) {
-      for (int i = 0; i < length; i++) { // line[length] contains '\0'
-        line[i] = line[i+1];
-      }
-      length--;
-    } //}}}
+    strcpy(line, TrimLine(line)); // trim excess whitespace
     char *split[30];
     count = 0; // number of strings in a line (except for trailing comment)
     split[0] = strtok(line, " \t");
@@ -671,7 +571,7 @@ int main(int argc, char *argv[]) {
 
   fprintf(fw, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
 
-  char stuff[1024];
+  char stuff[LINE];
   strcpy(stuff, "\0");
   WriteCoorIndexed(fw, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
 
