@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(1024,sizeof(char));
+  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
   double width = atof(argv[count]); //}}}
 
   // <output.rho> - filename with bead densities //{{{
-  char output_rho[1024];
+  char output_rho[LINE];
   strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -165,7 +165,6 @@ int main(int argc, char *argv[]) {
   free(input_vsf);
 
   // <molecule names> - types of molecules for calculation //{{{
-  char str[1024];
   while (++count < argc && argv[count][0] != '-') {
 
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
@@ -259,6 +258,7 @@ int main(int argc, char *argv[]) {
 
   // get pbc from coordinate file //{{{
   // skip till 'pbc' keyword
+  char str[LINE];
   do {
     if (fscanf(vcf, "%s", str) != 1) {
       fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
@@ -297,14 +297,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = malloc(1024*sizeof(int));
-
-  // initialize the array
-  for (int i = 0; i < 1024; i++) {
-    stuff[i] = '\0';
-  } //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // print information - verbose output //{{{
   if (verbose) {

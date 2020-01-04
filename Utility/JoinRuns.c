@@ -93,12 +93,12 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf_1 = calloc(1024,sizeof(char));
+  char *input_vsf_1 = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf_1, &verbose, &silent, &script);
 
   // save coordinates of joined aggregates //{{{
-  char joined_vcf[1024];
+  char joined_vcf[LINE];
   bool error = JoinCoorOption(argc, argv, joined_vcf);
   if (error) {
     exit(1);
@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <1st input> - first input coordinate file //{{{
-  char input_vcf_1[1024];
+  char input_vcf_1[LINE];
   strcpy(input_vcf_1, argv[++count]);
 
   // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <2nd input> - second input coordinate file //{{{
-  char input_vcf_2[1024];
+  char input_vcf_2[LINE];
   strcpy(input_vcf_2, argv[++count]);
 
   // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <2nd input.vsf> - second structure file (must end with .vsf) //{{{
-  char *input_vsf_2 = calloc(1024,sizeof(char *));
+  char *input_vsf_2 = calloc(LINE,sizeof(char *));
   strcpy(input_vsf_2, argv[++count]);
 
   // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[1024];
+  char output_vcf[LINE];
   strcpy(output_vcf, argv[++count]);
 
   // test if output coordinate file ends with '.vcf' (required by vmd)
@@ -293,7 +293,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // 1st vcf file - skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf_1, "%s", str) != 1) {
@@ -337,9 +337,8 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = calloc(1024,sizeof(int)); //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // start first run with start-th step //{{{
   int test;

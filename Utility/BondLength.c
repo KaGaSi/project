@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(1024,sizeof(char));
+  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - filename of input vcf file (must end with .vcf) //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
   double width = atof(argv[count]); //}}}
 
   // <output> - file name with bond length distribution //{{{
-  char output[1024];
+  char output[LINE];
   strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -166,7 +166,7 @@ int main(int argc, char *argv[]) {
 
   // '-d' option - specify bead ids to calculate distance between //{{{
   int bead[100] = {0}, number_of_beads = 0;
-  char output_d[1024];
+  char output_d[LINE];
   output_d[0] = '\0';
   if (FileIntsOption(argc, argv, "-d", bead, &number_of_beads, output_d)) {
     exit(1);
@@ -210,7 +210,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -267,9 +267,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = calloc(1024,sizeof(int)); //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // skip first start-1 steps //{{{
   count = 0;

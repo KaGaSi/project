@@ -104,12 +104,12 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(1024,sizeof(char));
+  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // -f <add> - FIELD-like file with molecules to add //{{{
-  char *input_add = calloc(1024, sizeof(char *));
+  char *input_add = calloc(LINE, sizeof(char *));
   if (FileOption(argc, argv, "-f", &input_add)) {
     exit(1);
   }
@@ -118,8 +118,8 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // -vtf <vsf> <vcf> - FIELD-like file with molecules to add //{{{
-  char *add_vsf = calloc(1024, sizeof(char *)),
-       *add_vcf = calloc(1024, sizeof(char *));
+  char *add_vsf = calloc(LINE, sizeof(char *)),
+       *add_vcf = calloc(LINE, sizeof(char *));
   // 1) vsf file
   if (FileOption(argc, argv, "-vtf", &add_vsf)) {
     exit(1);
@@ -141,7 +141,7 @@ int main(int argc, char *argv[]) {
       for (int i = 1; i < argc; i++) { // if *.vsf file, read next file
         if (strcmp(argv[i], "-vtf") == 0) {
           if (argc >= (i+3)) { // is there another cli argument behind '.vsf' file?
-            char temp[1024];
+            char temp[LINE];
             strcpy(temp, argv[i+1]); // save vsf filename
             strcpy(argv[i+1], argv[i+2]); // copy vcf filename to vsf - required by FileOption()
             ext = 1;
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // save into xyz file? //{{{
-  char *output_xyz = calloc(1024, sizeof(char *));
+  char *output_xyz = calloc(LINE, sizeof(char *));
   if (FileOption(argc, argv, "-xyz", &output_xyz)) {
     exit(1);
   } //}}}
@@ -266,7 +266,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input.vcf> - input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -279,7 +279,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <out.vsf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vsf[1024];
+  char output_vsf[LINE];
   strcpy(output_vsf, argv[++count]);
 
   // test if <out.vsf> filename ends with '.vsf' (required by VMD)
@@ -291,7 +291,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[1024];
+  char output_vcf[LINE];
   strcpy(output_vcf, argv[++count]);
 
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
@@ -347,7 +347,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -358,7 +358,7 @@ int main(int argc, char *argv[]) {
 
   // read pbc //{{{
   Vector BoxLength;
-  char line[1024];
+  char line[LINE];
   fgets(line, sizeof(line), vcf);
   // split the line into array
   char *split[30];
@@ -396,8 +396,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = calloc(1024,sizeof(int)); //}}}
+  char *stuff = calloc(LINE, sizeof(char)); //}}}
 
   // skip first start-1 steps //{{{
   count = 0;
@@ -479,7 +478,7 @@ int main(int argc, char *argv[]) {
     // 1) skip till 'species' keyword
     do {
       // get whole line - max 1000 chars
-      fgets(line, 1024, in_add);
+      fgets(line, sizeof(line), in_add);
 
       // first string of the line
       split[0] = strtok(line, " \t");
@@ -498,7 +497,7 @@ int main(int argc, char *argv[]) {
 
     // read bead type info //{{{
     for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
-      fgets(line, 1024, in_add);
+      fgets(line, sizeof(line), in_add);
       // bead name
       split[0] = strtok(line, " \t");
       strcpy(BeadType_add[i].Name, split[0]);
@@ -535,7 +534,7 @@ int main(int argc, char *argv[]) {
     // 1) skip till 'molecule' keyword
     do {
       // get whole line - max 1000 chars
-      fgets(line, 1024, in_add);
+      fgets(line, sizeof(line), in_add);
 
       // first string of the line
       split[0] = strtok(line, " \t");
@@ -558,26 +557,17 @@ int main(int argc, char *argv[]) {
     // read molecule info //{{{
     for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
       // molecule name //{{{
-      fgets(line, 1024, in_add);
-      // trim trailing whitespace in line
-      int length = strlen(line);
-      // last string character needs to be '\0'
-      while (length > 1 &&
-             (line[length-1] == ' ' ||
-              line[length-1] == '\n' ||
-              line[length-1] == '\t')) {
-        line[length-1] = '\0';
-        length--;
-      }
+      fgets(line, strlen(line), in_add);
+      strcpy(line, TrimLine(line)); // trim excess whitespace
       split[0] = strtok(line, " \t");
       strcpy(MoleculeType_add[i].Name, split[0]); //}}}
       // number of molecules of given type //{{{
-      fgets(line, 1024, in_add);
+      fgets(line, sizeof(line), in_add);
       split[0] = strtok(line, " \t");
       split[1] = strtok(NULL, " \t");
       MoleculeType_add[i].Number = atoi(split[1]); //}}}
       // number of beads in molecules of given type //{{{
-      fgets(line, 1024, in_add);
+      fgets(line, sizeof(line), in_add);
       split[0] = strtok(line, " \t");
       split[1] = strtok(NULL, " \t");
       MoleculeType_add[i].nBeads = atoi(split[1]);
@@ -612,7 +602,7 @@ int main(int argc, char *argv[]) {
       zero_first.y = 0;
       zero_first.z = 0;
       for (int j = 0; j < MoleculeType_add[i].nBeads; j++) {
-        fgets(line, 1024, in_add);
+        fgets(line, sizeof(line), in_add);
         // bead name //{{{
         split[0] = strtok(line, " \t");
         // is the bead type registered in the molecule already?
@@ -681,7 +671,7 @@ int main(int argc, char *argv[]) {
       Counts_add.Molecules += MoleculeType_add[i].Number;
 
       // number of bonds in molecules of given type //{{{
-      fgets(line, 1024, in_add);
+      fgets(line, sizeof(line), in_add);
       split[0] = strtok(line, " \t");
       split[1] = strtok(NULL, " \t");
       MoleculeType_add[i].nBonds = atoi(split[1]); //}}}
@@ -694,7 +684,7 @@ int main(int argc, char *argv[]) {
 
       // read bond info //{{{
       for (int j = 0; j < MoleculeType_add[i].nBonds; j++) {
-        fgets(line, 1024, in_add);
+        fgets(line, sizeof(line), in_add);
         split[0] = strtok(line, " \t");
         split[1] = strtok(NULL, " \t");
         split[2] = strtok(NULL, " \t");
@@ -705,20 +695,11 @@ int main(int argc, char *argv[]) {
       // skip till 'finish' keyword //{{{
       do {
         // get whole line - max 1000 chars
-        fgets(line, 1024, in_add);
-        // trim trailing whitespace in line
-        int length = strlen(line);
-        // last string character needs to be '\0'
-        while (length > 1 &&
-               (line[length-1] == ' ' ||
-                line[length-1] == '\n' ||
-                line[length-1] == '\t')) {
-          line[length-1] = '\0';
-          length--;
-        }
+        fgets(line, strlen(line), in_add);
+        strcpy(line, TrimLine(line)); // trim excess whitespace
+
         // first string of the line
         split[0] = strtok(line, " \t");
-
       } while (strcmp(split[0], "finish") != 0 &&
                strcmp(split[0], "Finish") != 0 &&
                strcmp(split[0], "FINISH") != 0); //}}}
