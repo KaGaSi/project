@@ -369,7 +369,7 @@ void SortBonds(int **bond, int length); //}}}
  *
  * \param[in] Counts   Counts structure to zeroize
  */
-void ZeroCounts(Counts *Counts);
+void ZeroCounts(Counts *Counts); //}}}
 
 // FreeBead() //{{{
 /**
@@ -406,4 +406,15 @@ void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType); //}}}
  * \param [out] Aggregate   information about individual molecules
  */
 void FreeAggregate(Counts Counts, Aggregate **Aggregate); //}}}
+
+// TrimLine() //{{{
+/**
+ * \brief Function to trim whitespace from
+ * the beginning and end of a string.
+ *
+ * \param line [in]   string to trim
+ *
+ * \return trimmed string
+ */
+char* TrimLine(char *line); //}}}
 #endif

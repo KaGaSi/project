@@ -79,7 +79,7 @@ int main ( int argc, char** argv ) {
   count = 0; // count mandatory arguments
 
   // <input> - filename of input file //{{{
-  char input[1024];
+  char input[LINE];
   strcpy(input, argv[++count]); //}}}
 
   // <column> - column number to analyze //{{{
@@ -126,19 +126,10 @@ int main ( int argc, char** argv ) {
     all_lines++;
 
     // get whole line - max 1000 chars //{{{
-    char line[1024];
-    fgets(line, 1024, fr); //}}}
+    char line[LINE];
+    fgets(line, strlen(line), fr); //}}}
 
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character is '\n' (at [length-1]), so check the previous one(s) - if there are any
-    while (length > 1 &&
-           (line[length-2] == ' ' ||
-           line[length-2] == '\t')) {
-      line[length-2] = line[length-1]; // move newline char
-      line[length-1] = '\0'; // add string ending char
-      length--;
-    } //}}}
+    strcpy(line, TrimLine(line)); // trim excess whitespace
 
     // if not empty line or comment continue //{{{
     char *split = strtok(line," \t");

@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
+  char *input_vsf = calloc(LINE,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count arguments
 
   // <output.vsf> - output structure file (must end with .vsf) //{{{
-  char output[1024];
+  char output[LINE];
   strcpy(output, argv[++count]);
 
   // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)

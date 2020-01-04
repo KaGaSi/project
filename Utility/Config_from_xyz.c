@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input.xyz> - filename of input xyz file (must end with .xyz) //{{{
-  char input_xyz[1024];
+  char input_xyz[LINE];
   strcpy(input_xyz, argv[++count]);
 
   // test if <input> filename ends with '.xyz' (required by VMD)
@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
   fprintf(config, "0 0 z\n");
 
   for (int i = 0; i < beads; i++) {
-    char line[1024];
+    char line[LINE];
     fgets(line, sizeof(line), xyz);
 
     // split the line into array //{{{

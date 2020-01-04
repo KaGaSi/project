@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
   bool verbose = BoolOption(argc, argv, "-v");
 
   // FIELD-like file //{{{
-  char *input = calloc(1024, sizeof(char *));
+  char *input = calloc(LINE, sizeof(char *));
   if (FileOption(argc, argv, "-f", &input)) {
     exit(1);
   }
@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count arguments
 
   // <out.vsf> - output structure file (must end with .vsf) //{{{
-  char output[1024];
+  char output[LINE];
   strcpy(output, argv[++count]);
 
   // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)
@@ -143,8 +143,8 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <out.vcf> - output vcf file //{{{
-  char *output_vcf = calloc(1024, sizeof(char));
-  char stuff[1024];
+  char *output_vcf = calloc(LINE, sizeof(char));
+  char stuff[LINE];
   strcpy(output_vcf, argv[++count]);
 
   // test if outpuf_vcf has '.vcf' extension - required by vmd //{{{
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // read box size //{{{
-  char line[1024], *box[3];
+  char line[LINE], *box[3];
   fgets(line, sizeof(line), fr);
   box[0] = strtok(line, " \t");
   box[1] = strtok(NULL, " \t");
@@ -267,16 +267,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     // name //{{{
     fgets(line, sizeof(line), fr);
-    // trim trailing whitespace in line
-    int length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
+    strcpy(line, TrimLine(line)); // trim excess whitespace
     strcpy(MoleculeType[i].Name, strtok(line, " \t")); //}}}
     // number of molecules - irrelevant, decided by spacing //{{{
     fgets(line, sizeof(line), fr);

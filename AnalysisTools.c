@@ -27,8 +27,8 @@ void ReadFIELD(Counts *Counts,
   char *split;
   do {
     // get whole line - max 1000 chars
-    char line[1024];
-    fgets(line, 1024, field);
+    char line[LINE];
+    fgets(line, strlen(line), field);
 
     // first string of the line
     split = strtok(line, " \t");
@@ -45,8 +45,8 @@ void ReadFIELD(Counts *Counts,
   for (int i = 0; i < bead_types; i++) {
 
     // get whole line - max 1000 chars //{{{
-    char line[1024];
-    fgets(line, 1024, field); //}}}
+    char line[LINE];
+    fgets(line, strlen(line), field); //}}}
 
     // read bead type name and test it is against data from vsf and vcf //{{{
     split = strtok(line, " \t");
@@ -244,23 +244,15 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       max_mol = 0, // highes mol id detected
       atom_lines = 0, // number of atom lines in vsf (including comments and blanks)
       type_default = -1; // default bead type
-  char line[1024];
+  char line[LINE];
   while(fgets(line, sizeof(line), vsf)) {
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
-    // for lines containing only whitespace
-    if (length == 1) {
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
+    // line containing only whitespace
+    if (strlen(line) == 1) {
       atom_lines++;
       continue;
-    } //}}}
+    }
 
     // split the line into array //{{{
     char *split[30];
@@ -445,20 +437,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   for (int count = 0; count < atom_lines; count++) {
     // read line
     fgets(line, sizeof(line), vsf);
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
     // for lines containing only whitespace
-    if (length == 1) {
+    if (strlen(line) == 1) {
       continue;
-    }//}}}
+    }
 
     // split the line into array //{{{
     char *split[30];
@@ -549,7 +533,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
     bonds[i] = -1;
   } //}}}
   while (fgets(line, sizeof(line), vsf)) {
-    // split the line into array - no need to trim trailing white space (the number of columns is known) //{{{
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
+    // split the line into array //{{{
     char *split[30];
     split[0] = strtok(line, " \t:");
     int i = 0;
@@ -604,20 +590,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   for (int count = 0; count < atom_lines; count++) {
     // read line
     fgets(line, sizeof(line), vsf);
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
     // for lines containing only whitespace
-    if (length == 1) {
+    if (strlen(line) == 1) {
       continue;
-    }//}}}
+    }
 
     // split the line into array //{{{
     char *split[30];
@@ -738,7 +716,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
 
     // skip initial stuff //{{{
     // skip lines including 't(imestep)' line //{{{
-    char line[1024], line2[1024], *split[32], str[32];
+    char line[LINE], line2[LINE], *split[32], str[32];
     str[0] = '\0';
     do {
       fgets(line, sizeof(line), vcf);
@@ -795,22 +773,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       // read data
       // the first coordinate line
       fgets(line, sizeof(line), vcf);
-
-      // trim trailing whitespace in line //{{{
-      int length = strlen(line);
-      // last string character needs to be '\0'
-      while (length > 1 &&
-             (line[length-1] == ' ' ||
-              line[length-1] == '\n' ||
-              line[length-1] == '\t')) {
-        line[length-1] = '\0';
-        length--;
-      }
+      strcpy(line, TrimLine(line)); // trim excess whitespace
       // for lines containing only whitespace
-      if (length == 1) {
+      if (strlen(line) == 1) {
         fprintf(stderr, "Error: %s - blank line instead of a first coordinate line\n", vcf_file);
         exit(1);
-      }//}}}
+      }
 
       // split the line into array //{{{
       char *split[30];
@@ -831,16 +799,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
         ungetc(test, vcf);
         // read line
         fgets(line, sizeof(line), vcf);
-        // trim trailing whitespace in line //{{{
-        int length = strlen(line);
-        // last string character needs to be '\0'
-        while (length > 1 &&
-               (line[length-1] == ' ' ||
-                line[length-1] == '\n' ||
-                line[length-1] == '\t')) {
-          line[length-1] = '\0';
-          length--;
-        } //}}}
+        strcpy(line, TrimLine(line)); // trim excess whitespace
         // split the line into array //{{{
         split[0] = strtok(line, " \t");
         int i = 0;
@@ -1261,7 +1220,7 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, int *Index, Bea
 
   // initial stuff //{{{
   (*stuff)[0] = '\0'; // no comment line
-  char line[1024];
+  char line[LINE];
   fpos_t position;
   do {
     fgetpos(vcf_file, &position); // save pointer position
@@ -1397,7 +1356,7 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
 
   // initial stuff //{{{
   (*stuff)[0] = '\0'; // no comment line
-  char line[1024];
+  char line[LINE];
   fpos_t position;
   do {
     fgetpos(vcf_file, &position); // save pointer position
@@ -2472,4 +2431,35 @@ void FreeAggregate(Counts Counts, Aggregate **Aggregate) {
     free((*Aggregate)[i].Monomer);
   }
   free(*Aggregate);
+} //}}}
+
+// TrimLine //{{{
+/**
+ * Function to trim whitespace from the
+ * beginning and end of a string.
+ */
+char * TrimLine(char *line) {
+  int length = strlen(line);
+  static char trimmed[LINE];
+  strcpy(trimmed, line);
+  // 1) trailing whitespace
+  while (length > 1 &&
+         (trimmed[length-1] == ' ' ||
+          trimmed[length-1] == '\n' ||
+          trimmed[length-1] == '\t')) {
+    trimmed[length-1] = '\0';
+    length--;
+  }
+  // 2) preceding whitespace
+  while (length > 1 &&
+         (trimmed[0] == ' ' ||
+          trimmed[0] == '\n' ||
+          trimmed[0] == '\t')) {
+    for (int i = 0; i < length; i++) { // line[length] contains '\0'
+      trimmed[i] = trimmed[i+1];
+    }
+    length--;
+  }
+
+  return trimmed;
 } //}}}

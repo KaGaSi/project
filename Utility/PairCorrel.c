@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(1024,sizeof(char));
+  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
   double bin_width = atof(argv[count]); //}}}
 
   // <output> - filename with pcf(s) //{{{
-  char output_pcf[1024];
+  char output_pcf[LINE];
   strcpy(output_pcf, argv[++count]); //}}}
 
   // variables - structures //{{{
@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -237,14 +237,8 @@ int main(int argc, char *argv[]) {
   double max_dist = Min3(BoxLength.x, BoxLength.y, BoxLength.z) / 2;
   int bins = ceil(max_dist / bin_width); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = malloc(1024*sizeof(int));
-
-  // initialize the array
-  for (int i = 0; i < 1024; i++) {
-    stuff[i] = '\0';
-  } //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // allocate memory for pcf arrays //{{{
   int *counter = calloc(Counts.TypesOfBeads,sizeof(int *)); // to count number of pairs
@@ -256,10 +250,10 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // print information - verbose output
+  // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
+  } //}}}
 
   // skip first start-1 steps //{{{
   count = 0;
