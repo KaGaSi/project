@@ -23,12 +23,13 @@ void CommonHelp(bool error); //}}}
  *
  * \param [in] input_vcf     .vcf coordinate file
  * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BoxLength     dimension of the simulation box
  * \param [in] BeadType      information about bead types
  * \param [in] Bead          informationn about individual beads
  * \param [in] MoleculeType  information about molecule types
  * \param [in] Molecule      information about individual molecules
  */
-void VerboseOutput(char *input_vcf, Counts Counts,
+void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule); //}}}
 

@@ -99,11 +99,14 @@ void CommonHelp(bool error) {
  * Function providing standard verbose output (for cases when verbose
  * option is used). It prints most of the information about used system.
  */
-void VerboseOutput(char *input_vcf, Counts Counts,
+void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule) {
 
   putchar('\n');
+  if (BoxLength.x != -1) {
+    fprintf(stdout, "Box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+  }
   PrintCounts(Counts);
   PrintBeadType(Counts, BeadType);
   PrintMoleculeType(Counts, BeadType, MoleculeType);

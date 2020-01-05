@@ -259,29 +259,6 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // print information - verbose output //{{{
-  if (verbose) {
-    VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-
-    fprintf(stdout, "\n   Starting from %d. timestep\n", start);
-    fprintf(stdout, "   Every %d. timestep used\n", skip+1);
-    if (end != -1) {
-      fprintf(stdout, "   Ending with %d. timestep\n", end);
-    }
-
-    if (number_of_steps > 0) {
-      fprintf(stdout, "   Save %d timesteps:", number_of_steps);
-      for (int i = 0; i < number_of_steps; i++) {
-        fprintf(stdout, " %d", save_step[i]);
-        if (i != (number_of_steps-1)) {
-          putchar(',');
-        } else {
-          putchar('\n');
-        }
-      }
-    }
-  } //}}}
-
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_coor, "r")) == NULL) {
@@ -314,6 +291,29 @@ int main(int argc, char *argv[]) {
   BoxLength.y = atof(split[1]);
   BoxLength.z = atof(split[2]); //}}}
   //}}}
+
+  // print information - verbose output //{{{
+  if (verbose) {
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+
+    fprintf(stdout, "\n   Starting from %d. timestep\n", start);
+    fprintf(stdout, "   Every %d. timestep used\n", skip+1);
+    if (end != -1) {
+      fprintf(stdout, "   Ending with %d. timestep\n", end);
+    }
+
+    if (number_of_steps > 0) {
+      fprintf(stdout, "   Save %d timesteps:", number_of_steps);
+      for (int i = 0; i < number_of_steps; i++) {
+        fprintf(stdout, " %d", save_step[i]);
+        if (i != (number_of_steps-1)) {
+          putchar(',');
+        } else {
+          putchar('\n');
+        }
+      }
+    }
+  } //}}}
 
   // print pbc if verbose output //{{{
   if (verbose) {

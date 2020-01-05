@@ -116,15 +116,16 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  char null[1] = {'\0'}; // because ReadStructure & VerboseOutput check the first value of the array
-  ReadStructure(input_vsf, null, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  ReadStructure(input_vsf, "\0", &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
 
   // print information - verbose option //{{{
   if (verbose) {
-    VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    Vector BoxLength;
+    BoxLength.x = -1;
+    VerboseOutput("\0", Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // create & fill output vsf file
