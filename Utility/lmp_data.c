@@ -134,11 +134,6 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
-  // print information - verbose output //{{{
-  if (verbose) {
-    VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-  } //}}}
-
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_coor, "r")) == NULL) {
@@ -169,6 +164,11 @@ int main(int argc, char *argv[]) {
   // print pbc if verbose output
   if (verbose) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+  } //}}}
+
+  // print information - verbose output //{{{
+  if (verbose) {
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // warn if not all beads //{{{

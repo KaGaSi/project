@@ -604,7 +604,7 @@ int main(int argc, char *argv[]) {
   if (verbose) {
     char null[1] = {'\0'};
     fprintf(stdout, "\n\n");
-    VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // free memory - to make valgrind happy //{{{

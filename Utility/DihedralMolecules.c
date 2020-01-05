@@ -298,8 +298,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
     fprintf(stdout, "\nChosen molecule types:");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {

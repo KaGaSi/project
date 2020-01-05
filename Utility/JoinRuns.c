@@ -274,13 +274,6 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // print information - verbose output //{{{
-  if (verbose) {
-    VerboseOutput(input_vcf_1, Counts, BeadType1, Bead1, MoleculeType1, Molecule1);
-    fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
-    fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
-  } //}}}
-
   // open input coordinate files //{{{
   FILE *vcf_1, *vcf_2;
   if ((vcf_1 = fopen(input_vcf_1, "r")) == NULL) {
@@ -326,6 +319,13 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
   //}}}
+
+  // print information - verbose output //{{{
+  if (verbose) {
+    VerboseOutput(input_vcf_1, Counts, BoxLength, BeadType1, Bead1, MoleculeType1, Molecule1);
+    fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
+    fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
+  } //}}}
 
   // print pbc to output .vcf file //{{{
   if ((out = fopen(output_vcf, "a")) == NULL) {

@@ -239,7 +239,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // allocate memory for sums of shape descriptors //{{{

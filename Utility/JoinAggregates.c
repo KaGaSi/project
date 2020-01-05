@@ -290,7 +290,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "\n   Starting from %d. timestep\n", start);
     fprintf(stdout, "   Every %d. timestep used\n", skip+1);
