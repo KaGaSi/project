@@ -318,7 +318,9 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     fprintf(stdout, "Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
-    VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    Vector BoxLength;
+    BoxLength.x = -1;
+    VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // arrays for distribution //{{{

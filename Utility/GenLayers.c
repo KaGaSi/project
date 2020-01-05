@@ -504,7 +504,7 @@ int main(int argc, char *argv[]) {
     char null[1] = {'\0'};
     putchar('\n');
     putchar('\n');
-    VerboseOutput(null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
     // molecule prototypes
     putchar('\n');
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {

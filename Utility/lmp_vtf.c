@@ -551,8 +551,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    fprintf(stdout, "Box = (%lf, %lf, %lf)\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
-    VerboseOutput("\0", Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput("\0", Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // write out.vcf file //{{{

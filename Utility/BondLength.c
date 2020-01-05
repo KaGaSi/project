@@ -197,11 +197,6 @@ int main(int argc, char *argv[]) {
     bead[i]--; // ids should start with zero (or -1 if none specified)
   } //}}}
 
-  // print information - verbose output
-  if (verbose) {
-    VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
-
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_coor, "r")) == NULL) {
@@ -233,6 +228,11 @@ int main(int argc, char *argv[]) {
   // print pbc if verbose output
   if (verbose) {
     fprintf(stdout, "\nbox size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+  } //}}}
+
+  // print information - verbose output //{{{
+  if (verbose) {
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // '-w' option - bond length warning //{{{

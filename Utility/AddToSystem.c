@@ -330,15 +330,6 @@ int main(int argc, char *argv[]) {
     exit(0);
   } //}}}
 
-  // print original system //{{{
-  if (verbose) {
-    fprintf(stdout, "\nORIGINAL SYSTEM\n");
-    VerboseOutput(input_coor, Counts, BeadType, Bead, MoleculeType, Molecule);
-    if (start > 1) {
-      fprintf(stdout, "\n   Using %d. timestep\n", start);
-    }
-  } //}}}
-
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_coor, "r")) == NULL) {
@@ -372,6 +363,15 @@ int main(int argc, char *argv[]) {
   BoxLength.z = atof(split[2]); //}}}
   //}}}
 
+  // print original system //{{{
+  if (verbose) {
+    fprintf(stdout, "\nORIGINAL SYSTEM\n");
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    if (start > 1) {
+      fprintf(stdout, "\n   Using %d. timestep\n", start);
+    }
+  } //}}}
+
   // define box size using constraints (-c{x,y,z} options)//{{{
   Vector new_box;
   if (constraint[1].x != 0) {
@@ -388,11 +388,6 @@ int main(int argc, char *argv[]) {
     new_box.z = constraint[1].z - constraint[0].z;
   } else {
     new_box.z = BoxLength.z;
-  } //}}}
-
-  // print pbc if verbose output //{{{
-  if (verbose) {
-    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
@@ -794,7 +789,7 @@ int main(int argc, char *argv[]) {
   // print what is to be added //{{{
   if (verbose) {
     fprintf(stdout, "\nBEADS AND MOLECULES TO ADD\n");
-    VerboseOutput(input_coor, Counts_add, BeadType_add, Bead_add, MoleculeType_add, Molecule_add);
+    VerboseOutput(input_coor, Counts_add, BoxLength, BeadType_add, Bead_add, MoleculeType_add, Molecule_add);
   } //}}}
 
   // join original and added systems //{{{
@@ -1048,7 +1043,7 @@ int main(int argc, char *argv[]) {
   // print new system //{{{
   if (verbose) {
     fprintf(stdout, "\nNEW SYSTEM\n");
-    VerboseOutput(input_coor, Counts_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new);
+    VerboseOutput(input_coor, Counts_new, BoxLength, BeadType_new, Bead_new, MoleculeType_new, Molecule_new);
   } //}}}
 
   // create & fill output vsf file
