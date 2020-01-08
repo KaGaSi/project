@@ -393,9 +393,9 @@ int main(int argc, char *argv[]) {
       Bead[count].Index = count;
       Bead[count].Type = MoleculeType[0].Bead[0];
       for (int k = 1; k < MoleculeType[0].nBeads; k++) {
-        Bead[count+k].Position.x = Bead[count].Position.x + prototype[0][k].x;
-        Bead[count+k].Position.y = Bead[count].Position.y + prototype[0][k].y;
-        Bead[count+k].Position.z = Bead[count].Position.z + prototype[0][k].z;
+        Bead[count+k].Position.x = Bead[count].Position.x + (prototype[0][k].x - prototype[0][0].x);
+        Bead[count+k].Position.y = Bead[count].Position.y + (prototype[0][k].y - prototype[0][0].y);
+        Bead[count+k].Position.z = Bead[count].Position.z + (prototype[0][k].z - prototype[0][0].z);
         Bead[count+k].Index = count + k;
         Bead[count+k].Type = MoleculeType[0].Bead[k];
       }
@@ -418,9 +418,9 @@ int main(int argc, char *argv[]) {
       Bead[count].Index = count;
       Bead[count].Type = MoleculeType[0].Bead[0];
       for (int k = 1; k < MoleculeType[0].nBeads; k++) {
-        Bead[count+k].Position.x = Bead[count].Position.x + prototype[0][k].x;
-        Bead[count+k].Position.y = Bead[count].Position.y + prototype[0][k].y;
-        Bead[count+k].Position.z = Bead[count].Position.z - prototype[0][k].z;
+        Bead[count+k].Position.x = Bead[count].Position.x + (prototype[0][k].x - prototype[0][0].x);
+        Bead[count+k].Position.y = Bead[count].Position.y + (prototype[0][k].y - prototype[0][0].y);
+        Bead[count+k].Position.z = Bead[count].Position.z - (prototype[0][k].z - prototype[0][0].z);
         Bead[count+k].Index = count + k;
         Bead[count+k].Type = MoleculeType[0].Bead[k];
       }
