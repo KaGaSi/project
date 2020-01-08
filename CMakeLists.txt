@@ -40,6 +40,7 @@ set(UTILS AddToSystem
           JoinRuns
           lmp_data
           lmp_vtf
+          OrientOrder
           PairCorrel
           PotentialAggregates
           SelectedVcf
