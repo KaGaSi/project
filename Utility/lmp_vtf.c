@@ -139,6 +139,7 @@ int main(int argc, char *argv[]) {
   while (line[0] == '\0' || // empty line
          line[0] == '#' || // comment line
          line[0] == '-' ||  // negative number
+         line[0] == '\n' ||  // just white space
          (line[0] >= '0' && line[0] <= '9')) { // positive number
     // read one line
     fgets(line, sizeof(line), fr);

@@ -370,8 +370,41 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
   }
-
   fclose(fr); //}}}
+
+  // print information about bonds and angles (verbouse output) //{{{
+  if (verbose) {
+    fprintf(stdout, "Bond types:\n");
+    for (int i = 0; i < count_bond_types; i++) {
+      fprintf(stdout, " %lf %lf\n", bond_type[i][0], bond_type[i][1]);
+    }
+    fprintf(stdout, "Bonds in molecules (<type> <bead 1> <bead 2>):\n");
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(stdout, " %s (%d bonds)\n", MoleculeType[i].Name, MoleculeType[i].nBonds);
+      for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+        fprintf(stdout, "  %2d: %3d %3d %3d\n", j+1, mol_bond_types[i][j]+1, MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
+      }
+    }
+    fprintf(stdout, "Angle types:\n");
+    for (int i = 0; i < count_angle_types; i++) {
+      fprintf(stdout, " %lf %lf\n", angle_type[i][0], angle_type[i][1]);
+    }
+    fprintf(stdout, "Angles in molecules (<type> <bead 1> <bead 2> <bead 3>):\n");
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(stdout, " %s ", MoleculeType[i].Name);
+      if (angle_beads_n[i] == -1) {
+        fprintf(stdout, "(no angles)\n");
+      } else {
+        fprintf(stdout, "(%d angles)\n", angle_beads_n[i]);
+      }
+      for (int j = 0; j < angle_beads_n[i]; j++) {
+        int id1 = angle_beads[i][j][0];
+        int id2 = angle_beads[i][j][1];
+        int id3 = angle_beads[i][j][2];
+        fprintf(stdout, "  %2d: %3d %3d %3d %3d\n", j+1, mol_angle_types[i][j]+1, id1+1, id2+1, id3+1);
+      }
+    }
+  } //}}}
 
   // create lammps data file //{{{
   // open output file for writing //{{{
