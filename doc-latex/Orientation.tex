@@ -1,0 +1,21 @@
+\section{Orientation} \label{sec:Orientation}
+
+\noindent
+\begin{longtable}{p{0.30\textwidth}p{0.644\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input>} & input coordinate file (either \texttt{vcf} or
+    \texttt{vtf} format) \\
+  \texttt{<width>} & width of each bin of the distribution \\
+  \texttt{<output>} & output file with distribution of the orientation
+    order parameter \\
+  \toprule
+  \multicolumn{2}{l}{Non-standard options} \\
+  \midrule
+  \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-e <int>} & ending timestep for calculation (default: none) \\
+  \texttt{-n <ints>} & bead indices in the molecule (multiple of two;
+    default: 1 2) \\
+  \bottomrule
+\end{longtable}
