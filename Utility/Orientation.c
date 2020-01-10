@@ -25,14 +25,14 @@ calculated relative to xy plane.\n\n");
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
 
-  fprintf(ptr, "   <input>                 input filename (vcf or vtf format)\n");
-  fprintf(ptr, "   <width>                 width of a single distribution bin\n");
-  fprintf(ptr, "   <output>                output file with distribution of the orientation parameter\n");
-  fprintf(ptr, "   <mole name(s)>          molecule name(s) to calculate orientational parameter for\n");
+  fprintf(ptr, "   <input>           input filename (vcf or vtf format)\n");
+  fprintf(ptr, "   <width>           width of a single distribution bin\n");
+  fprintf(ptr, "   <output>          output file with distribution of the orientation parameter\n");
+  fprintf(ptr, "   <mole name(s)>    molecule name(s) to calculate orientational parameter for\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -st <int>            starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>             ending timestep for calculation\n");
-  fprintf(ptr, "      -n <ints>            bead indices (multiple of 2 <ints>; default: 1 2)\n");
+  fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
+  fprintf(ptr, "      -n <ints>      bead indices (multiple of 2 <ints>; default: 1 2)\n");
   CommonHelp(error);
 } //}}}
 
