@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
             bead_mols[count][j] = bead_mols[i][j];
           }
           // sort molecules in bead_mols[count][] according to ascending id
-          SortArray(&bead_mols[count], mols[i], 1);
+          SortArray(&bead_mols[count], mols[i], 0);
           count++;
         }
       }
