@@ -8,6 +8,8 @@
 
 #define PI 3.141593 ///< value of pi
 
+#define LINE 1024 ///< maximum length of an array (for strings)
+
 #define SQR(x) ((x)*(x)) ///< macro for algebraic square
 #define CUBE(x) ((x)*(x)*(x)) ///< macro for algebraic cube
 
@@ -78,6 +80,8 @@ typedef struct Bead {
       Index; ///< index of the bead according to .vsf file (needed for indexed timesteps)
 
   Vector Position; ///< cartesian coordinates of the bead
+
+  bool Flag; ///< some flag for, e.g., use/not use
 } Bead; //}}}
 
 // struct MoleculeType //{{{
@@ -89,6 +93,7 @@ typedef struct MoleculeType {
 
   int Number, ///< number of molecules of given type
       nBeads, ///< number of beads in every molecule of given type
+      *Bead, ///< ids of bead types of every molecule bead
       nBonds, ///< number of bonds in every molecule of given type
       **Bond, ///< pair of ids for every bond (with relative bead numbers from 0 to nBeads)
                // has to be sorted; size: [MoleculeType[i].Bonds][2]

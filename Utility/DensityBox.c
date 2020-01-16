@@ -29,6 +29,8 @@ density for all bead types in the direction of specified axis (x, y, or z).\
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -n <int>       number of bins to average\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
+  fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
   CommonHelp(error);
 } //}}}
 
@@ -59,14 +61,14 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
-        strcmp(argv[i], "-st") != 0) {
+        strcmp(argv[i], "-e") != 0 &&
+        strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-x") != 0) {
 
       ErrorOption(argv[i]);
       Help(argv[0], true);
@@ -75,46 +77,11 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf)) {
-    exit(1);
-  }
-  if (input_vsf[0] == '\0') {
-    strcpy(input_vsf, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf'
-  int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
+  bool silent;
+  bool verbose;
+  char *input_vsf = calloc(LINE,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // starting timestep //{{{
   int start = 1;
@@ -122,9 +89,21 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
   // number of bins to average //{{{
   int avg = 1;
   if (IntegerOption(argc, argv, "-n", &avg)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -139,25 +118,18 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(8*sizeof(char));
-  }
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <width> - number of starting timestep //{{{
   // Error - non-numeric argument
@@ -169,21 +141,27 @@ int main(int argc, char *argv[]) {
   double width = atof(argv[count]); //}}}
 
   // <output.rho> - filename with bead densities //{{{
-  char output_rho[1024];
+  char output_rho[LINE];
   strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
+
+  // '-x' option //{{{
+  if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
+    exit(1);
+  } //}}}
 
   // <axis> - x, y, or z //{{{
   char axis = 'x';
@@ -280,18 +258,12 @@ int main(int argc, char *argv[]) {
     rho_2[i] = calloc(bins,sizeof(long int));
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = malloc(1024*sizeof(int));
-
-  // initialize the array
-  for (int i = 0; i < 1024; i++) {
-    stuff[i] = '\0';
-  } //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
 
     fprintf(stdout, "Chosen molecule types:");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -300,10 +272,7 @@ int main(int argc, char *argv[]) {
       }
     }
     putchar('\n');
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+  } //}}}
 
   // skip first start-1 steps //{{{
   count = 0;
@@ -314,13 +283,9 @@ int main(int argc, char *argv[]) {
     count++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarding step: %6d", count);
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
@@ -331,33 +296,33 @@ int main(int argc, char *argv[]) {
   // print number of discarded steps? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d   \n", start);
     }
   } //}}}
   //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
+  int count_vcf = start - 1;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
-    }
+    count_vcf++;
+
+    // write step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count_vcf);
+    } //}}}
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -391,15 +356,23 @@ int main(int argc, char *argv[]) {
 
     // calculate densities //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-      if (axis == 'x') {
-        int j = Bead[i].Position.x / width;
-        temp_rho[Bead[i].Type][j]++;
-      } else if (axis == 'y') {
-        int j = Bead[i].Position.y / width;
-        temp_rho[Bead[i].Type][j]++;
-      } else {
-        int j = Bead[i].Position.z / width;
-        temp_rho[Bead[i].Type][j]++;
+      bool use = true;
+      int mol = Bead[i].Molecule;
+      if (mol != -1) {
+        int mtype = Molecule[mol].Type;
+        use = MoleculeType[mtype].Use;
+      }
+      if (use) {
+        if (axis == 'x') {
+          int j = Bead[i].Position.x / width;
+          temp_rho[Bead[i].Type][j]++;
+        } else if (axis == 'y') {
+          int j = Bead[i].Position.y / width;
+          temp_rho[Bead[i].Type][j]++;
+        } else {
+          int j = Bead[i].Position.z / width;
+          temp_rho[Bead[i].Type][j]++;
+        }
       }
     } //}}}
 
@@ -417,19 +390,17 @@ int main(int argc, char *argv[]) {
     }
     free(temp_rho); //}}}
 
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
+    if (end == count_vcf)
+      break;
   }
   fclose(vcf);
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   } //}}}
 
@@ -479,6 +450,7 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);

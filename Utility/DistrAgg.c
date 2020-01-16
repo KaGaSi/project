@@ -14,9 +14,13 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-DistrAgg calculates weight and number average aggregation numbers during the \
-simulation run as well as overall weight and number distributions and volume \
-fractions of aggregates.\n\n");
+DistrAgg calculates average aggregation numbers and aggregate masses during \
+the simulation run (i.e., time evolution) as well as overall distributions \
+and volume fractions of aggregates. The definition of aggregate size is quite \
+flexible and only a specified range can be used. Also, this utility can \
+fanalyse composition of specified aggreget size(s) and write compositition \
+distribution (i.e., distribution of numbers of different molecules in over \
+all aggregates with given size).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -27,11 +31,13 @@ fractions of aggregates.\n\n");
   fprintf(ptr, "   <avg file>             output file with per-timestep averages\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -st <int>           starting timestep for calculation (default: 1)\n");
+  fprintf(ptr, "      -e <end>            ending timestep for calculation (default: none)\n");
   fprintf(ptr, "      -n <int> <int>      use aggregate sizes in a given range\n");
   fprintf(ptr, "      -m <name(s)>        use number of specified molecule(s) as aggrete size\n");
   fprintf(ptr, "      -x <name(s)>        exclude aggregates containing only specified molecule(s)\n");
-  fprintf(ptr, "      --only <name(s)>    use only aggregates composed of a specified molecule\n");
-  fprintf(ptr, "      -c <name> <int(s)>  composition distribution of specific aggregate size(s) to <name>\n");
+  fprintf(ptr, "      --only <name(s)>    use only aggregates composed of specified molecule(s)\n");
+  fprintf(ptr, "      -c <name> <int(s)>  write composition distribution of aggregate size(s) to <name>\n");
+  fprintf(ptr, "      -nc <name> <name>   two molecule names for composition calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -64,15 +70,16 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-i") != 0 &&
         strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
         strcmp(argv[i], "--only") != 0 &&
+        strcmp(argv[i], "-nc") != 0 &&
         strcmp(argv[i], "-c") != 0 ) {
 
       ErrorOption(argv[i]);
@@ -82,50 +89,27 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf)) {
-    exit(1);
-  }
-  if (input_vsf[0] == '\0') {
-    strcpy(input_vsf, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf'
-  int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
+  bool silent;
+  bool verbose;
+  char *input_vsf = calloc(LINE,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -140,22 +124,17 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input.agg> - input agg file //{{{
-  char input_agg[1024];
+  char input_agg[LINE];
   strcpy(input_agg, argv[++count]);
 
   // test if <output.agg> filename ends with '.agg' (required by VMD)
-  ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
+  int ext = 1;
+  char extension[2][5];
   strcpy(extension[0], ".agg");
   if (!ErrorExtension(input_agg, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // open input file and skip the first two lines //{{{
   FILE *agg;
@@ -170,27 +149,27 @@ int main(int argc, char *argv[]) {
     ; //}}}
 
   // <output distr file> - filename with weight and number distributions //{{{
-  char output_distr[1024];
+  char output_distr[LINE];
   strcpy(output_distr, argv[++count]); //}}}
 
   // <output avg file> - filename with weight and number average aggregation numbers //{{{
-  char output_avg[1024];
+  char output_avg[LINE];
   strcpy(output_avg, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // revers of Bead[].Index
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information //{{{
-  char vcf[1];
-  vcf[0] = '\0';
-  ReadStructure(input_vsf, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  // read system information
+  char null[1] = {'\0'}; // because ReadStructure & VerboseOutput check the first value in the array
+  ReadStructure(input_vsf, null, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(input_vsf); //}}}
+  free(input_vsf);
 
   // '-n' option - range of aggregation numbers //{{{
   int range_As[2], test = 2;
@@ -247,11 +226,12 @@ int main(int argc, char *argv[]) {
   // count total number of excluded aggs
   long int exclude_count_agg = 0; //}}}
 
-  // '-c' option - aggregate sizes //{{{
+  // '-c' option - aggregate sizes (may be complemented by '-nc' option) //{{{
   int multiply = 1000;
-  int composition[100] = {0}, comp_number_of_sizes = 0,
+  int composition[100] = {0}, // list of agg sizes
+      comp_number_of_sizes = 0, // number of agg sizes
       types[2][2] = {{-1},{-1}}; // [x][0]: mol type; [x][1]: number of mols
-  char output_comp[1024];
+  char output_comp[LINE];
   if (FileIntsOption(argc, argv, "-c", composition, &comp_number_of_sizes, output_comp)) {
     exit(1);
   }
@@ -274,6 +254,37 @@ int main(int argc, char *argv[]) {
       composition[i]+=0;
     }
   } //}}}
+
+  // '-nc' option must be complemented by '-c' option //{{{
+  int *composition_mol_names = calloc(Counts.TypesOfMolecules,sizeof(int *));
+  if (MoleculeTypeOption2(argc, argv, "-nc", &composition_mol_names, Counts, &MoleculeType)) {
+    exit(1);
+  }
+  // check number of provided names
+  count = 0;
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (composition_mol_names[i] == 1) {
+      count++;
+    }
+  }
+  // error if wrong number of names
+  if (count != 0 && count != 2) {
+    fprintf(stderr, "\nError: '-nc' option - exactly two molecule names are required\n\n");
+    exit(1);
+  }
+  // assign provided molecule names
+  if (count == 2) {
+    printf("%d %d\n", composition_mol_names[0], composition_mol_names[1]);
+    printf("%s %s\n", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
+    types[0][0] = composition_mol_names[0];
+    types[1][0] = composition_mol_names[1];
+    printf("%s %s\n", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
+  }
+  // warning if -nc is used, but not -c
+  if (count == 2 && comp_number_of_sizes == 0 && !silent) {
+    fprintf(stdout, "\nWarning: '-nc' option has no effect if '-c' option is not present\n\n");
+  }
+  //}}}
 
   // '--only' option //{{{
   int *only_specific_moltype_aggregates = calloc(Counts.TypesOfMolecules,sizeof(int));
@@ -307,12 +318,10 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     fprintf(stdout, "Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
-    char null[1] = {'\0'};
-    VerboseOutput(verbose2, null, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+    Vector BoxLength;
+    BoxLength.x = -1;
+    VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+  } //}}}
 
   // arrays for distribution //{{{
   // number distribution
@@ -324,7 +333,7 @@ int main(int argc, char *argv[]) {
   // [][0] = volume of mols according to options; [][1] = volume of whole agg
   long double voldistr[Counts.Molecules][2];
   // number distribution of agg composition
-  long double *ndistr_comp[Counts.Molecules];
+  long int *ndistr_comp[Counts.Molecules]; // TODO: should have size of the number of provided sizes
   for (int i = 0; i < Counts.Molecules; i++) {
     ndistr_comp[i] = malloc((multiply*Counts.Molecules)*sizeof(long int));
   }
@@ -396,58 +405,31 @@ int main(int argc, char *argv[]) {
   while ((test = getc(agg)) != 'L') { // cycle ends with 'Last Step' line in agg file
     ungetc(test, agg);
 
-    // print (or not) step number //{{{
     count_step++;
+
+    // print step? //{{{
     if (count_step < start) {
-      if (!silent) {
-        if (script) {
-          fprintf(stdout, "Discarding Step: %6d\n", count_step);
-        } else {
-          fflush(stdout);
-          fprintf(stdout, "\rDiscarding Step: %6d", count_step);
-        }
+      if (!silent && !script) {
+        fflush(stdout);
+        fprintf(stdout, "\rDiscarding Step: %6d", count_step);
       }
     } else if (count_step == start) {
       if (!silent) {
         if (script) {
-          fprintf(stdout, "Discarded Steps: %6d\n", count_step-1);
+          fprintf(stdout, "Starting step: %6d\n", start);
         } else {
           fflush(stdout);
-          fprintf(stdout, "\rDiscarded Steps: %6d\n", count_step-1);
+          fprintf(stdout, "\rStarting step: %6d   \n", start);
         }
       }
     } else {
-      if (!silent) {
-        if (script) {
-          fprintf(stdout, "Step: %6d\n", count_step);
-        } else {
-          fflush(stdout);
-          fprintf(stdout, "\rStep: %6d", count_step);
-        }
+      if (!silent && !script) {
+        fflush(stdout);
+        fprintf(stdout, "\rStep: %6d", count_step);
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule);
-
-    // print info about aggregates if '-V' is used //{{{
-    if (verbose2) {
-      for (int i = 0; i < Counts.Aggregates; i++) {
-        fprintf(stdout, "\nAggregate[%3d].{Mass = %6.2f,\nnMolecules = %3d:", i+1, Aggregate[i].Mass, Aggregate[i].nMolecules);
-        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          fprintf(stdout, " %d", Aggregate[i].Molecule[j]+1);
-        }
-        fprintf(stdout, ",\n nBeads = %4d:", Aggregate[i].nBeads);
-        for (int j = 0; j < Aggregate[i].nBeads; j++) {
-          fprintf(stdout, " %d", Aggregate[i].Bead[j]);
-        }
-        fprintf(stdout, ",\n nMonomers = %4d:", Aggregate[i].nMonomers);
-        for (int j = 0; j < Aggregate[i].nMonomers; j++) {
-          fprintf(stdout, " %d", Aggregate[i].Monomer[j]);
-        }
-        fprintf(stdout, "}\n");
-      }
-      putchar('\n');
-    } //}}}
+    ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
 
     // go through all aggregates
     int aggs_step = 0; // number of eligible aggregates per step
@@ -506,15 +488,16 @@ int main(int argc, char *argv[]) {
       // if '-c' is used, calculate composition distribution //{{{
       if (comp_number_of_sizes > 0) {
         // use the size?
-        bool use_size_comp = false;
+        int use_size_comp = -1;
         for (int j = 0; j < comp_number_of_sizes; j++) {
           if (size == composition[j]) {
-            use_size_comp = true;
+            use_size_comp = j;
             break;
           }
         }
 
-        if (use_size_comp) {
+        // TODO: ndistr_comp array size (should be number of provided sizes)
+        if (use_size_comp != -1) {
           // count numbers of the two mol types in aggregate 'i'
           types[0][1] = 0;
           types[1][1] = 0;
@@ -534,6 +517,9 @@ int main(int argc, char *argv[]) {
             ratio = (double)(types[0][1]) / types[1][1];
           }
           ndistr_comp[size-1][(int)(ratio*multiply)]++;
+          printf("%d / %d = %lf; ndistr_comp[%d][%d] = %ld\n", types[0][1], types[1][1], ratio,
+                                                               size-1, (int)(ratio*multiply),
+                                                               ndistr_comp[size-1][(int)(ratio*multiply)]);
         }
       } //}}}
 
@@ -555,8 +541,8 @@ int main(int argc, char *argv[]) {
 
       aggs_step++;
 
-      // start calculation of averages from specified 'start' timestep
-      if (count_step >= start) {
+      // start calculation of averages and distributions from specified 'start' timestep
+      if (count_step >= start && (end == -1 || count_step <= end)) {
 
         // distribution //{{{
         ndistr[size-1]++;
@@ -637,6 +623,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(agg);
 
+  // print last step //{{{
   if (!silent) {
     if (script) {
       fprintf(stdout, "Last Step: %6d\n", count_step);
@@ -645,6 +632,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rLast Step: %6d\n", count_step);
     }
   } //}}}
+  //}}}
 
   // print the first two lines to output file with distributions //{{{
   if ((out = fopen(output_distr, "w")) == NULL) {
@@ -693,7 +681,11 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  count_step -= start - 1;
+  if (end == -1) {
+    count_step = count_step - start + 1;
+  } else {
+    count_step = count_step - (start - 1) - (end - 1);
+  }
 
   // normalization factors
   long int ndistr_norm = 0, wdistr_norm[2] = {0}, zdistr_norm[2] = {0}, voldistr_norm[2] = {0};
@@ -785,7 +777,6 @@ int main(int argc, char *argv[]) {
     fprintf(out, " (%d) <M>_w,", count++);
     fprintf(out, " (%d) <M>_z,", count++);
   }
-//count++;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     fprintf(out, " (%d) <%s>_n", i+count, MoleculeType[i].Name);
     if (i != (Counts.TypesOfMolecules-1) && !only) {
@@ -813,19 +804,12 @@ int main(int argc, char *argv[]) {
     fprintf(out2, " (%d) <M>_w,", count++);
     fprintf(out2, " (%d) <M>_z,", count++);
   }
-//count++;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     fprintf(out2, " (%d) <%s>_n", i+count, MoleculeType[i].Name);
     if (i != (Counts.TypesOfMolecules-1) && !only) {
       putc(',', out2);
     }
   }
-//if (only) {
-//  // distr file
-//  fprintf(out, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+count);
-//  // avg file
-//  fprintf(out2, " (%d) <fraction of '--only' mols not touching other mols>", Counts.TypesOfMolecules+count);
-//}
   putc('\n', out);
   putc('\n', out2); //}}}
 
@@ -887,31 +871,6 @@ int main(int argc, char *argv[]) {
     fprintf(out2, " %lf", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
   }
 
-//if (only) {
-//  int only_molecules_sum = 0;
-//  int only_moltype_number = 0;
-//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//    if (only_specific_moltype_aggregates[i]) {
-//      only_molecules_sum += molecules_sum[0][i];
-//      only_moltype_number += MoleculeType[i].Number;
-//    }
-//  }
-//  // distr file
-//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//    if (only_specific_moltype_aggregates[i]) {
-//      fprintf(out, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
-//    }
-//  }
-//  fprintf(out, " %10.3f", (double)(only_count_chains)/(count_step*only_moltype_number));
-//  // avg file
-//  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//    if (only_specific_moltype_aggregates[i]) {
-//      fprintf(out2, "%10.3f", (double)(molecules_sum[0][i])/count_agg[0]); // <species>_n
-//    }
-//  }
-//  fprintf(out2, " %10.3f", (double)(only_count_chains)/(count_step*only_moltype_number));
-//}
-
   putc('\n', out);
   putc('\n', out2); //}}}
 
@@ -967,6 +926,7 @@ int main(int argc, char *argv[]) {
         fprintf(out, "%10.5f", (double)(i)/multiply);
         for (int j = 0; j < comp_number_of_sizes; j++) {
           if (ndistr_comp[composition[j]-1][i] != 0) {
+            printf("%ld %ld\n", ndistr_comp[composition[j]-1][i], sum[composition[j]-1]);
             fprintf(out, " %7.5f", (double)(ndistr_comp[composition[j]-1][i])/sum[composition[j]-1]);
           } else {
             fprintf(out, "       ?");
@@ -983,6 +943,7 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
@@ -993,7 +954,8 @@ int main(int argc, char *argv[]) {
     free(molecules_sum[i]);
     free(ndistr_comp[i]);
   }
-  free(molecules_sum); //}}}
+  free(molecules_sum);
+  free(composition_mol_names); //}}}
 
   return 0;
 }

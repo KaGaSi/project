@@ -16,19 +16,18 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
     fprintf(stdout, "\
 Average uses binning method to analyse data stored in a supplied file. It \
-prints average, statistical error and estimate of integrated \
-autocorrelation time (tau). Empty lines and lines beginning with '#' are \
-skipped. The program prints to standart output 4 values: <n_blocks> \
-<simple average> <statistical error> <estimate of tau>.\n\n");
+prints average, statistical error and estimate of integrated autocorrelation \
+time (tau). Empty lines and lines beginning with '#' are skipped. The program \
+prints to standart output 4 values: <n_blocks> <simple average> <statistical \
+error> <estimate of tau>.\n\n");
     fprintf(stdout, "\
-A way to estimate \
-the 'real' value of tau is to use a wide range of <n_blocks> and then plot \
-<tau> as a function of <n_blocks>. Since the number of data points in a \
-block has to be larger than tau (say, 10 times larger), plotting \
-<number of data lines>/10/<n_blocks> vs. <n_blocks> will produce an \
-exponential function that will intersect the plotted <tau>. A value of tau \
-near the intersection (but to the left where the exponential is above <tau>) \
-can be considered a good estimate for tau.\n\n");
+A way to get a reasonable tau estimate is to use a wide range of <n_blocks> \
+and then plot <tau> as a function of <n_blocks>. Since the number of data \
+points in a block has to be larger than tau (e.g., ten times larger), \
+plotting <number of data lines>/10/<n_blocks> vs. <n_blocks> will produce an \
+exponential function that intersects the plotted <tau>. A value of tau near \
+the intersection (but to the left where the exponential is above <tau>) can \
+be considered a safe estimate for tau.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -36,7 +35,7 @@ can be considered a good estimate for tau.\n\n");
 
   fprintf(ptr, "   <input>           input filename\n");
   fprintf(ptr, "   <column>          column number in the file to analyse\n");
-  fprintf(ptr, "   <discard>         number of rows discard (from the file beginning)\n");
+  fprintf(ptr, "   <discard>         number of data lines to discard from the file beginning\n");
   fprintf(ptr, "   <n_blocks>        number of blocks for binning\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -h             print this help and exit\n");
@@ -80,7 +79,7 @@ int main ( int argc, char** argv ) {
   count = 0; // count mandatory arguments
 
   // <input> - filename of input file //{{{
-  char input[1024];
+  char input[LINE];
   strcpy(input, argv[++count]); //}}}
 
   // <column> - column number to analyze //{{{
@@ -119,11 +118,6 @@ int main ( int argc, char** argv ) {
     exit(1);
   }
 
-//fprintf(stdout, "input=\"%s\", ", input);
-//fprintf(stdout, "column=%d, ", column);
-//fprintf(stdout, "discard=%d, ", discard);
-//fprintf(stdout, "n_blocks=%d\n", n_blocks);
-
   int test, lines = 0, all_lines = 0;
   while ((test = getc(fr)) != EOF) {
     ungetc(test, fr);
@@ -132,19 +126,10 @@ int main ( int argc, char** argv ) {
     all_lines++;
 
     // get whole line - max 1000 chars //{{{
-    char line[1024];
-    fgets(line, 1024, fr); //}}}
+    char line[LINE];
+    fgets(line, strlen(line), fr); //}}}
 
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character is '\n' (at [length-1]), so check the previous one(s) - if there are any
-    while (length > 1 &&
-           (line[length-2] == ' ' ||
-           line[length-2] == '\t')) {
-      line[length-2] = line[length-1]; // move newline char
-      line[length-1] = '\0'; // add string ending char
-      length--;
-    } //}}}
+    strcpy(line, TrimLine(line)); // trim excess whitespace
 
     // if not empty line or comment continue //{{{
     char *split = strtok(line," \t");
@@ -162,7 +147,7 @@ int main ( int argc, char** argv ) {
 
         // error - insufficient number of columns //{{{
         if (split == NULL) {
-          fprintf(stderr, "Only %d columns in %s on line %d (data line %d)!\n", col, input, all_lines, lines);
+          fprintf(stderr, "\nError: nnly %d columns in %s on line %d (data line %d)\n\n", col, input, all_lines, lines);
           exit(1);
         } //}}}
       } //}}}
@@ -179,7 +164,7 @@ int main ( int argc, char** argv ) {
 
   // error - <discard> is too large //{{{
   if (discard >= lines) {
-    fprintf(stderr, "Error: <discard> parameter is too large (%d) - ", discard);
+    fprintf(stderr, "\nError: <discard> parameter is too large (%d) - ", discard);
     fprintf(stderr, "there are only %d data lines in %s\n\n", lines, input);
     Help(argv[0], true);
     exit(1);

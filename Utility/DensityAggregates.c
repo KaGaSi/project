@@ -14,14 +14,15 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(ptr, "\
-DensityAggregates utility calculates bead density for aggregates of given \
-size(s) from \
-their centre of mass. Beside unbonded beads it takes into account only beads \
-from the current aggregate, not from any other aggregate. \
-Care must be taken with beadtype names in molecule types, because if \
-one beadtype appears in more molecule types, the resulting density for that \
-beadtype will be averaged without regard for the various types of molecule it \
-comes from (in that case, use -x option with SelectedVcf utility).\n\n");
+DensityAggregates utility calculates radial bead density for aggregates \
+of given size(s) from their centre of mass. For beads in molecules, \
+it takes into account only beads from the current aggregate, not from \
+any other aggregate. The utility does not check what molecule type a \
+given bead belongs to; therefore, if the same bead type appears in \
+more molecule types, the resulting density for that bead type will be \
+averaged without regard for the various types of molecule it comes from \
+(i.e., if 'mol1' and 'mol2' both both contain bead 'A', there will be \
+only one column for 'A' bead type).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -30,12 +31,13 @@ comes from (in that case, use -x option with SelectedVcf utility).\n\n");
   fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <input.agg>       input agg file\n");
   fprintf(ptr, "   <width>           width of a single bin of the distribution\n");
-  fprintf(ptr, "   <output.rho>      output density file with '#.rho' ending (# is aggregate size)\n");
+  fprintf(ptr, "   <output>          output density file with automatic '#.rho' ending (# is aggregate size)\n");
   fprintf(ptr, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      --joined       specify that aggregates with joined coordinates are used\n");
   fprintf(ptr, "      -n <int>       number of bins to average\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
   CommonHelp(error);
@@ -68,15 +70,14 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 ) {
 
@@ -87,46 +88,11 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf)) {
-    exit(1);
-  }
-  if (input_vsf[0] == '\0') {
-    strcpy(input_vsf, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf'
-  int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(1);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
+  bool silent;
+  bool verbose;
+  char *input_vsf = calloc(LINE,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // are provided coordinates joined? //{{{
   bool joined = BoolOption(argc, argv, "--joined"); //}}}
@@ -137,9 +103,21 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
   // number of bins to average //{{{
   int avg = 1;
   if (IntegerOption(argc, argv, "-n", &avg)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -154,43 +132,30 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(8*sizeof(char));
-  }
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
-  // <input.agg> - input agg file with aggregate information //{{{
-  char input_agg[1024];
+  // <input.agg> - input agg file //{{{
+  char input_agg[LINE];
   strcpy(input_agg, argv[++count]);
 
-  // test if <input.gg> ends with '.agg'
+  // test if <input.agg> ends with '.agg'
   ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".agg");
   if (!ErrorExtension(input_agg, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <width> - width of single bin //{{{
   // Error - non-numeric argument
@@ -202,21 +167,22 @@ int main(int argc, char *argv[]) {
   double width = atof(argv[count]); //}}}
 
   // <output.rho> - filename with bead densities //{{{
-  char output_rho[1024];
+  char output_rho[LINE];
   strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information{{{
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  // read system information
+  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(input_vsf); //}}}
+  free(input_vsf);
 
   // '-m' option //{{{
   int *specific_moltype_for_size;
@@ -236,10 +202,10 @@ int main(int argc, char *argv[]) {
 
   // <agg sizes> - aggregate sizes for calculation //{{{
   int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
-  int *other_mols = malloc(Counts.Molecules*sizeof(int));
+  int **agg_mols = malloc(Counts.Molecules*sizeof(int *));
   for (int i = 0; i < Counts.Molecules; i++) {
     agg_sizes[i] = calloc(2,sizeof(int));
-    other_mols[i] = 0;
+    agg_mols[i] = calloc(Counts.TypesOfMolecules, sizeof(int));
   }
 
   int aggs = 0;
@@ -256,7 +222,7 @@ int main(int argc, char *argv[]) {
 
     // write initial stuff to output density file //{{{
     FILE *out;
-    char str[1024];
+    char str[LINE];
     strcpy(str, output_rho);
 
     char str2[1030];
@@ -310,13 +276,13 @@ int main(int argc, char *argv[]) {
   while ((test = getc(agg)) != '-' && test != '\n') {
     ungetc(test, agg);
 
-    char name[1024];
+    char name[LINE];
     fscanf(agg, "%s", name);
     int type = FindBeadType(name, Counts, BeadType);
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", name, input_coor);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s coordinate file\n\n", name, input_coor);
       exit(1);
     }
 
@@ -348,7 +314,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -389,14 +355,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = malloc(1024*sizeof(int));
-
-  // initialize the array
-  for (int i = 0; i < 128; i++) {
-    stuff[i] = '\0';
-  } //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
@@ -411,17 +371,13 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
     fprintf(stdout, "Chosen aggregate sizes:");
     for (int i = 0; i < aggs; i++) {
       fprintf(stdout, " %d", agg_sizes[i][0]);
     }
     putchar('\n');
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+  } //}}}
 
   // skip first start-1 steps //{{{
   count = 0;
@@ -431,75 +387,67 @@ int main(int argc, char *argv[]) {
     count++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarding step: %6d", count);
     } //}}}
 
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
       test = '\0';
-      break;
+      exit(1);
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "Error: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
       exit(1);
     }
   }
-  if (test == '\0') {
-    exit(1);
-  }
-  // print number of discarded steps? //{{{
+
+  // print number of starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d   \n", start);
     }
   } //}}}
   //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
+  int count_vcf = start - 1;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
+    count_vcf++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count_vcf);
     } //}}}
 
     // read aggregates //{{{
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
       count--; // because last step isn't processed
-      test = start - 1 + count; // total number of processed steps in agg file
-      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, test, stuff);
+      count_vcf--;
+      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, count_vcf, stuff);
       break;
     } //}}}
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -539,8 +487,6 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       if (correct_size != -1) {
-        other_mols[correct_size] += Aggregate[i].nMolecules - size;
-
         Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
         // free temporary density array //{{{
@@ -559,8 +505,6 @@ int main(int argc, char *argv[]) {
           int moltype = Molecule[mol].Type;
 
           if (MoleculeType[moltype].Use) {
-//          fprintf(stdout, "%s: %d\n", MoleculeType[moltype].Name, MoleculeType[moltype].Use);
-
             Vector dist = Distance(Bead[Aggregate[i].Bead[j]].Position, com, BoxLength);
             dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
@@ -593,6 +537,11 @@ int main(int argc, char *argv[]) {
             rho_2[j][correct_size][k] += SQR(temp_rho[j][correct_size][k]);
           }
         } //}}}
+
+        // count mol types in the aggregate
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          agg_mols[correct_size][Molecule[Aggregate[i].Molecule[j]].Type]++;
+        }
       }
     } //}}}
 
@@ -605,20 +554,18 @@ int main(int argc, char *argv[]) {
     }
     free(temp_rho); //}}}
 
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
+    if (end == count_vcf)
+      break;
   }
   fclose(vcf);
   fclose(agg);
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   } //}}}
 
@@ -662,42 +609,45 @@ int main(int argc, char *argv[]) {
         temp_number_err = sqrt(temp_number_err - temp_number);
 
         // print average value to output file
-//      fprintf(out, " %10f", temp_rdp/avg);
         fprintf(out, " %10f %10f", temp_rdp/avg, temp_rdp_err/avg);
         fprintf(out, " %10f %10f", temp_number/avg, temp_number_err/avg);
       }
       putc('\n',out);
     }
 
-    fprintf(out, "# %d molecules in aggregate (sum of", agg_sizes[i][0]);
-    int types = 0;
+    fprintf(out, "# (1) Number of aggregates; Average numbers of molecules:");
+    count = 2;
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (specific_moltype_for_size[j]) {
-        if (++types == 1) { // first mol type
-          fprintf(out, " %s", MoleculeType[j].Name);
-        } else { // second and higher mol type
-          fprintf(out, ", %s", MoleculeType[j].Name);
-        }
+      fprintf(out," (%d) %s", count++, MoleculeType[j].Name);
+      if (i < (Counts.TypesOfMolecules-1)) {
+        putc(';', out);
       }
     }
-    fprintf(out, ") and %.2f other molecules", (double)(other_mols[i])/agg_sizes[i][1]);
-    fprintf(out, "(%d aggregates)\n", agg_sizes[i][1]);
+    putc('\n', out);
+    putc('#', out);
+    fprintf(out," %d", agg_sizes[i][1]);
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      fprintf(out," %lf", (double)(agg_mols[i][j])/agg_sizes[i][1]);
+    }
+    putc('\n', out);
 
     fclose(out);
   } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(stuff);
-  free(other_mols);
   for (int i = 0; i < Counts.Molecules; i++) {
     free(agg_sizes[i]);
+    free(agg_mols[i]);
   }
   free(agg_sizes);
+  free(agg_mols);
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     for (int j = 0; j < aggs; j++) {
       free(rho[i][j]);
