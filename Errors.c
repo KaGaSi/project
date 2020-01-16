@@ -67,15 +67,19 @@ bool ErrorExtension(char *file, int number, char extension[][5]) {
  */
 void ErrorFileOpen(char *file, char mode) {
   fprintf(stderr, "\nError: cannot open '%s' for ", file);
-  if (mode == 'r') {
-    fprintf(stderr, "reading\n");
-  } else if (mode == 'w') {
-    fprintf(stderr, "writing\n");
-  } else if (mode == 'a') {
-    fprintf(stderr, "appending\n");
-  } else {
-    fprintf(stderr, "...well, it seems you found something new to do with a file!\n");
-    fprintf(stderr, "Use r(ead), w(rite), or a(ppend).");
+  switch(mode) {
+    case 'r':
+      fprintf(stderr, "reading\n");
+      break;
+    case 'w':
+      fprintf(stderr, "writing\n");
+      break;
+    case 'a':
+      fprintf(stderr, "appending\n");
+      break;
+    default :
+      fprintf(stderr, "...well, it seems you found something new to do with a file!\n");
+      fprintf(stderr, "Use r(ead), w(rite), or a(ppend).\n\n");
   }
   putchar('\n');
 } //}}}
