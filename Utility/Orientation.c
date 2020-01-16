@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
       if (MoleculeType[j].Use && bead[i] > MoleculeType[j].nBeads) {
         if ((i%2) == 1 || bead[i+1] <= MoleculeType[j].nBeads) { // warning if one is higher
           fprintf(stderr, "\nWarning: '-n' option - %d is larger than the number of beads in %s; using %d instead\n", bead[i], MoleculeType[j].Name, MoleculeType[j].nBeads);
-        } else if ((i%2) == 0 && bead[i+1] > MoleculeType[j].nBeads)
+        } else if ((i%2) == 0 && bead[i+1] > MoleculeType[j].nBeads) {
           fprintf(stderr, "\nWarning: '-n' option - both %d and %d are larger than the number of beads in %s; this pair is ignored\n", bead[i], bead[i+1], MoleculeType[j].Name);
         }
       }
