@@ -7,8 +7,6 @@
 #include "../Options.h"
 #include "../Errors.h"
 
-// TODO: option to print angles as well as orientation parameter
-
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -32,6 +30,7 @@ calculated relative to xy plane.\n\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
+  fprintf(ptr, "      -a             axis to use as the normal vector (default: z)\n");
   fprintf(ptr, "      -n <ints>      bead indices (multiple of 2 <ints>; default: 1 2)\n");
   CommonHelp(error);
 } //}}}
@@ -85,6 +84,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
+        strcmp(argv[i], "-a") != 0 &&
         strcmp(argv[i], "-n") != 0) {
 
       ErrorOption(argv[i]);
@@ -117,6 +117,49 @@ int main(int argc, char *argv[]) {
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
     exit(1);
   } //}}}
+
+  // TODO: option to choose an axis and to specify plane (via a, b, and c in ax+by+cz+d=0)
+  // axis to use as a normal //{{{
+  int test = 'z';
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-a") == 0) {
+      // Error - missing argument //{{{
+      if ((i+1) >= argc) {
+        fprintf(stderr, "Missing numeric argument for '-a' option!\n");
+        Help(argv[0], true);
+        exit(1);
+      } //}}}
+      test = argv[i+1][0];
+    }
+  }
+  Vector normal;
+  switch(test) {
+    case 120: // x
+      normal.x = 1;
+      normal.y = 0;
+      normal.z = 0;
+      break;
+    case 121: // y
+      normal.x = 0;
+      normal.y = 1;
+      normal.z = 0;
+      break;
+    case 122: // z
+      normal.x = 0;
+      normal.y = 0;
+      normal.z = 1;
+      break;
+    default:
+      fprintf(stderr, "\nError: argument to -a option must be 'x', 'y', or 'z'\n\n");
+      Help(argv[0], true);
+      exit(1);
+  }
+  printf("normal=(%lf,%lf,%lf)\n", normal.x, normal.y, normal.z);
+//// use later, when arbitrary vector can be used
+//double normal_length = sqrt(SQR(normal.x) + SQR(normal.y) + SQR(normal.z));
+//normal.x /= normal_length;
+//normal.y /= normal_length;
+//normal.z /= normal_length; //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -125,17 +168,6 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, " %s", argv[i]);
     fprintf(stdout, "\n\n");
   } //}}}
-
-  // TODO: option to choose an axis and to specify plane (via a, b, and c in ax+by+cz+d=0)
-  // for now, do angle against z axis (i.e., normal to xy plane)
-  Vector normal;
-  normal.x = 0;
-  normal.y = 0;
-  normal.z = 1;
-  double normal_length = sqrt(SQR(normal.x) + SQR(normal.y) + SQR(normal.z));
-  normal.x /= normal_length;
-  normal.y /= normal_length;
-  normal.z /= normal_length;
 
   count = 0; // count mandatory arguments
 
@@ -196,8 +228,8 @@ int main(int argc, char *argv[]) {
   int bead[100] = {0}, // specified bead indices
       number_of_angles, // total number of angles to calculate
       number_of_beads = 2, // number of parameters to -n
-      beads_per_angle = 2, // the numbers must come in pairs
-      test = 0;
+      beads_per_angle = 2; // the numbers must come in pairs
+  test = 0;
   bead[0] = 1; // default ids for angle
   bead[1] = 2;
   if (MultiIntegerOption(argc, argv, "-n", &test, bead)) {
@@ -217,8 +249,12 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < number_of_beads; i++) {
     // Error - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (MoleculeType[j].Use && bead[i] >= MoleculeType[j].nBeads) {
-        fprintf(stderr, "\nWarning: '-n' option - %d is larger than the number of beads in %s; using %d instead\n", bead[i], MoleculeType[j].Name, MoleculeType[j].nBeads);
+      if (MoleculeType[j].Use && bead[i] > MoleculeType[j].nBeads) {
+        if ((i%2) == 1 || bead[i+1] <= MoleculeType[j].nBeads) { // warning if one is higher
+          fprintf(stderr, "\nWarning: '-n' option - %d is larger than the number of beads in %s; using %d instead\n", bead[i], MoleculeType[j].Name, MoleculeType[j].nBeads);
+        } else if ((i%2) == 0 && bead[i+1] > MoleculeType[j].nBeads)
+          fprintf(stderr, "\nWarning: '-n' option - both %d and %d are larger than the number of beads in %s; this pair is ignored\n", bead[i], bead[i+1], MoleculeType[j].Name);
+        }
       }
     } //}}}
     // Error - two same beads //{{{
@@ -265,7 +301,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // number of bins
-  int bins = 1.5 / width + 1; // value of orientation parameter: <-0.5,1>
+  int bins = 1.5 / width;
 
   // array for distributions //{{{
   double *orientation[Counts.TypesOfMolecules][number_of_angles],
@@ -371,11 +407,8 @@ int main(int argc, char *argv[]) {
           unit.y = (Bead[id1].Position.y - Bead[id2].Position.y) / length;
           unit.z = (Bead[id1].Position.z - Bead[id2].Position.z) / length;
 
-          // for now, angle against z axis, that is against (0,0,1)
           double value = unit.x * normal.x + unit.y * normal.y + unit.z * normal.z; // cos(angle)
-//        printf("xx %s (%d-%d; %d-%d) %lf %lf ", MoleculeType[mtype].Name, bead[j]+1, bead[j+1]+1, id1, id2, length, value);
           value = 0.5 * (3 * SQR(value) - 1);
-//        printf("xx %lf\n", value-0.5);
 
           // add to overall averages
           avg_orientation[mtype][j/2] += value;
@@ -384,6 +417,8 @@ int main(int argc, char *argv[]) {
           int k = (value + 0.5) / width; // +0.5, because its range is <-0.5,1>
           if (k < bins) {
             orientation[mtype][j/2][k]++;
+          } else if (k == bins) { // in case of value=1 exactly
+            orientation[mtype][j/2][bins-1]++;
           }
         }
       }
