@@ -33,15 +33,19 @@ set(UTILS AddToSystem
           DihedralMolecules
           DistrAgg
           GenSystem
+          GenLayers
           GyrationAggregates
           GyrationMolecules
           JoinAggregates
           JoinRuns
           lmp_data
+          lmp_vtf
+          Orientation
           PairCorrel
           PotentialAggregates
           SelectedVcf
-          TransformVsf)
+          TransformVsf
+          VisualizeAgg)
         foreach(utility ${UTILS})
   add_executable(${utility} Utility/${utility}.c)
   target_link_libraries(${utility} ${LIBRARIES} m)

@@ -8,6 +8,29 @@
 
 #include "Structs.h"
 
+// Help() //{{{
+/**
+ * \brief Function to print help.
+ *
+ * \param [in]  cmd    utility name
+ * \param [out] error  is it help due to error or not?
+ */
+void Help(char cmd[50], bool error); //}}}
+
+// CommonOptions() //{{{
+/**
+ * \brief Function for options common to most of the utilities.
+ *
+ * \param [in]  argc         number of program's arguments
+ * \param [in]  argv         program's arguments
+ * \param [out] input.vsf    .vsf structure file
+ * \param [out] verbose      verbose output?
+ * \param [out] silent       no output?
+ * \apram [out] script       output to file?
+ */
+void CommonOptions(int argc, char **argv, char **vsf_file,
+                   bool *verbose, bool *silent, bool *script); //}}}
+
 // VerboseLongOption() //{{{
 /**
  * \brief Option whether to use long verbose output (overrides
@@ -16,10 +39,9 @@
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
  * \param [out] verbose      bool for `-v` option (verbose output)
- * \param [out] verbose2     bool for `-V` option (detailed verbose output)
  * \return `true` or `false` for error on common options
  */
-void VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2); //}}}
+void VerboseLongOption(int argc, char **argv, bool *verbose); //}}}
 
 // SilentOption() //{{{
 /**
@@ -29,12 +51,10 @@ void VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2); //
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
  * \param [out] verbose      bool for `-v` option (verbose output)
- * \param [out] verbose2     bool for `-V` option (detailed verbose output)
  * \param [out] silent       bool for this option
  * \return `true` or `false` for error on common options
  */
-void SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
-                  bool *silent); //}}}
+void SilentOption(int argc, char **argv, bool *verbose, bool *silent); //}}}
 
 // ExcludeOption() //{{{
 /**
@@ -69,12 +89,13 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf); //}}}
  *
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
+ * \param [in]  opt          option switich (e.g., string '-bt')
  * \param [in]  use          if the option is not present, set all BeadType[].Use flags to 'use'
  * \param [in]  Counts       numbers of beads, molecules, etc.
  * \param [out] BeadType     information about bead types
  * \return `true` or `false` error or not error
  */
-bool BeadTypeOption(int argc, char **argv, bool use,
+bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
                     Counts Counts, BeadType **BeadType); //}}}
 
 // BoolOption() //{{{
@@ -192,11 +213,11 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts C
  * \param [in]  argc         number of program's arguments
  * \param [in]  argv         program's arguments
  * \param [in]  opt          option switch (e.g. array containing `-n`)
- * \param [in]  Counts       numbers of beads, molecules, etc.
  * \param [out] moltype      array for the molecule type
+ * \param [in]  Counts       numbers of beads, molecules, etc.
  * \param [in]  MoleculeType information about molecule types
  * \return `true` or `false` for error
  */
 bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts Counts,
-                        MoleculeType **MoleculeType); //}}}
+                         MoleculeType **MoleculeType); //}}}
 #endif

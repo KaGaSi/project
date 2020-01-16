@@ -23,7 +23,6 @@ visualisation tool.\n\n");
   fprintf(ptr, "   <output.vsf>    output structure file (*.vsf)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -i <name>  use input .vsf file different from traject.vsf\n");
-//fprintf(ptr, "      -b <name>  file containing bond alternatives to FIELD\n");
   fprintf(ptr, "      -v         verbose output\n");
   fprintf(ptr, "      -h         print this help and exit\n");
 } //}}}
@@ -55,7 +54,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-        strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0) {
 
       ErrorOption(argv[i]);
@@ -71,7 +69,7 @@ int main(int argc, char *argv[]) {
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
+  char *input_vsf = calloc(LINE,sizeof(char *));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }
@@ -81,26 +79,12 @@ int main(int argc, char *argv[]) {
 
   // test if structure file ends with '.vsf'
   int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
   } //}}}
 
   // output verbosity //{{{
@@ -111,57 +95,45 @@ int main(int argc, char *argv[]) {
   count = 0; // count arguments
 
   // <output.vsf> - output structure file (must end with .vsf) //{{{
-  char output[1024];
+  char output[LINE];
   strcpy(output, argv[++count]);
 
   // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)
   ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(output, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information{{{
-  char vcf[1];
-  vcf[0] = '\0';
-  ReadStructure(input_vsf, vcf, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  // read system information
+  ReadStructure(input_vsf, "\0", &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(input_vsf); //}}}
-//for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-//  printf("%d\n", MoleculeType[i].nBTypes);
-//}
+  free(input_vsf);
 
   // print information - verbose option //{{{
   if (verbose) {
-    char null[1] = {'\0'};
-    VerboseOutput(false, null, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
-
-  free(bonds_file); //}}}
+    Vector BoxLength;
+    BoxLength.x = -1;
+    VerboseOutput("\0", Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+  } //}}}
 
   // create & fill output vsf file
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead); //}}}

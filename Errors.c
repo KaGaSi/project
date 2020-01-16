@@ -11,13 +11,6 @@
  */
 void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input_vsf) {
   fprintf(stderr, "\nError: %s - cannot read coordinates (bead %d; step %d - '%s')\n\n", input_vcf, bead, step, stuff);
-  fprintf(stderr, "Possibilities\n");
-  fprintf(stderr, "  1) error in '%s', e.g., wrong number of lines per timestep or columns per line, \
-incorrect blank lines\n", input_vcf);
-  fprintf(stderr, "  2) error in '%s', e.g., wrong number of beads which can cause a complete chaos in \
-internal bead numbering\n", input_vsf);
-  fprintf(stderr, "  3) used '-x' option in generating %s by SelectedVcf, but reading of systems \
-configuration works only if all beads of a given type are in a vcf file \n", input_vcf);
   putchar('\n');
 } //}}}
 
@@ -48,7 +41,7 @@ void ErrorNaN(char *option) {
 // ErrorExtension() //{{{
 /** Error when missing or incorrect file extension
  */
-bool ErrorExtension(char *file, int number, char **extension) {
+bool ErrorExtension(char *file, int number, char extension[][5]) {
 
   char *dot = strrchr(file, '.');
 
@@ -58,7 +51,7 @@ bool ErrorExtension(char *file, int number, char **extension) {
     }
   }
 
-  fprintf(stderr, "Error: '%s' does not have a correct extension (", file);
+  fprintf(stderr, "\nError: '%s' does not have a correct extension (", file);
   for (int i = 0; i < number; i++) {
     if (i < (number-1)) {
       fprintf(stderr, "'%s', ", extension[i]);
@@ -74,14 +67,19 @@ bool ErrorExtension(char *file, int number, char **extension) {
  */
 void ErrorFileOpen(char *file, char mode) {
   fprintf(stderr, "\nError: cannot open '%s' for ", file);
-  if (mode == 'r') {
-    fprintf(stderr, "reading\n");
-  } else if (mode == 'w') {
-    fprintf(stderr, "writing\n");
-  } else if (mode == 'a') {
-    fprintf(stderr, "appending\n");
-  } else {
-    fprintf(stderr, "...well it seems you found a completely new thing to do with a file!\n");
+  switch(mode) {
+    case 'r':
+      fprintf(stderr, "reading\n");
+      break;
+    case 'w':
+      fprintf(stderr, "writing\n");
+      break;
+    case 'a':
+      fprintf(stderr, "appending\n");
+      break;
+    default :
+      fprintf(stderr, "...well, it seems you found something new to do with a file!\n");
+      fprintf(stderr, "Use r(ead), w(rite), or a(ppend).\n\n");
   }
   putchar('\n');
 } //}}}

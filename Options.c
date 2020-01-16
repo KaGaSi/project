@@ -7,40 +7,50 @@
 #include "AnalysisTools.h"
 #include "Errors.h"
 
-// VerboseLongOption() //{{{
+// CommonOptions() //{{{
 /**
- * Option whether to print detailed data to stdout. Data are printed via
- * VerboseOutput() function (and possibly some in-program code). Argument:
- * `-V`
+ * Function for options common to most of the utilities.
  */
-void VerboseLongOption(int argc, char **argv, bool *verbose, bool *verbose2) {
+void CommonOptions(int argc, char **argv, char **vsf_file,
+                   bool *verbose, bool *silent, bool *script) {
 
-  *verbose2 = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-V") == 0) {
-      *verbose = true;
-      *verbose2 = true;
-
-      break;
-    }
+  // -i <name> option - filename of input structure file //{{{
+  if (FileOption(argc, argv, "-i", vsf_file)) {
+    exit(1);
   }
+  // default name
+  if (*vsf_file[0] == '\0') {
+    strcpy(*vsf_file, "traject.vsf");
+  }
+  // test if structure file ends with '.vsf' or '.vtf'
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (!ErrorExtension(*vsf_file, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+  // -v option - verbose output
+  *verbose = BoolOption(argc, argv, "-v");
+  // -s option - silent mode
+  SilentOption(argc, argv, verbose, silent);
+  // --script - meant for when output is routed to file, so don't use flush & \r
+  *script = BoolOption(argc, argv, "--script"); // do not use \r & co.
 } //}}}
 
 // SilentOption() //{{{
 /**
  * Option to not print anything to stdout (or at least no system
- * definitions and no Step: #). Overrides VerboseShortOption and
- * VerboseLongOption. Argument: `-s`
+ * definitions and no Step: #). Overrides verbose option. Argument: `-s`
  */
-void SilentOption(int argc, char **argv, bool *verbose, bool *verbose2,
-                  bool *silent) {
+void SilentOption(int argc, char **argv, bool *verbose, bool *silent) {
 
   *silent = false;
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-s") == 0) {
       *verbose = false;
-      *verbose2 = false;
       *silent = true;
 
       break;
@@ -139,19 +149,19 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
  * is absent, all bead types are switched to `Use = true`. Argument: `-bt
  * <name(s)>`
  */
-bool BeadTypeOption(int argc, char **argv, bool use,
+bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
                     Counts Counts, BeadType **BeadType) {
 
   // specify what bead types to use - either specified by '-bt' option or all
   int types = -1;
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-bt") == 0) {
+    if (strcmp(argv[i], opt) == 0) {
       types = i; // positon of the '-bt' argument in command
       // <type names> - names of bead types to save
       while (++types < argc && argv[types][0] != '-') {
         int type = FindBeadType(argv[types], Counts, *BeadType);
         if (type == -1) {
-          fprintf(stderr, "Bead type '%s' does not exist in structure file ('-bt' option)!\n", argv[types]);
+          fprintf(stderr, "Bead type '%s' does not exist in structure file ('%s' option)!\n", argv[types], opt);
           return(true);
         }
 
@@ -416,7 +426,11 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts
 
       *moltype = FindMoleculeType(argv[i+1], Counts, *MoleculeType);
       if (*moltype == -1) {
-        fprintf(stderr, "Molecule '%s' does not exist in structure file ('%s' option)!\n", argv[i+1], opt);
+        fprintf(stderr, "Error: molecule '%s' does not exist in structure file ('%s' option)!\n\n", argv[i+1], opt);
+        fprintf(stderr, "   Present molecule types:\n");
+        for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+          fprintf(stderr, "%s\n", (*MoleculeType)[j].Name);
+        }
         return(true);
       }
     }
@@ -453,7 +467,11 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts
 
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
         if (type == -1) { // is argv[i+1+j] in vsf?
-          fprintf(stderr, "Molecule '%s' does not exist in structure file ('%s' option)!\n", argv[i+1+j], opt);
+          fprintf(stderr, "Error: molecule '%s' does not exist in the provided coordinate file ('%s' option)!\n\n", argv[i+1+j], opt);
+          fprintf(stderr, "   Present molecule types:\n");
+          for (int k = 0; k < Counts.TypesOfMolecules; k++) {
+            fprintf(stderr, "%s\n", (*MoleculeType)[k].Name);
+          }
           return(true);
         }
         (*moltype)[type] = 1;

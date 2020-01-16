@@ -1,6 +1,6 @@
 \section{DensityAggregates} \label{sec:DensityAggregates}
 
-This utility calculates radial density profiles (RDP, or radial number
+This utility calculates radial density profiles (RDPs, or radial number
 densities) for bead types in an aggregate with specified size (the number
 of molecules or aggregation number, $A_{\mathrm{S}}$) from its centre of
 mass.
@@ -9,14 +9,15 @@ RDP$_i(r)$ of bead type $i$, where $r$ is distance from an aggregate's
 centre of mass, is the number of these beads in a spherical shell between
 the distances $r$ and $r+\mathrm{d}r$ (in \texttt{DensityAggregates},
 $\mathrm{d}r$ is the \texttt{<width>} argument) divided by the volume of
-this shell. The distance written in the output file is always
-$r+0.5\mathrm{d}r$. Besides RDP, the output file also contains radial
-number profiles (i.e., the number of beads in the spherical shell not
-divided by the shell's volume) and one-sigma errors for both RDP and radial
-number profiles. The output file also contains a header describing what is
-in each column.
+this shell. The utility also prints radial number profile (RNP$_i(r)$), or
+the number of beads in each shell without dividing it by its volume. In
+addition, it prints one-$\sigma$ error for both RDP and RNP.
 
-Instead of `true' aggregate size, a number of molecules of specific type(s)
+Composition of an aggregate with given size (i.e., average numbers of
+different types of molecules in that aggregate) is appended to the output
+file.
+
+Instead of \enquote{true} aggregate size, a number of molecules of specific type(s)
 can be used (\texttt{-m} option). For example, an aggregate containg 1
 \texttt{Mol\_A} molecule and 2 \texttt{Mol\_B} molecules (i.e., three
 molecules in all) can be specified in several ways:
@@ -54,7 +55,7 @@ Usage:
 
 \vspace{1em}
 \noindent
-\texttt{DensityAggregates <input> <output.agg> <width> <output.rho> <agg \\
+\texttt{DensityAggregates <input> <input.agg> <width> <output> <agg \\
 size(s)> <options>}
 
 \noindent
@@ -64,9 +65,9 @@ size(s)> <options>}
   \midrule
   \texttt{<input>} & input coordinate file (either \texttt{vcf} or
     \texttt{vtf} format) \\
-  \texttt{<input.agg>} & input \texttt{agg} file \\
-  \texttt{<width>} & width of each bin of the distribution \\
-  \texttt{<output.rho>} & output file(s) (one per aggregate size) with
+  \texttt{<input.agg>} & input \texttt{.agg} file \\
+  \texttt{<width>} & width of a single distribution bin \\
+  \texttt{<output>} & output file(s) (one per aggregate size) with
     automatic \texttt{\#.rho} ending (\texttt{\#} is aggregate size) \\
   \texttt{<agg size(s)>} & aggregate size(s) (the number of molecules in an
     aggregate or the aggregation number, $A_{\mathrm{S}}$) to calculcate
@@ -80,6 +81,7 @@ size(s)> <options>}
   \texttt{-n <int>} & number of bins to average to get smoother density
     (default: 1) \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-e <int>} & ending timestep for calculation (default: none) \\
   \texttt{-m <mol name(s)>} & instead of `true' aggregate size, use the number
     of specified molecule type(s) in an aggregate \\
   \texttt{-x <mol name(s)>} & exclude specified molecule type(s) (i.e., do
@@ -90,7 +92,7 @@ size(s)> <options>}
 \noindent
 Format of output files:
 \begin{enumerate}[nosep,leftmargin=20pt]
-  \item \texttt{<output.rho>} -- bead densities for one aggregate size
+  \item \texttt{<output>\#.rho} -- bead densities for one aggregate size
     \begin{itemize}[nosep,leftmargin=5pt]
       \item first line: command used to generate the file
       \item second line: the order of data columns for each bead type --
@@ -106,6 +108,11 @@ Format of output files:
           \item the rest are for the calculated data: each number specifies
             the first column with data for the given bead type (i.e.,
             \texttt{rdp} column)
+          \item last line contains the total number of aggregates the
+            density was calculated for
         \end{itemize}
+      \item second to last line: column headers for average numbers of
+        different molecules in the given aggregate
+      \item last line: average numbers of the molecules
     \end{itemize}
 \end{enumerate}
