@@ -224,11 +224,7 @@ int main(int argc, char *argv[]) {
   // skip remainder of pbc line
   while (getc(vcf) != '\n')
     ;
-
-  // print pbc if verbose output
-  if (verbose) {
-    fprintf(stdout, "\nbox size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
-  } //}}}
+  //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -442,8 +438,15 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   }
-
   fclose(vcf); //}}}
+
+  // count number of calculated steps //{{{
+  int steps;
+  if (end != -1) {
+    steps = end - start + 1;
+  } else {
+    steps = count_vcf - start + 1;
+  } //}}}
 
   // count total number of bonds in molecules //{{{
   int bonds[Counts.TypesOfMolecules][Counts.TypesOfBeads][Counts.TypesOfBeads]; //{{{
@@ -640,14 +643,14 @@ int main(int argc, char *argv[]) {
     }
     putc('\n', out); //}}}
 
-    // write distances to output file //{{{
+    // write the distribution to output file //{{{
     for (int i = 0; i < bins; i++) {
       fprintf(out, "%7.4f", width*(2*i+1)/2);
 
       for (int j = 0; j < Counts.TypesOfMolecules; j++) {
         if (MoleculeType[j].Use) {
           for (int k = 0; k < number_of_beads; k += 2) {
-            fprintf(out, " %10f", (double)(distance[j][k/2][i])/((count-1)*MoleculeType[j].Number));
+            fprintf(out, " %10f", (double)(distance[j][k/2][i])/(steps*MoleculeType[j].Number));
           }
         }
       }
