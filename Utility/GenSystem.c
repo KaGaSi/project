@@ -14,15 +14,21 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-GenVsf reads information from FIELD-like file and creates \
-vsf structure file and generates coordinates for all beads \
-(used, e.g., as initial configuration for a simulation).\n\n");
+Warning: This utility was not extensively tested and is in fact not a \
+very good generator of initial configuration.\n\n\
+GenSystem reads information from a FIELD-like file to create vsf \
+structure file and generate coordinates for all beads (used, e.g., as \
+initial configuration for a simulation). This utility only creates linear \
+molecules no matter the connectivity in the provided FIELD-like file. \
+GenSystem also lacks checking for errors in the FIELD-like file so if an \
+incorrect file is provided, the utility will exhibit undefined behaviour \
+(it will freeze, crash, or produce wrong results).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <out.vsf> <out.vcf> <options>\n\n", cmd);
-  fprintf(ptr, "   <out.vsf>     output structure file (*.vsf)\n");
-  fprintf(ptr, "   <out.vcf>     output coordinate file (*.vcf)\n");
+  fprintf(ptr, "   <out.vsf>     output structure file (vsf format)\n");
+  fprintf(ptr, "   <out.vcf>     output coordinate file (vcf format)\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -f <name>  FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      -v         verbose output\n");
@@ -76,7 +82,7 @@ int main(int argc, char *argv[]) {
   // }}}
 
   // FIELD-like file //{{{
-  char *input = calloc(1024, sizeof(char *));
+  char *input = calloc(LINE, sizeof(char *));
   if (FileOption(argc, argv, "-f", &input)) {
     exit(1);
   }
@@ -88,43 +94,30 @@ int main(int argc, char *argv[]) {
   count = 0; // count arguments
 
   // <out.vsf> - output structure file (must end with .vsf) //{{{
-  char output[1024];
+  char output[LINE];
   strcpy(output, argv[++count]);
 
-  // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)
+  // test if <output.vsf> filename ends with '.vsf' (required by VMD)
   int ext = 1;
-  char **extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  char extension[1][5];
   strcpy(extension[0], ".vsf");
   if (!ErrorExtension(output, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <out.vcf> - output vcf file //{{{
-  char *output_vcf = calloc(1024, sizeof(char));
-  char stuff[1024];
+  char *output_vcf = calloc(LINE, sizeof(char));
+  char stuff[LINE];
   strcpy(output_vcf, argv[++count]);
 
   // test if outpuf_vcf has '.vcf' extension - required by vmd //{{{
   ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
   //}}}
 
   // variables - structures //{{{
@@ -143,7 +136,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // read box size //{{{
-  char line[1024], *box[3];
+  char line[LINE], *box[3];
   fgets(line, sizeof(line), fr);
   box[0] = strtok(line, " \t");
   box[1] = strtok(NULL, " \t");
@@ -157,9 +150,9 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "species") == 0 ||
-        strcmp(split, "Species") == 0 ||
-        strcmp(split, "SPECIES") == 0 ) {
+    if (strncmp(split, "species", 6) == 0 ||
+        strncmp(split, "Species", 6) == 0 ||
+        strncmp(split, "SPECIES", 6) == 0 ) {
       Counts.TypesOfBeads = atoi(strtok(NULL, " \t"));
       break;
     }
@@ -202,9 +195,9 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "molecule") == 0 ||
-        strcmp(split, "Molecule") == 0 ||
-        strcmp(split, "MOLECULE") == 0 ) {
+    if (strncmp(split, "molecules", 8) == 0 ||
+        strncmp(split, "Molecules", 8) == 0 ||
+        strncmp(split, "MOLECULES", 8) == 0 ) {
       Counts.TypesOfMolecules = atoi(strtok(NULL, " \t"));
       break;
     }
@@ -237,7 +230,8 @@ int main(int argc, char *argv[]) {
     // number of beads //{{{
     fgets(line, sizeof(line), fr);
     strtok(line, " \t ");
-    MoleculeType[i].nBeads = atoi(strtok(NULL, " \t")); //}}}
+    MoleculeType[i].nBeads = atoi(strtok(NULL, " \t"));
+    MoleculeType[i].Bead = calloc(MoleculeType[i].nBeads, sizeof(int)); //}}}
     // number of bonded beads
     Counts.Bonded += MoleculeType[i].Number * MoleculeType[i].nBeads;
     // realloc Bead and Molecule arrays //{{{
@@ -261,6 +255,7 @@ int main(int argc, char *argv[]) {
           break;
         }
       }
+      MoleculeType[i].Bead[j] = type;
       if (!test) {
         MoleculeType[i].nBTypes++;
         MoleculeType[i].BType = realloc(MoleculeType[i].BType,MoleculeType[i].nBTypes*sizeof(int));
@@ -272,7 +267,7 @@ int main(int argc, char *argv[]) {
       for (int k = 0; k < MoleculeType[i].Number; k++) {
         int id = Counts.Beads + MoleculeType[i].nBeads * k + j;
         Bead[id].Type = type;
-        Bead[id].Molecule = k;
+        Bead[id].Molecule = Counts.Molecules + k;
         Bead[id].Index = id;
         Molecule[Counts.Molecules+k].Bead[j] = id;
       }
@@ -294,7 +289,6 @@ int main(int argc, char *argv[]) {
     Counts.Beads = Counts.Unbonded + Counts.Bonded;
     // total number of molecules
     Counts.Molecules = MoleculeType[i].Number;
-
     // skip till 'finish' //{{{
     while(fgets(line, sizeof(line), fr)) {
       char *split;
@@ -350,15 +344,16 @@ int main(int argc, char *argv[]) {
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "molecule") == 0 ||
-        strcmp(split, "Molecule") == 0 ||
-        strcmp(split, "MOLECULE") == 0 ) {
+    if (strncmp(split, "molecules", 8) == 0 ||
+        strncmp(split, "Molecules", 8) == 0 ||
+        strncmp(split, "MOLECULES", 8) == 0 ) {
       Counts.TypesOfMolecules = atoi(strtok(NULL, " \t"));
       break;
     }
   } //}}}
 
   // read bond lenghts for all molecule types and create prototype molecules //{{{
+  printf("\nbox = (%lf, %lf, %lf)\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   double *prototype_z[Counts.TypesOfMolecules]; // prototype molecule z coordinate
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     // allocate array for bond lengths
@@ -369,14 +364,16 @@ int main(int argc, char *argv[]) {
     while(fgets(line, sizeof(line), fr)) {
       char *split;
       split = strtok(line, " \t");
-      if (strcmp(split, "bonds") == 0 ||
-          strcmp(split, "Bonds") == 0 ||
-          strcmp(split, "BONDS") == 0 ) {
+      if (strncmp(split, "bonds", 4) == 0 ||
+          strncmp(split, "Bonds", 4) == 0 ||
+          strncmp(split, "BONDS", 4) == 0 ) {
         break;
       }
     } //}}}
 
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+//  for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+    // if we assume linear molecule, there must be nBeads-1 bonds
+    for (int j = 0; j < (MoleculeType[i].nBeads-1); j++) {
       fgets(line, sizeof(line), fr);
       char *split;
       split = strtok(line, " \t"); // bond type
@@ -391,11 +388,12 @@ int main(int argc, char *argv[]) {
       prototype_z[i][j+1] = prototype_z[i][j] + length;
     }
 
-    printf("\nbox = (%lf, %lf, %lf)\n\nPrototype %s molecule (z coordinate):\n", BoxLength.x, BoxLength.y, BoxLength.z, MoleculeType[i].Name);
+    printf("Prototype %s molecule (z coordinate):\n", MoleculeType[i].Name);
     for (int j = 0; j < MoleculeType[i].nBeads; j++) {
-      printf("%2d: %lf\n", j, prototype_z[i][j]);
+      printf("%2d: %lf\n", j+1, prototype_z[i][j]);
     }
   } //}}}
+  fclose(fr);
 
   // longest molecule type //{{{
   int longest = -1;
@@ -485,7 +483,6 @@ int main(int argc, char *argv[]) {
     Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
     Bead[count_free].Position.y = (y % y_n) * dist + 0.1;
     Bead[count_free].Position.z = z;
-//  printf("%d %lf %lf %lf\n", count_free, Bead[count_free].Position.x, Bead[count_free].Position.y, Bead[count_free].Position.z);
     z += dist;
     if (z >= BoxLength.z) {
       z = 0.1;
@@ -506,7 +503,6 @@ int main(int argc, char *argv[]) {
   z = 0.1; // coordinates that are incrementally increased
   double y_coor = 0.1;
   count_free = 0; // count number of unbonded beads that are placed
-//printf("y_dist = %lf\n", y_dist);
 
   // molecules layers with solvent layers in between //{{{
   for (int i = 0; i < Counts.Molecules; i++) {
@@ -570,7 +566,6 @@ int main(int argc, char *argv[]) {
     Bead[count_free].Position.x = (x % x_n) * dist + 0.1;
     Bead[count_free].Position.y = y_coor;
     Bead[count_free].Position.z = z;
-//  printf("%d %lf %lf %lf\n", count_free, Bead[count_free].Position.x, Bead[count_free].Position.y, Bead[count_free].Position.z);
     z += dist;
     if (z >= BoxLength.z) {
       z = 0.1;
@@ -608,9 +603,8 @@ int main(int argc, char *argv[]) {
   // print information - verbose option //{{{
   if (verbose) {
     char null[1] = {'\0'};
-    putchar('\n');
-    putchar('\n');
-    VerboseOutput(false, null, null, Counts, BeadType, Bead, MoleculeType, Molecule);
+    fprintf(stdout, "\n\n");
+    VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // free memory - to make valgrind happy //{{{
@@ -621,7 +615,8 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     free(prototype_z[i]);
   }
-  free(input); //}}}
+  free(input);
+  free(output_vcf); //}}}
 
   return 0;
 }

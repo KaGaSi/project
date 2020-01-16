@@ -27,13 +27,16 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   fprintf(ptr, "   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
   fprintf(ptr, "   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
   fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
-  fprintf(ptr, "   <type names>      names of bead types to save\n");
+  fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
   fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
   fprintf(ptr, "      --join         join molecules (remove pbc)\n");
   fprintf(ptr, "      -st1 <int>     starting timestep from 1st run\n");
   fprintf(ptr, "      -st2 <int>     starting timestep from 2nd run\n");
-  fprintf(ptr, "      -sk1 <int>     skip every <int> steps from 1st run\n");
-  fprintf(ptr, "      -sk2 <int>     skip every <int> steps from 2nd run\n");
+  fprintf(ptr, "      -e1 <end>      ending timestep from the 1st run\n");
+  fprintf(ptr, "      -e2 <end>      ending timestep from the 2st runh\n");
+  fprintf(ptr, "      -sk1 <int>     leave out every <int> steps from 1st run\n");
+  fprintf(ptr, "      -sk2 <int>     leave out every <int> steps from 2st run\n");
   CommonHelp(error);
 } //}}}
 
@@ -54,7 +57,11 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  if (count < req_args) {
+  // reverse bead type selection? ...do now to check correct number of arguments
+  bool reverse = BoolOption(argc, argv, "-r");
+
+  // possible to omit <type name(s)> if '-r' is used
+  if (count < (req_args-1) || (count == (req_args-1) && !reverse)) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
     exit(1);
@@ -64,15 +71,16 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "--join") != 0 &&
         strcmp(argv[i], "-st1") != 0 &&
         strcmp(argv[i], "-st2") != 0 &&
+        strcmp(argv[i], "-e1") != 0 &&
+        strcmp(argv[i], "-e2") != 0 &&
         strcmp(argv[i], "-sk1") != 0 &&
         strcmp(argv[i], "-sk2") != 0) {
 
@@ -83,53 +91,18 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
+  bool silent;
+  bool verbose;
+  char *input_vsf_1 = calloc(LINE,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf_1, &verbose, &silent, &script);
+
   // save coordinates of joined aggregates //{{{
-  char joined_vcf[1024];
+  char joined_vcf[LINE];
   bool error = JoinCoorOption(argc, argv, joined_vcf);
   if (error) {
     exit(1);
   } //}}}
-
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf_1 = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf_1)) {
-    exit(1);
-  }
-  if (input_vsf_1[0] == '\0') {
-    strcpy(input_vsf_1, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf'
-  int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf_1, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
 
   // should output coordinates be joined? //{{{
   bool join = BoolOption(argc, argv, "--join"); //}}}
@@ -140,6 +113,25 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (IntegerOption(argc, argv, "-st2", &start_2)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end_1 = -1, end_2 = -1;
+  if (IntegerOption(argc, argv, "-e1", &end_1)) {
+    exit(1);
+  }
+  if (IntegerOption(argc, argv, "-e2", &end_2)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end_1 != -1 && start_1 > end_1) {
+    fprintf(stderr, "\nError: For the first run, starting step (%d) is higher than ending step (%d)\n", start_1, end_1);
+    exit(1);
+  }
+  if (end_2 != -1 && start_2 > end_2) {
+    fprintf(stderr, "\nError: For the first run, starting step (%d) is higher than ending step (%d)\n", start_2, end_2);
     exit(1);
   } //}}}
 
@@ -160,115 +152,79 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
 
-  // print command to stdout //{{{
-  if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
-  } //}}}
-
   count = 0; // count mandatory arguments
 
   // <1st input> - first input coordinate file //{{{
-  char input_vcf_1[1024];
+  char input_vcf_1[LINE];
   strcpy(input_vcf_1, argv[++count]);
 
   // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf_1, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <2nd input> - second input coordinate file //{{{
-  char input_vcf_2[1024];
+  char input_vcf_2[LINE];
   strcpy(input_vcf_2, argv[++count]);
 
   // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vcf_2, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <2nd input.vsf> - second structure file (must end with .vsf) //{{{
-  char *input_vsf_2 = calloc(1024,sizeof(char *));
+  char *input_vsf_2 = calloc(LINE,sizeof(char *));
   strcpy(input_vsf_2, argv[++count]);
 
   // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
   ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_vsf_2, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[1024];
+  char output_vcf[LINE];
   strcpy(output_vcf, argv[++count]);
 
   // test if output coordinate file ends with '.vcf' (required by vmd)
   ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
   strcpy(extension[0], ".vcf");
   if (!ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // variables - structures //{{{
   // data from 1st run
   BeadType *BeadType1; // structure with info about all bead types
   MoleculeType *MoleculeType1; // structure with info about all molecule types
   Bead *Bead1; // structure with info about every bead
+  int *Index1; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule1; // structure with info about every molecule
   // data from 2nd run
   BeadType *BeadType2; // structure with info about all bead types
   MoleculeType *MoleculeType2; // structure with info about all molecule types
   Bead *Bead2; // structure with info about every bead
+  int *Index2; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule2; // structure with info about every molecule
   // Counts is the same for both runs
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information //{{{
-  bool indexed = ReadStructure(input_vsf_1, input_vcf_1, bonds_file, &Counts, &BeadType1, &Bead1, &MoleculeType1, &Molecule1);
-  ReadStructure(input_vsf_2, input_vcf_2, bonds_file, &Counts, &BeadType2, &Bead2, &MoleculeType2, &Molecule2);
+  bool indexed = ReadStructure(input_vsf_1, input_vcf_1, &Counts, &BeadType1, &Bead1, &Index1, &MoleculeType1, &Molecule1);
+  ReadStructure(input_vsf_2, input_vcf_2, &Counts, &BeadType2, &Bead2, &Index2, &MoleculeType2, &Molecule2);
 
   // vsf files are not needed anymore
   free(input_vsf_1);
@@ -292,6 +248,17 @@ int main(int argc, char *argv[]) {
     BeadType1[type].Write = true;
   } //}}}
 
+  // if '-r' is used, switch Write bools for all bead types //{{{
+  if (reverse) {
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      if (BeadType1[i].Write) {
+        BeadType1[i].Write = false;
+      } else {
+        BeadType1[i].Write = true;
+      }
+    }
+  } //}}}
+
   // print selected bead type names to output .vcf file //{{{
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
@@ -307,17 +274,6 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // print information - verbose output //{{{
-  if (verbose) {
-    VerboseOutput(verbose2, input_vcf_1, bonds_file, Counts, BeadType1, Bead1, MoleculeType1, Molecule1);
-
-    fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
-    fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
-
   // open input coordinate files //{{{
   FILE *vcf_1, *vcf_2;
   if ((vcf_1 = fopen(input_vcf_1, "r")) == NULL) {
@@ -330,7 +286,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // 1st vcf file - skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf_1, "%s", str) != 1) {
@@ -364,6 +320,13 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
 
+  // print information - verbose output //{{{
+  if (verbose) {
+    VerboseOutput(input_vcf_1, Counts, BoxLength, BeadType1, Bead1, MoleculeType1, Molecule1);
+    fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
+    fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
+  } //}}}
+
   // print pbc to output .vcf file //{{{
   if ((out = fopen(output_vcf, "a")) == NULL) {
     ErrorFileOpen(output_vcf, 'a');
@@ -374,9 +337,8 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = calloc(1024,sizeof(int)); //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // start first run with start-th step //{{{
   int test;
@@ -385,67 +347,46 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < start_1; i++) {
     count++;
 
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarded from 1st coordinate file: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarded from 1st coordinate file: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarded from 1st run: %6d", count);
     }
 
     SkipCoor(vcf_1, Counts, &stuff);
   }
 
-  putchar('\n'); //}}}
+  if (!silent) {
+    if (script) {
+      fprintf(stdout, "Starting step for 1st run: %6d\n", start_1);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rStarting step for 1st run: %6d\n", start_1);
+    }
+  } //}}}
 
   // main loop - 1st run //{{{
+  int count_vcf = start_1 - 1;
   while ((test = getc(vcf_1)) != EOF) {
     ungetc(test, vcf_1);
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf_1, Counts, &Bead1, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
+    if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
       ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
       exit(1);
     } //}}}
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep from 1st run: %6d", count);
-      }
-    }
+    count_vcf++;
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep from 1st run: %6d", count_vcf);
+    } //}}}
 
     // join molecules? //{{{
     if (join) {
       RemovePBCMolecules(Counts, BoxLength, BeadType1, &Bead1, MoleculeType1, Molecule1);
-    } else { // if rounding leads to BoxLength, move it bead to other side of box
-      for (int i = 0; i < Counts.Beads; i++) {
-        char check[8];
-        char box[8];
-        // x direction
-        sprintf(check, "%.3f", Bead1[i].Position.x);
-        sprintf(box, "%.3f", BoxLength.x);
-        if (strcmp(check, box) == 0) {
-          Bead1[i].Position.x = 0;
-        }
-        // y direction
-        sprintf(check, "%.3f", Bead1[i].Position.y);
-        sprintf(box, "%.3f", BoxLength.y);
-        if (strcmp(check, box) == 0) {
-          Bead1[i].Position.y = 0;
-        }
-        // z direction
-        sprintf(check, "%.3f", Bead1[i].Position.z);
-        sprintf(box, "%.3f", BoxLength.z);
-        if (strcmp(check, box) == 0) {
-          Bead1[i].Position.z = 0;
-        }
-      }
     } //}}}
 
     // open output .vcf file for appending //{{{
@@ -466,93 +407,133 @@ int main(int argc, char *argv[]) {
       }
       ungetc(test, vcf_1); //}}}
 
-      fflush(stdout);
-      fprintf(stdout, "\rStep from 1st run: %6d", ++count);
+      count++;
+      count_vcf++;
 
       // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf_1, Counts, &Bead1, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
+      if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
+        ErrorCoorRead(input_vcf_1, test, count_vcf, stuff, input_vsf_1);
         exit(1);
       } //}}}
     } //}}}
 
-    // if -V option used, print comment at the beginning of a timestep
-    if (verbose2)
-      fprintf(stdout, "\n%s", stuff);
+    if (end_1 == count_vcf)
+      break;
   }
 
+  // print last step? //{{{
   if (!silent) {
-    fflush(stdout);
-    fprintf(stdout, "\rLast Step from first run: %6d\n", count);
-  }
+    if (script) {
+      fprintf(stdout, "Last step from 1st run: %6d\n", count_vcf);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rLast step from 1st run: %6d\n", count_vcf);
+    }
+  } //}}}
 
   fclose(vcf_1); //}}}
 
+  // connect Bead2 with Bead1 via Index arrays //{{{
+  if (!silent && !script) {
+    fprintf(stdout, "\nWarning: connecting bead indices from the two runs may take a long time\n");
+  }
+  bool used[Counts.Beads];
+  for (int i = 0; i < Counts.Beads; i++) {
+    used[i] = false;
+  }
+
+  for (int i = 0; i < Counts.Beads; i++) {
+    if (Bead1[i].Molecule == -1) { // monomer bead
+      for (int j = 0; j < Counts.Beads; j++) {
+        if (Bead1[i].Molecule == -1 && Bead2[i].Molecule == -1 &&
+            strcmp(BeadType2[Bead2[j].Type].Name, BeadType1[Bead1[i].Type].Name) == 0 &&
+            !used[j]) {
+          Index1[Bead1[i].Index] = Index2[Bead2[j].Index];
+
+          used[j] = true;
+
+          break;
+        }
+      }
+    } else { // molecular bead
+      for (int j = 0; j < Counts.Beads; j++) {
+        if (Bead2[j].Molecule != -1) {
+          // mol from run 1
+          int mol_id_1 = Bead1[i].Molecule;
+          int mol_type_1 = Molecule1[mol_id_1].Type;
+          // mol from run 2
+          int mol_id_2 = Bead2[j].Molecule;
+          int mol_type_2 = Molecule2[mol_id_2].Type;
+
+          if (!used[j] && strcmp(MoleculeType1[mol_type_1].Name, MoleculeType2[mol_type_2].Name) == 0) {
+            test = -1;
+            // find where exactly in the molecule the bead is
+            for (int k = 0; k <= MoleculeType2[mol_type_2].nBeads; k++) {
+              if (j == Molecule2[mol_id_2].Bead[k]) {
+                test = k;
+                break;
+              }
+            }
+            test = Bead1[Molecule1[mol_id_1].Bead[test]].Index;
+            Index1[test] = Index2[Bead2[j].Index];
+            used[j] = true;
+            break;
+          }
+        }
+      }
+    }
+    if (!silent && !script) {
+      fflush(stdout);
+      printf("\r%d. bead done", i);
+    }
+  } //}}}
+
   // start second run with start-th step //{{{
   count = 0;
-  if (!silent)
-    fprintf(stdout, "\rDiscarded from 2nd coordinate file: %6d", count);
   for (int i = 1; i < start_2; i++) {
     count++;
 
-    if (!silent) {
+    if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded from 2nd coordinate file: %6d", count);
+      fprintf(stdout, "\rDiscarded from 2nd run: %6d", count);
     }
 
     SkipCoor(vcf_2, Counts, &stuff);
   }
 
-  putchar('\n'); //}}}
+  if (!silent) {
+    if (script) {
+      fprintf(stdout, "Starting step for 2nd run: %6d\n", start_2);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rStarting step for 2nd run: %6d\n", start_2);
+    }
+  } //}}}
 
   // main loop - 2nd run //{{{
+  count_vcf = start_2 - 1;
   while ((test = getc(vcf_2)) != EOF) {
     ungetc(test, vcf_2);
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf_2, Counts, &Bead2, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf_2, test, count, stuff, input_vsf_2);
+      ErrorCoorRead(input_vcf_2, test, count_vcf, stuff, input_vsf_2);
       exit(1);
     } //}}}
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step from 2nd run: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep from 2nd run: %6d", count);
-      }
-    }
+    count_vcf++;
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep from 2nd run: %6d", count_vcf);
+    } //}}}
 
     // join molecules? //{{{
     if (join) {
       RemovePBCMolecules(Counts, BoxLength, BeadType2, &Bead2, MoleculeType2, Molecule2);
-    } else { // if rounding leads to BoxLength, move it bead to other side of box
-      for (int i = 0; i < Counts.Beads; i++) {
-        char check[8];
-        char box[8];
-        // x direction
-        sprintf(check, "%.3f", Bead2[i].Position.x);
-        sprintf(box, "%.3f", BoxLength.x);
-        if (strcmp(check, box) == 0) {
-          Bead2[i].Position.x = 0;
-        }
-        // y direction
-        sprintf(check, "%.3f", Bead2[i].Position.y);
-        sprintf(box, "%.3f", BoxLength.y);
-        if (strcmp(check, box) == 0) {
-          Bead2[i].Position.y = 0;
-        }
-        // z direction
-        sprintf(check, "%.3f", Bead2[i].Position.z);
-        sprintf(box, "%.3f", BoxLength.z);
-        if (strcmp(check, box) == 0) {
-          Bead2[i].Position.z = 0;
-        }
-      }
     } //}}}
 
     // open output .vcf file for appending //{{{
@@ -561,71 +542,13 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    // copy Bead2 coordinates to Bead1 //{{{
-    bool used[Counts.Beads];
     for (int i = 0; i < Counts.Beads; i++) {
-      used[i] = false;
+        Bead1[i].Position.x = Bead2[Index1[Bead1[i].Index]].Position.x;
+        Bead1[i].Position.y = Bead2[Index1[Bead1[i].Index]].Position.y;
+        Bead1[i].Position.z = Bead2[Index1[Bead1[i].Index]].Position.z;
     }
 
-    for (int i = 0; i < Counts.Beads; i++) {
-      for (int j = 0; j < Counts.Beads; j++) {
-        if (Bead1[i].Molecule == -1 && Bead2[i].Molecule == -1 &&
-            strcmp(BeadType2[Bead2[j].Type].Name, BeadType1[Bead1[i].Type].Name) == 0 &&
-            !used[j]) {
-          Bead1[i].Position.x = Bead2[j].Position.x;
-          Bead1[i].Position.y = Bead2[j].Position.y;
-          Bead1[i].Position.z = Bead2[j].Position.z;
-
-          used[j] = true;
-
-          break;
-        }
-      }
-    }
-
-    // molecule beads
-    for (int i = 0; i < Counts.Beads; i++) {
-      if (Bead2[i].Molecule != -1) {
-        for (int j = 0; j < Counts.Beads; j++) {
-          // beads & mols from run 1
-          int mol_id_1 = Bead1[i].Molecule;
-          int mol_type_1 = Molecule1[mol_id_1].Type;
-
-          // beads & mols from run 2
-          int mol_id_2 = Bead2[j].Molecule;
-          int mol_type_2 = Molecule2[mol_id_2].Type;
-
-          if (!used[j] && mol_type_1 == mol_type_2) {
-            test = -1;
-            for (int k = 0; k <= MoleculeType2[mol_type_2].nBeads; k++) {
-              if (Bead2[j].Index == Bead2[Molecule2[mol_id_2].Bead[k]].Index) {
-                test = k;
-
-                break;
-              }
-            }
-
-            test = Bead1[Molecule1[mol_id_1].Bead[test]].Index;
-            Bead1[test].Position.x = Bead2[j].Position.x;
-            Bead1[test].Position.y = Bead2[j].Position.y;
-            Bead1[test].Position.z = Bead2[j].Position.z;
-
-            used[j] = true;
-
-            break;
-          }
-        }
-      }
-    }
-
-    for (int i = 0; i < Counts.Beads; i++) {
-      if (!used[i]) {
-        fprintf(stdout, "ERROR - used[%d] = false\n", i);
-      }
-    } //}}}
-
-    // TODO: there probably shouldn't be Molecule(Type)1, but Molecule(Type)2
-    // or something different -- this program isn't used anyway
+    // Molecule(Type)1 and Bead(Type)1 are used, because *2 were copied to them
     WriteCoorIndexed(out, Counts, BeadType1, Bead1, MoleculeType1, Molecule1, stuff);
 
     fclose(out);
@@ -638,32 +561,37 @@ int main(int argc, char *argv[]) {
       }
       ungetc(test, vcf_2); //}}}
 
-      fflush(stdout);
-      fprintf(stdout, "\rStep from 2st run: %6d", ++count);
+      count++;
+      count_vcf++;
 
       // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf_2, Counts, &Bead2, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_vcf_2, test, count, stuff, input_vsf_2);
+      if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
+        ErrorCoorRead(input_vcf_2, test, count_vcf, stuff, input_vsf_2);
         exit(1);
       } //}}}
     } //}}}
 
-    // if -V option used, print comment at the beginning of a timestep
-    if (verbose2)
-      fprintf(stdout, "\n%s", stuff);
+    if (end_2 == count_vcf)
+      break;
   }
+  fclose(vcf_2);
 
+  // print last step? //{{{
   if (!silent) {
-    fflush(stdout);
-    fprintf(stdout, "\rLast Step from 2nd run: %6d\n", count);
-  }
-
-  fclose(vcf_2); //}}}
+    if (script) {
+      fprintf(stdout, "Last step from 2nd run: %6d\n", count_vcf);
+    } else {
+      fflush(stdout);
+      fprintf(stdout, "\rLast step from 2nd run: %6d\n", count_vcf);
+    }
+  } //}}}
+  //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType1);
   free(BeadType2);
+  free(Index1);
+  free(Index2);
   FreeMoleculeType(Counts, &MoleculeType1);
   FreeMoleculeType(Counts, &MoleculeType2);
   FreeMolecule(Counts, &Molecule1);

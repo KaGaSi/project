@@ -46,7 +46,7 @@ void ErrorNaN(char *option); //}}}
  * \param [in] number     number of correct extension(s)
  * \param [in] extension  correct extension(s)
  */
-bool ErrorExtension(char *file, int number, char **extension); //}}}
+bool ErrorExtension(char *file, int number, char extension[][5]); //}}}
 
 // ErrorFileOpen() //{{{
 /** \brief Cannot open file

@@ -15,7 +15,8 @@ void Help(char cmd[50], bool error) { //{{{
     fprintf(ptr, "\
 Config_from_xyz generates dl_meso CONFIG file from given step of a xyz file. \
 If the given timestep is larger than the number of steps the coordinate file, \
-the last step is used.\n\n");
+the last step is used. Note that box dimensions must be added manually to the \
+resulting CONFIG file, as xyz file does not contain box size.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -66,9 +67,9 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  bool verbose, verbose2, silent;
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
+  bool verbose, silent;
+  SilentOption(argc, argv, &verbose, &silent);
+  bool script = BoolOption(argc, argv, "--script");
 
   // timestep to create CONFIG file from //{{{
   int timestep = -1;
@@ -86,23 +87,17 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input.xyz> - filename of input xyz file (must end with .xyz) //{{{
-  char input_xyz[1024];
+  char input_xyz[LINE];
   strcpy(input_xyz, argv[++count]);
 
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  // test if <input> filename ends with '.xyz' (required by VMD)
   int ext = 1;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
+  char extension[2][5];
   strcpy(extension[0], ".xyz");
   if (!ErrorExtension(input_xyz, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // get number of beads from xyz file //{{{
   // open input coordinate file
@@ -134,13 +129,9 @@ int main(int argc, char *argv[]) {
     ungetc(test, xyz);
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count);
     }
 
     // skip remainder of number-of-beads line
@@ -178,7 +169,7 @@ int main(int argc, char *argv[]) {
   fprintf(config, "0 0 z\n");
 
   for (int i = 0; i < beads; i++) {
-    char line[1024];
+    char line[LINE];
     fgets(line, sizeof(line), xyz);
 
     // split the line into array //{{{

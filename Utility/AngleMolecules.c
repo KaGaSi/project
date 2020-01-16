@@ -14,24 +14,24 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-AngleMolecules utility calculates angles \
-for specified beads (three beads per angel) in each molecule of specified \
-molecule type(s). The specified beads do not to be connected by bonds. \
-\n\n");
+AngleMolecules utility calculates angles for specified beads (three beads per \
+angle) for molecules of specified type(s). The specified beads do not have \
+to be connected by bonds.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
 
-  fprintf(ptr, "   <input>         input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <width>         width of a single bin in degrees\n");
-  fprintf(ptr, "   <output>        output file with distribution of dihedral angles\n");
-  fprintf(ptr, "   <mol name(s)>   molecule name(s) to calculate density for\n");
+  fprintf(ptr, "   <input>       input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <width>           width of a single bin in degrees\n");
+  fprintf(ptr, "   <output>          output file with distribution of angles\n");
+  fprintf(ptr, "   <mol name(s)>     molecule name(s) to calculate angles for\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      --joined     specify that <input> contains joined coordinates\n");
-  fprintf(ptr, "      -n <ints>    bead indices (multiple of 3 <ints>) for dihedral calculation (default: 1 2 3)\n");
-  fprintf(ptr, "      -a <name>    write angle of all molecules in all times to <name>\n");
-  fprintf(ptr, "      -st <int>    starting timestep for calculation\n");
+  fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "      -n <ints>      bead indices (multiple of 3 <ints>) for angle calculation (default: 1 2 3)\n");
+  fprintf(ptr, "      -a <name>      write angles of all molecules in all times to <name>\n");
+  fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -63,15 +63,14 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-a") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
       ErrorOption(argv[i]);
@@ -81,46 +80,11 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf)) {
-    exit(1);
-  }
-  if (input_vsf[0] == '\0') {
-    strcpy(input_vsf, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf' or '.vtf'
-  int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
+  bool silent;
+  bool verbose;
+  char *input_vsf = calloc(LINE,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // are provided coordinates joined? //{{{
   bool joined = BoolOption(argc, argv, "--joined"); //}}}
@@ -128,6 +92,12 @@ int main(int argc, char *argv[]) {
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
     exit(1);
   } //}}}
   //}}}
@@ -142,26 +112,18 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - filename of input vcf file (must end with .vcf) //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD) //{{{
-  ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(8*sizeof(char));
-  }
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-  //}}}
+  } //}}}
 
   // <width> - number of starting timestep //{{{
   // Error - non-numeric argument
@@ -176,18 +138,19 @@ int main(int argc, char *argv[]) {
   int bins = ceil(180 / width); //}}}
 
   // <output> - file name with dihedral angle distribution //{{{
-  char output_distr[1024];
+  char output_distr[LINE];
   strcpy(output_distr, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
   free(input_vsf);
@@ -198,7 +161,12 @@ int main(int argc, char *argv[]) {
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (mol_type == -1) {
-      fprintf(stderr, "Error: molecule '%s' does not exist in FIELD\n\n", argv[count]);
+      fprintf(stderr, "\nError: molecule '%s' is not included in %s\n", argv[count], input_coor);
+      fprintf(stderr, "   Present molecule types:\n");
+      for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+        fprintf(stderr, "     %s\n", MoleculeType[i].Name);
+      }
+      putc('\n', stderr);
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -206,20 +174,20 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-n' option - specify bead ids //{{{
-  int bead[100] = {0}, number_of_beads = 3, beads_per_angle = 3, test;
+  int bead[100] = {0}, number_of_beads = 3, beads_per_angle = 3, test = 0;
   bead[0] = 1; // default ids for angle
   bead[1] = 2;
   bead[2] = 3;
   if (MultiIntegerOption(argc, argv, "-n", &test, bead)) {
     exit(1);
   }
-  if (test != 0) { // -a is present
+  if (test != 0) { // -n is present
     number_of_beads = test;
   }
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
-    fprintf(stderr, "\nError: '-a' option - number of bead ids must be dividable by three.\n");
+    fprintf(stderr, "\nError: '-n' option - number of bead ids must be dividable by three\n\n");
     exit(1);
   } //}}}
 
@@ -229,7 +197,7 @@ int main(int argc, char *argv[]) {
     // Error - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && bead[i] >= MoleculeType[j].nBeads) {
-        fprintf(stderr, "\nError: '-a' option - %d is larger than the number of beads in molecule %s\n\n", bead[i], MoleculeType[j].Name);
+        fprintf(stderr, "\nError: '-n' option - %d is larger than the number of beads in molecule %s\n\n", bead[i], MoleculeType[j].Name);
         Help(argv[0], true);
         exit(1);
       }
@@ -237,7 +205,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-a' option - write angles for all molecules //{{{
-  char *output = calloc(1024,sizeof(char *));
+  char *output = calloc(LINE,sizeof(char *));
   if (FileOption(argc, argv, "-a", &output)) {
     exit(1);
   }
@@ -288,7 +256,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -312,19 +280,12 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = malloc(1024*sizeof(int));
-
-  // initialize the array
-  for (int i = 0; i < 1024; i++) {
-    stuff[i] = '\0';
-  } //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
     fprintf(stdout, "Chosen molecule types:");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       if (MoleculeType[i].Use) {
@@ -332,10 +293,7 @@ int main(int argc, char *argv[]) {
       }
     }
     putchar('\n');
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+  } //}}}
 
   // allocate array for distribution of angles //{{{
   double avg_angle[Counts.TypesOfMolecules][number_of_beads/beads_per_angle];
@@ -355,13 +313,9 @@ int main(int argc, char *argv[]) {
     count++;
 
     // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rDiscarding step: %6d", count);
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
@@ -369,36 +323,36 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   }
-  // print number of discarded steps? //{{{
+  // print starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
+      fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
+      fprintf(stdout, "\rStarting step: %6d   \n", start);
     }
   } //}}}
   //}}}
 
   // main loop //{{{
-  count = 0; // count timesteps
+  count = 0; // count calculated timesteps
+  int count_vcf = start - 1;
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
-    }
+    count_vcf++;
+
+    // print step? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count_vcf);
+    } //}}}
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
       exit(1);
     } //}}}
 
@@ -437,7 +391,7 @@ int main(int argc, char *argv[]) {
           if (k < bins) {
             distr[mol_type_i][j/beads_per_angle][k]++;
           } else {
-            fprintf(stdout, "\nWarning - weird angle: %lf degrees\n", angle[i][j/beads_per_angle]);
+            fprintf(stdout, "\nWarning: weird angle: %lf degrees\n", angle[i][j/beads_per_angle]);
           }
         }
       }
@@ -451,7 +405,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
 
-      fprintf(out, "%6d", count);
+      fprintf(out, "%6d", count_vcf);
       for (int i = 0; i < Counts.Molecules; i++) {
         int mol_type_i = Molecule[i].Type;
         if (MoleculeType[mol_type_i].Use) {
@@ -465,19 +419,17 @@ int main(int argc, char *argv[]) {
       fclose(out);
     } //}}}
 
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
+    if (end == count_vcf)
+      break;
   }
   fclose(vcf);
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %6d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   } //}}}
 
@@ -498,7 +450,7 @@ int main(int argc, char *argv[]) {
   // print molecule names & bead ids //{{{
   fprintf(out, "# angles between beads:");
   for (int j = 0; j < number_of_beads; j += beads_per_angle) {
-    fprintf(out, " (%d) %d-%d-%d;", j/beads_per_angle+1, bead[j], bead[j+1], bead[j+2]);
+    fprintf(out, " (%d) %d-%d-%d;", j/beads_per_angle+1, bead[j]+1, bead[j+1]+1, bead[j+2]+1);
   }
   putc('\n', out);
   fprintf(out, "# columns: (1) angle [deg];");
@@ -558,6 +510,7 @@ int main(int argc, char *argv[]) {
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);

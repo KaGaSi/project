@@ -13,7 +13,7 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-lmp_data utility generates lammps data file from FIELD and coordinate file.\
+lmp_data utility generates lammps data file from FIELD and coordinate file. \
 It assumes molecules have bonds and can also have angles, but no dihedrals.\n\n");
   }
 
@@ -23,8 +23,9 @@ It assumes molecules have bonds and can also have angles, but no dihedrals.\n\n"
   fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <out.data>        output lammps data file\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -f <name>      FIELD file (default: FIELD)\n");
-  fprintf(ptr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
+  fprintf(ptr, "      -f <name>      FIELD-like file (default: FIELD)\n");
+  fprintf(ptr, "      --srp          add one more bead type for srp");
+  fprintf(ptr, "      -st <step>     timestep for creating the output file (default: last)\n");
   CommonHelp(error);
 } //}}}
 
@@ -56,10 +57,10 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "--srp") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
@@ -70,60 +71,28 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char));
-  if (FileOption(argc, argv, "-i", &input_vsf)) {
-    exit(1);
-  }
-  if (input_vsf[0] == '\0') {
-    strcpy(input_vsf, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf'
-  int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
-
-  // timestep to create CONFIG file from //{{{
-  int timestep = -1;
-  if (IntegerOption(argc, argv, "-st", &timestep)) {
-    exit(1);
-  } //}}}
+  bool silent;
+  bool verbose;
+  char *input_vsf = calloc(LINE,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // custom FIELD file //{{{
-  char *input = calloc(1024, sizeof(char));
+  char *input = calloc(LINE, sizeof(char));
   if (FileOption(argc, argv, "-f", &input)) {
     exit(1);
   }
   if (input[0] == '\0') {
     strcpy(input, "FIELD");
+  } //}}}
+
+  // add srp bead type //{{{
+  bool srp = BoolOption(argc, argv, "--srp"); //}}}
+
+  // timestep to create CONFIG file from //{{{
+  int timestep = -1;
+  if (IntegerOption(argc, argv, "-st", &timestep)) {
+    exit(1);
   } //}}}
 
   // print command to stdout //{{{
@@ -137,57 +106,43 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(8*sizeof(char));
-  }
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <out.data> - output lammps data file //{{{
-  char output[1024];
+  char output[LINE];
   strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
-
-  // print information - verbose output //{{{
-  if (verbose) {
-    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-  } //}}}
+  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_coor, "r")) == NULL) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+  } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -211,6 +166,11 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
+  // print information - verbose output //{{{
+  if (verbose) {
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+  } //}}}
+
   // warn if not all beads //{{{
   if (Counts.Beads != Counts.BeadsInVsf) {
     fprintf(stdout, "\nWarning: '%s' does not contain all beads from '%s'\n\n", input_coor, input_vsf);
@@ -219,9 +179,8 @@ int main(int argc, char *argv[]) {
   // vsf file is not needed anymore
   free(input_vsf);
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = calloc(1024,sizeof(int)); //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // main loop //{{{
   fpos_t pos, pos_old; // for saving pointer position in vcf file
@@ -231,13 +190,9 @@ int main(int argc, char *argv[]) {
     ungetc(test, vcf);
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count);
     }
 
     // save pointer position in file
@@ -245,21 +200,17 @@ int main(int argc, char *argv[]) {
     fgetpos(vcf, &pos);
 
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\n\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
       pos = pos_old;
       count--;
     }
-
-    // if -V option used, print comment from the beginning of a timestep
-    if (verbose2)
-      fprintf(stdout, "\n%s", stuff);
   }
 
   // restore pointer position in FIELD file
   fsetpos(vcf, &pos);
 
   // read coordinates //{{{
-  if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+  if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
     // print newline to stdout if Step... doesn't end with one
     ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
     exit(1);
@@ -267,7 +218,7 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Config Step: %6d\n", count);
     } else {
       fflush(stdout);
       fprintf(stdout, "\nConfig Step: %6d\n", count);
@@ -291,13 +242,13 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // read till molecule keyword //{{{
-  char line[1024];
+  char line[LINE];
   while(fgets(line, sizeof(line), fr)) {
     char *split;
     split = strtok(line, " \t ");
-    if (strcmp(split, "molecule") == 0 ||
-        strcmp(split, "Molecule") == 0 ||
-        strcmp(split, "MOLECULE") == 0 ) {
+    if (strncmp(split, "molecule", 8) == 0 ||
+        strncmp(split, "Molecule", 8) == 0 ||
+        strncmp(split, "MOLECULE", 8) == 0 ) {
       break;
     }
   } //}}}
@@ -364,7 +315,8 @@ int main(int argc, char *argv[]) {
       mol_bond_types[i][j] = exist;
     } //}}}
 
-    // read till angle keyword (if present) //{{{
+    // read angles (if present) //{{{
+    angle_beads_n[i] = -1;
     exist = -1;
     while(fgets(line, sizeof(line), fr)) {
       split[0] = strtok(line, " \t ");
@@ -374,9 +326,9 @@ int main(int argc, char *argv[]) {
         split[0] = strtok(NULL, " \t"); // number of angles for the molecule
         exist = 1;
         break;
-      } else if (strcmp(split[0], "finish") == 0 ||
-                 strcmp(split[0], "Finish") == 0 ||
-                 strcmp(split[0], "FINISH") == 0 ) {
+      } else if (strncmp(split[0], "finish", 6) == 0 ||
+                 strncmp(split[0], "Finish", 6) == 0 ||
+                 strncmp(split[0], "FINISH", 6) == 0 ) {
         break;
       }
     } //}}}
@@ -398,13 +350,14 @@ int main(int argc, char *argv[]) {
         angle_beads[i][j][2] = atoi(split[0]) - 1;
         split[0] = strtok(NULL, " \t"); // spring strength
         split[1] = strtok(NULL, " \t"); // bond length
+        // find if the bond type alread exists
         exist = -1;
         for (int k = 0; k < count_angle_types; k++) {
-          if (angle_type[k][0] == atof(split[0]) && angle_type[k][1] == atof(split[1])){
+          if (angle_type[k][0] == atof(split[0]) && angle_type[k][1] == atof(split[1])) {
             exist = k;
           }
         }
-        if (exist == -1) {
+        if (exist == -1) { // add a new bond type if this doesn't exist
           count_angle_types++;
           angle_type = realloc(angle_type, count_angle_types*sizeof(double *));
           angle_type[count_angle_types-1] = malloc(2*sizeof(double));
@@ -417,11 +370,44 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
   }
-
   fclose(fr); //}}}
 
+  // print information about bonds and angles (verbouse output) //{{{
+  if (verbose) {
+    fprintf(stdout, "Bond types:\n");
+    for (int i = 0; i < count_bond_types; i++) {
+      fprintf(stdout, " %lf %lf\n", bond_type[i][0], bond_type[i][1]);
+    }
+    fprintf(stdout, "Bonds in molecules (<type> <bead 1> <bead 2>):\n");
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(stdout, " %s (%d bonds)\n", MoleculeType[i].Name, MoleculeType[i].nBonds);
+      for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+        fprintf(stdout, "  %2d: %3d %3d %3d\n", j+1, mol_bond_types[i][j]+1, MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
+      }
+    }
+    fprintf(stdout, "Angle types:\n");
+    for (int i = 0; i < count_angle_types; i++) {
+      fprintf(stdout, " %lf %lf\n", angle_type[i][0], angle_type[i][1]);
+    }
+    fprintf(stdout, "Angles in molecules (<type> <bead 1> <bead 2> <bead 3>):\n");
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(stdout, " %s ", MoleculeType[i].Name);
+      if (angle_beads_n[i] == -1) {
+        fprintf(stdout, "(no angles)\n");
+      } else {
+        fprintf(stdout, "(%d angles)\n", angle_beads_n[i]);
+      }
+      for (int j = 0; j < angle_beads_n[i]; j++) {
+        int id1 = angle_beads[i][j][0];
+        int id2 = angle_beads[i][j][1];
+        int id3 = angle_beads[i][j][2];
+        fprintf(stdout, "  %2d: %3d %3d %3d %3d\n", j+1, mol_angle_types[i][j]+1, id1+1, id2+1, id3+1);
+      }
+    }
+  } //}}}
+
   // create lammps data file //{{{
-  // open output CONFIG file for writing //{{{
+  // open output file for writing //{{{
   FILE *out;
   if ((out = fopen(output, "w")) == NULL) {
     ErrorFileOpen(output, 'w');
@@ -435,7 +421,11 @@ int main(int argc, char *argv[]) {
   fprintf(out, "%7d atoms\n", Counts.BeadsInVsf);
   fprintf(out, "%7d bonds\n", count_bonds);
   fprintf(out, "%7d angles\n", count_angles);
-  fprintf(out, "%7d atom types\n", Counts.TypesOfBeads);
+  if (srp) { // an extra srp bead
+    fprintf(out, "%7d atom types\n", Counts.TypesOfBeads+1);
+  } else {
+    fprintf(out, "%7d atom types\n", Counts.TypesOfBeads);
+  }
   fprintf(out, "%7d bond types\n", count_bond_types);
   fprintf(out, "%7d angle types\n", count_angle_types);
   putc('\n', out); //}}}
@@ -450,6 +440,9 @@ int main(int argc, char *argv[]) {
   fprintf(out, "Masses\n\n");
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     fprintf(out, "%2d %lf # %s\n", i+1, BeadType[i].Mass, BeadType[i].Name);
+  }
+  if (srp) {
+    fprintf(out, "%2d %lf # for srp\n", Counts.TypesOfBeads+1, 1.0);
   }
   putc('\n', out); //}}}
 
@@ -492,40 +485,43 @@ int main(int argc, char *argv[]) {
   putc('\n', out); //}}}
 
   // print bond information //{{{
-  fprintf(out, "Bonds\n\n");
-  count = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
-
-    int type = Molecule[i].Type;
-    for (int j = 0; j < MoleculeType[type].nBonds; j++) {
-      count++;
-      int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
-      int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
-      fprintf(out, "%7d %3d %7d %7d\n", count, mol_bond_types[type][j]+1, id1+1, id2+1);
+  if (count_angle_types != 0) {
+    fprintf(out, "Bonds\n\n");
+    count = 0;
+    for (int i = 0; i < Counts.Molecules; i++) {
+      int type = Molecule[i].Type;
+      for (int j = 0; j < MoleculeType[type].nBonds; j++) {
+        count++;
+        int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
+        int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
+        fprintf(out, "%7d %3d %7d %7d\n", count, mol_bond_types[type][j]+1, id1+1, id2+1);
+      }
     }
-  }
-  putc('\n', out); //}}}
+    putc('\n', out);
+  } //}}}
 
   // print angle information //{{{
   if (count_angle_types != 0) {
-  fprintf(out, "Angles\n\n");
-  count = 0;
-  for (int i = 0; i < Counts.Molecules; i++) {
+    fprintf(out, "Angles\n\n");
+    count = 0;
+    for (int i = 0; i < Counts.Molecules; i++) {
 
-    int type = Molecule[i].Type;
-    for (int j = 0; j < angle_beads_n[type]; j++) {
-      count++;
-      int id1 = Molecule[i].Bead[angle_beads[type][j][0]];
-      int id2 = Molecule[i].Bead[angle_beads[type][j][1]];
-      int id3 = Molecule[i].Bead[angle_beads[type][j][2]];
-      fprintf(out, "%7d %3d %7d %7d %7d\n", count, mol_angle_types[type][j]+1, id1+1, id2+1, id3+1);
+      int type = Molecule[i].Type;
+      for (int j = 0; j < angle_beads_n[type]; j++) {
+        count++;
+        int id1 = Molecule[i].Bead[angle_beads[type][j][0]];
+        int id2 = Molecule[i].Bead[angle_beads[type][j][1]];
+        int id3 = Molecule[i].Bead[angle_beads[type][j][2]];
+        fprintf(out, "%7d %3d %7d %7d %7d\n", count, mol_angle_types[type][j]+1, id1+1, id2+1, id3+1);
+      }
     }
-  } }//}}}
+  }//}}}
 
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);

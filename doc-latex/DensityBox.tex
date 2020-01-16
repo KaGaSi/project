@@ -2,7 +2,17 @@
 
 This utility calculates number density for all bead types in the specified
 direction of the simulation box. The density is calculated from 0 to box
-length in the given direction.
+length in the given direction, that is, the box is \enquote{sliced} into
+blocks with width \texttt{<width>} and numbers of different bead types are
+counted in each of the slices.
+
+The utility does not distinguish between beads with the same name in
+different molecules, so if one bead type is in more than one molecule type,
+it's density will be averaged over all molecule types it appears in. In
+this case, however, the \texttt{-x} option can be used to first run the
+utility and exclude one molecule type and then rerun it, excluding the
+other molecule type. Thus, two output files are generated, each missing
+densities from the specified molecule types.
 
 Usage:
 
@@ -11,7 +21,7 @@ Usage:
 \texttt{DensityBox <input> <width> <output> <axis> <options>}
 
 \noindent
-\begin{longtable}{p{0.15\textwidth}p{0.794\textwidth}}
+\begin{longtable}{p{0.24\textwidth}p{0.704\textwidth}}
   \toprule
   \multicolumn{2}{l}{Mandatory arguments} \\
   \midrule
@@ -27,6 +37,8 @@ Usage:
   \texttt{-n <int>} & number of bins to average to get smoother density
     (default: 1) \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-x <mol name(s)>} & exclude specified molecule type(s) (i.e., do
+    not calculate density for beads in molecules \texttt{<mol name(s)>}) \\
   \bottomrule
 \end{longtable}
 

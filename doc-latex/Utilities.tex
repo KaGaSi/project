@@ -11,25 +11,22 @@ options can be used with any utility unless stated otherwise.
   \toprule
   \multicolumn{2}{l}{Standard options} \\
   \midrule
-  \texttt{-i <name>} & use custom \texttt{vsf} file instead of
-    \texttt{traject.vsf} \\
+  \texttt{-i <name>} & use custom structure file instead of
+    \texttt{traject.vsf} (it can also be a \texttt{vtf} file) \\
   \texttt{-v}        & verbose output that provides information about all
     bead and molecule types \\
-  \texttt{-V}        & detailed verbose output that provides
-    information about all individual molecules as well as about bead and
-    molecule types \\
   \texttt{-s}        & run silently, i.e., without any output at all
-    (overrides \texttt{-v} and \texttt{-V} options) \\
-  \texttt{--script}  & do not rewrite terminal line (useful if output is
-    routed to a file) \\
-  \texttt{-h}        & print help and exit \\
+    (overrides \texttt{-v} option) \\
+  \texttt{--script}  & no progress output (useful if output is routed to a
+    file) \\
+  \texttt{-h}        & print this help and exit \\
   \bottomrule
 \end{tabular}
 
 \input{AddToSystem}
-\input{AngleMolecules}
 \input{Aggregates}
-\input{Averages}
+\input{AngleMolecules}
+\input{Average}
 \input{BondLength}
 \input{Config}
 \input{DensityAggregates}
@@ -37,15 +34,18 @@ options can be used with any utility unless stated otherwise.
 \input{DensityMolecules}
 \input{DihedralMolecules}
 \input{DistrAgg}
-%\input{EndToEnd}
+\input{GenLayers}
 \input{GenSystem}
 \input{GyrationAggregates}
 \input{GyrationMolecules}
 \input{JoinAggregates}
 \input{JoinRuns}
 \input{lmp_data}
+\input{lmp_vtf}
+\input{Orientation}
 \input{PairCorrel}
 \input{PotentialAggregates}
 \input{SelectedVcf}
 \input{traject}
 \input{TransformVsf}
+\input{VisualizeAgg}

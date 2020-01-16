@@ -1,32 +1,19 @@
 \chapter{Installation} \label{chap:Install}
 
-All programs can be compiled using \texttt{cmake} which generates
+All programs can be compiled on linux using \texttt{cmake} which generates
 \texttt{Makefile} and subsequently running \texttt{make}. It requires
-\texttt{C} and \texttt{FORTRAN} compilers.
-The compilation should be done in a separate directory, such as
-\texttt{build}.
+\texttt{C} and \texttt{FORTRAN} compilers.  The compilation should be done
+in a separate directory, such as \texttt{build}.
 
-To create the \texttt{Makefule} and compile all utilities,
-simply run the following command (assuming \texttt{build} is a subdirectory
-of \texttt{AnalysisTools} root directory):
+To create the \texttt{Makefile}, simply run \texttt{cmake \$ROOT\_DIR} in
+the separate directory, where \texttt{\$ROOT\_DIR} is the
+\texttt{AnalysisTools} root directory.  All utilities can be then compiled
+by simply running \texttt{make} without any arguments. To compile
+individual utilities, simply run \texttt{make <utility name>}. The binaries
+will be in \texttt{build/bin} directory.
 
-\vspace{1em}
-\noindent
-\texttt{cmake -G "Unix Makefiles" ../}
-\vspace{1em}
-
-The binaries will be in `bin` subdirectory of `build`.
-
-Cmake variable \texttt{-DCMAKE\_BUILD\_TYPE=Debug} can be used to compile
-the version of utilities for debugging.
-
-To compile individual \texttt{C} programs using \texttt{gcc}, run (assuming
-you are in a subdirectory of \texttt{AnalysisTools} root directory):
-
-\vspace{1em}
-\noindent
-\texttt{gcc -O3 -lm ../AnalysisTools.c ../Error.c ../Options.c
-../Utility/pro}-
-\noindent
-\texttt{gram.c}.
+Individual utilities can also be compiled without the use of \texttt{cmake}
+(and without \texttt{Makefile}) by using
+\texttt{gcc -O3 -lm \$ROOT\_DIR/AnalysisTools.c \$ROOT\_DIR/Error.c}\\
+\texttt{\$ROOT\_DIR/Options.c \$ROOT\_DIR/Utility/program.c}.
 \vspace{1em}

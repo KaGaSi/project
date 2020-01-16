@@ -14,13 +14,13 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-GyrationAggregates calculates radii of gyration, acylindricities, \
-asphericities and relative shape anisotropies during the simulation for all \
-aggregates izes. The shape descriptors are calculated from eigenvalues of \
-gyration tensor. It also prints averages to the stdout. Instead of aggregate \
-size, a number of specified molecular species in an aggregate can be used and \
-only specified bead types can be used for all calculations. Data can also be \
-saved in the per-size files (for analysis of autocorrelation).\n\n");
+GyrationAggregates calculates gyration tensor for aggregates and determines \
+shape descriptors like radius of gyration, acylindricity, asphericity, or \
+relative shape anisotropy. By default, it calculates per-timestep averages, \
+but per-size averages can also be determined. Overall averages are appended \
+to the output file. The definition of aggregate size is quite flexible and \
+the calculation can also be made only for aggregate sizes in a given \
+range.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -37,6 +37,7 @@ saved in the per-size files (for analysis of autocorrelation).\n\n");
   fprintf(ptr, "      -ps <file>     save per-size averages to a file\n");
   fprintf(ptr, "      -n <int> <int> calculate for aggregate sizes in given range\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -67,9 +68,7 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
-//      strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-V") != 0 &&
         strcmp(argv[i], "-s") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
@@ -79,7 +78,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-x") != 0 &&
         strcmp(argv[i], "-ps") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
-        strcmp(argv[i], "-st") != 0) {
+        strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0) {
 
       ErrorOption(argv[i]);
       Help(argv[0], true);
@@ -88,52 +88,17 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-i", &input_vsf)) {
-    exit(1);
-  }
-  if (input_vsf[0] == '\0') {
-    strcpy(input_vsf, "traject.vsf");
-  }
-
-  // test if structure file ends with '.vsf'
-  int ext = 2;
-  char **extension;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
-
-  // use bonds file? //{{{
-  char *bonds_file = calloc(1024,sizeof(char *));
-  if (FileOption(argc, argv, "-b", &bonds_file)) {
-    exit(0);
-  } //}}}
-
-  // output verbosity //{{{
-  bool verbose2, silent;
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  VerboseLongOption(argc, argv, &verbose, &verbose2); // more verbose output
-  SilentOption(argc, argv, &verbose, &verbose2, &silent); // no output
-  bool script = BoolOption(argc, argv, "--script"); // do not use \r & co.
-  // }}}
+  bool silent;
+  bool verbose;
+  char *input_vsf = calloc(LINE,sizeof(char));
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
   // are provided coordinates joined? //{{{
   bool joined = BoolOption(argc, argv, "--joined"); //}}}
 
   // write per-agg averages to a file? //{{{
-  char *per_size_file = calloc(1024,sizeof(char));
+  char *per_size_file = calloc(LINE,sizeof(char));
   if (FileOption(argc, argv, "-ps", &per_size_file)) {
     exit(0);
   } //}}}
@@ -141,6 +106,18 @@ int main(int argc, char *argv[]) {
   // starting timestep //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
+    exit(1);
+  } //}}}
+
+  // ending timestep //{{{
+  int end = -1;
+  if (IntegerOption(argc, argv, "-e", &end)) {
+    exit(1);
+  } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
     exit(1);
   } //}}}
   //}}}
@@ -155,60 +132,48 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[1024];
+  char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
 
   // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  extension = malloc(ext*sizeof(char *));
-  for (int i = 0; i < ext; i++) {
-    extension[i] = malloc(5*sizeof(char));
-  }
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (!ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <input.agg> - filename of input agg file //{{{
-  char input_agg[1024];
+  char input_agg[LINE];
   strcpy(input_agg, argv[++count]);
 
   // test if <input.agg> filename ends with '.agg'
   ext = 1;
-  extension = malloc(ext*sizeof(char *));
-  extension[0] = malloc(5*sizeof(char));
   strcpy(extension[0], ".agg");
   if (!ErrorExtension(input_agg, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  }
-  for (int i = 0; i < ext; i++) {
-    free(extension[i]);
-  }
-  free(extension); //}}}
+  } //}}}
 
   // <output> - filename with data during simulation run //{{{
-  char output[1024];
+  char output[LINE];
   strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information //{{{
-  bool indexed = ReadStructure(input_vsf, input_coor, bonds_file, &Counts, &BeadType, &Bead, &MoleculeType, &Molecule);
+  // read system information
+  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // vsf file is not needed anymore
-  free(input_vsf); //}}}
+  free(input_vsf);
 
   // '-n' option - range of aggregation numbers //{{{
   int range_As[2], test = 2;
@@ -256,7 +221,7 @@ int main(int argc, char *argv[]) {
   long int exclude_count_agg = 0; //}}}
 
   // -bt <name(s)> - specify what bead types to use //{{{
-  if (BeadTypeOption(argc, argv, true, Counts, &BeadType)) {
+  if (BeadTypeOption(argc, argv, "-bt", true, Counts, &BeadType)) {
     exit(0);
   } //}}}
 
@@ -275,10 +240,21 @@ int main(int argc, char *argv[]) {
   putc('\n', out);
 
   // print legend line to output file
-  fprintf(out, "# column: (1) dt, (2) <Rg>_n, (3) <Rg>_w, (4) <Rg>_z,");
-  fprintf(out, " (5) <Rg^2>_n, (6) <Rg^2>_w (7) <Rg^2>_z,");
-  fprintf(out, " (8) <Anis>_n, (9) <Acyl>_n, (10) <Aspher>_n,");
-  fprintf(out, " (11) <eigen.x>_n (12) <eigen.y>_n, (13) <eigen.z>_n");
+  count = 1;
+  fprintf(out, "# column: ");
+  fprintf(out, "(%d) timestep", count++);
+  fprintf(out, ", (%d) <Rg>_n", count++);
+  fprintf(out, ", (%d) <Rg>_w", count++);
+  fprintf(out, ", (%d) <Rg>_z", count++);
+  fprintf(out, ", (%d) <Rg^2>_n", count++);
+  fprintf(out, ", (%d) <Rg^2>_w", count++);
+  fprintf(out, ", (%d) <Rg^2>_z", count++);
+  fprintf(out, ", (%d) <Anis>_n", count++);
+  fprintf(out, ", (%d) <Acyl>_n", count++);
+  fprintf(out, ", (%d) <Aspher>_n", count++);
+  fprintf(out, ", (%d) <eigen.x>_n", count++);
+  fprintf(out, ", (%d) <eigen.y>_n", count++);
+  fprintf(out, ", (%d) <eigen.z>_n", count++);
   putc('\n', out);
 
   fclose(out); //}}}
@@ -302,7 +278,7 @@ int main(int argc, char *argv[]) {
   while ((test = getc(agg)) != '-' && test != '\n') {
     ungetc(test, agg);
 
-    char name[1024];
+    char name[LINE];
     fscanf(agg, "%s", name);
     int type = FindBeadType(name, Counts, BeadType);
 
@@ -337,7 +313,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[1024];
+  char str[LINE];
   // skip till 'pbc' keyword
   do {
     if (fscanf(vcf, "%s", str) != 1) {
@@ -362,14 +338,8 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
-  char *stuff;
-  stuff = malloc(1024*sizeof(int));
-
-  // initialize the array
-  for (int i = 0; i < 1024; i++) {
-    stuff[i] = '\0';
-  } //}}}
+  // create array for the first line of a timestep ('# <number and/or other comment>')
+  char *stuff = calloc(LINE, sizeof(char));
 
   // allocate Aggregate struct //{{{
   Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
@@ -384,14 +354,10 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(verbose2, input_coor, bonds_file, Counts, BeadType, Bead, MoleculeType, Molecule);
-  }
-
-  // bonds file is not needed anymore
-  free(bonds_file); //}}}
+    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+  } //}}}
 
   // allocate memory for sum of various things //{{{
-
   // numbers of aggregates of all possibe sizes
   int *agg_counts_sum = calloc(Counts.Molecules,sizeof(int *));
   // total radius of gyration: [size][0] normal sum, [size][1] sum of Rg*mass, [size][2] Rg*mass^2
@@ -417,56 +383,21 @@ int main(int argc, char *argv[]) {
     molecules_sum[i] = calloc(Counts.TypesOfMolecules,sizeof(int));
   } //}}}
 
-  // skip first start-1 steps //{{{
-  count = 0;
-  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
-    ungetc(test, vcf);
-
-    count++;
-
-    // print step? //{{{
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Discarding step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rDiscarding step: %6d", count);
-      }
-    } //}}}
-
-    if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
-      exit(1);
-    }
-  }
-  // print number of discarded steps? //{{{
-  if (!silent) {
-    if (script) {
-      fprintf(stdout, "Discarded steps: %6d\n", count);
-    } else {
-      fflush(stdout);
-      fprintf(stdout, "\rDiscarded steps: %6d\n", count);
-    }
-  } //}}}
-  //}}}
-
   // main loop //{{{
   count = 0; // count timesteps
   while ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
 
     count++;
-    if (!silent) {
-      if (script) {
-        fprintf(stdout, "Step: %6d\n", count);
-      } else {
-        fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count);
-      }
-    }
+
+    // print steps? //{{{
+    if (!silent && !script) {
+      fflush(stdout);
+      fprintf(stdout, "\rStep: %6d", count);
+    } //}}}
 
     // read aggregates //{{{
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule)) {
+    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
@@ -476,7 +407,7 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, &Bead, &stuff)) != 0) {
+    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
       ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
       exit(1);
@@ -514,7 +445,6 @@ int main(int argc, char *argv[]) {
           size++;
         }
       }
-      // IS THIS STILL NEEDED? I DON'T THINKS SO!
       // is 'size' agg size in provided list?
       int correct_size = -1;
       for (int j = 0; j < Counts.Molecules; j++) {
@@ -539,7 +469,6 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       if (size != 0 && size >= range_As[0] && size <= range_As[1]) {
-//    if (true) {
         if (correct_size != -1) {
           // copy bead ids to a separate array //{{{
           int *list = malloc(Aggregate[i].nBeads*sizeof(int));
@@ -600,35 +529,40 @@ int main(int argc, char *argv[]) {
           eigen_step[correct_size].x += eigen.x;
           eigen_step[correct_size].y += eigen.y;
           eigen_step[correct_size].z += eigen.z;
-          // aggregate size
-          mass_sum[correct_size][0] += agg_mass;
-          mass_sum[correct_size][1] += SQR(agg_mass);
           // aggregate count
           agg_counts_step[correct_size]++;
-          agg_counts_sum[correct_size]++;
 
-          for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-            int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
-            molecules_sum[correct_size][mol_type]++;
+          // sum molecules and aggregates (if step between start and end)
+          if (count >= start && (end == -1 || count <= end)) {
+            agg_counts_sum[correct_size]++;
+            // aggregate mass
+            mass_sum[correct_size][0] += agg_mass;
+            mass_sum[correct_size][1] += SQR(agg_mass);
+            for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+              int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
+              molecules_sum[correct_size][mol_type]++;
+            }
           }
         }
       }
     } //}}}
 
     // add values to sums //{{{
-    for (int i = 0; i < Counts.Molecules; i++) {
-      Rg_sum[i][0] += Rg_step[i][0];
-      Rg_sum[i][1] += Rg_step[i][1];
-      Rg_sum[i][2] += Rg_step[i][2];
-      sqrRg_sum[i][0] += sqrRg_step[i][0];
-      sqrRg_sum[i][1] += sqrRg_step[i][1];
-      sqrRg_sum[i][2] += sqrRg_step[i][2];
-      Anis_sum[i] += Anis_step[i];
-      Acyl_sum[i] += Acyl_step[i];
-      Aspher_sum[i] += Aspher_step[i];
-      eigen_sum[i].x += eigen_step[i].x;
-      eigen_sum[i].y += eigen_step[i].y;
-      eigen_sum[i].z += eigen_step[i].z;
+    if (count >= start && (end == -1 || count <= end)) {
+      for (int i = 0; i < Counts.Molecules; i++) {
+        Rg_sum[i][0] += Rg_step[i][0];
+        Rg_sum[i][1] += Rg_step[i][1];
+        Rg_sum[i][2] += Rg_step[i][2];
+        sqrRg_sum[i][0] += sqrRg_step[i][0];
+        sqrRg_sum[i][1] += sqrRg_step[i][1];
+        sqrRg_sum[i][2] += sqrRg_step[i][2];
+        Anis_sum[i] += Anis_step[i];
+        Acyl_sum[i] += Acyl_step[i];
+        Aspher_sum[i] += Aspher_step[i];
+        eigen_sum[i].x += eigen_step[i].x;
+        eigen_sum[i].y += eigen_step[i].y;
+        eigen_sum[i].z += eigen_step[i].z;
+      }
     } //}}}
 
     // print data to output file //{{{
@@ -672,11 +606,6 @@ int main(int argc, char *argv[]) {
 
     fclose(out); //}}}
 
-    // print comment at the beginning of a timestep - detailed verbose output //{{{
-    if (verbose2) {
-      fprintf(stdout, "\n%s", stuff);
-    } //}}}
-
     // free memory //{{{
     free(agg_counts_step);
     for (int i = 0; i < Counts.Molecules; i++) {
@@ -693,6 +622,7 @@ int main(int argc, char *argv[]) {
   fclose(vcf);
   fclose(agg);
 
+  // print last step? //{{{
   if (!silent) {
     if (script) {
       fprintf(stdout, "Last Step: %6d\n", count);
@@ -701,6 +631,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rLast Step: %6d\n", count);
     }
   } //}}}
+  //}}}
 
   // calculate per-size averages? //{{{
   if (per_size_file[0] != '\0') {
@@ -719,7 +650,7 @@ int main(int argc, char *argv[]) {
     }
     putc('\n', out); //}}}
 
-    fprintf(out, "# column: (1) As");
+    fprintf(out, "# column: (1) agg size");
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
       fprintf(out, " (%d) <%s>", i+2, MoleculeType[i].Name);
     }
@@ -803,30 +734,32 @@ int main(int argc, char *argv[]) {
   fprintf(out, "(%d) <eigen.y>, ", Counts.TypesOfMolecules+13);
   fprintf(out, "(%d) <eigen.z>, ", Counts.TypesOfMolecules+14);
   putc('\n', out);
-  fprintf(out, "# %8.3f", (double)(mass_sum[0][0])/agg_counts_sum[0]); //<M_As>_n
-  fprintf(out, " %8.3f", (double)(mass_sum[0][1])/mass_sum[0][0]); //<M_As>_w
+  fprintf(out, "# %lf", (double)(mass_sum[0][0])/agg_counts_sum[0]); //<M_As>_n
+  fprintf(out, " %lf", (double)(mass_sum[0][1])/mass_sum[0][0]); //<M_As>_w
   // molecule types
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(out, " %8.3f", (double)(molecules_sum)[0][i]/agg_counts_sum[0]);
+    fprintf(out, " %lf", (double)(molecules_sum)[0][i]/agg_counts_sum[0]);
   }
-  fprintf(out, " %8.3f", Rg_sum[0][0]/agg_counts_sum[0]); // <Rg>_n
-  fprintf(out, " %8.3f", Rg_sum[0][1]/mass_sum[0][0]); // <Rg>_w
-  fprintf(out, " %8.3f", Rg_sum[0][2]/mass_sum[0][1]); // <Rg>_z
-  fprintf(out, " %8.3f", sqrRg_sum[0][0]/agg_counts_sum[0]); // <Rg^2>_n
-  fprintf(out, " %8.3f", sqrRg_sum[0][1]/mass_sum[0][0]); // <Rg^2>_w
-  fprintf(out, " %8.3f", sqrRg_sum[0][2]/mass_sum[0][1]); // <Rg^2>_z
-  fprintf(out, " %8.3f", Anis_sum[0]/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", Acyl_sum[0]/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", Aspher_sum[0]/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", eigen_sum[0].x/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", eigen_sum[0].y/agg_counts_sum[0]);
-  fprintf(out, " %8.3f", eigen_sum[0].z/agg_counts_sum[0]);
+  printf("xx%d\n", agg_counts_sum[0]);
+  fprintf(out, " %lf", Rg_sum[0][0]/agg_counts_sum[0]); // <Rg>_n
+  fprintf(out, " %lf", Rg_sum[0][1]/mass_sum[0][0]); // <Rg>_w
+  fprintf(out, " %lf", Rg_sum[0][2]/mass_sum[0][1]); // <Rg>_z
+  fprintf(out, " %lf", sqrRg_sum[0][0]/agg_counts_sum[0]); // <Rg^2>_n
+  fprintf(out, " %lf", sqrRg_sum[0][1]/mass_sum[0][0]); // <Rg^2>_w
+  fprintf(out, " %lf", sqrRg_sum[0][2]/mass_sum[0][1]); // <Rg^2>_z
+  fprintf(out, " %lf", Anis_sum[0]/agg_counts_sum[0]);
+  fprintf(out, " %lf", Acyl_sum[0]/agg_counts_sum[0]);
+  fprintf(out, " %lf", Aspher_sum[0]/agg_counts_sum[0]);
+  fprintf(out, " %lf", eigen_sum[0].x/agg_counts_sum[0]);
+  fprintf(out, " %lf", eigen_sum[0].y/agg_counts_sum[0]);
+  fprintf(out, " %lf", eigen_sum[0].z/agg_counts_sum[0]);
   putc('\n', out);
 
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
+  free(Index);
   FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);

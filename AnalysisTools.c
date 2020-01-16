@@ -13,7 +13,7 @@
  * 'species' lines in FIELD. It only reads information about bead types with
  * Use=true flag.
  */
-void ReadFIELD(char *bonds_file, Counts *Counts,
+void ReadFIELD(Counts *Counts,
                BeadType **BeadType, MoleculeType **MoleculeType) {
 
   // open FIELD file //{{{
@@ -27,8 +27,8 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
   char *split;
   do {
     // get whole line - max 1000 chars
-    char line[1024];
-    fgets(line, 1024, field);
+    char line[LINE];
+    fgets(line, strlen(line), field);
 
     // first string of the line
     split = strtok(line, " \t");
@@ -45,8 +45,8 @@ void ReadFIELD(char *bonds_file, Counts *Counts,
   for (int i = 0; i < bead_types; i++) {
 
     // get whole line - max 1000 chars //{{{
-    char line[1024];
-    fgets(line, 1024, field); //}}}
+    char line[LINE];
+    fgets(line, strlen(line), field); //}}}
 
     // read bead type name and test it is against data from vsf and vcf //{{{
     split = strtok(line, " \t");
@@ -89,113 +89,9 @@ void CommonHelp(bool error) {
   fprintf(ptr, "      -i <name>      use input .vsf file different from traject.vsf\n");
 //fprintf(ptr, "      -b <name>      file containing bond alternatives to FIELD\n");
   fprintf(ptr, "      -v             verbose output\n");
-  fprintf(ptr, "      -V             more verbose output\n");
-  fprintf(ptr, "      -s             no output (overrides verbose options)\n");
+  fprintf(ptr, "      -s             no output (overrides verbose option)\n");
   fprintf(ptr, "      -h             print this help and exit\n");
-  fprintf(ptr, "      --script       do not reprint line (useful when output goes to file)\n");
-} //}}}
-
-// CommonOptions() //{{{
-/**
- * Function for options common to most of the utilities.
- */
-bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
-                   bool *verbose, bool *verbose2, bool *silent, bool *script) {
-
-  bool error = false;
-
-  // -i <name> option - filename of input structure file //{{{
-  (*vsf_file)[0] = '\0'; // check if -i option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-i") == 0) {
-
-      // wrong argument to -i option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-i' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
-
-        error = true;
-        break;
-      }
-
-      // check if .vsf ending is present
-      char *vsf = strrchr(argv[i+1], '.');
-      if (!vsf || strcmp(vsf, ".vsf")) {
-        fprintf(stderr, "'-i' arguments does not have .vsf ending!\n");
-        error = true;
-      }
-
-      strcpy(*vsf_file, argv[i+1]);
-    }
-  }
-
-  // -i option is not used
-  if ((*vsf_file)[0] == '\0') {
-    strcpy(*vsf_file, "traject.vsf");
-  } //}}}
-
-  // -b <name> option - filename of input bond file //{{{
-  (*bonds_file)[0] = '\0'; // check if -b option is used
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-b") == 0) {
-
-      // wrong argument to -b option
-      if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\nMissing argument to '-b' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-
-        error = true;
-        break;
-      }
-
-      strcpy(*bonds_file, argv[i+1]);
-    }
-  } //}}}
-
-  // -v option - verbose output //{{{
-  *verbose = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-v") == 0) {
-      *verbose = true;
-
-      break;
-    }
-  } //}}}
-
-  // -V option - verbose output with comments from input .vcf file //{{{
-  *verbose2 = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-V") == 0) {
-      *verbose = true;
-      *verbose2 = true;
-
-      break;
-    }
-  } //}}}
-
-  // -s option - silent mode //{{{
-  *silent = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-s") == 0) {
-      *verbose = false;
-      *verbose2 = false;
-      *silent = true;
-
-      break;
-    }
-  } //}}}
-
-  // --script  option - meant for when output is routed to file, so don't use flush & \r //{{{
-  *script = false;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--script") == 0) {
-      *script = true;
-
-      break;
-    }
-  } //}}}
-
-  return error;
+  fprintf(ptr, "      --script       no progress output (useful if output is routed to a file)\n");
 } //}}}
 
 // VerboseOutput() //{{{
@@ -203,107 +99,115 @@ bool CommonOptions(int argc, char **argv, char **vsf_file,char **bonds_file,
  * Function providing standard verbose output (for cases when verbose
  * option is used). It prints most of the information about used system.
  */
-void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
+void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule) {
 
-//if (input_vcf[0] != '\0')
-  printf("Counts.{");
-  printf("TypesOfBeads =%3d, ", Counts.TypesOfBeads);
-  printf("Bonded =%7d, ", Counts.Bonded);
-  printf("Unbonded =%7d, ", Counts.Unbonded);
-  printf("Beads = %7d, ", Counts.Beads);
-  printf("BeadsInVsf = %7d, ", Counts.BeadsInVsf);
-  printf("TypesOfMolecules =%3d, ", Counts.TypesOfMolecules);
-  printf("Molecules =%4d}\n", Counts.Molecules);
-  printf("\ntotal number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
+  putchar('\n');
+  if (BoxLength.x != -1) {
+    fprintf(stdout, "Box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+  }
+  PrintCounts(Counts);
+  PrintBeadType(Counts, BeadType);
+  PrintMoleculeType(Counts, BeadType, MoleculeType);
+  putchar('\n');
+} //}}}
 
+// PrintCounts()  //{{{
+/**
+ * Function printing Counts structure.
+ */
+void PrintCounts(Counts Counts) {
+  fprintf(stdout, "Counts.{");
+  fprintf(stdout, "TypesOfBeads = %d, ", Counts.TypesOfBeads);
+  fprintf(stdout, "Bonded = %d, ", Counts.Bonded);
+  fprintf(stdout, "Unbonded = %d, ", Counts.Unbonded);
+  fprintf(stdout, "Beads = %d, ", Counts.Beads);
+  fprintf(stdout, "BeadsInVsf = %d, ", Counts.BeadsInVsf);
+  fprintf(stdout, "TypesOfMolecules = %d, ", Counts.TypesOfMolecules);
+  fprintf(stdout, "Molecules = %d}\n", Counts.Molecules);
+  fprintf(stdout, "total number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
+} //}}}
+
+// PrintBeadType()  //{{{
+/**
+ * Function printing BeadType structure.
+ */
+void PrintBeadType(Counts Counts, BeadType *BeadType) {
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    printf("BeadType[%2d].{", i);
-    printf("Name =%10s, ", BeadType[i].Name);
-    printf("Number =%7d, ", BeadType[i].Number);
-    printf("Charge =%6.2f, ", BeadType[i].Charge);
-    printf("Mass =%5.2f, ", BeadType[i].Mass);
-    printf("Use = %3s, ", BeadType[i].Use? "Yes":"No");
-    printf("Write = %3s}\n", BeadType[i].Write? "Yes":"No");
+    fprintf(stdout, "BeadType[%2d].{", i);
+    fprintf(stdout, "Name =%10s, ", BeadType[i].Name);
+    fprintf(stdout, "Number =%7d, ", BeadType[i].Number);
+    fprintf(stdout, "Charge =%9.5f, ", BeadType[i].Charge);
+    fprintf(stdout, "Mass = %.5f}\n", BeadType[i].Mass);
+//  fprintf(stdout, "Use = %3s, ", BeadType[i].Use? "Yes":"No");
+//  fprintf(stdout, "Write = %3s}\n", BeadType[i].Write? "Yes":"No");
   }
   putchar('\n');
+} //}}}
 
+// PrintMoleculeType()  //{{{
+/**
+ * Function printing MoleculeType structure.
+ */
+void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *MoleculeType) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf("MoleculeType[%d].{", i);
-    printf("Name =%10s", MoleculeType[i].Name);
-    printf(", Number =%4d", MoleculeType[i].Number);
-    printf(", nBeads =%3d", MoleculeType[i].nBeads);
-    printf(", nBonds =%3d", MoleculeType[i].nBonds);
-
-    printf(", nBTypes =%2d, BType{", MoleculeType[i].nBTypes);
-    printf("%8s", BeadType[MoleculeType[i].BType[0]].Name);
-    for (int j = 1; j < MoleculeType[i].nBTypes; j++) {
-      printf(",%8s", BeadType[MoleculeType[i].BType[j]].Name);
+    fprintf(stdout, "MoleculeType[%2d].{\n", i);
+    fprintf(stdout, "  Name    = %s\n", MoleculeType[i].Name);
+    fprintf(stdout, "  Number  = %d\n", MoleculeType[i].Number);
+    fprintf(stdout, "  nBeads  = %d\n  Bead    = {", MoleculeType[i].nBeads);
+    for (int j = 0; j < MoleculeType[i].nBeads; j++) {
+      if (j != 0) {
+        fprintf(stdout, ", ");
+      }
+      fprintf(stdout, "%s", BeadType[MoleculeType[i].Bead[j]].Name);
     }
-
-    printf("}, Mass =%7.2f", MoleculeType[i].Mass);
-
-    if (bonds_file[0] == '\0') { // all bonds taken from vsf file
-//    printf(", Bonds from vsf,");
-    } else {
-      // go through bond file to find out if molecule type 'i' is there
-      FILE *bond;
-      if ((bond = fopen(bonds_file, "r")) == NULL) {
-        ErrorFileOpen(bonds_file, 'r');
-        exit(1);
-      }
-
-      int test;
-      char str[32];
-      while ((test = getc(bond)) != EOF) {
-        ungetc(test, bond);
-
-        if ((fscanf(bond, "%s %d", str, &test)) != 2) {
-          fprintf(stderr, "Cannot read string or number of bonds from %s with '-v' option!\n", bonds_file);
-          exit(1);
-        }
-
-        if (strcmp(str, MoleculeType[i].Name) == 0) {
-          printf(", Bonds from '%s',", bonds_file);
-          break;
-        }
-
-        while (getc(bond) != '\n')
-          ;
-      }
-
-      // if not in bonds_file, then bonds taken from FIELD
-      if (test == EOF) {
-        printf(", Bonds from 'FIELD',");
-      }
-
-      fclose(bond);
-    }
-    printf(" Use = %3s,", MoleculeType[i].Use? "Yes":"No");
-    printf(" Write = %3s}\n", MoleculeType[i].Write? "Yes":"No");
-  }
-
-  printf("Bonds:\n");
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    printf("MoleculeType[%d].nBonds = %d:", i, MoleculeType[i].nBonds);
+    fprintf(stdout, "}\n  nBonds  = %d\n  Bond    = {", MoleculeType[i].nBonds);
     for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      printf(" %d-%d", MoleculeType[i].Bond[j][0], MoleculeType[i].Bond[j][1]);
-      if (j < (MoleculeType[i].nBonds-1)) {
-        putchar(',');
+      if (j != 0) {
+        fprintf(stdout, ", ");
       }
+      fprintf(stdout, "%d-%d", MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
     }
-    putchar('\n');
+    fprintf(stdout, "}\n  nBTypes = %d\n  BType   = {", MoleculeType[i].nBTypes);
+    fprintf(stdout, "%s", BeadType[MoleculeType[i].BType[0]].Name);
+    for (int j = 1; j < MoleculeType[i].nBTypes; j++) {
+      fprintf(stdout, ", %s", BeadType[MoleculeType[i].BType[j]].Name);
+    }
+    fprintf(stdout, "}\n  Mass    = %.5f}\n", MoleculeType[i].Mass);
   }
+} //}}}
 
-  // print bead ids of all molecules if '-V' option is used
-  for (int i = 0; Verbose2 && i < Counts.Molecules; i++) {
-    int type = Molecule[i].Type;
-    printf("Molecule %3d (%s):\n", i+1, MoleculeType[type].Name);
-    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      printf(" %d (%d)", Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
+// PrintBead() //{{{
+/**
+ * Function printing Bead structure useful for debugging.
+ */
+void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
+  fprintf(stdout, "Beads - <i> (<Bead[i].Index>; <Index[i]>)\n");
+  for (int i = 0; i < Counts.Beads; i++) {
+    int type = Bead[i].Type;
+    fprintf(stdout, "   %6d (%6d; %6d) %8s molecule: ", i, Bead[i].Index, Index[i], BeadType[type].Name);
+    if (Bead[i].Molecule == -1) {
+      fprintf(stdout, "None\n");
+    } else {
+      fprintf(stdout, "%6d\n", Bead[i].Molecule+1);
     }
-    printf("\n");
+  }
+} //}}}
+
+// PrintMolecule() //{{{
+/**
+ * Function printing Molecule structure useful for debugging.
+ */
+void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType) {
+  fprintf(stdout, "Molecules\n");
+  for (int i = 0; i < Counts.Molecules; i++) {
+    int type = Molecule[i].Type;
+    fprintf(stdout, "Molecule %3d (%s):\n", i+1, MoleculeType[type].Name);
+    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+      fprintf(stdout, " %d (%d)", Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
+    }
+    fprintf(stdout, "\n");
   }
 } //}}}
 
@@ -317,9 +221,9 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  * Overly complicated, some things done more than once, needs complete
  * overhaul. Thankfully, it works.
  */
-bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
-    *Counts, BeadType **BeadType, Bead **Bead, MoleculeType **MoleculeType,
-    Molecule **Molecule) {
+bool ReadStructure(char *vsf_file, char *vcf_file, Counts
+    *Counts, BeadType **BeadType, Bead **Bead, int **Index,
+    MoleculeType **MoleculeType, Molecule **Molecule) {
 
   FILE *vsf;
 
@@ -343,23 +247,15 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       max_mol = 0, // highes mol id detected
       atom_lines = 0, // number of atom lines in vsf (including comments and blanks)
       type_default = -1; // default bead type
-  char line[1024];
+  char line[LINE];
   while(fgets(line, sizeof(line), vsf)) {
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
-    // for lines containing only whitespace
-    if (length == 1) {
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
+    // line containing only whitespace
+    if (strlen(line) == 1) {
       atom_lines++;
       continue;
-    } //}}}
+    }
 
     // split the line into array //{{{
     char *split[30];
@@ -470,6 +366,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
             (*MoleculeType)[type].Number = 0;
             (*MoleculeType)[type].nBonds = 0;
             (*MoleculeType)[type].nBeads = 0;
+            (*MoleculeType)[type].Bead = calloc(1, sizeof(int));
             (*MoleculeType)[type].nBTypes = 0;
             // copy new name to MoleculeType[].Name
             strcpy((*MoleculeType)[type].Name, split[i+1]);
@@ -516,6 +413,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   (*Counts).Molecules = max_mol; // mol ids start from 1 in vsf
   (*Counts).BeadsInVsf = max_bead + 1; // bead ids start from 0 in vsf
 
+  // reverse of Bead[].Index
+  *Index = malloc((*Counts).BeadsInVsf*sizeof(int));
+
   // allocate Bead and Molecule structures
   *Bead = calloc((*Counts).BeadsInVsf, sizeof(struct Bead));
   int mol_alloced = (*Counts).Molecules; // redundant as the earilier max_mol is not used later
@@ -540,20 +440,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   for (int count = 0; count < atom_lines; count++) {
     // read line
     fgets(line, sizeof(line), vsf);
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
     // for lines containing only whitespace
-    if (length == 1) {
+    if (strlen(line) == 1) {
       continue;
-    }//}}}
+    }
 
     // split the line into array //{{{
     char *split[30];
@@ -580,39 +472,35 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       }
 
       // assign values to Bead & Molecule
+      (*Index)[bead_id] = bead_id; // reverse of Bead[].Index
       (*Bead)[bead_id].Type = bead_type;
       (*Bead)[bead_id].Index = bead_id;
       (*Bead)[bead_id].Molecule = mol_id;
       if (mol_id > -1) {
         (*Molecule)[mol_id].Type = mol_type;
         (*MoleculeType)[mol_type].nBeads++;
-
-//      printf(" bead_type=%2d (%3s), bead_id=%5d,", bead_type, (*BeadType)[bead_type].Name, bead_id);
-//      printf(" mol_type=%2d (%5s),", mol_type, (*MoleculeType)[mol_type].Name);
-//      printf(" mol_id=%3d", mol_id);
-//      putchar('\n');
+        (*MoleculeType)[mol_type].Bead = realloc((*MoleculeType)[mol_type].Bead, (*MoleculeType)[mol_type].nBeads*sizeof(int));
+        (*MoleculeType)[mol_type].Bead[(*MoleculeType)[mol_type].nBeads-1] = bead_type;
       }
     } //}}}
   } //}}}
-//for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
-//  if ((*Bead)[i].Molecule != -1) {
-//    printf("i=%d Bead[i].Type=%d Bead[i].Molecule=%d BeadType[Bead[i].Type].Name=|%s|\n", i, (*Bead)[i].Type, (*Bead)[i].Molecule, (*BeadType)[(*Bead)[i].Type].Name); // default beads aren't in molecules
-//  }
-//}
 
   // assign 'type_default' to default beads //{{{
-  int count = 0;
-  for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
-    if ((*Bead)[i].Type == -1) {
-      (*Bead)[i].Type = type_default;
-      (*Bead)[i].Index = i;
-      (*Bead)[i].Molecule = -1; // default beads aren't in molecules
-      count++;
-    } else if ((*Bead)[i].Type == type_default) { // default type beads explicitly specified by 'atom' line
-      count++;
+  if (type_default != -1) {
+    int count = 0;
+    for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
+      if ((*Bead)[i].Type == -1) {
+        (*Index)[i] = i; // reverse of Bead[].Index
+        (*Bead)[i].Type = type_default;
+        (*Bead)[i].Index = i;
+        (*Bead)[i].Molecule = -1; // default beads aren't in molecules
+        count++;
+      } else if ((*Bead)[i].Type == type_default) { // default type beads explicitly specified by 'atom' line
+        count++;
+      }
     }
-  }
-  (*BeadType)[type_default].Number = count; //}}}
+    (*BeadType)[type_default].Number = count;
+  } //}}}
 
   // calculate number of molecules/beads in each molecule type //{{{
   int max = 0; // the highest number of beads in a molecule - for memory allocation later
@@ -648,7 +536,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     bonds[i] = -1;
   } //}}}
   while (fgets(line, sizeof(line), vsf)) {
-    // split the line into array - no need to trim trailing white space (the number of columns is known) //{{{
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
+    // split the line into array //{{{
     char *split[30];
     split[0] = strtok(line, " \t:");
     int i = 0;
@@ -690,13 +580,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 
   fclose(vsf);
 
-//for (int i = 0; i < (*Counts).Molecules; i++) {
-//  int type = (*Molecule)[i].Type;
-//  for (int j = 0; j < (*MoleculeType)[type].nBonds; j++) {
-//    printf("bonds %2d (%5d): %5d (%5d) %5d (%5d)\n", i, j, (*Molecule)[i].Bead[(*MoleculeType)[type].Bond[j][0]], (*MoleculeType)[type].Bond[j][0], (*Molecule)[i].Bead[(*MoleculeType)[type].Bond[j][1]], (*MoleculeType)[type].Bond[j][1]);
-//  }
-//}
-
   // fourth, go through vsf and assign bead ids to molecules //{{{
   // open vsf structure file //{{{
   if ((vsf = fopen(vsf_file, "r")) == NULL) {
@@ -710,20 +593,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   for (int count = 0; count < atom_lines; count++) {
     // read line
     fgets(line, sizeof(line), vsf);
-    // trim trailing whitespace in line //{{{
-    int length = strlen(line);
-    // last string character needs to be '\0'
-    while (length > 1 &&
-           (line[length-1] == ' ' ||
-            line[length-1] == '\n' ||
-            line[length-1] == '\t')) {
-      line[length-1] = '\0';
-      length--;
-    }
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
     // for lines containing only whitespace
-    if (length == 1) {
+    if (strlen(line) == 1) {
       continue;
-    }//}}}
+    }
 
     // split the line into array //{{{
     char *split[30];
@@ -749,26 +624,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     } //}}}
   }
   free(beads); //}}}
-
-//// bubble sort the bead arrays - useless as the beads must be in ascending order in vsf //{{{
-//for (int i = 0; i < (*Counts).Molecules; i++) {
-//  // go through all besds in the molecule
-//  int type = (*Molecule)[i].Type;
-//  for (int j = 0; j < ((*MoleculeType)[type].nBeads-1); j++) {
-//    int swap = -1;
-//    for (int k = 0; k < ((*MoleculeType)[type].nBeads-j-1); k++) {
-//      if ((*Molecule)[i].Bead[k] > (*Molecule)[i].Bead[k+1]) {
-//        swap = (*Molecule)[i].Bead[k];
-//        (*Molecule)[i].Bead[k] = (*Molecule)[i].Bead[k+1];
-//        (*Molecule)[i].Bead[k+1] = swap;
-//      }
-//    }
-
-//    // if no swap was made, the array is sorted
-//    if (swap == -1)
-//      break;
-//  }
-//} //}}}
 
   // fifth, go again through the bonds and assign ids of bonded beads //{{{
   // initialize helper arrays //{{{
@@ -817,50 +672,10 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   free(count_bonds);
   fclose(vsf); //}}}
 
-  // bubble sort the Bond arrays //{{{
+  // sort the Bond arrays //{{{
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-    // go through all bonds in molecule type 'i'
-    for (int j = 0; j < ((*MoleculeType)[i].nBonds-1); j++) {
-      int swap = 0;
-      for (int k = 0; k < ((*MoleculeType)[i].nBonds-j-1); k++) {
-        // swap bonds if the first beads are in wrong order
-        if ((*MoleculeType)[i].Bond[k][0] > (*MoleculeType)[i].Bond[k+1][0]) {
-          swap = (*MoleculeType)[i].Bond[k][0];
-          (*MoleculeType)[i].Bond[k][0] = (*MoleculeType)[i].Bond[k+1][0];
-          (*MoleculeType)[i].Bond[k+1][0] = swap;
-
-          swap  = (*MoleculeType)[i].Bond[k][1];
-          (*MoleculeType)[i].Bond[k][1] = (*MoleculeType)[i].Bond[k+1][1];
-          (*MoleculeType)[i].Bond[k+1][1] = swap;
-        // swap bonds if the first beads are the same,
-        // but second ones are in wrong order
-        } else if ((*MoleculeType)[i].Bond[k][0] == (*MoleculeType)[i].Bond[k+1][0] &&
-                   (*MoleculeType)[i].Bond[k][1] > (*MoleculeType)[i].Bond[k+1][1]) {
-          swap = (*MoleculeType)[i].Bond[k][0];
-          (*MoleculeType)[i].Bond[k][0] = (*MoleculeType)[i].Bond[k+1][0];
-          (*MoleculeType)[i].Bond[k+1][0] = swap;
-
-          swap  = (*MoleculeType)[i].Bond[k][1];
-          (*MoleculeType)[i].Bond[k][1] = (*MoleculeType)[i].Bond[k+1][1];
-          (*MoleculeType)[i].Bond[k+1][1] = swap;
-        }
-      }
-
-      // if no swap was made, the array is sorted
-      if (swap == 0)
-        break;
-    }
+    SortBonds((*MoleculeType)[i].Bond, (*MoleculeType)[i].nBonds);
   } //}}}
-
-//for (int i = 0; i < (*Counts).Molecules; i++) {
-//  int type = (*Molecule)[i].Type;
-//  for (int j = 0; j < (*MoleculeType)[type].nBeads; j++) {
-//    printf("beads %2d: %5d (%5d)\n", i, (*Molecule)[i].Bead[j], j);
-//  }
-//  for (int j = 0; j < (*MoleculeType)[type].nBonds; j++) {
-//    printf("bonds %2d (%5d): %5d (%5d) %5d (%5d)\n", i, j, (*Molecule)[i].Bead[(*MoleculeType)[type].Bond[j][0]], (*MoleculeType)[type].Bond[j][0], (*Molecule)[i].Bead[(*MoleculeType)[type].Bond[j][1]], (*MoleculeType)[type].Bond[j][1]);
-//  }
-//}
 
   // fill BTypes array //{{{
   // allocate & initialize arrays //{{{
@@ -904,7 +719,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 
     // skip initial stuff //{{{
     // skip lines including 't(imestep)' line //{{{
-    char line[1024], line2[1024], *split[32], str[32];
+    char line[LINE], line2[LINE], *split[32], str[32];
     str[0] = '\0';
     do {
       fgets(line, sizeof(line), vcf);
@@ -961,22 +776,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       // read data
       // the first coordinate line
       fgets(line, sizeof(line), vcf);
-
-      // trim trailing whitespace in line //{{{
-      int length = strlen(line);
-      // last string character needs to be '\0'
-      while (length > 1 &&
-             (line[length-1] == ' ' ||
-              line[length-1] == '\n' ||
-              line[length-1] == '\t')) {
-        line[length-1] = '\0';
-        length--;
-      }
+      strcpy(line, TrimLine(line)); // trim excess whitespace
       // for lines containing only whitespace
-      if (length == 1) {
+      if (strlen(line) == 1) {
         fprintf(stderr, "Error: %s - blank line instead of a first coordinate line\n", vcf_file);
         exit(1);
-      }//}}}
+      }
 
       // split the line into array //{{{
       char *split[30];
@@ -997,16 +802,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         ungetc(test, vcf);
         // read line
         fgets(line, sizeof(line), vcf);
-        // trim trailing whitespace in line //{{{
-        int length = strlen(line);
-        // last string character needs to be '\0'
-        while (length > 1 &&
-               (line[length-1] == ' ' ||
-                line[length-1] == '\n' ||
-                line[length-1] == '\t')) {
-          line[length-1] = '\0';
-          length--;
-        } //}}}
+        strcpy(line, TrimLine(line)); // trim excess whitespace
         // split the line into array //{{{
         split[0] = strtok(line, " \t");
         int i = 0;
@@ -1057,7 +853,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 
   // remove unused molecules from Molecule struct  //{{{
   int mols_in_vcf = 0;
-  count = 0;
+  int count = 0;
   for (int i = 0; i < (*Counts).Molecules; i++) {
     int type = (*Molecule)[i].Type;
     if ((*MoleculeType)[type].Use) {
@@ -1089,6 +885,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         strcpy((*MoleculeType)[count].Name, (*MoleculeType)[i].Name);
         (*MoleculeType)[count].Number = (*MoleculeType)[i].Number;
         (*MoleculeType)[count].nBeads = (*MoleculeType)[i].nBeads;
+        for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+          (*MoleculeType)[count].Bead[j] = (*MoleculeType)[i].Bead[j];
+        }
         (*MoleculeType)[count].nBonds = (*MoleculeType)[i].nBonds;
         for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
           (*MoleculeType)[count].Bond[j][0] = (*MoleculeType)[i].Bond[j][0];
@@ -1110,20 +909,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     (*Molecule)[i].Type = FindMoleculeType(name[type], *Counts, *MoleculeType);
   } //}}}
 
-  // free name array //{{{
-  for (int i = 0; i < moltype_alloced; i++) {
-    free(name[i]);
-  }
-  free(name); //}}}
-
-//for (int i = 0; i < (*Counts).Molecules; i++) {
-//  for (int j = 0; j < (*MoleculeType)[(*Molecule)[i].Type].nBeads; j++) {
-//    printf("%6d %6d %6d\n", i, j, (*Bead)[(*Molecule)[i].Bead[j]].Index);
-//  }
-//}
-
   // remove unused beads from bonds in molecules //{{{
-  int mol_type[(*Counts).TypesOfMolecules]; // helper array //{{{
+  // helper array indicating if a given type was already changed //{{{
+  int mol_type[(*Counts).TypesOfMolecules];
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     mol_type[i] = -1;
   } //}}}
@@ -1133,8 +921,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
     // is this molecule type done?
     if (mol_type[mtype] == -1) {
       count = 0;
-      // go through all bonds //{{{
+      // go through all bonds and also find initial minimal id //{{{
+      int min1 = 1000000;
       for (int j = 0; j < (*MoleculeType)[mtype].nBonds; j++) {
+        if ((*MoleculeType)[mtype].Bond[j][0] < min1) {
+          min1 = (*MoleculeType)[mtype].Bond[j][0];
+        }
         int id1 = (*Molecule)[i].Bead[(*MoleculeType)[mtype].Bond[j][0]];
         int btype1 = (*Bead)[id1].Type;
         int id2 = (*Molecule)[i].Bead[(*MoleculeType)[mtype].Bond[j][1]];
@@ -1145,17 +937,28 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
           count++;
         }
       } //}}}
+      // change number of bonds
+      (*MoleculeType)[mtype].nBonds = count;
       // find minimum id in Bond array //{{{
-      int min = 1000000;
+      int min2 = 1000000;
       for (int j = 0; j < (*MoleculeType)[mtype].nBonds; j++) {
-        if ((*MoleculeType)[mtype].Bond[j][0] < min) {
-          min = (*MoleculeType)[mtype].Bond[j][0];
+        if ((*MoleculeType)[mtype].Bond[j][0] < min2) {
+          min2 = (*MoleculeType)[mtype].Bond[j][0];
         }
       } //}}}
       // minimize ids in Bond array //{{{
       for (int j = 0; j < (*MoleculeType)[mtype].nBonds; j++) {
-        (*MoleculeType)[mtype].Bond[j][0] -= min;
-        (*MoleculeType)[mtype].Bond[j][1] -= min;
+        (*MoleculeType)[mtype].Bond[j][0] += min1 - min2;
+        (*MoleculeType)[mtype].Bond[j][1] += min1 - min2;
+      } //}}}
+      // go through all beads to correct MoleculeType[].Bead array //{{{
+      count = 0;
+      for (int j = 0; j < (*MoleculeType)[mtype].nBeads; j++) {
+        int btype = (*MoleculeType)[mtype].Bead[j];
+        if ((*BeadType)[btype].Use) {
+          (*MoleculeType)[mtype].Bead[count] = (*MoleculeType)[mtype].Bead[j];
+          count++;
+        }
       } //}}}
       // mark this molecule type as done
       mol_type[mtype] = i;
@@ -1202,6 +1005,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
       (*Bead)[count].Type = (*Bead)[i].Type;
       (*Bead)[count].Molecule = (*Bead)[i].Molecule;
       (*Bead)[count].Index = (*Bead)[i].Index;
+      (*Index)[(*Bead)[i].Index] = count;
       int id = (*Bead)[count].Molecule;
       if (id != -1) {
         int type = (*Molecule)[id].Type;
@@ -1212,17 +1016,26 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
         }
       }
       count++;
+    } else {
+      (*Index)[(*Bead)[i].Index] = -1;
     }
   } //}}}
 
   // copy bead type names //{{{
+  // first, free name[] ...to prevent memory leak
+  for (int i = 0; i < moltype_alloced; i++) {
+    free(name[i]);
+  }
+  // second, realloc name
   int beadtype_alloced = (*Counts).TypesOfBeads;
-  name = calloc(beadtype_alloced, sizeof(char *));
+  name = realloc(name, beadtype_alloced*sizeof(char *));
+  // third, calloc name[]
   for (int i = 0; i < beadtype_alloced; i++) {
     name[i] = calloc(16, sizeof(char));
   }
-  for (int i = 0; i < beadtype_alloced; i++) {
-    strcpy(name[i], (*BeadType)[i].Name);
+  // fourth, copy names
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    strcpy(name[i], (*MoleculeType)[i].Name);
   } //}}}
 
   // remove unused bead types from BeadType struct and molecule bonds //{{{
@@ -1237,6 +1050,11 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
           for (int k = 0; k < (*MoleculeType)[j].nBTypes; k++) {
             if ((*MoleculeType)[j].BType[k] == i) {
               (*MoleculeType)[j].BType[k] = count;
+            }
+          }
+          for (int k = 0; k < (*MoleculeType)[j].nBeads; k++) {
+            if ((*MoleculeType)[j].Bead[k] == i) {
+              (*MoleculeType)[j].Bead[k] = count;
             }
           }
         }
@@ -1280,10 +1098,11 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
     if ((*BeadType)[i].Charge == 1000 || (*BeadType)[i].Mass == 1000) {
       charge_mass = false;
+      break;
     }
   }
   if (!charge_mass) {
-    ReadFIELD(bonds_file, Counts, BeadType, MoleculeType);
+    ReadFIELD(Counts, BeadType, MoleculeType);
   } //}}}
 
   // calculate molecule mass //{{{
@@ -1311,8 +1130,13 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts
 
   // allocate Bead[].Aggregate array //{{{
   for (int i = 0; i < (*Counts).Beads; i++) {
-    // quite a lot memory to be on the save side
-    (*Bead)[i].Aggregate = calloc(20, sizeof(int));
+    (*Bead)[i].Aggregate = calloc(1, sizeof(int));
+    (*Bead)[i].Aggregate[0] = -1;
+  } //}}}
+
+  // fill Molecule[].Aggregate //{{{
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    (*Molecule)[i].Aggregate = -1;
   } //}}}
 
   // set all molecule & bead types to be unused //{{{
@@ -1395,11 +1219,11 @@ void MoveCOMMolecules(Counts Counts, Vector BoxLength,
 /**
  * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
  */
-int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff) {
+int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, int *Index, Bead **Bead, char **stuff) {
 
   // initial stuff //{{{
   (*stuff)[0] = '\0'; // no comment line
-  char line[1024];
+  char line[LINE];
   fpos_t position;
   do {
     fgetpos(vcf_file, &position); // save pointer position
@@ -1423,13 +1247,6 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, ch
   fsetpos(vcf_file, &position); //}}}
 
   if (indexed) { // indexed timestep
-    // allocate helper array of coordinates //{{{
-    double imp = 1000000; // a value impossible for bead's coordinate
-    Vector *pos = malloc(Counts.BeadsInVsf*sizeof(Vector));
-    for (int i = 0; i < Counts.BeadsInVsf; i++) {
-      pos[i].x = imp;
-    } //}}}
-
     // read data //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       fgets(line, sizeof(line), vcf_file);
@@ -1480,24 +1297,10 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, ch
       } //}}}
 
       // bead coordinates
-      pos[index].x = atof(split[1]);
-      pos[index].y = atof(split[2]);
-      pos[index].z = atof(split[3]);
+      (*Bead)[Index[index]].Position.x = atof(split[1]);
+      (*Bead)[Index[index]].Position.y = atof(split[2]);
+      (*Bead)[Index[index]].Position.z = atof(split[3]);
     } //}}}
-
-    // copy coordinates to Bead struct //{{{
-    int count = 0;
-    for (int i = 0; i < Counts.BeadsInVsf; i++) {
-      if (pos[i].x != imp) { // i.e., if bead i is present in the timestep
-        (*Bead)[count].Position.x = pos[i].x;
-        (*Bead)[count].Position.y = pos[i].y;
-        (*Bead)[count].Position.z = pos[i].z;
-        if ((++count) == Counts.Beads) {
-          break;
-        }
-      }
-    } //}}}
-    free(pos);
   } else { // ordered timestep
     // read data //{{{
     for (int i = 0; i < Counts.Beads; i++) {
@@ -1556,7 +1359,7 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
 
   // initial stuff //{{{
   (*stuff)[0] = '\0'; // no comment line
-  char line[1024];
+  char line[LINE];
   fpos_t position;
   do {
     fgetpos(vcf_file, &position); // save pointer position
@@ -1604,11 +1407,11 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff) {
  */
 bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
                     BeadType *BeadType, Bead **Bead,
-                    MoleculeType *MoleculeType, Molecule **Molecule) {
+                    MoleculeType *MoleculeType, Molecule **Molecule, int *Index) {
 
   bool error = false;
 
-  // is there a Step? I.e., isn't this the line 'Last Step'?
+  // is there a Step? i.e., isn't this the line 'Last Step'?
   if (getc(agg_file) == 'L') {
     error = true;
   } else {
@@ -1634,18 +1437,31 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
       // read molecules in Aggregate 'i' //{{{
       fscanf(agg_file, "%d :", &(*Aggregate)[i].nMolecules);
       for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
-        fscanf(agg_file, "%d", &(*Aggregate)[i].Molecule[j]);
+        int mol;
+        fscanf(agg_file, "%d", &mol);
+        mol--; // in agg file the numbers correspond to vmd
 
-        (*Aggregate)[i].Molecule[j]--; // in agg file the numbers correspond to vmd
+        (*Aggregate)[i].Molecule[j] = mol;
+        (*Molecule)[mol].Aggregate = i;
       }
 
       while (getc(agg_file) != '\n')
        ; //}}}
 
       // read monomeric beads in Aggregate 'i' //{{{
-      fscanf(agg_file, "%d :", &(*Aggregate)[i].nMonomers);
-      for (int j = 0; j < (*Aggregate)[i].nMonomers; j++) {
-        fscanf(agg_file, "%d", &(*Aggregate)[i].Monomer[j]);
+      int count;
+      fscanf(agg_file, "%d :", &count);
+      for (int j = 0; j < count; j++) {
+        int id;
+        fscanf(agg_file, "%d", &id); // monomer index from vsf file
+        (*Aggregate)[i].nMonomers = 0; // their number will be counted according to which beads are in vcf
+        if (Index[id] > -1) {
+          (*Aggregate)[i].nMonomers++;
+          (*Aggregate)[i].Monomer[j] = id;
+          (*Bead)[Index[id]].nAggregates++;
+          (*Bead)[Index[id]].Aggregate = realloc((*Bead)[Index[id]].Aggregate, (*Bead)[Index[id]].nAggregates*sizeof(int));
+          (*Bead)[Index[id]].Aggregate[(*Bead)[Index[id]].nAggregates-1] = i;
+        }
       }
 
       while (getc(agg_file) != '\n')
@@ -1673,7 +1489,11 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
         // increment number of beads in aggregate 'i'
         (*Aggregate)[i].nBeads += MoleculeType[(*Molecule)[mol].Type].nBeads;
       }
-    } //}}}
+    }
+
+    // fill Bead[].Aggregate for monomeric Beads
+//  for (int i = 0, i < (*Counts).Bead)
+    //}}}
 
     // calculate aggregates' masses //{{{
     for (int i = 0; i < (*Counts).Aggregates; i++) {
@@ -1708,13 +1528,11 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
   fprintf(vcf_file, "indexed\n");
 
   for (int i = 0; i < Counts.Beads; i++) {
-    int type_b = Bead[i].Type;
-    if (BeadType[type_b].Write) {
-
+    int btype = Bead[i].Type;
+    if (BeadType[btype].Write) {
       if (Bead[i].Molecule != -1) { // bead in a molecule
-
-        int mol_type = Molecule[Bead[i].Molecule].Type;
-        if (MoleculeType[mol_type].Write) {
+        int mtype = Molecule[Bead[i].Molecule].Type;
+        if (MoleculeType[mtype].Write) {
           fprintf(vcf_file, "%8d %7.3f %7.3f %7.3f\n", Bead[i].Index,
                                                        Bead[i].Position.x,
                                                        Bead[i].Position.y,
@@ -1770,24 +1588,34 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
   } //}}}
 
   // find most common type of bead and make it default //{{{
-  int type_def = 0, count = 0;
+  int type_def = -1, count = 0;
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    if (BeadType[i].Number >= count) {
+    bool use = true;
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      for (int k = 0; k < MoleculeType[j].nBTypes; k++) {
+        if (MoleculeType[j].BType[k] == i) {
+          use = false;
+        }
+      }
+    }
+    if (use && BeadType[i].Number >= count) {
       count = BeadType[i].Number;
       type_def = i;
     }
   } //}}}
 
+// type_def = -1; // uncomment if no default is to be in vsf (for debugging)
   // print default bead type //{{{
-  fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
-  fprintf(fw, "mass %9.5f ", BeadType[type_def].Mass);
-  fprintf(fw, "charge %9.5f\n", BeadType[type_def].Charge); //}}}
+  if (type_def != -1) {
+    fprintf(fw, "atom default name %8s ", BeadType[type_def].Name);
+    fprintf(fw, "mass %9.5f ", BeadType[type_def].Mass);
+    fprintf(fw, "charge %9.5f\n", BeadType[type_def].Charge);
+  } //}}}
 
   // print beads //{{{
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
-
     // don't print beads with type 'type_def'
-    if (Bead[i].Type != type_def) {
+    if (Bead[i].Type != type_def || Bead[i].Molecule != -1) {
       fprintf(fw, "atom %7d ", i);
       fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
       fprintf(fw, "mass %9.5f ", BeadType[Bead[i].Type].Mass);
@@ -1899,15 +1727,40 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
 
   for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
-    for (int j = 0; j < MoleculeType[type].nBonds; j++) {
-      int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
-      int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
+    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+      (*Bead)[Molecule[i].Bead[j]].Flag = false;
+    }
+    (*Bead)[Molecule[i].Bead[MoleculeType[type].Bond[0][0]]].Flag = true;
+    bool done = false;
+    while (!done) {
+      for (int j = 0; j < MoleculeType[type].nBonds; j++) {
+        int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
+        int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
 
-      Vector dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
+        if (!(*Bead)[id1].Flag && (*Bead)[id2].Flag) {
+          Vector dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
 
-      (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
-      (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
-      (*Bead)[id2].Position.z = (*Bead)[id1].Position.z - dist.z;
+          (*Bead)[id1].Position.x = (*Bead)[id2].Position.x - dist.x;
+          (*Bead)[id1].Position.y = (*Bead)[id2].Position.y - dist.y;
+          (*Bead)[id1].Position.z = (*Bead)[id2].Position.z - dist.z;
+          (*Bead)[id1].Flag = true;
+        } else if ((*Bead)[id1].Flag && !(*Bead)[id2].Flag) {
+          Vector dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
+
+          (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
+          (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
+          (*Bead)[id2].Position.z = (*Bead)[id1].Position.z - dist.z;
+          (*Bead)[id2].Flag = true;
+        }
+      }
+
+      done = true;
+      for (int j = 1; j < MoleculeType[type].nBeads; j++) {
+        if (!(*Bead)[Molecule[i].Bead[j]].Flag) {
+          done = false;
+          break;
+        }
+      }
     }
   }
 } //}}}
@@ -1923,10 +1776,10 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
   bool *moved = malloc(Counts.Molecules*sizeof(bool));
 
-  // go through all aggregates larger than unimers
+  // go through all aggregates larger than unimers and put all molecules together //{{{
   for (int i = 0; i < Counts.Aggregates; i++) {
 
-    // negate moved array, while first molecule is not to move //{{{
+    // negate moved array, but the first molecule is not to move //{{{
     for (int j = 1; j < Counts.Molecules; j++) {
       moved[j] = false;
     }
@@ -1959,7 +1812,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                   dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
 
                   // move 'mol2' (or 'k') if 'bead1' and 'bead2' are in contact
-                  if (dist.x < distance) {
+                  if (dist.x <= distance) {
 
                     // distance vector between 'bead1' and 'bead2' //{{{
                     dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
@@ -2033,7 +1886,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
         }
       } //}}}
     }
-  }
+  } //}}}
 
   // put aggregates' centre of mass into the simulation box //{{{
   for (int i = 0; i < Counts.Aggregates; i++) {
@@ -2061,6 +1914,70 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
       (*Bead)[bead].Position.x -= move.x * BoxLength.x;
       (*Bead)[bead].Position.y -= move.y * BoxLength.y;
       (*Bead)[bead].Position.z -= move.z * BoxLength.z;
+    }
+  } //}}}
+
+  // put monomeric beads in contact with their aggregates //{{{
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    // go through monomeric beads in the aggregate
+    for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+      int id1 = Aggregate[i].Monomer[j], id_move_to = -1;
+      double min_dist = 1000000;
+      // find smallest distance between th monomeric bead and bonded beads //{{{
+      for (int k = 0; k < Aggregate[i].nBeads; k++) {
+        int id2 = Aggregate[i].Bead[k];
+
+        // distance between the beads, including pbc
+        Vector dist;
+        dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+        dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+        dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+        dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+
+        if (dist.x < min_dist) {
+          min_dist = dist.x;
+          id_move_to = id2;
+        }
+      } //}}}
+
+      // move monomer if it's too far from aggregate
+      if (min_dist > distance) {
+
+        // distance between the beads, including pbc
+        Vector dist;
+        dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
+        dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
+        dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
+
+        // move id1 bead? //{{{
+        // x direction
+        while (dist.x > (BoxLength.x/2)) {
+          (*Bead)[id1].Position.x -= BoxLength.x;
+          dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
+        }
+        while (dist.x <= -(BoxLength.x/2)) {
+          (*Bead)[id1].Position.x += BoxLength.x;
+          dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
+        }
+        // y direction
+        while (dist.y > (BoxLength.y/2)) {
+          (*Bead)[id1].Position.y -= BoxLength.y;
+          dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
+        }
+        while (dist.y <= -(BoxLength.y/2)) {
+          (*Bead)[id1].Position.y += BoxLength.y;
+          dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
+        }
+        // z direction
+        while (dist.z > (BoxLength.z/2)) {
+          (*Bead)[id1].Position.z -= BoxLength.z;
+          dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
+        }
+        while (dist.z <= -(BoxLength.z/2)) {
+          (*Bead)[id1].Position.z += BoxLength.z;
+          dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
+        } //}}}
+      }
     }
   } //}}}
 
@@ -2264,6 +2181,28 @@ double Min3(double x, double y, double z) {
   return min;
 } //}}}
 
+// Max3() //{{{
+/**
+ * Function returning the highest number from three floats.
+ */
+double Max3(double x, double y, double z) {
+
+  double max;
+  if (x < y) {
+    if (y < z) {
+      max = z;
+    } else {
+      max = y;
+    }
+  } else if (x < z) {
+    max = z;
+  } else {
+    max = x;
+  }
+
+  return max;
+} //}}}
+
 // Sort3() //{{{
 /**
  * Function returning sorted numbers x < y < z.
@@ -2305,6 +2244,143 @@ Vector Sort3(Vector in) {
   return out;
 } //}}}
 
+// Swap() //{{{
+/**
+ * Swap two integers.
+ */
+void Swap(int *a, int *b) {
+  int swap = *a;
+  *a = *b;
+  *b = swap;
+}
+// }}}
+
+// SwapDouble() //{{{
+/**
+ * Swap two doubles.
+ */
+void SwapDouble(double *a, double *b) {
+  double swap = *a;
+  *a = *b;
+  *b = swap;
+}
+// }}}
+
+// SwapBool() //{{{
+/**
+ * Swap two booleans.
+ */
+void SwapBool(bool *a, bool *b) {
+  bool swap = *a;
+  *a = *b;
+  *b = swap;
+}
+// }}}
+
+// SortArray() //{{{
+/**
+ * Sort an array using the bubble sort algorithm. If mode = 0, sort
+ * ascendingly; if mode = 1, sort descendingly.
+ */
+void SortArray(int **array, int length, int mode) {
+  if (mode != 0 && mode != 1) {
+    fprintf(stderr, "\nError - SortArray(): use 0 or 1 for sorting mode\n");
+    exit(1);
+  }
+  for (int i = 0 ; i < (length-1); i++) {
+    bool done = true;
+    for (int j = 0 ; j < (length-i-1); j++) {
+      if (mode == 0 && (*array)[j] > (*array)[j+1]) {
+        Swap(&(*array)[j], &(*array)[j+1]);
+        done = false;
+      }
+      if (mode == 1 && (*array)[j] < (*array)[j+1]) {
+        Swap(&(*array)[j], &(*array)[j+1]);
+        done = false;
+      }
+    }
+    if (done)
+      break;
+  }
+} //}}}
+
+// SortAggStruct() //{{{
+/**
+ * Sort an Aggregate struct using the bubble sort algorithm. The resulting
+ * struct is arranged so that aggregates with the first molecule's lower id
+ * come first.
+ */
+void SortAggStruct(Aggregate **Aggregate, Counts Counts) {
+  for (int i = 0; i < (Counts.Aggregates-1); i++) {
+    bool done = true;
+    for (int j = 0; j < (Counts.Aggregates-i-1); j++) {
+      if ((*Aggregate)[j].Molecule[0] > (*Aggregate)[j+1].Molecule[0]) {
+        Swap(&(*Aggregate)[j].nMolecules, &(*Aggregate)[j+1].nMolecules);
+        // switch the whole Aggregate[].Molecule array
+        int mols; // number of molecules in the larger aggregate
+        if ((*Aggregate)[j].nMolecules > (*Aggregate)[j+1].nMolecules) {
+          mols = (*Aggregate)[j].nMolecules;
+        } else {
+          mols = (*Aggregate)[j+1].nMolecules;
+        }
+        for (int k = 0; k < mols; k++) {
+          Swap(&(*Aggregate)[j].Molecule[k], &(*Aggregate)[j+1].Molecule[k]);
+        }
+        done = false;
+      }
+    }
+    if (done)
+      break;
+  }
+} //}}}
+
+// SortBonds() //{{{
+/**
+ * Function to sort a bond array. As each bond contains a 2-member array, first
+ * check that first bead id is lower than the second. Then sort the bonds
+ * according to the index of the first bead in each bond.
+ */
+void SortBonds(int **bond, int length) {
+  // first, check order in every bond
+  for (int j = 0; j < length; j++) {
+    if (bond[j][0] > bond[j][1]) {
+      Swap(&bond[j][0], &bond[j][1]);
+    }
+  }
+  // second, bubble sort bonds
+  for (int j = 0; j < (length-1); j++) {
+    bool swap = false;
+    for (int k = 0; k < (length-j-1); k++) {
+      if ((bond[k][0] > bond[k+1][0]) || // swap if first beads are in wrong order
+          (bond[k][0] == bond[k+1][0] && // or if they're the same, but second ones are in wrong order
+          bond[k][1] > bond[k+1][1])) {
+        Swap(&bond[k][0], &bond[k+1][0]);
+        Swap(&bond[k][1], &bond[k+1][1]);
+        swap = true;
+      }
+    }
+    // if no swap was made, the array is sorted
+    if (!swap) {
+      break;
+    }
+  }
+} //}}}
+
+// ZeroCounts() //{{{
+/**
+ * Zeroize Counts struct
+ */
+void ZeroCounts(Counts *Counts) {
+  (*Counts).TypesOfBeads = 0;
+  (*Counts).TypesOfMolecules = 0;
+  (*Counts).Beads = 0;
+  (*Counts).Bonded = 0;
+  (*Counts).Unbonded = 0;
+  (*Counts).BeadsInVsf = 0;
+  (*Counts).Molecules = 0;
+  (*Counts).Aggregates = 0;
+} //}}}
+
 // FreeBead() //{{{
 /**
  * Free memory allocated for Bead struct array. This function makes it
@@ -2339,6 +2415,7 @@ void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType) {
     for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
       free((*MoleculeType)[i].Bond[j]);
     }
+    free((*MoleculeType)[i].Bead);
     free((*MoleculeType)[i].Bond);
     free((*MoleculeType)[i].BType);
   }
@@ -2357,4 +2434,35 @@ void FreeAggregate(Counts Counts, Aggregate **Aggregate) {
     free((*Aggregate)[i].Monomer);
   }
   free(*Aggregate);
+} //}}}
+
+// TrimLine //{{{
+/**
+ * Function to trim whitespace from the
+ * beginning and end of a string.
+ */
+char * TrimLine(char *line) {
+  int length = strlen(line);
+  static char trimmed[LINE];
+  strcpy(trimmed, line);
+  // 1) trailing whitespace
+  while (length > 1 &&
+         (trimmed[length-1] == ' ' ||
+          trimmed[length-1] == '\n' ||
+          trimmed[length-1] == '\t')) {
+    trimmed[length-1] = '\0';
+    length--;
+  }
+  // 2) preceding whitespace
+  while (length > 1 &&
+         (trimmed[0] == ' ' ||
+          trimmed[0] == '\n' ||
+          trimmed[0] == '\t')) {
+    for (int i = 0; i < length; i++) { // line[length] contains '\0'
+      trimmed[i] = trimmed[i+1];
+    }
+    length--;
+  }
+
+  return trimmed;
 } //}}}

@@ -21,18 +21,57 @@ void CommonHelp(bool error); //}}}
  * \brief Function printing basic information about system if `-v` or `-V`
  * option is provided
  *
- * \param [in] Verbose2      print extra information if 'true'
  * \param [in] input_vcf     .vcf coordinate file
- * \param [in] bonds_file    filename with bonds
  * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BoxLength     dimension of the simulation box
  * \param [in] BeadType      information about bead types
  * \param [in] Bead          informationn about individual beads
  * \param [in] MoleculeType  information about molecule types
  * \param [in] Molecule      information about individual molecules
  */
-void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Counts,
+void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
                    BeadType *BeadType, Bead *Bead,
                    MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
+// PrintCounts()  //{{{
+/**
+ * \brief Function printing Counts structure.
+ *
+ * \param [in] Counts   numbers of beads, molecules, etc.
+ */
+void PrintCounts(Counts Counts);
+//}}}
+
+// PrintBeadType() //{{{
+/**
+ * \brief Function printing Counts structure.
+ *
+ * \param [in] Counts     numbers of beads, molecules, etc.
+ * \param [in] BeadType   information about bead types
+ */
+void PrintBeadType(Counts Counts, BeadType *BeadType); //}}}
+
+// PrintMoleculeTypeType()  //{{{
+/**
+ * \brief Function printing MoleculeType structure.
+ *
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] BeadType      information about bead types
+ * \param [in] MoleculeType  information about molecule types
+ */
+void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *MoleculeType); //}}}
+
+// PrintBead() //{{{
+/**
+ * Function printing Bead structure.
+ */
+void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead); //}}}
+
+// PrintMolecule() //{{{
+/**
+ * Function printing Molecule structure.
+ */
+void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType); //}}}
 
 // ReadStructure() //{{{
 /**
@@ -41,17 +80,17 @@ void VerboseOutput(bool Verbose2, char *input_vcf, char *bonds_file, Counts Coun
  *
  * \param [in]  vsf_file      .vsf structure file
  * \param [in]  vcf_file      .vcf coordinate file
- * \param [in]  bonds_file    filename with bonds
  * \param [out] Counts        numbers of beads, molecules, etc.
  * \param [out] BeadType      information about bead types
  * \param [out] Bead          informationn about individual beads
+ * \param [out] Index         bead indices between program and vsf (i.e., opposite of Bead[].Index)
  * \param [out] MoleculeType  information about molecule types
  * \param [out] Molecule      information about individual molecules
  * \return 'true' or 'false' for .vcf file with indexed or ordered
  * timesteps, respectively
  * */
-bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Counts,
-                   BeadType **BeadType, Bead **Bead,
+bool ReadStructure(char *vsf_file, char *vcf_file, Counts *Counts,
+                   BeadType **BeadType, Bead **Bead, int **Index,
                    MoleculeType **MoleculeType, Molecule **Molecule); //}}}
 
 // ReadCoordinates() //{{{
@@ -61,11 +100,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, char *bonds_file, Counts *Cou
  * \param [in]  indexed    is the vcf indexed?
  * \param [in]  vcf_file   name of input .vcf coordinate file
  * \param [in]  Counts     numbers of beads, molecules, etc.
+ * \param [in]  Index         bead indices between program and vsf (i.e., opposite of Bead[].Index)
  * \param [out] Bead       coordinates of individual beads
  * \param [out] stuff      first line of a timestep
  * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
  */
-int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, Bead **Bead, char **stuff); //}}}
+int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, int *Index, Bead **Bead, char **stuff); //}}}
 
 // SkipCoor() //{{{
 /**
@@ -93,7 +133,7 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
  */
 bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
                     BeadType *BeadType, Bead **Bead,
-                    MoleculeType *MoleculeType, Molecule **Molecule); //}}}
+                    MoleculeType *MoleculeType, Molecule **Molecule, int *Index); //}}}
 
 // WriteCoorIndexed //{{{
 /**
@@ -246,6 +286,17 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
  */
 double Min3(double x, double y, double z); //}}}
 
+// Max3() //{{{
+/**
+ * \brief Function returning the highest number from three floats.
+ *
+ * \param [in] x   first double precision number
+ * \param [in] y   second double precision number
+ * \param [in] z   third double precision number
+ * \return highest of the supplied numbers
+ */
+double Max3(double x, double y, double z); //}}}
+
 // Sort3() //{{{
 /**
  * \brief Function returning sorted numbers x < y < z.
@@ -254,6 +305,72 @@ double Min3(double x, double y, double z); //}}}
  * \return sorted vector
  */
 Vector Sort3(Vector in); //}}}
+
+// Swap() //{{{
+/**
+ * \brief Function to swap two integers.
+ *
+ * \param [in] a   first integer to swap
+ * \param [in] b   second integer to swap
+ */
+void Swap(int *a, int *b);
+// }}}
+
+// SwapDouble() //{{{
+/**
+ * \brief Function to swap two doubles.
+ *
+ * \param [in] a   first integer to swap
+ * \param [in] b   second integer to swap
+ */
+void SwapDouble(double *a, double *b);
+// }}}
+
+// SwapBool() //{{{
+/**
+ * \brief Function to swap two booleans.
+ *
+ * \param [in] a   first integer to swap
+ * \param [in] b   second integer to swap
+ */
+void SwapBool(bool *a, bool *b);
+// }}}
+
+// SortArray() //{{{
+/**
+ * \brief Function to sort an integer array.
+ *
+ * \param [out] array   integer array to sort
+ * \param [in]  length  array length
+ * \param [in]  mode    0 for ascending order, 1 for descending order
+ */
+void SortArray(int **array, int length, int mode); //}}}
+
+// SortAggStruct() //{{{
+/**
+ * \brief Function to sort Aggregate struct.
+ *
+ * \param [out] Aggregate  Aggregate struct to sort
+ * \param [in]  Counts     numbers of beads, molecules, etc.
+ */
+void SortAggStruct(Aggregate **Aggregate, Counts Counts); //}}}
+
+// SortBonds() //{{{
+/**
+ * \brief Function to sort 2D array of bonds.
+ *
+ * \param [out] bond    2D array of bonds
+ * \param [in]  length  number of bonds
+ */
+void SortBonds(int **bond, int length); //}}}
+
+// ZeroCounts() //{{{
+/**
+ * \brief Zeroize Counts structure.
+ *
+ * \param[in] Counts   Counts structure to zeroize
+ */
+void ZeroCounts(Counts *Counts); //}}}
 
 // FreeBead() //{{{
 /**
@@ -290,4 +407,15 @@ void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType); //}}}
  * \param [out] Aggregate   information about individual molecules
  */
 void FreeAggregate(Counts Counts, Aggregate **Aggregate); //}}}
+
+// TrimLine() //{{{
+/**
+ * \brief Function to trim whitespace from
+ * the beginning and end of a string.
+ *
+ * \param line [in]   string to trim
+ *
+ * \return trimmed string
+ */
+char* TrimLine(char *line); //}}}
 #endif
