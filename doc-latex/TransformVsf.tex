@@ -8,7 +8,7 @@ one generated with \texttt{TransformVsf} (or with \texttt{traject.exe} from
 the dl\_meso version 2.7) does and therefore the original \texttt{FIELD}
 file is not needed for further analysis.
 
-Usage:
+Usage (\texttt{TransformVsf} does not use standard options):
 
 \vspace{1em}
 \noindent
@@ -21,5 +21,10 @@ Usage:
   \multicolumn{2}{l}{Mandatory argument} \\
   \midrule
   \texttt{<output.vsf>} & output structure file \\
+  \multicolumn{2}{l}{Options} \\
+  \texttt{-i <name>} & use custom structure file instead of
+    \texttt{traject.vsf} (\texttt{vsf} or \texttt{vtf} format) \\
+  \texttt{-v} & verbose output \\
+  \texttt{-h} & print this help and exit \\
   \bottomrule
 \end{longtable}
