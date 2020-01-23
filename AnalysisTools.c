@@ -106,6 +106,8 @@ void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
   putchar('\n');
   if (BoxLength.x != -1) {
     fprintf(stdout, "Box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+  } else {
+    fprintf(stdout, "Unknown box size because no coordinate file is provided.\n\n");
   }
   PrintCounts(Counts);
   PrintBeadType(Counts, BeadType);
@@ -1016,8 +1018,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
         }
       }
       count++;
-    } else {
-      (*Index)[(*Bead)[i].Index] = -1;
     }
   } //}}}
 
@@ -1045,6 +1045,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       if (count != i) {
         strcpy((*BeadType)[count].Name, (*BeadType)[i].Name);
         (*BeadType)[count].Number = (*BeadType)[i].Number;
+        (*BeadType)[count].Charge = (*BeadType)[i].Charge;
+        (*BeadType)[count].Mass = (*BeadType)[i].Mass;
         (*BeadType)[count].Use = (*BeadType)[i].Use;
         for (int j = 0; j < (*Counts).TypesOfMolecules; j++) {
           for (int k = 0; k < (*MoleculeType)[j].nBTypes; k++) {

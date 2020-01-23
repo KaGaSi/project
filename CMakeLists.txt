@@ -36,6 +36,7 @@ set(UTILS AddToSystem
           GenLayers
           GyrationAggregates
           GyrationMolecules
+          Info
           JoinAggregates
           JoinRuns
           lmp_data
