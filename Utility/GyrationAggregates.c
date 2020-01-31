@@ -393,7 +393,7 @@ int main(int argc, char *argv[]) {
     // print steps? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rStep: %6d", count);
+      fprintf(stdout, "\rStep: %d", count);
     } //}}}
 
     // read aggregates //{{{
@@ -625,10 +625,11 @@ int main(int argc, char *argv[]) {
   // print last step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %d\n", count);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\r                      ");
+      fprintf(stdout, "\rLast Step: %d\n", count);
     }
   } //}}}
   //}}}

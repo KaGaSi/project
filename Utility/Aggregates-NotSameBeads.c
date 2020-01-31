@@ -812,7 +812,7 @@ int main(int argc, char *argv[]) {
     // print step? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rStep: %6d", count);
+      fprintf(stdout, "\rStep: %d", count);
     } //}}}
 
     for (int i = 0; i < Counts.Molecules; i++) {
@@ -911,10 +911,11 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
+      fprintf(stdout, "Last Step: %d\n", count);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count);
+      fprintf(stdout, "\r                      ");
+      fprintf(stdout, "\rLast Step: %d\n", count);
     }
   } //}}}
 

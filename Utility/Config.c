@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
     count++;
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rStep: %6d", count);
+      fprintf(stdout, "\rStep: %d", count);
     }
 
     // save pointer position in file
@@ -199,10 +199,11 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "CONFIG Step: %6d\n", count);
+      fprintf(stdout, "CONFIG Step: %d\n", count);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\nCCONFIG Step: %6d\n", count);
+      fprintf(stdout, "\r                         ");
+      fprintf(stdout, "\rCCONFIG Step: %d\n", count);
     }
   }
 

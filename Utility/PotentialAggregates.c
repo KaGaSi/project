@@ -345,7 +345,7 @@ int main(int argc, char *argv[]) {
     // print step? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarding step: %6d", count);
+      fprintf(stdout, "\rDiscarding step: %d", count);
     } //}}}
 
     if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
@@ -366,10 +366,11 @@ int main(int argc, char *argv[]) {
   // print number of starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Starting step: %6d\n", start);
+      fprintf(stdout, "Starting step: %d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rStarting step: %6d   \n", start);
+      fprintf(stdout, "\r                          ");
+      fprintf(stdout, "\rStarting step: %d\n", start);
     }
   } //}}}
   //}}}
@@ -392,7 +393,7 @@ int main(int argc, char *argv[]) {
     // print step? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rStep: %6d", count_vcf);
+      fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
     // read aggregates //{{{
@@ -773,10 +774,11 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count_vcf);
+      fprintf(stdout, "Last Step: %d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
+      fprintf(stdout, "\r                          ");
+      fprintf(stdout, "\rLast Step: %d\n", count_vcf);
     }
   } //}}}
 
