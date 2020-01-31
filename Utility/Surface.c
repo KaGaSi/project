@@ -24,7 +24,7 @@ are found corresponding to the two surfaces (e.g., polymer brush on both box \
 edges or the two surfaces of a lipid bilayer inside the box). The output \
 file contains 3D data in the format expected by the gnuplot program.\n\n");
     fprintf(ptr, "\
-TODO: implenent -in, -xm, and -xb options.\n\n");
+TODO: implenent -in, -mol, and -bt options.\n\n");
 
   }
 
@@ -37,8 +37,8 @@ TODO: implenent -in, -xm, and -xb options.\n\n");
   fprintf(ptr, "   <axis>            calculate along x, y, or z axis\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -in            TODO: start from the box's centre instead of edges\n");
-  fprintf(ptr, "      -xm <name(s)>  TODO: molecule type(s) to exclude\n");
-  fprintf(ptr, "      -xb <name(s)>  TODO: bead type(s) to exclude\n");
+  fprintf(ptr, "      -mol <name(s)> TODO: molecule type(s) to use\n");
+  fprintf(ptr, "      -bt <name(s)>  TODO: bead type(s) to use\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   fprintf(ptr, "      -e <int>       number of timestep to end with\n");
   CommonHelp(error);
@@ -76,6 +76,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-in") != 0 &&
+        strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0) {
 
@@ -181,11 +182,10 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-// TODO: implement -xb
-  // set all bead types to use
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    BeadType[i].Use = true;
-  }
+  // -bt <name(s)> - specify what bead types to use //{{{
+  if (BeadTypeOption(argc, argv, "-bt", true, Counts, &BeadType)) {
+    exit(0);
+  } //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -220,25 +220,19 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // set maximum/minimum as half a box length in the given direction //{{{
-  double initial[4];
+  double range[2];
   switch(axis) {
     case 'x':
-      initial[0] = 0;
-      initial[1] = BoxLength.x / 2;
-      initial[2] = BoxLength.x / 2;
-      initial[3] = BoxLength.x;
+      range[0] = 0;
+      range[1] = BoxLength.x;
       break;
     case 'y':
-      initial[0] = 0;
-      initial[1] = BoxLength.y / 2;
-      initial[2] = BoxLength.y / 2;
-      initial[3] = BoxLength.y;
+      range[0] = 0;
+      range[1] = BoxLength.y;
       break;
     case 'z':
-      initial[0] = 0;
-      initial[1] = BoxLength.z / 2;
-      initial[2] = BoxLength.z / 2;
-      initial[3] = BoxLength.z;
+      range[0] = 0;
+      range[1] = BoxLength.z;
       break;
   } //}}}
 
@@ -309,6 +303,7 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
   //}}}
+
   // main loop //{{{
   count = 0; // count timesteps
   int count_vcf = start - 1;
@@ -355,16 +350,16 @@ int main(int argc, char *argv[]) {
         } else {
           switch(axis) {
             case 'x':
-              temp[i][j][0] = BoxLength.x / 2;
-              temp[i][j][1] = BoxLength.x / 2;
+              temp[i][j][0] = BoxLength.x;
+              temp[i][j][1] = 0;
               break;
             case 'y':
-              temp[i][j][0] = BoxLength.y / 2;
-              temp[i][j][1] = BoxLength.y / 2;
+              temp[i][j][0] = BoxLength.y;
+              temp[i][j][1] = 0;
               break;
             case 'z':
-              temp[i][j][0] = BoxLength.z / 2;
-              temp[i][j][1] = BoxLength.z / 2;
+              temp[i][j][0] = BoxLength.z;
+              temp[i][j][1] = 0;
               break;
           }
         }
@@ -397,19 +392,21 @@ int main(int argc, char *argv[]) {
         int bin[2];
         bin[0] = coor[0] / width;
         bin[1] = coor[1] / width;
-        if (!in) { // go from box centre to edges
-          if (coor[2] >= temp[bin[0]][bin[1]][0] && coor[2] >= initial[0] && coor[2] <= initial[1]) {
-            temp[bin[0]][bin[1]][0] = coor[2];
-          }
-          if (coor[2] <= temp[bin[0]][bin[1]][1] && coor[2] >= initial[2] && coor[2] <= initial[3]) {
-            temp[bin[0]][bin[1]][1] = coor[2];
-          }
-        } else { // go from box edges to centre
-          if (coor[2] <= temp[bin[0]][bin[1]][0] && coor[2] >= initial[0] && coor[2] <= initial[1]) {
-            temp[bin[0]][bin[1]][0] = coor[2];
-          }
-          if (coor[2] >= temp[bin[0]][bin[1]][1] && coor[2] >= initial[2] && coor[2] <= initial[3]) {
-            temp[bin[0]][bin[1]][1] = coor[2];
+        if (coor[2] >= range[0] && coor[2] <= range[1]) {
+          if (!in) { // go from box centre to edges
+            if (coor[2] >= temp[bin[0]][bin[1]][0]) {
+              temp[bin[0]][bin[1]][0] = coor[2];
+            }
+            if (coor[2] <= temp[bin[0]][bin[1]][1]) {
+              temp[bin[0]][bin[1]][1] = coor[2];
+            }
+          } else { // go from box edges to centre
+            if (coor[2] <= temp[bin[0]][bin[1]][0]) {
+              temp[bin[0]][bin[1]][0] = coor[2];
+            }
+            if (coor[2] >= temp[bin[0]][bin[1]][1]) {
+              temp[bin[0]][bin[1]][1] = coor[2];
+            }
           }
         }
       }
@@ -419,7 +416,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < bins[0]; i++) {
       for (int j = 0; j < bins[1]; j++) {
         if (!in) {
-          if (temp[i][j][0] > -1) {
+          if (temp[i][j][0] > 0) {
             surf[i][j][0] += temp[i][j][0];
             values[i][j][0]++;
           }
@@ -466,11 +463,11 @@ int main(int argc, char *argv[]) {
               }
               break;
             case 'z':
-              if (temp[i][j][0] != (BoxLength.z/2)) {
+              if (temp[i][j][0] < BoxLength.z) {
                 surf[i][j][0] += temp[i][j][0];
                 values[i][j][0]++;
               }
-              if (temp[i][j][1] != (BoxLength.z/2)) {
+              if (temp[i][j][1] > 0) {
                 surf[i][j][1] += temp[i][j][1];
                 values[i][j][1]++;
               }
@@ -502,14 +499,6 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rLast Step: %6d\n", count_vcf);
     }
   } //}}}
-
-//// count number of calculated steps //{{{
-//int steps;
-//if (end != -1) {
-//  steps = end - start + 1;
-//} else {
-//  steps = count_vcf - start + 1;
-//} //}}}
 
   // write surface to output file //{{{
   // open output file //{{{

@@ -223,9 +223,9 @@ int main(int argc, char *argv[]) {
     for (int j = i; j < Counts.TypesOfBeads; j++) {
       if (BeadType[i].Use && BeadType[j].Use) {
         fprintf(out, " (%d) %s-%s", ++count, BeadType[i].Name, BeadType[j].Name);
-      }
-      if (i != (Counts.TypesOfBeads-1) || j != (Counts.TypesOfBeads-1)) {
-        putc(';', out);
+        if (i != (Counts.TypesOfBeads-1) || j != (Counts.TypesOfBeads-1)) {
+          putc(';', out);
+        }
       }
     }
   }
@@ -280,6 +280,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "Starting step: %6d\n", start);
     } else {
       fflush(stdout);
+      fprintf(stdout, "\r                                  ");
       fprintf(stdout, "\rStarting step: %6d\n", start);
     }
   } //}}}
