@@ -389,7 +389,7 @@ int main(int argc, char *argv[]) {
     // print step? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarding step: %6d", count);
+      fprintf(stdout, "\rDiscarding step: %d", count);
     } //}}}
 
     if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
@@ -410,10 +410,11 @@ int main(int argc, char *argv[]) {
   // print number of starting step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Starting step: %6d\n", start);
+      fprintf(stdout, "Starting step: %d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rStarting step: %6d   \n", start);
+      fprintf(stdout, "\r                          ");
+      fprintf(stdout, "\rStarting step: %d\n", start);
     }
   } //}}}
   //}}}
