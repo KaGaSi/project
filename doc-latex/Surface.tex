@@ -1,0 +1,56 @@
+\section{Surface} \label{sec:Surface}
+
+Surface utility determines the first bead (either from the box's centre or
+edges) in each square prism defined by the given <width> parameter, thus
+defining a surface of, e.g., polymer brush or lipid bilayer. The <width>
+slices the box into square prisms along the chosen axis (i.e., if z is the
+chosen axis, the xy plane is chopped into squares, creating
+<width>*<width>*<box length in z> prisms). In each such prism, two beads
+are found corresponding to the two surfaces (e.g., polymer brush on both
+box edges or the two surfaces of a lipid bilayer inside the box). The
+output file contains 3D data in the format expected by the gnuplot program.
+
+Usage:
+
+\vspace{1em}
+\noindent
+\texttt{Surface <input> <width> <output> <axis> <options>}
+
+\noindent
+\begin{longtable}{p{0.24\textwidth}p{0.704\textwidth}}
+  \toprule
+  \multicolumn{2}{l}{Mandatory arguments} \\
+  \midrule
+  \texttt{<input>} & input coordinate file (either \texttt{vcf} or
+    \texttt{vtf} format) \\
+  \texttt{<width>} & side length of each square \\
+  \texttt{<output>} & output file \\
+  \texttt{<axis>} & direction in which to determine the surface: \texttt{x},
+    \texttt{y}, or \texttt{z} \\
+  \toprule
+  \multicolumn{2}{l}{Non-standard options} \\
+  \midrule
+  \texttt{-in} & start from the box centre instead of from its edges \\
+  \texttt{-mol <name(s)>} & molecule type(s) to use (default: all) \\
+  \texttt{-bt <name(s)>} & bead type(s) to use (default: all) \\
+  \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \bottomrule
+\end{longtable}
+
+\noindent
+Format of output files:
+\begin{enumerate}[nosep,leftmargin=20pt]
+  \item \texttt{<output>} -- bead densities
+    \begin{itemize}[nosep,leftmargin=5pt]
+      \item first line: command used to generate the file
+      \item second line: column headers
+        \begin{itemize}[nosep,leftmargin=5pt]
+          \item first is the centre of each bin (governed by
+            \texttt{<width>}); i.e., if \texttt{<width>} is 0.1,
+            then the centre of bin 0 to 0.1 is 0.05, centre of bin 0.1 to
+            0.2 is 0.15, etc.
+          \item the rest are for the calculated data: each number
+            corresponds to the density of the specified bead type
+        \end{itemize}
+    \end{itemize}
+\end{enumerate}
