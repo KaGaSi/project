@@ -1,14 +1,47 @@
 \section{Surface} \label{sec:Surface}
 
-Surface utility determines the first bead (either from the box's centre or
-edges) in each square prism defined by the given <width> parameter, thus
-defining a surface of, e.g., polymer brush or lipid bilayer. The <width>
-slices the box into square prisms along the chosen axis (i.e., if z is the
-chosen axis, the xy plane is chopped into squares, creating
-<width>*<width>*<box length in z> prisms). In each such prism, two beads
-are found corresponding to the two surfaces (e.g., polymer brush on both
-box edges or the two surfaces of a lipid bilayer inside the box). The
-output file contains 3D data in the format expected by the gnuplot program.
+Surface utility determines the average surface of structures such as
+membranes or or polymer brushes.
+
+The utility cuts a plane perpendicular to the given axis into squares of
+size \texttt{<width>*<width>} and then finds the beads with the highest and
+lowest coordinates along the given axis whose other two coordinates fall
+into the square for each square on the plane. By default, it searches the
+given axis for the beads with the highest coordinate in the interval
+$\langle0, (box length)/2\rangle$ and with the lowest coordinate in the
+interval $\langle(box\ length)/2; (box\ length)\rangle$, i.e., it assumes
+something such as a polymer brush on each wall. If \texttt{-in}
+option is used, it searches for a layer structure inside the box, i.e., it
+searches for the bead with the lowest and highest coordinates in the whole
+box, $\langle0; (box\ length)\rangle$ (this mode finds surfaces for
+something like a bilayer bilayer inside the box).
+
+Note that the utility does not recognise any structures for now, therefore
+any molecules outside the brush/membrane can be recognised as a part of the
+surface (\texttt{-bt} and \texttt{-m} can be sometimes used to eliminate
+this problem).
+
+By default, all bead types in all molecule types are used, but using
+\texttt{-bt} and \texttt{-m} options, only specified bead and/or molecule
+types can be used. This is particularly useful when, e.g., other molecules
+solubilise inside the brush/membrane, leaving some molecules in the
+solution.
+
+Following are two examples of usage with and without \texttt{-in} option
+(on top are snapshots with coloured balls representing the detected surface
+and on the bottom are graphs of the surface):
+
+\begin{minipage}{0.45\textwidth}
+  \centering
+  \texttt{Surface in.vcf 1 out.txt z -in}
+  \includegraphics[width=\textwidth]{Surface-bilayer.pdf}
+\end{minipage}
+\hfill
+\begin{minipage}{0.45\textwidth}
+  \texttt{Surface in.vcf 1 out.txt z}
+  \centering
+  \includegraphics[width=\textwidth]{Surface-brush.pdf}
+\end{minipage}
 
 Usage:
 
@@ -17,7 +50,7 @@ Usage:
 \texttt{Surface <input> <width> <output> <axis> <options>}
 
 \noindent
-\begin{longtable}{p{0.24\textwidth}p{0.704\textwidth}}
+\begin{longtable}{p{0.2\textwidth}p{0.744\textwidth}}
   \toprule
   \multicolumn{2}{l}{Mandatory arguments} \\
   \midrule
@@ -31,9 +64,10 @@ Usage:
   \multicolumn{2}{l}{Non-standard options} \\
   \midrule
   \texttt{-in} & start from the box centre instead of from its edges \\
-  \texttt{-mol <name(s)>} & molecule type(s) to use (default: all) \\
+  \texttt{-m <name(s)>} & molecule type(s) to use (default: all) \\
   \texttt{-bt <name(s)>} & bead type(s) to use (default: all) \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
+  \texttt{-e <int>} & ending timestep for calculation (default: none) \\
   \bottomrule
 \end{longtable}
 

@@ -21,11 +21,7 @@ slices the box into square prisms along the chosen axis (i.e., if z is the \
 chosen axis, the xy plane is chopped into squares, creating \
 <width>*<width>*<box length in z> prisms). In each such prism, two beads \
 are found corresponding to the two surfaces (e.g., polymer brush on both box \
-edges or the two surfaces of a lipid bilayer inside the box). The output \
-file contains 3D data in the format expected by the gnuplot program.\n\n");
-    fprintf(ptr, "\
-TODO: implenent -in, -mol, and -bt options.\n\n");
-
+edges or the two surfaces of a lipid bilayer inside the box).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -36,9 +32,9 @@ TODO: implenent -in, -mol, and -bt options.\n\n");
   fprintf(ptr, "   <output>          output file\n");
   fprintf(ptr, "   <axis>            calculate along x, y, or z axis\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -in            TODO: start from the box's centre instead of edges\n");
-  fprintf(ptr, "      -mol <name(s)> TODO: molecule type(s) to use\n");
-  fprintf(ptr, "      -bt <name(s)>  TODO: bead type(s) to use\n");
+  fprintf(ptr, "      -in            start from the box's centre instead of edges\n");
+  fprintf(ptr, "      -m <name(s)>   molecule type(s) to use\n");
+  fprintf(ptr, "      -bt <name(s)>  bead type(s) to use\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   fprintf(ptr, "      -e <int>       number of timestep to end with\n");
   CommonHelp(error);
@@ -77,6 +73,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "-in") != 0 &&
         strcmp(argv[i], "-bt") != 0 &&
+        strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0) {
 
@@ -184,7 +181,20 @@ int main(int argc, char *argv[]) {
 
   // -bt <name(s)> - specify what bead types to use //{{{
   if (BeadTypeOption(argc, argv, "-bt", true, Counts, &BeadType)) {
-    exit(0);
+    exit(1);
+  } //}}}
+
+  // -m <name(s)> - specify what molecule types to use //{{{
+  int *use = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  // if -m not present, use all
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    use[i] = 1;
+  }
+  if (MoleculeTypeOption2(argc, argv, "-m", &use, Counts, &MoleculeType)) {
+    exit(1);
+  }
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    MoleculeType[i].Use = use[i];
   } //}}}
 
   // open input coordinate file //{{{
@@ -336,33 +346,31 @@ int main(int argc, char *argv[]) {
       for (int j = 0; j < bins[1]; j++) {
         temp[i][j] = calloc(2, sizeof(double));
         if (!in) {
-          temp[i][j][0] = -1;
+          temp[i][j][0] = 0;
           switch(axis) {
             case 'x':
-              temp[i][j][1] = BoxLength.x + 1;
+              temp[i][j][1] = BoxLength.x;
               break;
             case 'y':
-              temp[i][j][1] = BoxLength.y + 1;
+              temp[i][j][1] = BoxLength.y;
               break;
             case 'z':
-              temp[i][j][1] = BoxLength.z + 1;
+              temp[i][j][1] = BoxLength.z;
               break;
           }
         } else {
           switch(axis) {
             case 'x':
               temp[i][j][0] = BoxLength.x;
-              temp[i][j][1] = 0;
               break;
             case 'y':
               temp[i][j][0] = BoxLength.y;
-              temp[i][j][1] = 0;
               break;
             case 'z':
               temp[i][j][0] = BoxLength.z;
-              temp[i][j][1] = 0;
               break;
           }
+          temp[i][j][1] = 0;
         }
       }
     } //}}}
@@ -370,7 +378,11 @@ int main(int argc, char *argv[]) {
     // calculate surface //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       int btype = Bead[i].Type,
-          mtype = Molecule[Bead[i].Molecule].Type;
+          mol = Bead[i].Molecule;
+      if (mol == -1) { // consider only beads in molecules
+        continue;
+      }
+      int mtype = Molecule[mol].Type;
       if (Bead[i].Molecule != -1 && MoleculeType[mtype].Use && BeadType[btype].Use) {
         double coor[3];
         switch(axis) {
@@ -393,21 +405,19 @@ int main(int argc, char *argv[]) {
         int bin[2];
         bin[0] = coor[0] / width;
         bin[1] = coor[1] / width;
-        if (coor[2] >= range[0] && coor[2] <= range[1]) {
-          if (!in) { // go from box centre to edges
-            if (coor[2] >= temp[bin[0]][bin[1]][0]) {
-              temp[bin[0]][bin[1]][0] = coor[2];
-            }
-            if (coor[2] <= temp[bin[0]][bin[1]][1]) {
-              temp[bin[0]][bin[1]][1] = coor[2];
-            }
-          } else { // go from box edges to centre
-            if (coor[2] <= temp[bin[0]][bin[1]][0]) {
-              temp[bin[0]][bin[1]][0] = coor[2];
-            }
-            if (coor[2] >= temp[bin[0]][bin[1]][1]) {
-              temp[bin[0]][bin[1]][1] = coor[2];
-            }
+        if (!in) { // go from box centre to edges
+          if (coor[2] >= temp[bin[0]][bin[1]][0] && coor[2] >= range[0] && coor[2] <= ((range[0]+range[1])/2)) {
+            temp[bin[0]][bin[1]][0] = coor[2];
+          }
+          if (coor[2] <= temp[bin[0]][bin[1]][1] && coor[2] >= ((range[0]+range[1])/2) && coor[2] <= range[1]) {
+            temp[bin[0]][bin[1]][1] = coor[2];
+          }
+        } else if (in && coor[2] >= range[0] && coor[2] <= range[1]) { // go from box edges to centre
+          if (coor[2] <= temp[bin[0]][bin[1]][0]) {
+            temp[bin[0]][bin[1]][0] = coor[2];
+          }
+          if (coor[2] >= temp[bin[0]][bin[1]][1]) {
+            temp[bin[0]][bin[1]][1] = coor[2];
           }
         }
       }
@@ -546,7 +556,6 @@ int main(int argc, char *argv[]) {
       }
       fprintf(out, "\n");
     }
-    fprintf(out, "\n");
   }
   fclose(out); //}}}
 
