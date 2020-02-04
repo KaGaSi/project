@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
     // print step? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarding step: %6d", count);
+      fprintf(stdout, "\rDiscarding step: %d", count);
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
@@ -414,10 +414,11 @@ int main(int argc, char *argv[]) {
   // print number of discarded steps? //{{{
   if (!silent && start > 1) {
     if (script) {
-      fprintf(stdout, "Starting step: %6d\n", start);
+      fprintf(stdout, "Starting step: %d\n", start);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rStarting step: %6d   \n", start);
+      fprintf(stdout, "\r                             ");
+      fprintf(stdout, "\rStarting step: %d   \n", start);
     }
   } //}}}
 
@@ -1133,7 +1134,7 @@ int main(int argc, char *argv[]) {
       // print number of placed beads? //{{{
       if (!silent && !script) {
         fflush(stdout);
-        fprintf(stdout, "\rMonomer placed: %3d", count);
+        fprintf(stdout, "\rMonomers placed: %d", count);
       } //}}}
     }
     // stop when all unbonded beads are added
@@ -1145,10 +1146,11 @@ int main(int argc, char *argv[]) {
   // print total number of placed beads? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Monomer placed: %3d\n", count);
+      fprintf(stdout, "Monomer placed: %d\n", count);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rMonomer placed: %3d\n", count);
+      fprintf(stdout, "\r                           ");
+      fprintf(stdout, "\rMonomer placed: %d\n", count);
     }
   } //}}}
   //}}}
@@ -1264,7 +1266,7 @@ int main(int argc, char *argv[]) {
     // print number of placed molecules? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rMolecules placed: %3d", i-Counts.Molecules+1);
+      fprintf(stdout, "\rMolecules placed: %d", i-Counts.Molecules+1);
     } //}}}
   }
 
@@ -1274,6 +1276,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "Molecules placed: %3d\n", Counts_add.Molecules);
     } else {
       fflush(stdout);
+      fprintf(stdout, "\r                                             ");
       fprintf(stdout, "\rMolecules placed: %3d\n", Counts_add.Molecules);
     }
   } //}}}
