@@ -3,7 +3,6 @@ build
 doc
 cscope*
 tags
-DoxyErrors.txt
 OneTime
 *aux
 *latexmk
@@ -12,4 +11,4 @@ OneTime
 *gz
 *toc
 *out
-*xmpi
+*xmp*

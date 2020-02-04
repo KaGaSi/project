@@ -45,6 +45,7 @@ set(UTILS AddToSystem
           PairCorrel
           PotentialAggregates
           SelectedVcf
+          Surface
           TransformVsf
           VisualizeAgg)
         foreach(utility ${UTILS})

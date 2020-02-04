@@ -411,21 +411,22 @@ int main(int argc, char *argv[]) {
     if (count_step < start) {
       if (!silent && !script) {
         fflush(stdout);
-        fprintf(stdout, "\rDiscarding Step: %6d", count_step);
+        fprintf(stdout, "\rDiscarding Step: %d", count_step);
       }
     } else if (count_step == start) {
       if (!silent) {
         if (script) {
-          fprintf(stdout, "Starting step: %6d\n", start);
+          fprintf(stdout, "Starting step: %d\n", start);
         } else {
           fflush(stdout);
-          fprintf(stdout, "\rStarting step: %6d   \n", start);
+          fprintf(stdout, "\r                          ");
+          fprintf(stdout, "\rStarting step: %d\n", start);
         }
       }
     } else {
       if (!silent && !script) {
         fflush(stdout);
-        fprintf(stdout, "\rStep: %6d", count_step);
+        fprintf(stdout, "\rStep: %d", count_step);
       }
     } //}}}
 
@@ -626,10 +627,11 @@ int main(int argc, char *argv[]) {
   // print last step //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count_step);
+      fprintf(stdout, "Last Step: %d\n", count_step);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast Step: %6d\n", count_step);
+      fprintf(stdout, "\r                           ");
+      fprintf(stdout, "\rLast Step: %d\n", count_step);
     }
   } //}}}
   //}}}

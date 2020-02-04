@@ -349,7 +349,7 @@ int main(int argc, char *argv[]) {
 
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded from 1st run: %6d", count);
+      fprintf(stdout, "\rDiscarded from 1st run: %d", count);
     }
 
     SkipCoor(vcf_1, Counts, &stuff);
@@ -357,10 +357,11 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Starting step for 1st run: %6d\n", start_1);
+      fprintf(stdout, "Starting step for 1st run: %d\n", start_1);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rStarting step for 1st run: %6d\n", start_1);
+      fprintf(stdout, "\r                                        ");
+      fprintf(stdout, "\rStarting step for 1st run: %d\n", start_1);
     }
   } //}}}
 
@@ -381,7 +382,7 @@ int main(int argc, char *argv[]) {
     // print step? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rStep from 1st run: %6d", count_vcf);
+      fprintf(stdout, "\rStep from 1st run: %d", count_vcf);
     } //}}}
 
     // join molecules? //{{{
@@ -424,10 +425,11 @@ int main(int argc, char *argv[]) {
   // print last step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last step from 1st run: %6d\n", count_vcf);
+      fprintf(stdout, "Last step from 1st run: %d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast step from 1st run: %6d\n", count_vcf);
+      fprintf(stdout, "\r                                       ");
+      fprintf(stdout, "\rLast step from 1st run: %d\n", count_vcf);
     }
   } //}}}
 
@@ -495,7 +497,7 @@ int main(int argc, char *argv[]) {
 
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rDiscarded from 2nd run: %6d", count);
+      fprintf(stdout, "\rDiscarded from 2nd run: %d", count);
     }
 
     SkipCoor(vcf_2, Counts, &stuff);
@@ -503,10 +505,11 @@ int main(int argc, char *argv[]) {
 
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Starting step for 2nd run: %6d\n", start_2);
+      fprintf(stdout, "Starting step for 2nd run: %d\n", start_2);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rStarting step for 2nd run: %6d\n", start_2);
+      fprintf(stdout, "\r                                        ");
+      fprintf(stdout, "\rStarting step for 2nd run: %d\n", start_2);
     }
   } //}}}
 
@@ -528,7 +531,7 @@ int main(int argc, char *argv[]) {
     // print step? //{{{
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rStep from 2nd run: %6d", count_vcf);
+      fprintf(stdout, "\rStep from 2nd run: %d", count_vcf);
     } //}}}
 
     // join molecules? //{{{
@@ -579,10 +582,11 @@ int main(int argc, char *argv[]) {
   // print last step? //{{{
   if (!silent) {
     if (script) {
-      fprintf(stdout, "Last step from 2nd run: %6d\n", count_vcf);
+      fprintf(stdout, "Last step from 2nd run: %d\n", count_vcf);
     } else {
       fflush(stdout);
-      fprintf(stdout, "\rLast step from 2nd run: %6d\n", count_vcf);
+      fprintf(stdout, "\r                                       ");
+      fprintf(stdout, "\rLast step from 2nd run: %d\n", count_vcf);
     }
   } //}}}
   //}}}

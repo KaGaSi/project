@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
     count++;
     if (!silent && !script) {
       fflush(stdout);
-      fprintf(stdout, "\rStep: %6d", count);
+      fprintf(stdout, "\rStep: %d", count);
     }
 
     // skip remainder of number-of-beads line
