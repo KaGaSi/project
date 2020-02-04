@@ -3,25 +3,25 @@
 Surface utility determines the average surface of structures such as
 membranes or or polymer brushes.
 
-The utility cuts a plane perpendicular to the given axis into squares of
+The utility cuts the plane perpendicular to the chosen axis into squares of
 size \texttt{<width>*<width>} and then finds the beads with the highest and
-lowest coordinates along the given axis whose other two coordinates fall
+lowest coordinates along the chosen axis whose other two coordinates fall
 into the square for each square on the plane. By default, it searches the
-given axis for the beads with the highest coordinate in the interval
+chosen axis for the beads with the highest coordinate in the interval
 $\langle0, (box length)/2\rangle$ and with the lowest coordinate in the
 interval $\langle(box\ length)/2; (box\ length)\rangle$, i.e., it assumes
 something such as a polymer brush on each wall. If \texttt{-in}
 option is used, it searches for a layer structure inside the box, i.e., it
 searches for the bead with the lowest and highest coordinates in the whole
 box, $\langle0; (box\ length)\rangle$ (this mode finds surfaces for
-something like a bilayer bilayer inside the box).
+something like a bilayer).
 
-Note that the utility does not recognise any structures for now, therefore
+Note that the utility does not determines any structures for now, therefore
 any molecules outside the brush/membrane can be recognised as a part of the
 surface (\texttt{-bt} and \texttt{-m} can be sometimes used to eliminate
 this problem).
 
-By default, all bead types in all molecule types are used, but using
+By default, all bead types and all molecule types are used, but using
 \texttt{-bt} and \texttt{-m} options, only specified bead and/or molecule
 types can be used. This is particularly useful when, e.g., other molecules
 solubilise inside the brush/membrane, leaving some molecules in the
@@ -74,17 +74,17 @@ Usage:
 \noindent
 Format of output files:
 \begin{enumerate}[nosep,leftmargin=20pt]
-  \item \texttt{<output>} -- bead densities
+  \item \texttt{<output>} -- 3D coordinates
     \begin{itemize}[nosep,leftmargin=5pt]
       \item first line: command used to generate the file
       \item second line: column headers
         \begin{itemize}[nosep,leftmargin=5pt]
-          \item first is the centre of each bin (governed by
-            \texttt{<width>}); i.e., if \texttt{<width>} is 0.1,
-            then the centre of bin 0 to 0.1 is 0.05, centre of bin 0.1 to
-            0.2 is 0.15, etc.
-          \item the rest are for the calculated data: each number
-            corresponds to the density of the specified bead type
+          \item first two numbers represent the centre of each square
+            (being the coordinates on the sliced up plane); i.e., if \texttt{<width>} is 1,
+            then the centre of the first square is 0.5 0.5, the centre of
+            the second one is 0.5 1.5, etc.
+          \item the second two numbers are coordinates of the surface in
+            the third dimension, i.e., along the chosen axis
         \end{itemize}
     \end{itemize}
 \end{enumerate}
