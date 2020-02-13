@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
       Help(argv[0], true);
       exit(1);
   }
-  printf("normal=(%lf,%lf,%lf)\n", normal.x, normal.y, normal.z);
+//printf("normal=(%lf,%lf,%lf)\n", normal.x, normal.y, normal.z);
 //// use later, when arbitrary vector can be used
 //double normal_length = sqrt(SQR(normal.x) + SQR(normal.y) + SQR(normal.z));
 //normal.x /= normal_length;

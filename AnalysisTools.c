@@ -28,14 +28,14 @@ void ReadFIELD(Counts *Counts,
   do {
     // get whole line - max 1000 chars
     char line[LINE];
-    fgets(line, strlen(line), field);
+    fgets(line, sizeof(line), field);
 
     // first string of the line
     split = strtok(line, " \t");
 
-  } while (strcmp(split, "species") != 0 &&
-           strcmp(split, "SPECIES") != 0 &&
-           strcmp(split, "Species") != 0); //}}}
+  } while (strncmp(split, "species", 6) != 0 &&
+           strncmp(split, "SPECIES", 6) != 0 &&
+           strncmp(split, "Species", 6) != 0); //}}}
 
   // read number of bead types //{{{
   split = strtok(NULL, " \n");
@@ -46,7 +46,7 @@ void ReadFIELD(Counts *Counts,
 
     // get whole line - max 1000 chars //{{{
     char line[LINE];
-    fgets(line, strlen(line), field); //}}}
+    fgets(line, sizeof(line), field); //}}}
 
     // read bead type name and test it is against data from vsf and vcf //{{{
     split = strtok(line, " \t");
