@@ -22,20 +22,20 @@ void ErrorArgNumber(int count, int need) {
   putchar('\n');
 } //}}}
 
-// ErrorOption() //{{{
-/** Error when unknown option specified as argument
+// ErrorDiscard()  //{{{
+/** Error when number of starting step is higher then the total number of steps
+ * in a coordinate file
  */
-void ErrorOption(char *option) {
-  fprintf(stderr, "\nError: non-existent option '%s'\n", option);
-  putchar('\n');
-} //}}}
-
-// ErrorNaN() //{{{
-/** Error when unknown non-numeric argument is present instead of a number
- */
-void ErrorNaN(char *option) {
-  fprintf(stderr, "\nError: non-numeric argument for '%s'\n", option);
-  putchar('\n');
+bool ErrorDiscard(int start, int step, char *file, FILE *coor) {
+  int test;
+  if ((test = getc(coor)) == EOF) {
+    fflush(stdout);
+    fprintf(stderr, "\nError: %s - starting timestep (%d) is higher than the total number of steps (%d)\n\n", file, start, step);
+    return true;
+  } else {
+    ungetc(test,coor);
+  }
+  return false;
 } //}}}
 
 // ErrorExtension() //{{{
@@ -47,7 +47,7 @@ bool ErrorExtension(char *file, int number, char extension[][5]) {
 
   for (int i = 0; i < number; i++) {
     if (dot && strcmp(dot, extension[i]) == 0) {
-      return true;
+      return false;
     }
   }
 
@@ -59,7 +59,7 @@ bool ErrorExtension(char *file, int number, char extension[][5]) {
       fprintf(stderr, "'%s')\n", extension[i]);
     }
   }
-  return false;
+  return true;
 } //}}}
 
 // ErrorFileOpen() //{{{
@@ -81,5 +81,21 @@ void ErrorFileOpen(char *file, char mode) {
       fprintf(stderr, "...well, it seems you found something new to do with a file!\n");
       fprintf(stderr, "Use r(ead), w(rite), or a(ppend).\n\n");
   }
+  putchar('\n');
+} //}}}
+
+// ErrorNaN() //{{{
+/** Error when unknown non-numeric argument is present instead of a number
+ */
+void ErrorNaN(char *option) {
+  fprintf(stderr, "\nError: non-numeric argument for '%s'\n", option);
+  putchar('\n');
+} //}}}
+
+// ErrorOption() //{{{
+/** Error when unknown option specified as argument
+ */
+void ErrorOption(char *option) {
+  fprintf(stderr, "\nError: non-existent option '%s'\n", option);
   putchar('\n');
 } //}}}
