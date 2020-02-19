@@ -582,7 +582,7 @@ int main(int argc, char *argv[]) {
   char extension[2][5];
   strcpy(extension[0], ".vcf");
   if (joined_vcf[0] != '\0') {
-    if (!ErrorExtension(joined_vcf, ext, extension)) {
+    if (ErrorExtension(joined_vcf, ext, extension)) {
       Help(argv[0], true);
       exit(1);
     }
@@ -606,7 +606,7 @@ int main(int argc, char *argv[]) {
   ext = 2;
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_coor, ext, extension)) {
+  if (ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -636,7 +636,7 @@ int main(int argc, char *argv[]) {
   // test if <output.agg> ends with '.agg'
   ext = 1;
   strcpy(extension[0], ".agg");
-  if (!ErrorExtension(output_agg, ext, extension)) {
+  if (ErrorExtension(output_agg, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}

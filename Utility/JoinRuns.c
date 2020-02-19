@@ -155,28 +155,28 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <1st input> - first input coordinate file //{{{
-  char input_vcf_1[LINE];
-  strcpy(input_vcf_1, argv[++count]);
+  char input_coor_1[LINE];
+  strcpy(input_coor_1, argv[++count]);
 
   // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
   int ext = 2;
   char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vcf_1, ext, extension)) {
+  if (ErrorExtension(input_coor_1, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
 
   // <2nd input> - second input coordinate file //{{{
-  char input_vcf_2[LINE];
-  strcpy(input_vcf_2, argv[++count]);
+  char input_coor_2[LINE];
+  strcpy(input_coor_2, argv[++count]);
 
   // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
   ext = 2;
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vcf_2, ext, extension)) {
+  if (ErrorExtension(input_coor_2, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
   ext = 2;
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf_2, ext, extension)) {
+  if (ErrorExtension(input_vsf_2, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
   // test if output coordinate file ends with '.vcf' (required by vmd)
   ext = 1;
   strcpy(extension[0], ".vcf");
-  if (!ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -223,8 +223,8 @@ int main(int argc, char *argv[]) {
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information //{{{
-  bool indexed = ReadStructure(input_vsf_1, input_vcf_1, &Counts, &BeadType1, &Bead1, &Index1, &MoleculeType1, &Molecule1);
-  ReadStructure(input_vsf_2, input_vcf_2, &Counts, &BeadType2, &Bead2, &Index2, &MoleculeType2, &Molecule2);
+  bool indexed = ReadStructure(input_vsf_1, input_coor_1, &Counts, &BeadType1, &Bead1, &Index1, &MoleculeType1, &Molecule1);
+  ReadStructure(input_vsf_2, input_coor_2, &Counts, &BeadType2, &Bead2, &Index2, &MoleculeType2, &Molecule2);
 
   // vsf files are not needed anymore
   free(input_vsf_1);
@@ -241,7 +241,7 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType1);
 
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s or %s coordinate file\n\n", argv[count], input_vcf_1, input_vcf_2);
+      fprintf(stderr, "\nError: bead type '%s' is not in %s or %s coordinate file\n\n", argv[count], input_coor_1, input_coor_2);
       exit(1);
     }
 
@@ -276,12 +276,12 @@ int main(int argc, char *argv[]) {
 
   // open input coordinate files //{{{
   FILE *vcf_1, *vcf_2;
-  if ((vcf_1 = fopen(input_vcf_1, "r")) == NULL) {
-    ErrorFileOpen(input_vcf_1, 'r');
+  if ((vcf_1 = fopen(input_coor_1, "r")) == NULL) {
+    ErrorFileOpen(input_coor_1, 'r');
     exit(1);
   }
-  if ((vcf_2 = fopen(input_vcf_2, "r")) == NULL) {
-    ErrorFileOpen(input_vcf_2, 'r');
+  if ((vcf_2 = fopen(input_coor_2, "r")) == NULL) {
+    ErrorFileOpen(input_coor_2, 'r');
     exit(1);
   } //}}}
 
@@ -290,14 +290,14 @@ int main(int argc, char *argv[]) {
   // 1st vcf file - skip till 'pbc' keyword //{{{
   do {
     if (fscanf(vcf_1, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf_1);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor_1);
     }
   } while (strcmp(str, "pbc") != 0);
 
   // read pbc
   Vector BoxLength;
   if (fscanf(vcf_1, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_vcf_1);
+    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor_1);
     exit(1);
   }
   // skip remainder of pbc line
@@ -307,7 +307,7 @@ int main(int argc, char *argv[]) {
   // 2nd vcf file - skip till 'pbc' keword //{{{
   do {
     if (fscanf(vcf_2, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_vcf_2);
+      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor_2);
     }
   } while (strcmp(str, "pbc") != 0);
   // skip remainder of pbc line
@@ -322,7 +322,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_vcf_1, Counts, BoxLength, BeadType1, Bead1, MoleculeType1, Molecule1);
+    VerboseOutput(input_coor_1, Counts, BoxLength, BeadType1, Bead1, MoleculeType1, Molecule1);
     fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
     fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
   } //}}}
@@ -363,7 +363,12 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\r                                        ");
       fprintf(stdout, "\rStarting step for 1st run: %d\n", start_1);
     }
-  } //}}}
+  }
+  // is the vcf file continuing?
+  if (ErrorDiscard(start_1, count, input_coor_1, vcf_1)) {
+    exit(1);
+  }
+  //}}}
 
   // main loop - 1st run //{{{
   int count_vcf = start_1 - 1;
@@ -372,7 +377,7 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
-      ErrorCoorRead(input_vcf_1, test, count, stuff, input_vsf_1);
+      ErrorCoorRead(input_coor_1, test, count, stuff, input_vsf_1);
       exit(1);
     } //}}}
 
@@ -413,7 +418,7 @@ int main(int argc, char *argv[]) {
 
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
-        ErrorCoorRead(input_vcf_1, test, count_vcf, stuff, input_vsf_1);
+        ErrorCoorRead(input_coor_1, test, count_vcf, stuff, input_vsf_1);
         exit(1);
       } //}}}
     } //}}}
@@ -511,7 +516,12 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\r                                        ");
       fprintf(stdout, "\rStarting step for 2nd run: %d\n", start_2);
     }
-  } //}}}
+  }
+  // is the vcf file continuing?
+  if (ErrorDiscard(start_2, count, input_coor_2, vcf_2)) {
+    exit(1);
+  }
+  //}}}
 
   // main loop - 2nd run //{{{
   count_vcf = start_2 - 1;
@@ -521,7 +531,7 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_vcf_2, test, count_vcf, stuff, input_vsf_2);
+      ErrorCoorRead(input_coor_2, test, count_vcf, stuff, input_vsf_2);
       exit(1);
     } //}}}
 
@@ -569,7 +579,7 @@ int main(int argc, char *argv[]) {
 
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
-        ErrorCoorRead(input_vcf_2, test, count_vcf, stuff, input_vsf_2);
+        ErrorCoorRead(input_coor_2, test, count_vcf, stuff, input_vsf_2);
         exit(1);
       } //}}}
     } //}}}

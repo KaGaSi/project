@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
   int ext = 1;
   char extension[1][5];
   strcpy(extension[0], ".vsf");
-  if (!ErrorExtension(output_vsf, ext, extension)) {
+  if (ErrorExtension(output_vsf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
   // test if <out.vcf> filename ends with '.vcf' (required by VMD)
   ext = 1;
   strcpy(extension[0], ".vcf");
-  if (!ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}

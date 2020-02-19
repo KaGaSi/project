@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
     ext = 2;
     strcpy(extension[0], ".vsf");
     strcpy(extension[1], ".vtf");
-    if (!ErrorExtension(add_vsf, ext, extension)) {
+    if (ErrorExtension(add_vsf, ext, extension)) {
       Help(argv[0], true);
       exit(1);
     }
@@ -149,7 +149,7 @@ int main(int argc, char *argv[]) {
             if (FileOption(argc, argv, "-vtf", &add_vcf)) {
               exit(1);
             }
-            if (!ErrorExtension(add_vcf, ext, extension)) {
+            if (ErrorExtension(add_vcf, ext, extension)) {
               fprintf(stderr, "       Wrong second filename!\n");
               Help(argv[0], true);
               exit(1);
@@ -273,7 +273,7 @@ int main(int argc, char *argv[]) {
   ext = 2;
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_coor, ext, extension)) {
+  if (ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -285,7 +285,7 @@ int main(int argc, char *argv[]) {
   // test if <out.vsf> filename ends with '.vsf' (required by VMD)
   ext = 1;
   strcpy(extension[0], ".vsf");
-  if (!ErrorExtension(output_vsf, ext, extension)) {
+  if (ErrorExtension(output_vsf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -297,7 +297,7 @@ int main(int argc, char *argv[]) {
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
   ext = 1;
   strcpy(extension[0], ".vcf");
-  if (!ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -421,14 +421,10 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStarting step: %d   \n", start);
     }
   } //}}}
-
-  // is the vcf file continuing? //{{{
-  if ((test = getc(vcf)) == EOF) {
-    fprintf(stderr, "\nError: %s - number of discard steps is lower (or equal) to the total number of steps\n\n", input_coor);
+  // is the vcf file continuing?
+  if (ErrorDiscard(start, count, input_coor, vcf)) {
     exit(1);
-  } else {
-    ungetc(test,vcf);
-  } //}}}
+  }
   //}}}
 
   // read the coordinate timestep to add stuff to //{{{
