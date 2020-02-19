@@ -485,7 +485,7 @@ int main(int argc, char *argv[]) {
   putc('\n', out); //}}}
 
   // print bond information //{{{
-  if (count_angle_types != 0) {
+  if (count_bond_types != 0) {
     fprintf(out, "Bonds\n\n");
     count = 0;
     for (int i = 0; i < Counts.Molecules; i++) {
