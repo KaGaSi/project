@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
   int ext = 1;
   char extension[2][5];
   strcpy(extension[0], ".xyz");
-  if (!ErrorExtension(input_xyz, ext, extension)) {
+  if (ErrorExtension(input_xyz, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}

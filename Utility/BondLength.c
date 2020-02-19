@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
   char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_coor, ext, extension)) {
+  if (ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -295,6 +295,10 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStarting step: %d\n", start);
     }
   } //}}}
+  // is the vcf file continuing?
+  if (ErrorDiscard(start, count, input_coor, vcf)) {
+    exit(1);
+  }
   //}}}
 
   // main loop //{{{
