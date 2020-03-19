@@ -420,6 +420,9 @@ int main(int argc, char *argv[]) {
         break;
       } //}}}
     } //}}}
+
+    if (end == count_vcf)
+      break;
   }
 
   fclose(vcf);
