@@ -568,7 +568,6 @@ int main(int argc, char *argv[]) {
       MoleculeType_add[i].Use = true;
       MoleculeType_add[i].Write = true;
 
-
       // total number of beads in the molecules of type 'i'
       int beads = MoleculeType_add[i].Number * MoleculeType_add[i].nBeads;
       // total number of molecules and beads so far
@@ -687,7 +686,7 @@ int main(int argc, char *argv[]) {
       // skip till 'finish' keyword //{{{
       do {
         // get whole line - max 1000 chars
-        fgets(line, strlen(line), in_add);
+        fgets(line, sizeof(line), in_add);
         strcpy(line, TrimLine(line)); // trim excess whitespace
 
         // first string of the line
