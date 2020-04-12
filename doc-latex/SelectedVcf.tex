@@ -29,6 +29,10 @@ read a \texttt{vcf} file that does not contain all beads of a given type,
 so the \texttt{-x} option is useful only for visualization, e.g., using
 vmd.
 
+Lastly, the \texttt{--last} saves to output file(s) only the last step from
+the input coordinate file; it is useful, when only the last timestep is
+required, but the total number of timesteps in the input file is unknown.
+
 Usage:
 
 \vspace{1em}
@@ -63,5 +67,6 @@ Usage:
     use if \texttt{<output.vcf>} is further analysed \\
   \texttt{-xyz <name>} & save coordinates to \texttt{xyz} file -- does not
     take into account \texttt{-x} option \\
+  \texttt{--last} & save only the last step \\
   \bottomrule
 \end{longtable}
