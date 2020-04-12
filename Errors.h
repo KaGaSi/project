@@ -25,19 +25,16 @@ void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input
  */
 void ErrorArgNumber(int count, int need); //}}}
 
-// ErrorOption() //{{{
-/** \brief Unknown option
+// ErrorDiscard() //{{{
+/** \brief Starting timestep is higher than the number of steps
  *
- * \param [in] option   the unknown option
+ * \param [in] start  starting timestep
+ * \param [in] step   number of steps read
+ * \param [in] file   coordinate filename
+ * \param [in] coor   pointer to the coordinate file
+ * \return 'true' if the starting step is too high, 'false' otherwise
  */
-void ErrorOption(char *option); //}}}
-
-// ErrorNaN() //{{{
-/** \brief Non-numeric argument
- *
- * \param [in] option   the option with wrong argument
- */
-void ErrorNaN(char *option); //}}}
+bool ErrorDiscard(int start, int step, char *file, FILE *coor); //}}}
 
 // ErrorExtension() //{{{
 /** \brief Wrong file extension
@@ -45,6 +42,7 @@ void ErrorNaN(char *option); //}}}
  * \param [in] file       filename
  * \param [in] number     number of correct extension(s)
  * \param [in] extension  correct extension(s)
+ * \return 'true' if wrong extension, 'false' otherwise
  */
 bool ErrorExtension(char *file, int number, char extension[][5]); //}}}
 
@@ -55,4 +53,18 @@ bool ErrorExtension(char *file, int number, char extension[][5]); //}}}
  * \param [in] mode  open mode - r(ead), w(rite), a(ppend)
  */
 void ErrorFileOpen(char *file, char mode); //}}}
+
+// ErrorNaN() //{{{
+/** \brief Non-numeric argument
+ *
+ * \param [in] option   the option with wrong argument
+ */
+void ErrorNaN(char *option); //}}}
+
+// ErrorOption() //{{{
+/** \brief Unknown option
+ *
+ * \param [in] option   the unknown option
+ */
+void ErrorOption(char *option); //}}}
 #endif

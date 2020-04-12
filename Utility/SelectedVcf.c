@@ -39,6 +39,7 @@ vmd).\n\n");
   fprintf(ptr, "      -n <int(s)>    save only specified timesteps\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
   fprintf(ptr, "      -xyz <name>    output xyz file\n");
+  fprintf(ptr, "      --last         use only the last step\n");
   CommonHelp(error);
 } //}}}
 
@@ -84,8 +85,9 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-sk") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "-x") != 0 &&
         strcmp(argv[i], "-xyz") != 0 &&
-        strcmp(argv[i], "-x") != 0) {
+        strcmp(argv[i], "--last") != 0) {
 
       ErrorOption(argv[i]);
       Help(argv[0], true);
@@ -135,6 +137,9 @@ int main(int argc, char *argv[]) {
   if (FileOption(argc, argv, "-xyz", &output_xyz)) {
     exit(1);
   } //}}}
+
+  // use only the last step?
+  bool last = BoolOption(argc, argv, "--last");
   //}}}
 
   // print command to stdout //{{{
@@ -155,7 +160,7 @@ int main(int argc, char *argv[]) {
   char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_coor, ext, extension)) {
+  if (ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -167,7 +172,7 @@ int main(int argc, char *argv[]) {
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
   ext = 1;
   strcpy(extension[0], ".vcf");
-  if (!ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -361,14 +366,10 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStarting step: %d\n", start);
     }
   } //}}}
-
-  // is the vcf file continuing? //{{{
-  if ((test = getc(vcf)) == EOF) {
-    fprintf(stderr, "\nError: %s - number of discard steps is lower (or equal) to the total number of steps\n\n", input_coor);
+  // is the vcf file continuing?
+  if (ErrorDiscard(start, count, input_coor, vcf)) {
     exit(1);
-  } else {
-    ungetc(test,vcf);
-  } //}}}
+  }
   //}}}
 
   // main loop //{{{
@@ -385,6 +386,17 @@ int main(int argc, char *argv[]) {
     if (!silent && !script) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count_vcf);
+    } //}}}
+
+    // if --last is used, just read coordinates and move on //{{{
+    if (last) {
+      // read coordinates
+      if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
+        // print newline to stdout if Step... doesn't end with one
+        ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+        exit(1);
+      }
+      continue;
     } //}}}
 
     if (number_of_steps != 0) {
@@ -544,6 +556,28 @@ int main(int argc, char *argv[]) {
   }
 
   fclose(vcf); //}}}
+
+  // save last step if --last is used //{{{
+  if (last) {
+    // open .vcf file for appending
+    if ((out = fopen(output_vcf, "a")) == NULL) {
+      ErrorFileOpen(output_vcf, 'a');
+      exit(1);
+    }
+    WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
+    fclose(out);
+
+    // save to xyz file?
+    if (output_xyz[0] != '\0') {
+      // open output .xyz file for appending
+      if ((out = fopen(output_xyz, "a")) == NULL) {
+        ErrorFileOpen(output_xyz, 'a');
+        exit(1);
+      }
+      WriteCoorXYZ(out, Counts, BeadType, Bead);
+      fclose(out);
+    }
+  } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);

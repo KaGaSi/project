@@ -99,7 +99,7 @@ int main(int argc, char *argv[]) {
   char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_coor, ext, extension)) {
+  if (ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -224,11 +224,24 @@ int main(int argc, char *argv[]) {
   fprintf(out, "0.000000 0.000000 %lf\n", BoxLength.z); //}}}
 
   // bead coordinates //{{{
+  // unbonded beads must be first (dl_meso requirement)
+  count = 0;
   for (int i = 0; i < Counts.Beads; i++) {
-    fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
-    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x-BoxLength.x/2,
-                                  Bead[i].Position.y-BoxLength.y/2,
-                                  Bead[i].Position.z-BoxLength.z/2);
+    if (Bead[i].Molecule == -1) {
+      fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, ++count);
+      fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x-BoxLength.x/2,
+                                    Bead[i].Position.y-BoxLength.y/2,
+                                    Bead[i].Position.z-BoxLength.z/2);
+    }
+  }
+  // bonded beads follow
+  for (int i = 0; i < Counts.Beads; i++) {
+    if (Bead[i].Molecule != -1) {
+      fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, ++count);
+      fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x-BoxLength.x/2,
+                                    Bead[i].Position.y-BoxLength.y/2,
+                                    Bead[i].Position.z-BoxLength.z/2);
+    }
   } //}}}
 
   fclose(out); //}}}
