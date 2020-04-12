@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
   int ext = 1;
   char extension[1][5];
   strcpy(extension[0], ".vsf");
-  if (!ErrorExtension(output, ext, extension)) {
+  if (ErrorExtension(output, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
   // test if outpuf_vcf has '.vcf' extension - required by vmd //{{{
   ext = 1;
   strcpy(extension[0], ".vcf");
-  if (!ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}

@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
   int ext = 1;
   char extension[2][5];
   strcpy(extension[0], ".agg");
-  if (!ErrorExtension(input_agg, ext, extension)) {
+  if (ErrorExtension(input_agg, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}

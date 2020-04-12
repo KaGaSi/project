@@ -27,7 +27,7 @@ void CommonOptions(int argc, char **argv, char **vsf_file,
   char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(*vsf_file, ext, extension)) {
+  if (ErrorExtension(*vsf_file, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}

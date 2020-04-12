@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
   char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(input_vsf, ext, extension)) {
+  if (ErrorExtension(input_vsf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
   ext = 2;
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
-  if (!ErrorExtension(output, ext, extension)) {
+  if (ErrorExtension(output, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
