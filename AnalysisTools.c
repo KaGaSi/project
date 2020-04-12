@@ -182,7 +182,7 @@ void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *Molecule
 
 // PrintBead() //{{{
 /**
- * Function printing Bead structure useful for debugging.
+ * Function printing Bead structure (useful for debugging).
  */
 void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
   fprintf(stdout, "Beads - <i> (<Bead[i].Index>; <Index[i]>)\n");
@@ -199,7 +199,7 @@ void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
 
 // PrintMolecule() //{{{
 /**
- * Function printing Molecule structure useful for debugging.
+ * Function printing Molecule structure (useful for debugging).
  */
 void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType) {
   fprintf(stdout, "Molecules\n");
@@ -210,6 +210,50 @@ void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecu
       fprintf(stdout, " %d (%d)", Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
     }
     fprintf(stdout, "\n");
+  }
+} //}}}
+
+// PrintAggregate() //{{{
+/**
+ * Function printing Aggregate structure (useful for debugging).
+ */
+void PrintAggregate(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType, Aggregate *Aggregate) {
+  fprintf(stdout, "Aggregates: %d\n", Counts.Aggregates);
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    // print molecules
+    fprintf(stdout, " %d mols:", Aggregate[i].nMolecules);
+    for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+      int mol = Aggregate[i].Molecule[j];
+      int type = Molecule[mol].Type;
+      fprintf(stdout, " %d (%d)", mol, type);
+      if (j != (Aggregate[i].nMolecules-1)) {
+        putchar(',');
+      } else {
+        putchar('\n');
+      }
+    }
+    // print bonded beads
+    fprintf(stdout, " %d bonded beads:", Aggregate[i].nBeads);
+    for (int j = 0; j < Aggregate[i].nBeads; j++) {
+      int bead = Aggregate[i].Bead[j];
+      fprintf(stdout, " %d (%d)", bead, Bead[bead].Index);
+      if (j != (Aggregate[i].nBeads-1)) {
+        putchar(',');
+      } else {
+        putchar('\n');
+      }
+    }
+    // print monomeric beads
+    fprintf(stdout, " %d free beads:", Aggregate[i].nMonomers);
+    for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+      int bead = Aggregate[i].Monomer[j];
+      fprintf(stdout, " %d (%d)", bead, Bead[bead].Index);
+      if (j != (Aggregate[i].nMonomers-1)) {
+        putchar(',');
+      } else {
+        putchar('\n');
+      }
+    }
   }
 } //}}}
 
@@ -1453,13 +1497,13 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
       // read monomeric beads in Aggregate 'i' //{{{
       int count;
       fscanf(agg_file, "%d :", &count);
+      (*Aggregate)[i].nMonomers = 0; // their number will be counted according to which beads are in vcf
       for (int j = 0; j < count; j++) {
         int id;
         fscanf(agg_file, "%d", &id); // monomer index from vsf file
-        (*Aggregate)[i].nMonomers = 0; // their number will be counted according to which beads are in vcf
         if (Index[id] > -1) {
-          (*Aggregate)[i].nMonomers++;
-          (*Aggregate)[i].Monomer[j] = id;
+          int beads = (*Aggregate)[i].nMonomers++;
+          (*Aggregate)[i].Monomer[beads] = id;
           (*Bead)[Index[id]].nAggregates++;
           (*Bead)[Index[id]].Aggregate = realloc((*Bead)[Index[id]].Aggregate, (*Bead)[Index[id]].nAggregates*sizeof(int));
           (*Bead)[Index[id]].Aggregate[(*Bead)[Index[id]].nAggregates-1] = i;

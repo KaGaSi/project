@@ -378,6 +378,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
+    PrintAggregate(Counts, Index, MoleculeType, Molecule, Bead, BeadType, Aggregate);
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
