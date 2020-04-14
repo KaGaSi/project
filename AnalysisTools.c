@@ -1499,14 +1499,15 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
       fscanf(agg_file, "%d :", &count);
       (*Aggregate)[i].nMonomers = 0; // their number will be counted according to which beads are in vcf
       for (int j = 0; j < count; j++) {
-        int id;
-        fscanf(agg_file, "%d", &id); // monomer index from vsf file
-        if (Index[id] > -1) {
+        int vsf_id;
+        fscanf(agg_file, "%d", &vsf_id); // monomer index in vsf file
+        int id = Index[vsf_id]; // monomer index in Bead structure
+        if (id > -1) {
           int beads = (*Aggregate)[i].nMonomers++;
           (*Aggregate)[i].Monomer[beads] = id;
-          (*Bead)[Index[id]].nAggregates++;
-          (*Bead)[Index[id]].Aggregate = realloc((*Bead)[Index[id]].Aggregate, (*Bead)[Index[id]].nAggregates*sizeof(int));
-          (*Bead)[Index[id]].Aggregate[(*Bead)[Index[id]].nAggregates-1] = i;
+          (*Bead)[id].nAggregates++;
+          (*Bead)[id].Aggregate = realloc((*Bead)[id].Aggregate, (*Bead)[id].nAggregates*sizeof(int));
+          (*Bead)[id].Aggregate[(*Bead)[id].nAggregates-1] = i;
         }
       }
 
@@ -1774,7 +1775,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
   for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
     for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      (*Bead)[Molecule[i].Bead[j]].Flag = false;
+      (*Bead)[Molecule[i].Bead[j]].Flag = false; // no beads moved yet
     }
     (*Bead)[Molecule[i].Bead[MoleculeType[type].Bond[0][0]]].Flag = true;
     bool done = false;
@@ -1783,6 +1784,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
         int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
         int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
 
+        // move id1, if id2 is moved already
         if (!(*Bead)[id1].Flag && (*Bead)[id2].Flag) {
           Vector dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
 
@@ -1790,6 +1792,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
           (*Bead)[id1].Position.y = (*Bead)[id2].Position.y - dist.y;
           (*Bead)[id1].Position.z = (*Bead)[id2].Position.z - dist.z;
           (*Bead)[id1].Flag = true;
+        // move id2, if id1 was moved already
         } else if ((*Bead)[id1].Flag && !(*Bead)[id2].Flag) {
           Vector dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
 
@@ -1840,12 +1843,14 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
           // use only moved molecule 'mol1' and unmoved molecule 'mol2'
           if (moved[j] && !moved[k]) { // automatically follows that j != k
-            int mol1 = Aggregate[i].Molecule[j];
-            int mol2 = Aggregate[i].Molecule[k];
+            int mol1 = Aggregate[i].Molecule[j],
+                mol2 = Aggregate[i].Molecule[k],
+                mol1_type = Molecule[mol1].Type,
+                mol2_type = Molecule[mol2].Type;
 
             // go through all bead pairs in the two molecules
-            for (int l = 0; l < MoleculeType[Molecule[mol1].Type].nBeads; l++) {
-              for (int m = 0; m < MoleculeType[Molecule[mol2].Type].nBeads; m++) {
+            for (int l = 0; l < MoleculeType[mol1_type].nBeads; l++) {
+              for (int m = 0; m < MoleculeType[mol2_type].nBeads; m++) {
                 int bead1 = Molecule[mol1].Bead[l];
                 int bead2 = Molecule[mol2].Bead[m];
 
@@ -1864,44 +1869,41 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                     dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
                     dist.y = (*Bead)[bead1].Position.y - (*Bead)[bead2].Position.y;
                     dist.z = (*Bead)[bead1].Position.z - (*Bead)[bead2].Position.z; //}}}
-
                     // if 'bead1' and 'bead2' are too far in x-direction, move 'mol2' in x-direction //{{{
                     while (dist.x > (BoxLength.x/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
+                      for (int n = 0; n < MoleculeType[mol2_type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.x += BoxLength.x;
                       }
                       dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
                     }
                     while (dist.x <= -(BoxLength.x/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
+                      for (int n = 0; n < MoleculeType[mol2_type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.x -= BoxLength.x;
                       }
                       dist.x = (*Bead)[bead1].Position.x - (*Bead)[bead2].Position.x;
                     } //}}}
-
                     // if 'bead1' and 'bead2' are too far in y-direction, move 'mol2' in y-direction //{{{
                     while (dist.y > (BoxLength.y/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
+                      for (int n = 0; n < MoleculeType[mol2_type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.y += BoxLength.y;
                       }
                       dist.y = (*Bead)[bead1].Position.y - (*Bead)[bead2].Position.y;
                     }
                     while (dist.y <= -(BoxLength.y/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
+                      for (int n = 0; n < MoleculeType[mol2_type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.y -= BoxLength.y;
                       }
                       dist.y = (*Bead)[bead1].Position.y - (*Bead)[bead2].Position.y;
                     } //}}}
-
                     // if 'bead1' and 'bead2' are too far in z-direction, move 'mol2' in x-direction //{{{
                     while (dist.z > (BoxLength.z/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
+                      for (int n = 0; n < MoleculeType[mol2_type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.z += BoxLength.z;
                       }
                       dist.z = (*Bead)[bead1].Position.z - (*Bead)[bead2].Position.z;
                     }
                     while (dist.z <= -(BoxLength.z/2)) {
-                      for (int n = 0; n < MoleculeType[Molecule[mol2].Type].nBeads; n++) {
+                      for (int n = 0; n < MoleculeType[mol2_type].nBeads; n++) {
                         (*Bead)[Molecule[mol2].Bead[n]].Position.z -= BoxLength.z;
                       }
                       dist.z = (*Bead)[bead1].Position.z - (*Bead)[bead2].Position.z;
