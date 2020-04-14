@@ -33,11 +33,15 @@ incorrect file is provided, the utility will exhibit undefined behaviour \
   fprintf(ptr, "      -f <name>  FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      -v         verbose output\n");
   fprintf(ptr, "      -h         print this help and exit\n");
+  fprintf(ptr, "      --version  print version number and exit\n");
 } //}}}
 
 int main(int argc, char *argv[]) {
 
-  // -h option - print help and exit //{{{
+  // -h/--version options - print stuff and exit //{{{
+  if (VersionOption(argc, argv)) {
+    exit(0);
+  }
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       Help(argv[0], false);
@@ -63,6 +67,7 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
+        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-h") != 0) {
 
       ErrorOption(argv[i]);

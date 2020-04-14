@@ -89,9 +89,10 @@ void CommonHelp(bool error) {
   fprintf(ptr, "      -i <name>      use input .vsf file different from traject.vsf\n");
 //fprintf(ptr, "      -b <name>      file containing bond alternatives to FIELD\n");
   fprintf(ptr, "      -v             verbose output\n");
-  fprintf(ptr, "      -s             no output (overrides verbose option)\n");
+  fprintf(ptr, "      --silent       no output (overrides verbose option)\n");
   fprintf(ptr, "      -h             print this help and exit\n");
   fprintf(ptr, "      --script       no progress output (useful if output is routed to a file)\n");
+  fprintf(ptr, "      --version      print version number and exit\n");
 } //}}}
 
 // VerboseOutput() //{{{

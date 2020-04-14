@@ -42,7 +42,10 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
 
 int main(int argc, char *argv[]) {
 
-  // -h option - print help nd exit //{{{
+  // -h/--version options - print stuff and exit //{{{
+  if (VersionOption(argc, argv)) {
+    exit(0);
+  }
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       Help(argv[0], false);
@@ -72,9 +75,10 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-s") != 0 &&
+        strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-r") != 0 &&
         strcmp(argv[i], "--join") != 0 &&
         strcmp(argv[i], "-st1") != 0 &&

@@ -33,7 +33,7 @@ void CommonOptions(int argc, char **argv, char **vsf_file,
   } //}}}
   // -v option - verbose output
   *verbose = BoolOption(argc, argv, "-v");
-  // -s option - silent mode
+  // --silent option - silent mode
   SilentOption(argc, argv, verbose, silent);
   // --script - meant for when output is routed to file, so don't use flush & \r
   *script = BoolOption(argc, argv, "--script"); // do not use \r & co.
@@ -42,20 +42,36 @@ void CommonOptions(int argc, char **argv, char **vsf_file,
 // SilentOption() //{{{
 /**
  * Option to not print anything to stdout (or at least no system
- * definitions and no Step: #). Overrides verbose option. Argument: `-s`
+ * definitions and no Step: #). Overrides verbose option. Argument: `--silent`
  */
 void SilentOption(int argc, char **argv, bool *verbose, bool *silent) {
 
   *silent = false;
 
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-s") == 0) {
+    if (strcmp(argv[i], "--silent") == 0) {
       *verbose = false;
       *silent = true;
 
       break;
     }
   }
+} //}}}
+
+// VersionOption() //{{{
+/**
+ * Option to print version number of the program suite.
+ */
+bool VersionOption(int argc, char **argv) {
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--version") == 0) {
+      fprintf(stdout, "AnalysisTools by Karel Šindelka (KaGaSi), version %s\n", VERSION);
+      fprintf(stdout, "Download at https://github.com/KaGaSi/AnalysisTools/releases/tag/v%s\n", VERSION);
+      return true;
+    }
+  }
+
+  return false;
 } //}}}
 
 // ExcludeOption() //{{{

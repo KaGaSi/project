@@ -1,9 +1,9 @@
 # AnalysisTools
 
-A bundle of linux programs to analyse trajectories from coarse-grained
-molecular dynamics simulations. The programs work with
-[vsf/vcf files](https://github.com/olenz/vtfplugin/wiki/VTF-format)
-coordinate files.
+A bundle of linux programs to analyse trajectories from particle-based
+molecular simulations. The programs work with [vsf/vcf
+files](https://github.com/olenz/vtfplugin/wiki/VTF-format) coordinate
+files.
 
 Installation
 ===
@@ -21,6 +21,7 @@ command to first create unix makefile and then compile all programs:
 Version for debugging is compiled when `-DCMAKE_BUILD_TYPE=Debug` option is
 used with cmake; `../` represent the path to the repository (i.e., one
 directory up from `build`). The binaries will be in `bin` subdirectory of
-`build`. To compile individual, just run `make UTILITY_NAM`
+`build`. To compile individual utilities, just run `make UTILITY_NAME`
+after running `cmake`.
 
 Reference manual is included in the repository (refman.pdf).
