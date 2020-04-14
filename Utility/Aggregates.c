@@ -459,7 +459,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                   // test if 'i' is near 'j''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) <= sqdist) {
-                    (*Aggregate)[agg_j].Monomer[beads_j] = (*Bead)[i].Index;
+                    (*Aggregate)[agg_j].Monomer[beads_j] = i;
                     (*Aggregate)[agg_j].nMonomers++;
 
                     int aggs = (*Bead)[i].nAggregates;
@@ -489,7 +489,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                   // test if 'j' is near 'i''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) <= sqdist) {
-                    (*Aggregate)[agg_i].Monomer[mono_i] = (*Bead)[j].Index;
+                    (*Aggregate)[agg_i].Monomer[mono_i] = j;
                     (*Aggregate)[agg_i].nMonomers++;
 
                     int aggs = (*Bead)[j].nAggregates;
@@ -836,7 +836,7 @@ int main(int argc, char *argv[]) {
 
     // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
     if (joined_vcf[0] != '\0') {
-      PrintAggregate(Counts, Index, MoleculeType, Molecule, Bead, BeadType, Aggregate);
+//    PrintAggregate(Counts, Index, MoleculeType, Molecule, Bead, BeadType, Aggregate);
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
@@ -903,7 +903,7 @@ int main(int argc, char *argv[]) {
         // go through all monomeric beads in aggregate 'i'
         fprintf(out, "   %d :", Aggregate[i].nMonomers);
         for (int j = 0; j < Aggregate[i].nMonomers; j++) {
-          fprintf(out, " %d", Aggregate[i].Monomer[j]);
+          fprintf(out, " %d", Bead[Aggregate[i].Monomer[j]].Index);
         }
         putc('\n', out);
       }
