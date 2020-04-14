@@ -25,11 +25,15 @@ well.\n\n");
   fprintf(ptr, "      -c         input coordinate file in either vcf or vtf format (default: none)\n");
   fprintf(ptr, "      -v         verbose output\n");
   fprintf(ptr, "      -h         print this help and exit\n");
+  fprintf(ptr, "      --version  print version number and exit\n");
 } //}}}
 
 int main(int argc, char *argv[]) {
 
-  // -h option - print help and exit //{{{
+  // -h/--version options - print stuff and exit //{{{
+  if (VersionOption(argc, argv)) {
+    exit(0);
+  }
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       Help(argv[0], false);
@@ -55,6 +59,7 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-c") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
+        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-h") != 0) {
 
       ErrorOption(argv[i]);
