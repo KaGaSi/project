@@ -376,11 +376,11 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     // go through all molecules in aggregate 'i'
     for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
       int mol = (*Aggregate)[i].Molecule[j];
-      int beads = (*Aggregate)[i].nBeads;
 
       // copy all bead in molecule 'mol' to Aggregate struct
       int mtype = (*Molecule)[mol].Type;
       for (int k = 0; k < MoleculeType[mtype].nBeads; k++) {
+        int beads = (*Aggregate)[i].nBeads;
         (*Aggregate)[i].Bead[beads] = (*Molecule)[mol].Bead[k];
         (*Aggregate)[i].nBeads++;
 
