@@ -281,6 +281,21 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
 Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
                 BeadType *BeadType, Bead **Bead); //}}}
 
+// evaluate the contacts //{{{
+/**
+ * \brief Function evaluating contacts for aggregate detection
+ *
+ * \param [in]  Counts        numbers of beads, molecules, etc.
+ * \param [out] Aggregate     information about aggregates
+ * \param [in]  Molecule      information about individual molecules
+ * \param [in]  contacts      number of contacts for aggregate check
+ * \param [in]  contact       2D array containing number of contacts between molecules
+ */
+void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
+                      Molecule **Molecule,
+                      int contacts, int **contact);
+//}}
+
 // Min3() //{{{
 /**
  * \brief Function returning the lowest number from three floats.
