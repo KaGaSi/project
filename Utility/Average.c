@@ -132,7 +132,7 @@ int main ( int argc, char** argv ) {
 
     // get whole line - max 1000 chars //{{{
     char line[LINE];
-    fgets(line, strlen(line), fr); //}}}
+    fgets(line, sizeof(line), fr); //}}}
 
     strcpy(line, TrimLine(line)); // trim excess whitespace
 

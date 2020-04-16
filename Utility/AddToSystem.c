@@ -553,7 +553,7 @@ int main(int argc, char *argv[]) {
     // read molecule info //{{{
     for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
       // molecule name //{{{
-      fgets(line, strlen(line), in_add);
+      fgets(line, sizeof(line), in_add);
       strcpy(line, TrimLine(line)); // trim excess whitespace
       split[0] = strtok(line, " \t");
       strcpy(MoleculeType_add[i].Name, split[0]); //}}}
