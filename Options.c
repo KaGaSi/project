@@ -65,7 +65,8 @@ void SilentOption(int argc, char **argv, bool *verbose, bool *silent) {
 bool VersionOption(int argc, char **argv) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--version") == 0) {
-      fprintf(stdout, "AnalysisTools by Karel Šindelka (KaGaSi), version %s\n", VERSION);
+      fprintf(stdout, "AnalysisTools by Karel Šindelka (KaGaSi), version %s", VERSION);
+      fprintf(stdout, " (released %s)\n", DATE);
       fprintf(stdout, "Download at https://github.com/KaGaSi/AnalysisTools/releases/tag/v%s\n", VERSION);
       return true;
     }
