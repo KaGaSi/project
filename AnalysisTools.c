@@ -2220,10 +2220,8 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
   for (int i = 1; i < (*Counts).Molecules; i++) {
     // second molecule
     for (int j = 0; j < i; j++) {
-
       int agg_i = (*Molecule)[i].Aggregate;
       int agg_j = (*Molecule)[j].Aggregate;
-
       // molecules 'i' and 'j' are in contact //{{{
       if (contact[i][j] >= contacts) {
         // create new aggregate if 'j' isn'it in any //{{{
@@ -2289,6 +2287,27 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
       } //}}}
     }
   }
+
+  // if residue with highest id is in no aggregate, create it //{{{
+  // check if highest id residue is in aggregate //{{{
+  bool test = false;
+  for (int i = 0; i < (*Counts).Aggregates; i++) {
+    for (int j = 1; j < (*Aggregate)[i].nMolecules; j++) {
+      if ((*Aggregate)[i].Molecule[j] == ((*Counts).Molecules-1)) {
+        test = 1;
+      }
+    }
+  } //}}}
+
+  /* highest id residue not in any aggregate => create separate one */ //{{{
+  if (!test) {
+    int aggs = (*Counts).Aggregates;
+    (*Aggregate)[aggs].nMolecules = 1;
+    (*Aggregate)[aggs].Molecule[0] = (*Counts).Molecules - 1;
+
+    (*Counts).Aggregates++;
+  } //}}}
+  //}}}
 } //}}}
 
 // Min3() //{{{
@@ -2457,6 +2476,17 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts) {
         }
         for (int k = 0; k < mols; k++) {
           Swap(&(*Aggregate)[j].Molecule[k], &(*Aggregate)[j+1].Molecule[k]);
+        }
+        // switch bonded beads array
+        Swap(&(*Aggregate)[j].nBeads, &(*Aggregate)[j+1].nBeads);
+        int beads; // number of molecules in the larger aggregate
+        if ((*Aggregate)[j].nBeads > (*Aggregate)[j+1].nBeads) {
+          beads = (*Aggregate)[j].nBeads;
+        } else {
+          beads = (*Aggregate)[j+1].nBeads;
+        }
+        for (int k = 0; k < beads; k++) {
+          Swap(&(*Aggregate)[j].Bead[k], &(*Aggregate)[j+1].Bead[k]);
         }
         done = false;
       }

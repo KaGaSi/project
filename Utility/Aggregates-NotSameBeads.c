@@ -24,7 +24,7 @@ types 'A' and 'B' are given, it considers only 'A-B' pairs.\n\n");
   fprintf(ptr, "   %s <input> <distance> <contacts> ", cmd);
   fprintf(ptr, "<output.agg> <bead name(s)> <options>\n\n");
 
-  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <input>               input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <distance>            minimum distance for beads to be considered in contact\n");
   fprintf(ptr, "   <contacts>            minimum number of contacts for aggregate check\n");
   fprintf(ptr, "   <output.agg>          output filename with '.agg' ending\n");
@@ -267,124 +267,37 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
     }
   } //}}}
 
-  // evaluate the contacts //{{{
-  // first molecule
-  for (int i = 1; i < (*Counts).Molecules; i++) {
-    // second molecule
-    for (int j = 0; j < i; j++) {
-
-      int agg_i = (*Molecule)[i].Aggregate;
-      int agg_j = (*Molecule)[j].Aggregate;
-
-      // molecules 'i' and 'j' are in contact //{{{
-      if (contact[i][j] >= contacts) {
-        // create new aggregate if 'j' isn'it in any //{{{
-        if (agg_j == -1) {
-          agg_j = (*Counts).Aggregates;
-          (*Molecule)[j].Aggregate = agg_j;
-
-          (*Aggregate)[agg_j].nMolecules = 1;
-          (*Aggregate)[agg_j].Molecule[0] = j;
-
-          (*Counts).Aggregates++;
-        } //}}}
-
-        // add 'mol_i' to 'agg_j' aggregate (that contains 'mol_j' molecule) if 'i' isn't in an agg //{{{
-        if (agg_i == -1) {
-          int mols = (*Aggregate)[agg_j].nMolecules;
-          (*Aggregate)[agg_j].Molecule[mols] = i;
-          (*Aggregate)[agg_j].nMolecules++;
-
-          (*Molecule)[i].Aggregate = agg_j;
-        } //}}}
-
-        // 'mol_i' and 'mol_j' molecules are in different aggregate => unite aggregates
-        if (agg_i != -1 && agg_j != -1 && agg_i != agg_j) {
-
-          // add molecules from aggregate 'agg_i' to 'agg_j' //{{{
-          int mols = (*Aggregate)[agg_j].nMolecules;
-          (*Aggregate)[agg_j].nMolecules += (*Aggregate)[agg_i].nMolecules;
-
-          // copy molecule ids from Aggregate[agg_i-1] to Aggregate[agg_j-1]
-          int id1 = 0;
-          for (int k = mols; k < (*Aggregate)[agg_j].nMolecules; k++) {
-            int mol = (*Aggregate)[agg_i].Molecule[id1];
-            (*Aggregate)[agg_j].Molecule[k] = mol;
-            (*Molecule)[mol].Aggregate = agg_j;
-            id1++;
-          } //}}}
-
-          // move aggregates with id greater then agg_i to id-1 //{{{
-          for (int k = (agg_i+1); k < (*Counts).Aggregates; k++) {
-
-            (*Aggregate)[k-1].nMolecules = (*Aggregate)[k].nMolecules;
-
-            // move every molecule from aggregate 'k' to aggregate 'k-1'
-            for (int l = 0; l < (*Aggregate)[k].nMolecules; l++) {
-              int mol = (*Aggregate)[k].Molecule[l];
-              (*Aggregate)[k-1].Molecule[l] = mol;
-              (*Molecule)[mol].Aggregate = k - 1;
-            }
-          } //}}}
-
-          // reduce number of aggregates (two aggregates were merged)
-          (*Counts).Aggregates--;
-        } //}}}
-      } else if (agg_j == -1) { // or 'i' and 'j' aren't in contact and 'j' isn't in any aggregate =>  new aggregate for 'j' */ //{{{
-        int agg_j = (*Counts).Aggregates;
-        (*Molecule)[j].Aggregate = agg_j;
-
-        (*Aggregate)[agg_j].nMolecules = 1;
-        (*Aggregate)[agg_j].Molecule[0] = j;
-
-        (*Counts).Aggregates++;
-      } //}}}
-    }
-  } //}}}
-
-  // if residue with highest id is in no aggregate, create it //{{{
-  // check if highest id residue is in aggregate //{{{
-  bool test = false;
-  for (int i = 0; i < (*Counts).Aggregates; i++) {
-    for (int j = 1; j < (*Aggregate)[i].nMolecules; j++) {
-      if ((*Aggregate)[i].Molecule[j] == ((*Counts).Molecules-1)) {
-        test = 1;
-      }
-    }
-  } //}}}
-
-  /* highest id residue not in any aggregate => create separate one */ //{{{
-  if (!test) {
-    int aggs = (*Counts).Aggregates;
-    (*Aggregate)[aggs].nMolecules = 1;
-    (*Aggregate)[aggs].Molecule[0] = (*Counts).Molecules - 1;
-
-    (*Counts).Aggregates++;
-  } //}}}
-  //}}}
+  EvaluateContacts(&(*Counts), &(*Aggregate), &(*Molecule), contacts, contact);
 
   // sort molecules in aggregates according to ascending ids //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
     SortArray(&(*Aggregate)[i].Molecule, (*Aggregate)[i].nMolecules, 0);
   } //}}}
 
-  // sort aggregates according to ascending ids of first molecules
-  SortAggStruct(&(*Aggregate), *Counts);
-
   // assign bonded beads to Aggregate struct //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
     // go through all molecules in aggregate 'i'
     for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
       int mol = (*Aggregate)[i].Molecule[j];
-
       // copy all bead in molecule 'mol' to Aggregate struct
       int mtype = (*Molecule)[mol].Type;
       for (int k = 0; k < MoleculeType[mtype].nBeads; k++) {
         int beads = (*Aggregate)[i].nBeads;
         (*Aggregate)[i].Bead[beads] = (*Molecule)[mol].Bead[k];
         (*Aggregate)[i].nBeads++;
+      }
+    }
+  } //}}}
 
-        // every bead from molecule 'mol' is only in one aggregate
+  // sort aggregates according to ascending ids of first molecules
+  SortAggStruct(&(*Aggregate), *Counts);
+
+  // assign aggregate id to every bonded bead in the aggregate //{{{
+  for (int i = 0; i < (*Counts).Aggregates; i++) {
+    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+      int mol = (*Aggregate)[i].Molecule[j];
+      int mtype = (*Molecule)[mol].Type;
+      for (int k = 0; k < MoleculeType[mtype].nBeads; k++) {
         int id = (*Molecule)[mol].Bead[k];
         (*Bead)[id].nAggregates = 1;
         (*Bead)[id].Aggregate[0] = i;

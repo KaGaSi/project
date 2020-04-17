@@ -273,49 +273,35 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
   EvaluateContacts(&(*Counts), &(*Aggregate), &(*Molecule), contacts, contact);
 
-  // if residue with highest id is in no aggregate, create it //{{{
-  // check if highest id residue is in aggregate //{{{
-  bool test = false;
-  for (int i = 0; i < (*Counts).Aggregates; i++) {
-    for (int j = 1; j < (*Aggregate)[i].nMolecules; j++) {
-      if ((*Aggregate)[i].Molecule[j] == ((*Counts).Molecules-1)) {
-        test = 1;
-      }
-    }
-  } //}}}
-
-  /* highest id residue not in any aggregate => create separate one */ //{{{
-  if (!test) {
-    int aggs = (*Counts).Aggregates;
-    (*Aggregate)[aggs].nMolecules = 1;
-    (*Aggregate)[aggs].Molecule[0] = (*Counts).Molecules - 1;
-
-    (*Counts).Aggregates++;
-  } //}}}
-  //}}}
-
   // sort molecules in aggregates according to ascending ids //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
     SortArray(&(*Aggregate)[i].Molecule, (*Aggregate)[i].nMolecules, 0);
   } //}}}
-
-  // sort aggregates according to ascending ids of first molecules
-  SortAggStruct(&(*Aggregate), *Counts);
 
   // assign bonded beads to Aggregate struct //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
     // go through all molecules in aggregate 'i'
     for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
       int mol = (*Aggregate)[i].Molecule[j];
-
       // copy all bead in molecule 'mol' to Aggregate struct
       int mtype = (*Molecule)[mol].Type;
       for (int k = 0; k < MoleculeType[mtype].nBeads; k++) {
         int beads = (*Aggregate)[i].nBeads;
         (*Aggregate)[i].Bead[beads] = (*Molecule)[mol].Bead[k];
         (*Aggregate)[i].nBeads++;
+      }
+    }
+  } //}}}
 
-        // every bead from molecule 'mol' is only in one aggregate
+  // sort aggregates according to ascending ids of first molecules
+  SortAggStruct(&(*Aggregate), *Counts);
+
+  // assign aggregate id to every bonded bead in the aggregate //{{{
+  for (int i = 0; i < (*Counts).Aggregates; i++) {
+    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+      int mol = (*Aggregate)[i].Molecule[j];
+      int mtype = (*Molecule)[mol].Type;
+      for (int k = 0; k < MoleculeType[mtype].nBeads; k++) {
         int id = (*Molecule)[mol].Bead[k];
         (*Bead)[id].nAggregates = 1;
         (*Bead)[id].Aggregate[0] = i;
@@ -767,7 +753,6 @@ int main(int argc, char *argv[]) {
 
     // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
     if (joined_vcf[0] != '\0') {
-//    PrintAggregate(Counts, Index, MoleculeType, Molecule, Bead, BeadType, Aggregate);
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
       RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
