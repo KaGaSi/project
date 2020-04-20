@@ -6,6 +6,9 @@
 #ifndef _OPTIONS_H_
 #define _OPTIONS_H_
 
+#define VERSION "3.2-1"
+#define DATE "April 12, 2020"
+
 #include "Structs.h"
 
 // Help() //{{{
@@ -52,9 +55,18 @@ void VerboseLongOption(int argc, char **argv, bool *verbose); //}}}
  * \param [in]  argv         program's arguments
  * \param [out] verbose      bool for `-v` option (verbose output)
  * \param [out] silent       bool for this option
- * \return `true` or `false` for error on common options
  */
 void SilentOption(int argc, char **argv, bool *verbose, bool *silent); //}}}
+
+// VersionOption() //{{{
+/**
+ * \brief Option to print version number of the program suite.
+ *
+ * \param [in]  argc         number of program's arguments
+ * \param [in]  argv         program's arguments
+ * \return true/false if option is present/absetn
+ */
+bool VersionOption(int argc, char **argv); //}}}
 
 // ExcludeOption() //{{{
 /**

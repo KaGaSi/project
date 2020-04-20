@@ -39,11 +39,15 @@ be considered a safe estimate for tau.\n\n");
   fprintf(ptr, "   <n_blocks>        number of blocks for binning\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -h             print this help and exit\n");
+  fprintf(ptr, "      --version      print version number and exit\n");
 } //}}}
 
 int main ( int argc, char** argv ) {
 
-  // -h option - print help and exit //{{{
+  // -h/--version options - print stuff and exit //{{{
+  if (VersionOption(argc, argv)) {
+    exit(0);
+  }
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       Help(argv[0], false);
@@ -68,6 +72,7 @@ int main ( int argc, char** argv ) {
   // test if options are given correctly //{{{
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
+        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-h") != 0 ) {
 
       ErrorOption(argv[i]);
@@ -127,7 +132,7 @@ int main ( int argc, char** argv ) {
 
     // get whole line - max 1000 chars //{{{
     char line[LINE];
-    fgets(line, strlen(line), fr); //}}}
+    fgets(line, sizeof(line), fr); //}}}
 
     strcpy(line, TrimLine(line)); // trim excess whitespace
 

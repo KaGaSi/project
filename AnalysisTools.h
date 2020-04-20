@@ -73,6 +73,12 @@ void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead); //}}}
  */
 void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType); //}}}
 
+// PrintAggregate() //{{{
+/**
+ * Function printing Molecule structure.
+ */
+void PrintAggregate(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType, Aggregate *Aggregate); //}}}
+
 // ReadStructure() //{{{
 /**
  * \brief Function reading information from dl_meso FIELD and vsf
