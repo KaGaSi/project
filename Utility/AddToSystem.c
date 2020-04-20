@@ -8,6 +8,11 @@
 #include "../Options.h"
 #include "../Errors.h"
 
+// TODO: check the whole thing
+// 1) possible mess-ups in struct names
+// 2) check flags .Use and .Write and what they're used for
+// 3) weird (somehow) generation procedure... sometimes leads to unexplainable segfaults
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -54,7 +59,10 @@ accompanied by -bt option.\n\n");
 
 int main(int argc, char *argv[]) {
 
-  // -h option - print help and exit //{{{
+  // -h/--version options - print stuff and exit //{{{
+  if (VersionOption(argc, argv)) {
+    exit(0);
+  }
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       Help(argv[0], false);
@@ -80,9 +88,10 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-s") != 0 &&
+        strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-vtf") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
@@ -323,7 +332,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Write = BeadType[i].Use; // use Write flag to decide which bead types to use
     BeadType[i].Use = false;
-  }//}}}
+  } //}}}
 
   // -bt <name(s)> - specify what bead types to use //{{{
   if (BeadTypeOption(argc, argv, "-bt", false, Counts, &BeadType)) {
@@ -549,7 +558,7 @@ int main(int argc, char *argv[]) {
     // read molecule info //{{{
     for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
       // molecule name //{{{
-      fgets(line, strlen(line), in_add);
+      fgets(line, sizeof(line), in_add);
       strcpy(line, TrimLine(line)); // trim excess whitespace
       split[0] = strtok(line, " \t");
       strcpy(MoleculeType_add[i].Name, split[0]); //}}}
@@ -1057,6 +1066,7 @@ int main(int argc, char *argv[]) {
   srand(time(0));
 
   // count unbonded neutral beads //{{{
+  // TODO: change - it doesn't seem to take into account -xb option
   int can_be_exchanged = 0;
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
     int btype = Bead[i].Type;
@@ -1084,7 +1094,7 @@ int main(int argc, char *argv[]) {
 
       if (add_vsf[0] == '\0') { // randomly place monomers if FIELD-like file is used
         double min_dist;
-        if (lowest_dist != -1 || highest_dist != -1) { // ||
+        if (lowest_dist != -1 || highest_dist != -1) {
           do {
             random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
             random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
@@ -1093,7 +1103,6 @@ int main(int argc, char *argv[]) {
             min_dist = SQR(BoxLength.x * 100);
             for (int j = 0; j < Counts.Beads; j++) {
               int btype = Bead[j].Type;
-              // TODO: is that thing below true? ...anyway, use Counts_new now
               // j can be added monomeric bead, so it's type can be higher than the number of types
               if (btype < Counts.TypesOfBeads && BeadType[btype].Use) {
                 Vector dist;
@@ -1102,10 +1111,6 @@ int main(int argc, char *argv[]) {
                 if (dist.x < min_dist) {
                   min_dist = dist.x;
                 }
-              }
-              if ((lowest_dist != -1 && lowest_dist >= min_dist) ||
-                  (highest_dist != -1 && highest_dist <= min_dist)) {
-                break;
               }
             }
           } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
