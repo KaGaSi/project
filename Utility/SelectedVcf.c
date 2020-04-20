@@ -568,6 +568,17 @@ int main(int argc, char *argv[]) {
       ErrorFileOpen(output_vcf, 'a');
       exit(1);
     }
+
+    // wrap coordinates? //{{{
+    if (wrap) {
+      RestorePBC(Counts, BoxLength, &Bead);
+    } // }}}
+
+    // join molecules? //{{{
+    if (join) {
+      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+    } //}}}
+
     WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
     fclose(out);
 
