@@ -1061,6 +1061,7 @@ int main(int argc, char *argv[]) {
   srand(time(0));
 
   // count unbonded neutral beads //{{{
+  // TODO: change - it doesn't seem to take into account -xb option
   int can_be_exchanged = 0;
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
     int btype = Bead[i].Type;

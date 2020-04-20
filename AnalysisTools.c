@@ -2035,8 +2035,8 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
 // RestorePBC() //{{{
 /**
- * Function to restore removed periodic boundary conditions. Used in case
- * of cell linked list, because it needs coordinates <0, BoxLength>.
+ * Function to restore removed periodic boundary conditions. Used also in case
+ * of cell linked lists, because they need coordinates <0, BoxLength>.
  */
 void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead) {
 
