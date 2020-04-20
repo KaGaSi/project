@@ -6,8 +6,8 @@
 #ifndef _OPTIONS_H_
 #define _OPTIONS_H_
 
-#define VERSION "3.2-1"
-#define DATE "April 12, 2020"
+#define VERSION "3.2-2"
+#define DATE "April 20, 2020"
 
 #include "Structs.h"
 
