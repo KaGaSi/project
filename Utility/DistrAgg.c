@@ -43,7 +43,10 @@ all aggregates with given size).\n\n");
 
 int main(int argc, char *argv[]) {
 
-  // -h option - print help and exit //{{{
+  // -h/--version options - print stuff and exit //{{{
+  if (VersionOption(argc, argv)) {
+    exit(0);
+  }
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       Help(argv[0], false);
@@ -70,9 +73,10 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-i") != 0 &&
         strcmp(argv[i], "-b") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
-        strcmp(argv[i], "-s") != 0 &&
+        strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--script") != 0 &&
+        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
@@ -584,14 +588,13 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // print averages to output file (only if non-zero eligible aggregates) //{{{
+    // print averages to output file //{{{
+    if ((out = fopen(output_avg, "a")) == NULL) {
+      ErrorFileOpen(output_avg, 'a');
+      exit(1);
+    }
+    fprintf(out, "%5d", count_step); // step
     if (aggs_step > 0) {
-      if ((out = fopen(output_avg, "a")) == NULL) {
-        ErrorFileOpen(output_avg, 'a');
-        exit(1);
-      }
-
-      fprintf(out, "%5d", count_step); // step
       fprintf(out, " %10.5f", avg_mass_n_step[0]/aggs_step); // <mass>_n
       if (m_option) {
         fprintf(out, " %10.5f", avg_mass_n_step[1]/aggs_step); // <mass>_n (whole agg mass)
@@ -616,11 +619,35 @@ int main(int argc, char *argv[]) {
       if (m_option) {
         fprintf(out, " %10.5f", avg_As_z_step[1]/avg_mass_w_step[1]); // <As>_z (whole agg mass)
       }
-      fprintf(out, " %5d", aggs_step); // number of aggregates in the step
-
-      putc('\n', out);
-      fclose(out); //}}}
+    } else { // zero everywhere if there are no aggregates of the specified type
+      fprintf(out, " %10.5f", 0.0); // <mass>_n
+      if (m_option) {
+        fprintf(out, " %10.5f", 0.0); // <mass>_n (whole agg mass)
+      }
+      fprintf(out, " %10.5f", 0.0); // <mass>_w
+      if (m_option) {
+        fprintf(out, " %10.5f", 0.0); // <mass>_w (whole agg mass)
+      }
+      fprintf(out, " %10.5f", 0.0); // <mass>_z
+      if (m_option) {
+        fprintf(out, " %10.5f", 0.0); // <mass>_z (whole agg mass)
+      }
+      fprintf(out, " %10.5f", 0.0); // <As>_n
+      if (m_option) {
+        fprintf(out, " %10.5f", 0.0); // <As>_n (whole agg)
+      }
+      fprintf(out, " %10.5f", 0.0); // <As>_w
+      if (m_option) {
+        fprintf(out, " %10.5f", 0.0); // <As>_w (whole agg mass)
+      }
+      fprintf(out, " %10.5f", 0.0); // <As>_z
+      if (m_option) {
+        fprintf(out, " %10.5f", 0.0); // <As>_z (whole agg mass)
+      }
     }
+    fprintf(out, " %5d", aggs_step); // number of aggregates in the step
+    putc('\n', out);
+    fclose(out); //}}}
   }
   fclose(agg);
 
