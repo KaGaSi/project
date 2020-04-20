@@ -8,6 +8,11 @@
 #include "../Options.h"
 #include "../Errors.h"
 
+// TODO: check the whole thing
+// 1) possible mess-ups in struct names
+// 2) check flags .Use and .Write and what they're used for
+// 3) weird (somehow) generation procedure... sometimes leads to unexplainable segfaults
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -327,7 +332,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Write = BeadType[i].Use; // use Write flag to decide which bead types to use
     BeadType[i].Use = false;
-  }//}}}
+  } //}}}
 
   // -bt <name(s)> - specify what bead types to use //{{{
   if (BeadTypeOption(argc, argv, "-bt", false, Counts, &BeadType)) {
@@ -1089,7 +1094,7 @@ int main(int argc, char *argv[]) {
 
       if (add_vsf[0] == '\0') { // randomly place monomers if FIELD-like file is used
         double min_dist;
-        if (lowest_dist != -1 || highest_dist != -1) { // ||
+        if (lowest_dist != -1 || highest_dist != -1) {
           do {
             random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
             random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
@@ -1098,7 +1103,6 @@ int main(int argc, char *argv[]) {
             min_dist = SQR(BoxLength.x * 100);
             for (int j = 0; j < Counts.Beads; j++) {
               int btype = Bead[j].Type;
-              // TODO: is that thing below true? ...anyway, use Counts_new now
               // j can be added monomeric bead, so it's type can be higher than the number of types
               if (btype < Counts.TypesOfBeads && BeadType[btype].Use) {
                 Vector dist;
@@ -1107,10 +1111,6 @@ int main(int argc, char *argv[]) {
                 if (dist.x < min_dist) {
                   min_dist = dist.x;
                 }
-              }
-              if ((lowest_dist != -1 && lowest_dist >= min_dist) ||
-                  (highest_dist != -1 && highest_dist <= min_dist)) {
-                break;
               }
             }
           } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||
