@@ -588,9 +588,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
     // split the line into array //{{{
     char *split[30];
     split[0] = strtok(line, " \t:");
-    int i = 0;
-    while (split[i] != NULL && i < 29) {
-      split[++i] = strtok(NULL, " \t:");
+    int words = 0;
+    while (split[words] != NULL && words < 29) {
+      split[++words] = strtok(NULL, " \t:");
     } //}}}
 
     // b(ond) lines in the form 'bond <int>: <int>'
@@ -605,6 +605,30 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       if (bonds[mol_type] == mol_id) {
         (*MoleculeType)[mol_type].nBonds++;
       }
+    // should something be behind bonds section, it can be coordinates (vtf file):
+    // timestep starting line can be can be
+    // 1) t(imestep) ...and nothing behind it
+    // 2) t(imestep) o(rdered)/i(ndexed)
+    // 3) o(rdered)/i(ndexed)
+    // or pbc line: 4) pbc
+    } else if ((split[0][0] == 't' && words == 1) || // 1)
+               (split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) || // 2)
+               (split[0][0] == 'o' || split[0][0] == 'i') || // 3)
+               strcmp("pbc", split[0]) == 0) { // 4)
+      break;
+    // exit with error if not empty line or comment
+    } else if (split[0][0] != '\n' && // empty line
+               split[0][0] != '#') { // comment
+      fprintf(stderr, "\nError - %s: unrecognised line '%s", vsf_file, split[0]);
+      for (int i = 1; i < (words-1); i++) {
+        fprintf(stderr, " %s", split[i]);
+      }
+      // remove newline if at the end of the last split[]
+      if (split[words-1][strlen(split[words-1])-1] == '\n') {
+        split[words-1][strlen(split[words-1])-1] = '\0';
+      }
+      fprintf(stderr, " %s'\n\n", split[words-1]);
+      exit(1);
     }
   } //}}}
 
@@ -683,9 +707,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
     // split the line into array //{{{
     char *split[30];
     split[0] = strtok(line, " \t:");
-    int i = 0;
-    while (split[i] != NULL && i < 29) {
-      split[++i] = strtok(NULL, " \t:");
+    int words = 0;
+    while (split[words] != NULL && words < 29) {
+      split[++words] = strtok(NULL, " \t:");
     } //}}}
     if (split[0][0] == 'b') { // b(ond) lines
       int mol_id = (*Bead)[atoi(split[1])].Molecule;
@@ -714,6 +738,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
         }
         count_bonds[mol_type]++;
       }
+    } else if (split[0][0] != '\n' && split[0][0] != '#') {
+      break;
     }
   }
   free(count_bonds);
@@ -776,10 +802,20 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       // 't(imestep)' line
       if (split[0][0] == 't' || split[0][0] == 'T') {
         split[1] = strtok(NULL, " \t");
-        if (split[1][0] != 'o' && split[1][0] != 'O' &&
+        // if only 't(imestep)' present, assume ordered timestep
+        if (split[1] == NULL) {
+          str[0] = 'o';
+          break;
+        // otherwise, error if 'i(ndexed)' or 'o(ordered)' not present
+        } else if (split[1][0] != 'o' && split[1][0] != 'O' &&
             split[1][0] != 'i' && split[1][0] != 'I') {
-          fprintf(stderr, "\nError: %s - no 'i(ndexed)' or 'o(rdered)' keyword after 't(imestep)' keyword\n", vcf_file);
+          // remove newline if at the end of split[1]
+          if (split[1][strlen(split[1])-1] == '\n') {
+            split[1][strlen(split[1])-1] = '\0';
+          }
+          fprintf(stderr, "\nError: %s - unrecognised keywords '%s %s'", vsf_file, split[0], split[1]);
           exit(1);
+        // save 'i(ndexed)' or 'o(rdered)' timestep
         } else {
           str[0] = split[1][0];
           break;
@@ -2511,6 +2547,10 @@ char * TrimLine(char *line) {
       trimmed[i] = trimmed[i+1];
     }
     length--;
+  }
+  // 3) if only 1 character remains, make it into newline (otherwise segfault happens)
+  if (length == 1 && (trimmed[0] == ' ' || trimmed[0] == '\t')) {
+    trimmed[0] = '\n';
   }
 
   return trimmed;
