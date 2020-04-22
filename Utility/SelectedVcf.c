@@ -276,30 +276,43 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get pbc from coordinate file //{{{
-  char str[LINE];
-  // skip till 'pbc' keyword //{{{
-  do {
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
+  char line[LINE];
+  Vector BoxLength;
+  while (fgets(line, sizeof(line), vcf)) {
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+
+    // split the line into array //{{{
+    char *split[30];
+    split[0] = strtok(line, " \t:");
+    int words = 0;
+    while (split[words] != NULL && words < 29) {
+      split[++words] = strtok(NULL, " \t:");
+    } //}}}
+
+    if (strcmp(split[0], "pbc") == 0) {
+      BoxLength.x = atof(split[0]);
+      BoxLength.y = atof(split[1]);
+      BoxLength.z = atof(split[2]);
+      break;
+    // only certain keywords besides pbc can be present before the first coordinate block
+    // 1) t(imestep) ... starting the coordinate block
+    // 2) t(imestep) i(ndexed)/o(ordered) ... starting the coordinate block
+    // 3) i(ndexed)/o(ordered) ... starting the coordinate block
+    // 4) a(tom) ... in case of vtf file
+    // 5) b(ond) ... in case of vtf file
+    // 6) empty line
+    // 7) comment
+    } else if (!(split[0][0] == 't' && words == 1) && // 1)
+               !(split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) && // 2)
+               !(split[0][0] == 'o' || split[0][0] == 'i') && // 3)
+               split[0][0] != 'a' && // 4)
+               split[0][0] != 'b' && // 5)
+               split[0][0] != '\n' && // 6)
+               split[0][0] != '#') { // 7)
+      fprintf(stderr, "Error");
       exit(1);
     }
-  } while (strcmp(str, "pbc") != 0); //}}}
-
-  // read pbc //{{{
-  Vector BoxLength;
-  char line[LINE];
-  fgets(line, sizeof(line), vcf);
-  // split the line into array
-  char *split[30];
-  split[0] = strtok(line, " \t");
-  int i = 0;
-  while (split[i] != NULL && i < 29) {
-    split[++i] = strtok(NULL, " \t");
-  }
-  BoxLength.x = atof(split[0]);
-  BoxLength.y = atof(split[1]);
-  BoxLength.z = atof(split[2]); //}}}
-  //}}}
+  }; //}}}
 
   // print information - verbose output //{{{
   if (verbose) {

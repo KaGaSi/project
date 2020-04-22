@@ -619,15 +619,20 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
     // exit with error if not empty line or comment
     } else if (split[0][0] != '\n' && // empty line
                split[0][0] != '#') { // comment
-      fprintf(stderr, "\nError - %s: unrecognised line '%s", vsf_file, split[0]);
-      for (int i = 1; i < (words-1); i++) {
-        fprintf(stderr, " %s", split[i]);
-      }
-      // remove newline if at the end of the last split[]
+      // remove newline if at the end of the last split[] of the wrong line
       if (split[words-1][strlen(split[words-1])-1] == '\n') {
         split[words-1][strlen(split[words-1])-1] = '\0';
       }
-      fprintf(stderr, " %s'\n\n", split[words-1]);
+      // print the wrong line
+      fprintf(stderr, "\nError - %s: unrecognised line '%s", vsf_file, split[0]);
+      for (int i = 1; i < words; i++) {
+        fprintf(stderr, " %s", split[i]);
+      }
+      fprintf(stderr, "'\n");
+      if (split[0][0] >= '0' && split[0][0] <= '9') {
+        fprintf(stderr, "        Possibly missing 't(imestep) i(ndexed)/o(rdered)' line\n");
+      }
+      putc('\n', stderr);
       exit(1);
     }
   } //}}}
@@ -809,13 +814,13 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
         // otherwise, error if 'i(ndexed)' or 'o(ordered)' not present
         } else if (split[1][0] != 'o' && split[1][0] != 'O' &&
             split[1][0] != 'i' && split[1][0] != 'I') {
-          // remove newline if at the end of split[1]
+          // remove newline if present at the end of split[1]
           if (split[1][strlen(split[1])-1] == '\n') {
             split[1][strlen(split[1])-1] = '\0';
           }
           fprintf(stderr, "\nError: %s - unrecognised keywords '%s %s'", vsf_file, split[0], split[1]);
           exit(1);
-        // save 'i(ndexed)' or 'o(rdered)' timestep
+        // if no error, find if 'i(ndexed)' or 'o(rdered)' timestep
         } else {
           str[0] = split[1][0];
           break;
