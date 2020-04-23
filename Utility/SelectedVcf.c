@@ -275,44 +275,50 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char line[LINE];
-  Vector BoxLength;
-  while (fgets(line, sizeof(line), vcf)) {
-    strcpy(line, TrimLine(line)); // trim excess whitespace
+  Vector BoxLength = GetPBC(vcf, input_coor);
+//// get pbc from coordinate file //{{{
+//char line[LINE], line2[LINE];
+//Vector BoxLength;
+//while (fgets(line, sizeof(line), vcf)) {
+//  strcpy(line, TrimLine(line)); // trim excess whitespace
+//  strcpy(line2, line); // copy line to print in case of error
 
-    // split the line into array //{{{
-    char *split[30];
-    split[0] = strtok(line, " \t:");
-    int words = 0;
-    while (split[words] != NULL && words < 29) {
-      split[++words] = strtok(NULL, " \t:");
-    } //}}}
+//  // split the line into array //{{{
+//  char *split[30];
+//  split[0] = strtok(line, " \t:");
+//  int words = 0;
+//  while (split[words] != NULL && words < 29) {
+//    split[++words] = strtok(NULL, " \t:");
+//  } //}}}
 
-    if (strcmp(split[0], "pbc") == 0) {
-      BoxLength.x = atof(split[0]);
-      BoxLength.y = atof(split[1]);
-      BoxLength.z = atof(split[2]);
-      break;
-    // only certain keywords besides pbc can be present before the first coordinate block
-    // 1) t(imestep) ... starting the coordinate block
-    // 2) t(imestep) i(ndexed)/o(ordered) ... starting the coordinate block
-    // 3) i(ndexed)/o(ordered) ... starting the coordinate block
-    // 4) a(tom) ... in case of vtf file
-    // 5) b(ond) ... in case of vtf file
-    // 6) empty line
-    // 7) comment
-    } else if (!(split[0][0] == 't' && words == 1) && // 1)
-               !(split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) && // 2)
-               !(split[0][0] == 'o' || split[0][0] == 'i') && // 3)
-               split[0][0] != 'a' && // 4)
-               split[0][0] != 'b' && // 5)
-               split[0][0] != '\n' && // 6)
-               split[0][0] != '#') { // 7)
-      fprintf(stderr, "Error");
-      exit(1);
-    }
-  }; //}}}
+//  if (strcmp(split[0], "pbc") == 0) {
+//    BoxLength.x = atof(split[1]);
+//    BoxLength.y = atof(split[2]);
+//    BoxLength.z = atof(split[3]);
+//    break;
+//  // only certain keywords besides pbc can be present before the first coordinate block
+//  // 1) t(imestep) ... starting the coordinate block
+//  // 2) t(imestep) i(ndexed)/o(ordered) ... starting the coordinate block
+//  // 3) i(ndexed)/o(ordered) ... starting the coordinate block
+//  // 4) a(tom) ... in case of vtf file
+//  // 5) b(ond) ... in case of vtf file
+//  // 6) empty line
+//  // 7) comment
+//  } else if (!(split[0][0] == 't' && words == 1) && // 1)
+//             !(split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) && // 2)
+//             !(split[0][0] == 'o' || split[0][0] == 'i') && // 3)
+//             split[0][0] != 'a' && // 4)
+//             split[0][0] != 'b' && // 5)
+//             split[0][0] != '\n' && // 6)
+//             split[0][0] != '#') { // 7)
+//    fprintf(stderr, "\nError - %s: unrecognised line '%s'\n", input_coor, line2);
+//    if (line2[0] >= '0' && line2[0] <= '9' && words > 2) {
+//      fprintf(stderr, "        Possibly missing pbc line\n");
+//    }
+//    putc('\n', stderr);
+//    exit(1);
+//  }
+//}; //}}}
 
   // print information - verbose output //{{{
   if (verbose) {

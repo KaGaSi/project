@@ -8,6 +8,16 @@
 
 #include "Structs.h"
 
+// GetPBC() //{{{
+/*
+ * \brief Function to get box dimensions.
+ *
+ * \param [in] vcf         opened coordinate file
+ * \param [in] input_coor  name of the coordinate file
+ * \return vector with box dimensions
+ */
+Vector GetPBC(FILE *vcf, char *input_coor); //}}}
+
 // CommonHelp() //{{{
 /**
  * \brief Function printing help for common options.
