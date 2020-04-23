@@ -289,40 +289,23 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // 1st vcf file - skip till 'pbc' keyword //{{{
-  do {
-    if (fscanf(vcf_1, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor_1);
-    }
-  } while (strcmp(str, "pbc") != 0);
-
-  // read pbc
-  Vector BoxLength;
-  if (fscanf(vcf_1, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor_1);
+  // get to the pbc line in both input files //{{{
+  Vector BoxLength = GetPBC(vcf_1, input_coor_1);
+  Vector BoxLength_2 = GetPBC(vcf_2, input_coor_2);
+  // check that the box sizes are the same
+  if (BoxLength.x != BoxLength_2.x ||
+      BoxLength.y != BoxLength_2.y ||
+      BoxLength.z != BoxLength_2.z) {
+    fprintf(stderr, "\nError - different box sizes in provided coordinate files\n");
+    fprintf(stderr, "          %s: %lf %lf %lf\n", input_coor_1, BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stderr, "          %s: %lf %lf %lf\n\n", input_coor_1, BoxLength_2.x, BoxLength_2.y, BoxLength_2.z);
     exit(1);
-  }
-  // skip remainder of pbc line
-  while (getc(vcf_1) != '\n')
-    ; //}}}
+  } //}}}
 
-  // 2nd vcf file - skip till 'pbc' keword //{{{
-  do {
-    if (fscanf(vcf_2, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor_2);
-    }
-  } while (strcmp(str, "pbc") != 0);
-  // skip remainder of pbc line
-  while (getc(vcf_2) != '\n')
-    ;
-
-  // print pbc if verbose output
+  // print pbc if verbose output //{{{
   if (verbose) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
-  //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
