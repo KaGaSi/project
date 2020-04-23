@@ -346,31 +346,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // skip till 'pbc' keyword //{{{
-  do {
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
-      exit(1);
-    }
-  } while (strcmp(str, "pbc") != 0); //}}}
-
-  // read pbc //{{{
-  Vector BoxLength;
-  char line[LINE];
-  fgets(line, sizeof(line), vcf);
-  // split the line into array
-  char *split[30];
-  split[0] = strtok(line, " \t");
-  int i = 0;
-  while (split[i] != NULL && i < 29) {
-    split[++i] = strtok(NULL, " \t");
-  }
-  BoxLength.x = atof(split[0]);
-  BoxLength.y = atof(split[1]);
-  BoxLength.z = atof(split[2]); //}}}
-  //}}}
+  Vector BoxLength = GetPBC(vcf, input_coor);
 
   // print original system //{{{
   if (verbose) {
@@ -477,8 +453,10 @@ int main(int argc, char *argv[]) {
 
     // read number of bead types //{{{
     // 1) skip till 'species' keyword
+    char *split[30];
     do {
       // get whole line - max 1000 chars
+      char line[LINE];
       fgets(line, sizeof(line), in_add);
 
       // first string of the line
@@ -498,6 +476,7 @@ int main(int argc, char *argv[]) {
 
     // read bead type info //{{{
     for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
+      char line[LINE];
       fgets(line, sizeof(line), in_add);
       // bead name
       split[0] = strtok(line, " \t");
@@ -535,6 +514,7 @@ int main(int argc, char *argv[]) {
     // 1) skip till 'molecule' keyword
     do {
       // get whole line - max 1000 chars
+      char line[LINE];
       fgets(line, sizeof(line), in_add);
 
       // first string of the line
@@ -557,6 +537,7 @@ int main(int argc, char *argv[]) {
 
     // read molecule info //{{{
     for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
+      char line[LINE];
       // molecule name //{{{
       fgets(line, sizeof(line), in_add);
       strcpy(line, TrimLine(line)); // trim excess whitespace
