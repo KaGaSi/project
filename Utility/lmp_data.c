@@ -145,30 +145,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // skip till 'pbc' keyword
-  do {
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
-    }
-  } while (strcmp(str, "pbc") != 0);
-
-  // read pbc
-  Vector BoxLength;
-  if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_coor);
-    exit(1);
-  }
-
-  // skip remainder of pbc line
-  while (getc(vcf) != '\n')
-    ;
-
-  // print pbc if verbose output
-  if (verbose) {
-    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
-  } //}}}
+  Vector BoxLength = GetPBC(vcf, input_coor);
 
   // print information - verbose output //{{{
   if (verbose) {
