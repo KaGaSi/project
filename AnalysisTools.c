@@ -7,6 +7,59 @@
 #include "AnalysisTools.h"
 #include "Errors.h"
 
+// GetPBC() //{{{
+/*
+ * Function to get box dimensions from the provided coordinate file.
+ */
+Vector GetPBC(FILE *vcf, char *input_coor) {
+
+  Vector BoxLength;
+
+  char line[LINE], line2[LINE];
+  while (fgets(line, sizeof(line), vcf)) {
+    strcpy(line, TrimLine(line)); // trim excess whitespace
+    strcpy(line2, line); // copy line to print in case of error
+
+    // split the line into array //{{{
+    char *split[30];
+    split[0] = strtok(line, " \t:");
+    int words = 0;
+    while (split[words] != NULL && words < 29) {
+      split[++words] = strtok(NULL, " \t:");
+    } //}}}
+
+    if (strcmp(split[0], "pbc") == 0) {
+      BoxLength.x = atof(split[1]);
+      BoxLength.y = atof(split[2]);
+      BoxLength.z = atof(split[3]);
+      break;
+    // only certain keywords besides pbc can be present before the first coordinate block
+    // 1) t(imestep) ... starting the coordinate block
+    // 2) t(imestep) i(ndexed)/o(ordered) ... starting the coordinate block
+    // 3) i(ndexed)/o(ordered) ... starting the coordinate block
+    // 4) a(tom) ... in case of vtf file
+    // 5) b(ond) ... in case of vtf file
+    // 6) empty line
+    // 7) comment
+    } else if (!(split[0][0] == 't' && words == 1) && // 1)
+               !(split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) && // 2)
+               !(split[0][0] == 'o' || split[0][0] == 'i') && // 3)
+               split[0][0] != 'a' && // 4)
+               split[0][0] != 'b' && // 5)
+               split[0][0] != '\n' && // 6)
+               split[0][0] != '#') { // 7)
+      fprintf(stderr, "\nError - %s: unrecognised line '%s'\n", input_coor, line2);
+      if (line2[0] >= '0' && line2[0] <= '9' && words > 2) {
+        fprintf(stderr, "        Possibly missing pbc line\n");
+      }
+      putc('\n', stderr);
+      exit(1);
+    }
+  };
+
+  return BoxLength;
+} //}}}
+
 // ReadFIELD() - auxiliary for ReadStructure() //{{{
 /*
  * Function reading information about bead types (mass and charge) from
@@ -582,8 +635,10 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     bonds[i] = -1;
   } //}}}
+  char line2[LINE];
   while (fgets(line, sizeof(line), vsf)) {
     strcpy(line, TrimLine(line)); // trim excess whitespace
+    strcpy(line2, line); // copy line to print in case of error
 
     // split the line into array //{{{
     char *split[30];
@@ -605,31 +660,28 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       if (bonds[mol_type] == mol_id) {
         (*MoleculeType)[mol_type].nBonds++;
       }
-    // should something be behind bonds section, it can be coordinates (vtf file):
-    // timestep starting line can be can be
-    // 1) t(imestep) ...and nothing behind it
-    // 2) t(imestep) o(rdered)/i(ndexed)
-    // 3) o(rdered)/i(ndexed)
-    // or pbc line: 4) pbc
+    /* Break while loop if at end of bond section
+     * Excepting comments or white lines, behind bonds section can be either coordinates (vtf file):
+     * timestep starting line can be
+     * 1) t(imestep) ...and nothing behind it
+     * 2) t(imestep) o(rdered)/i(ndexed)
+     * 3) o(rdered)/i(ndexed)
+     * or pbc line:
+     * 4) pbc <number> <number> <number>
+     */
     } else if ((split[0][0] == 't' && words == 1) || // 1)
                (split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) || // 2)
                (split[0][0] == 'o' || split[0][0] == 'i') || // 3)
-               strcmp("pbc", split[0]) == 0) { // 4)
+               (strcmp("pbc", split[0]) == 0 && words > 3 && // 4)
+                split[1][0] >= '0' && split[1][0] && // 4) 1st <number>
+                split[2][0] >= '0' && split[1][0] && // 4) 2nd <number>
+                split[3][0] >= '0' && split[1][0])) { // 4) 3rd <number>
       break;
     // exit with error if not empty line or comment
     } else if (split[0][0] != '\n' && // empty line
                split[0][0] != '#') { // comment
-      // remove newline if at the end of the last split[] of the wrong line
-      if (split[words-1][strlen(split[words-1])-1] == '\n') {
-        split[words-1][strlen(split[words-1])-1] = '\0';
-      }
-      // print the wrong line
-      fprintf(stderr, "\nError - %s: unrecognised line '%s", vsf_file, split[0]);
-      for (int i = 1; i < words; i++) {
-        fprintf(stderr, " %s", split[i]);
-      }
-      fprintf(stderr, "'\n");
-      if (split[0][0] >= '0' && split[0][0] <= '9') {
+      fprintf(stderr, "\nError - %s: unrecognised line '%s'\n", vsf_file, line2);
+      if (line2[0] >= '0' && line2[0] <= '9' && words > 2) {
         fprintf(stderr, "        Possibly missing 't(imestep) i(ndexed)/o(rdered)' line\n");
       }
       putc('\n', stderr);
