@@ -7,6 +7,299 @@
 #include "../Options.h"
 #include "../Errors.h"
 
+/*
+ * TODO: move monomeric beads towards the aggregate
+  // put monomeric beads in contact with their aggregates //{{{
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    // go through monomeric beads in the aggregate
+    for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+      int id1 = Aggregate[i].Monomer[j]; // id_move_to = -1;
+      // find smallest distance between the monomeric bead and bonded beads //{{{
+      double min_dist = 1000000;
+      for (int k = 0; k < Aggregate[i].nBeads; k++) {
+        int id2 = Aggregate[i].Bead[k];
+        if (BeadType[(*Bead)[id2].Type].Use) {
+          Vector dist;
+          dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+          dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+          dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+          double d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+          if (d < min_dist) {
+            min_dist = d;
+          }
+          // stop if the monomeric bead is confirmed close to the aggregate
+          if (min_dist <= distance) {
+            break;
+          }
+        }
+      } //}}}
+
+      // move monomer if it's too far from aggregate //{{{
+      while (min_dist > distance) {
+        double d, min_dist_2;
+        if (id1 == 10) {
+          printf("before -x %lf, (%lf, %lf, %lf)\n", min_dist,
+                                                    (*Bead)[10].Position.x,
+                                                    (*Bead)[10].Position.y,
+                                                    (*Bead)[10].Position.z);
+        }
+        // test moving by -BoxLength.x //{{{
+        if (min_dist > distance) {
+          (*Bead)[id1].Position.x -= BoxLength.x;
+          // find smallest distance between the monomeric bead and bonded beads //{{{
+          min_dist_2 = 1000000;
+          for (int k = 0; k < Aggregate[i].nBeads; k++) {
+            int id2 = Aggregate[i].Bead[k];
+            Vector dist;
+            dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+            dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+            dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+            d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+            if (d < min_dist_2) {
+              min_dist_2 = d;
+            }
+            // stop if the monomeric bead is confirmed close to the aggregate
+            if (min_dist_2 <= distance) {
+              break;
+            }
+          } //}}}
+          if (min_dist_2 > min_dist) {
+            (*Bead)[id1].Position.x += BoxLength.x;
+          } else {
+            min_dist = min_dist_2;
+          }
+        } //}}}
+        if (id1 == 10) {
+          printf("before +x %lf, (%lf, %lf, %lf)\n", min_dist,
+                                                    (*Bead)[10].Position.x,
+                                                    (*Bead)[10].Position.y,
+                                                    (*Bead)[10].Position.z);
+        }
+        // test moving by +BoxLength.x //{{{
+        if (min_dist > distance) {
+          (*Bead)[id1].Position.x += BoxLength.x;
+          // find smallest distance between the monomeric bead and bonded beads //{{{
+          min_dist_2 = 1000000;
+          for (int k = 0; k < Aggregate[i].nBeads; k++) {
+            int id2 = Aggregate[i].Bead[k];
+            Vector dist;
+            dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+            dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+            dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+            d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+            if (d < min_dist_2) {
+              min_dist_2 = d;
+            }
+            // stop if the monomeric bead is confirmed close to the aggregate
+            if (min_dist_2 <= distance) {
+              break;
+            }
+          } //}}}
+          if (min_dist_2 > min_dist) {
+            (*Bead)[id1].Position.x -= BoxLength.x;
+          } else {
+            min_dist = min_dist_2;
+          }
+        } //}}}
+        if (id1 == 10) {
+          printf("before -y %lf, (%lf, %lf, %lf)\n", min_dist,
+                                                    (*Bead)[10].Position.x,
+                                                    (*Bead)[10].Position.y,
+                                                    (*Bead)[10].Position.z);
+        }
+        // test moving by -BoxLength.y //{{{
+        if (min_dist > distance) {
+          (*Bead)[id1].Position.y -= BoxLength.y;
+          // find smallest distance between the monomeric bead and bonded beads //{{{
+          min_dist_2 = 1000000;
+          for (int k = 0; k < Aggregate[i].nBeads; k++) {
+            int id2 = Aggregate[i].Bead[k];
+            Vector dist;
+            dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+            dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+            dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+            d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+            if (d < min_dist_2) {
+              min_dist_2 = d;
+            }
+            // stop if the monomeric bead is confirmed close to the aggregate
+            if (min_dist_2 <= distance) {
+              break;
+            }
+          } //}}}
+          if (min_dist_2 > min_dist) {
+            (*Bead)[id1].Position.y += BoxLength.y;
+          } else {
+            min_dist = min_dist_2;
+          }
+        } //}}}
+        if (id1 == 10) {
+          printf("before +y %lf, (%lf, %lf, %lf)\n", min_dist,
+                                                    (*Bead)[10].Position.x,
+                                                    (*Bead)[10].Position.y,
+                                                    (*Bead)[10].Position.z);
+        }
+        // test moving by +BoxLength.y //{{{
+        if (min_dist > distance) {
+          (*Bead)[id1].Position.y += BoxLength.y;
+          // find smallest distance between the monomeric bead and bonded beads //{{{
+          min_dist_2 = 1000000;
+          for (int k = 0; k < Aggregate[i].nBeads; k++) {
+            int id2 = Aggregate[i].Bead[k];
+            Vector dist;
+            dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+            dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+            dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+            d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+            if (d < min_dist_2) {
+              min_dist_2 = d;
+            }
+            // stop if the monomeric bead is confirmed close to the aggregate
+            if (min_dist_2 <= distance) {
+              break;
+            }
+          } //}}}
+          if (min_dist_2 > min_dist) {
+            (*Bead)[id1].Position.y -= BoxLength.y;
+          } else {
+            min_dist = min_dist_2;
+          }
+        } //}}}
+        if (id1 == 10) {
+          printf("before -z %lf, (%lf, %lf, %lf)\n", min_dist,
+                                                    (*Bead)[10].Position.x,
+                                                    (*Bead)[10].Position.y,
+                                                    (*Bead)[10].Position.z);
+        }
+        // test moving by -BoxLength.z //{{{
+        if (min_dist > distance) {
+          (*Bead)[id1].Position.z -= BoxLength.z;
+          // find smallest distance between the monomeric bead and bonded beads //{{{
+          min_dist_2 = 1000000;
+          for (int k = 0; k < Aggregate[i].nBeads; k++) {
+            int id2 = Aggregate[i].Bead[k];
+            Vector dist;
+            dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+            dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+            dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+            d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+            if (d < min_dist_2) {
+              min_dist_2 = d;
+            }
+            // stop if the monomeric bead is confirmed close to the aggregate
+            if (min_dist_2 <= distance) {
+              break;
+            }
+          } //}}}
+          if (min_dist_2 > min_dist) {
+            (*Bead)[id1].Position.z += BoxLength.z;
+          } else {
+            min_dist = min_dist_2;
+          }
+        } //}}}
+        if (id1 == 10) {
+          printf("before +z %lf, (%lf, %lf, %lf)\n", min_dist,
+                                                    (*Bead)[10].Position.x,
+                                                    (*Bead)[10].Position.y,
+                                                    (*Bead)[10].Position.z);
+        }
+        // test moving by +BoxLength.z //{{{
+        if (min_dist > distance) {
+          (*Bead)[id1].Position.z += BoxLength.z;
+          // find smallest distance between the monomeric bead and bonded beads //{{{
+          min_dist_2 = 1000000;
+          for (int k = 0; k < Aggregate[i].nBeads; k++) {
+            int id2 = Aggregate[i].Bead[k];
+            Vector dist;
+            dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+            dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+            dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+            d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+            if (d < min_dist_2) {
+              min_dist_2 = d;
+            }
+            // stop if the monomeric bead is confirmed close to the aggregate
+            if (min_dist_2 <= distance) {
+              break;
+            }
+          } //}}}
+          if (min_dist_2 > min_dist) {
+            (*Bead)[id1].Position.z -= BoxLength.z;
+          } else {
+            min_dist = min_dist_2;
+          }
+        } //}}}
+        if (id1 == 10) {
+          printf("after +z %lf, (%lf, %lf, %lf)\n", min_dist,
+                                                    (*Bead)[10].Position.x,
+                                                    (*Bead)[10].Position.y,
+                                                    (*Bead)[10].Position.z);
+        }
+
+        // find smallest distance between the monomeric bead and bonded beads
+        min_dist = 1000000;
+        for (int k = 0; k < Aggregate[i].nBeads; k++) {
+          int id2 = Aggregate[i].Bead[k];
+          Vector dist;
+          dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+          dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+          dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+          double d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+          if (d < min_dist) {
+            min_dist = d;
+          }
+        }
+        if (id1 == 10) {
+          printf("%3d %4d %lf (%lf, %lf, %lf)\n", i, id1, min_dist,
+                                                  (*Bead)[id1].Position.x,
+                                                  (*Bead)[id1].Position.y,
+                                                  (*Bead)[id1].Position.z);
+        }
+        if (id1 == 10) {
+          printf("%3d %4d %lf (%lf, %lf, %lf)\n", i, id1, min_dist,
+                                                  (*Bead)[id1].Position.x,
+                                                  (*Bead)[id1].Position.y,
+                                                  (*Bead)[id1].Position.z);
+        }
+      } //}}}
+    }
+  } //}}}
+printf("(%lf, %lf, %lf)\n", (*Bead)[10].Position.x,
+                            (*Bead)[10].Position.y,
+                            (*Bead)[10].Position.z);
+
+  // test monomeric beads //{{{
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+      int id1 = Aggregate[i].Monomer[j];
+      int near;
+      double min_dist = 1000000;
+      Vector near_d;
+      for (int k = 0; k < Aggregate[i].nBeads; k++) {
+        int id2 = Aggregate[i].Bead[k];
+        Vector dist;
+        dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
+        dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
+        dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
+        double d = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+        if (d < min_dist) {
+          min_dist = d;
+          near = id2;
+          near_d.x = dist.x;
+          near_d.y = dist.y;
+          near_d.z = dist.z;
+        }
+      }
+      if (min_dist > distance) {
+        printf("%3d %4d %4d %lf (%lf, %lf, %lf); (%lf, %lf, %lf)\n", i, id1, near, min_dist, near_d.x, near_d.y, near_d.z,
+                                                                     (*Bead)[id1].Position.x,
+                                                                     (*Bead)[id1].Position.y,
+                                                                     (*Bead)[id1].Position.z);
+      }
+    }
+  } //}}}
+*/
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
