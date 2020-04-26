@@ -20,11 +20,11 @@ density for all bead types in the direction of specified axis (x, y, or z).\
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <width> <output.rho> <axis> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <width> <output> <axis> <options>\n\n", cmd);
 
   fprintf(ptr, "   <input>           input filename (either vcf or vtf format)\n");
   fprintf(ptr, "   <width>           width of a single bin\n");
-  fprintf(ptr, "   <output.rho>      output density file (automatic ending '<axis>.rho' added)\n");
+  fprintf(ptr, "   <output>          output density file (automatic ending '<axis>.rho' added)\n");
   fprintf(ptr, "   <axis>            calculate along x, y, or z axis\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -n <int>       number of bins to average\n");
