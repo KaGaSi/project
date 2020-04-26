@@ -429,7 +429,7 @@ int main(int argc, char *argv[]) {
 
   // connect Bead2 with Bead1 via Index arrays //{{{
   if (!silent && !script) {
-    fprintf(stdout, "\nWarning: connecting bead indices from the two runs may take a long time\n");
+    fprintf(stdout, "\nWarning: depending on the number of beads in the system, connecting bead indices from the two runs may take a long time\n\n");
   }
   bool used[Counts.Beads];
   for (int i = 0; i < Counts.Beads; i++) {

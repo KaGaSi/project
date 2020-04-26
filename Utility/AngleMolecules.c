@@ -22,7 +22,7 @@ to be connected by bonds.\n\n");
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
 
-  fprintf(ptr, "   <input>       input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <width>           width of a single bin in degrees\n");
   fprintf(ptr, "   <output>          output file with distribution of angles\n");
   fprintf(ptr, "   <mol name(s)>     molecule name(s) to calculate angles for\n");
