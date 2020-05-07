@@ -6,6 +6,14 @@
 #ifndef _ERRORS_H_
 #define _ERRORS_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <time.h>
+#include <stdbool.h>
+#include "Structs.h"
+
 // ErrorCoorRead() //{{{
 /** \brief Incorrect reading of vcf file
  *
@@ -67,4 +75,14 @@ void ErrorNaN(char *option); //}}}
  * \param [in] option   the unknown option
  */
 void ErrorOption(char *option); //}}}
+
+// ErrorOption() //{{{
+/** \brief Non-existent bead.
+ *
+ * \param [in] file_name   file the non-existent bead is in ('\0' for non-existent bead in command)
+ * \param [in] bname       non-existent bead name
+ * \param [in] Counts      numbers of beads, molecules, etc.
+ * \param [in] BeadType    information about bead types
+ */
+void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadType); //}}}
 #endif

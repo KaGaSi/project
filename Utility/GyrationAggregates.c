@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -91,10 +84,48 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input> - input coordinate file //{{{
+  char input_coor[LINE];
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // <input.agg> - filename of input agg file //{{{
+  char input_agg[LINE];
+  strcpy(input_agg, argv[++count]);
+
+  // test if <input.agg> filename ends with '.agg'
+  ext = 1;
+  strcpy(extension[0], ".agg");
+  if (ErrorExtension(input_agg, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <output> - filename with data during simulation run //{{{
+  char output[LINE];
+  strcpy(output, argv[++count]); //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -132,38 +163,6 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, " %s", argv[i]);
     fprintf(stdout, "\n\n");
   } //}}}
-
-  count = 0; // count mandatory arguments
-
-  // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <input.agg> - filename of input agg file //{{{
-  char input_agg[LINE];
-  strcpy(input_agg, argv[++count]);
-
-  // test if <input.agg> filename ends with '.agg'
-  ext = 1;
-  strcpy(extension[0], ".agg");
-  if (ErrorExtension(input_agg, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <output> - filename with data during simulation run //{{{
-  char output[LINE];
-  strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -285,13 +284,11 @@ int main(int argc, char *argv[]) {
     char name[LINE];
     fscanf(agg, "%s", name);
     int type = FindBeadType(name, Counts, BeadType);
-
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "Bead type '%s' is not in %s coordinate file!\n", name, input_coor);
+      ErrorBeadType(input_coor, name, Counts, BeadType);
       exit(1);
     }
-
     while ((test = getc(agg)) == ' ')
       ;
     ungetc(test, agg);

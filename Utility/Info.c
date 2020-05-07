@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -124,12 +118,12 @@ int main(int argc, char *argv[]) {
   // read system information
   ReadStructure(input, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
-  if (verbose) {
+  if (verbose) { //{{{
     fprintf(stdout, "\nInformation about every bead:\n");
     PrintBead(Counts, Index, BeadType, Bead);
     fprintf(stdout, "\nInformation about every molecule:\n");
     PrintMolecule(Counts, Index, MoleculeType, Molecule, Bead, BeadType);
-  }
+  } //}}}
 
   // get box dimensions if -c is used //{{{
   Vector BoxLength;
