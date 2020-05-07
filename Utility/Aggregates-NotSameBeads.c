@@ -1,12 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
 #include "Aggregates.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -564,38 +557,6 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // options before reading system data //{{{
-  bool silent;
-  bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
-  // save coordinates of joined aggregates //{{{
-  char joined_vcf[LINE];
-  if (JoinCoorOption(argc, argv, joined_vcf)) {
-    exit(1);
-  }
-
-  // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
-  int ext = 1;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  if (joined_vcf[0] != '\0') {
-    if (ErrorExtension(joined_vcf, ext, extension)) {
-      Help(argv[0], true);
-      exit(1);
-    }
-  } //}}}
-  //}}}
-
-  // print command to stdout //{{{
-  if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
-  } //}}}
-
   count = 0; // count mandatory arguments
 
   // <input> - filename of input coordinate file //{{{
@@ -603,12 +564,20 @@ int main(int argc, char *argv[]) {
   strcpy(input_coor, argv[++count]);
 
   // test if <input> ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
+  int ext = 2;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
   strcpy(extension[1], ".vtf");
   if (ErrorExtension(input_coor, ext, extension)) {
     Help(argv[0], true);
     exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
   } //}}}
 
   // <distance> - number of starting timestep //{{{
@@ -641,6 +610,35 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // options before reading system data //{{{
+  bool silent;
+  bool verbose;
+  bool script;
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
+
+  // save coordinates of joined aggregates //{{{
+  char joined_vcf[LINE];
+  if (JoinCoorOption(argc, argv, joined_vcf)) {
+    exit(1);
+  }
+  // test if <joined.vcf> filename ends with '.vcf' (required by VMD)
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (joined_vcf[0] != '\0') {
+    if (ErrorExtension(joined_vcf, ext, extension)) {
+      Help(argv[0], true);
+      exit(1);
+    }
+  } //}}}
+  //}}}
+
+  // print command to stdout //{{{
+  if (!silent) {
+    for (int i = 0; i < argc; i++)
+      fprintf(stdout, " %s", argv[i]);
+    fprintf(stdout, "\n\n");
+  } //}}}
+
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
@@ -658,16 +656,15 @@ int main(int argc, char *argv[]) {
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
-
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n   Present bead types:\n", argv[count], input_coor);
-      for (int i = 0; i < Counts.TypesOfBeads; i++) {
-        fprintf(stderr, "%s\n", BeadType[i].Name);
-      }
+      ErrorBeadType(input_coor, argv[count], Counts, BeadType);
       exit(1);
     }
-
+    if (BeadType[type].Use) {
+      fprintf(stderr, "\nError: bead type %s specified more than once\n\n", argv[count]);
+      exit(1);
+    }
     BeadType[type].Use = true;
   } //}}}
 

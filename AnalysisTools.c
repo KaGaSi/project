@@ -1,11 +1,95 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
-#include <stdbool.h>
 #include "AnalysisTools.h"
-#include "Errors.h"
+
+bool IsPosDouble(char *a) { //{{{
+  // wrong first character - can be minus, dot, or number
+  if (a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
+    return false;
+  }
+  // only one dot can be present
+  bool dot = false;
+  if (a[0] == '.') {
+    dot = true;
+  }
+  // test the remaining characters - either digit, or dot (but only 1 in total)
+  for (int i = 1; i < strlen(a); i++) {
+    if (a[i] == '.') {
+      if (dot) { // has there been a dot already?
+        return false;
+      } else {
+        dot = true;
+      }
+    } else if (a[i] < '0' || a[i] > '9') {
+      return false;
+    }
+  }
+  return true;
+} //}}}
+
+bool IsDouble(char *a) { //{{{
+  // wrong first character - can be minus, dot, or number
+  if (a[0] != '-' && a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
+    return false;
+  }
+  // only one dot can be present
+  bool dot = false;
+  if (a[0] == '.') {
+    dot = true;
+  }
+  // test the remaining characters - either digit, or dot (but only 1 in total)
+  for (int i = 1; i < strlen(a); i++) {
+    if (a[i] == '.') {
+      if (dot) { // has there been a dot already?
+        return false;
+      } else {
+        dot = true;
+      }
+    } else if (a[i] < '0' || a[i] > '9') {
+      return false;
+    }
+  }
+  return true;
+} //}}}
+
+bool IsInteger(char *a) { //{{{
+  // test the remaining characters - either digit, or dot (but only 1 in total)
+  for (int i = 0; i < strlen(a); i++) {
+    if (a[i] < '0' || a[i] > '9') {
+      return false;
+    }
+  }
+  return true;
+} //}}}
+
+// split the line into array //{{{
+/**
+ * Function that splits the provided line into individual strings (using tab,
+ * space, and colon as a delimiter) and removes newline character from the end
+ * of the last string.
+ */
+int SplitLine(char out[30][100], char *line) {
+  // trim whitespaces at the beginning and end of line
+  strcpy(line, TrimLine(line));
+  // split into words separated by " ", tab, or colon
+  char *split[30];
+  split[0] = strtok(line, " \t:"); // first word
+  int words = 0;
+  while (split[words] != NULL && words < 29) {
+    words++; // start from 1, as the first split is already done
+    split[words] = strtok(NULL, " \t:");
+  }
+  // if the last word ends with newline, make it into '\0'
+  if (split[words-1][strlen(split[words-1])-1] == '\n') {
+    split[words-1][strlen(split[words-1])-1] = '\0';
+  }
+  if (split[words-1][0] == '\n') {
+    words--;
+  }
+  // if the last words is just '\0', disregard it
+  for (int i = 0; i < words; i++) {
+    strcpy(out[i], split[i]);
+  }
+ return words;
+} //}}}
 
 // GetPBC() //{{{
 /*
@@ -17,16 +101,17 @@ Vector GetPBC(FILE *vcf, char *input_coor) {
 
   char line[LINE], line2[LINE];
   while (fgets(line, sizeof(line), vcf)) {
-    strcpy(line, TrimLine(line)); // trim excess whitespace
     strcpy(line2, line); // copy line to print in case of error
 
-    // split the line into array //{{{
-    char *split[30];
-    split[0] = strtok(line, " \t:");
-    int words = 0;
-    while (split[words] != NULL && words < 29) {
-      split[++words] = strtok(NULL, " \t:");
-    } //}}}
+    char split[30][100];
+    int words = SplitLine(split, line);
+//  // split the line into array //{{{
+//  char *split[30];
+//  split[0] = strtok(line, " \t:");
+//  int words = 0;
+//  while (split[words] != NULL && words < 29) {
+//    split[++words] = strtok(NULL, " \t:");
+//  } //}}}
 
     if (strcmp(split[0], "pbc") == 0) {
       BoxLength.x = atof(split[1]);
@@ -46,7 +131,7 @@ Vector GetPBC(FILE *vcf, char *input_coor) {
                !(split[0][0] == 'o' || split[0][0] == 'i') && // 3)
                split[0][0] != 'a' && // 4)
                split[0][0] != 'b' && // 5)
-               split[0][0] != '\n' && // 6)
+               split[0][0] != '\0' && // 6)
                split[0][0] != '#') { // 7)
       fprintf(stderr, "\nError - %s: unrecognised line '%s'\n", input_coor, line2);
       if (line2[0] >= '0' && line2[0] <= '9' && words > 2) {
@@ -1792,6 +1877,9 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
 } //}}}
 
 // FindBeadType() //{{{
+/* Function to identify type of bead from its name; returns -1 on non-existent
+ * bead name.
+ */
 int FindBeadType(char *name, Counts Counts, BeadType *BeadType) {
   int type;
 

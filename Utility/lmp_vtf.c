@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <ctype.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -27,7 +20,7 @@ well as according to molecule connectivity. Angles are disregarded.\n\n");
 
   fprintf(ptr, "   <input>           input lammps data file\n");
   fprintf(ptr, "   <out.vsf>         output vsf structure file\n");
-  fprintf(ptr, "   <out.vsf>         output vcf coordinate file\n");
+  fprintf(ptr, "   <out.vcf>         output vcf coordinate file\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -v             verbose output\n");
   fprintf(ptr, "      -h             print this help and exit\n");
@@ -140,7 +133,7 @@ int main(int argc, char *argv[]) {
   // data file header lines must start with a number (or '#' for comment),
   // therefore read until something else is encountered
   line[0] = '\0';
-  char *split[30]; // to hold individual strings from the line
+  char split[30][100]; // to hold individual strings from the line
   while (line[0] == '\0' || // empty line
          line[0] == '#' || // comment line
          line[0] == '-' ||  // negative number
@@ -148,17 +141,10 @@ int main(int argc, char *argv[]) {
          (line[0] >= '0' && line[0] <= '9')) { // positive number
     // read one line
     fgets(line, sizeof(line), fr);
-    strcpy(line, TrimLine(line)); // trim excess whitespace
-
-    count = 0; // number of strings in a line (except for trailing comment)
-    // split line //{{{
-    split[0] = strtok(line, " \t");
-    while (split[count] != NULL && count < 29 && split[count][0] != '#') {
-      split[++count] = strtok(NULL, " \t");
-    } //}}}
+    int words = SplitLine(split, line);
 
     // read header data //{{{
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < words; i++) {
       if (strcmp(split[i], "atoms") == 0) {
         Counts.BeadsInVsf = atoi(split[0]);
         Counts.Beads = atoi(split[0]);
@@ -170,21 +156,21 @@ int main(int argc, char *argv[]) {
 //      angles = atoi(split[0]);
 //    }
       if (strcmp(split[i], "atom") == 0 &&
-          (i+1) < count && strcmp(split[i+1], "types") == 0) {
+          (i+1) < words && strcmp(split[i+1], "types") == 0) {
         Counts.TypesOfBeads = atoi(split[0]);
       }
       if (strcmp(split[i], "xlo") == 0 &&
-          (i+1) < count && strcmp(split[i+1], "xhi") == 0) {
+          (i+1) < words && strcmp(split[i+1], "xhi") == 0) {
         BoxLength.x = atof(split[1]) - atof(split[0]);
         box_lo.x = atof(split[0]);
       }
       if (strcmp(split[i], "ylo") == 0 &&
-          (i+1) < count && strcmp(split[i+1], "yhi") == 0) {
+          (i+1) < words && strcmp(split[i+1], "yhi") == 0) {
         BoxLength.y = atof(split[1]) - atof(split[0]);
         box_lo.y = atof(split[0]);
       }
       if (strcmp(split[i], "zlo") == 0 &&
-          (i+1) < count && strcmp(split[i+1], "zhi") == 0) {
+          (i+1) < words && strcmp(split[i+1], "zhi") == 0) {
         BoxLength.z = atof(split[1]) - atof(split[0]);
         box_lo.z = atof(split[0]);
       }
@@ -243,16 +229,11 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i < Counts.TypesOfBeads; i++) {
         fgets(line, sizeof(line), fr);
         strcpy(line, TrimLine(line)); // trim excess whitespace
-        // split line //{{{
-        split[0] = strtok(line, " \t");
-        count = 0; // number of strings in a line (except for trailing comment)
-        while (split[count] != NULL && count < 29) {
-          split[++count] = strtok(NULL, " \t");
-        } //}}}
+        int words = SplitLine(split, line);
         BeadType[i].Mass = atof(split[1]);
         // if there's a comment at the end of the line, consider it bead name
-        if (count > 2 && split[2][0] == '#') {
-          if (strlen(split[2]) == 1 && count > 3) { // comment form '# name'
+        if (words > 2 && split[2][0] == '#') {
+          if (strlen(split[2]) == 1 && words > 3) { // comment form '# name'
             strcpy(BeadType[i].Name, split[3]);
           } else if (strlen(split[2]) > 1) { // comment form '#name'
             for (int j = 0; j < strlen(split[2]); j++) {
@@ -281,13 +262,7 @@ int main(int argc, char *argv[]) {
       fgetpos(fr, &pos); // save file pointer
       for (int i = 0; i < Counts.Beads; i++) {
         fgets(line, sizeof(line), fr);
-        strcpy(line, TrimLine(line)); // trim excess whitespace
-        // split line //{{{
-        split[0] = strtok(line, " \t");
-        count = 0; // number of strings in a line (except for trailing comment)
-        while (split[count] != NULL && count < 29 && split[count][0] != '#') {
-          split[++count] = strtok(NULL, " \t");
-        } //}}}
+        SplitLine(split, line);
 
         int id = atoi(split[0]) - 1, // in lammps, these start at 1
             mol_id = atoi(split[1]) - 1, // in lammps, molecules start with 1; unbonded atoms can be 0
@@ -387,13 +362,7 @@ int main(int argc, char *argv[]) {
       // read all bonds //{{{
       for (int i = 0; i < bonds; i++) {
         fgets(line, sizeof(line), fr);
-        strcpy(line, TrimLine(line)); // trim excess whitespace
-        // split line //{{{
-        split[0] = strtok(line, " \t");
-        count = 0; // number of strings in a line (except for trailing comment)
-        while (split[count] != NULL && count < 29 && split[count][0] != '#') {
-          split[++count] = strtok(NULL, " \t");
-        } //}}}
+        SplitLine(split, line);
 
         int bead1 = atoi(split[2]) - 1; // in lammps, atom ids start at 1
         int bead2 = atoi(split[3]) - 1;
@@ -536,13 +505,7 @@ int main(int argc, char *argv[]) {
 
     // read and split next line //{{{
     fgets(line, sizeof(line), fr);
-    strcpy(line, TrimLine(line)); // trim excess whitespace
-    char *split[30];
-    count = 0; // number of strings in a line (except for trailing comment)
-    split[0] = strtok(line, " \t");
-    while (split[count] != NULL && count < 29 && split[count][0] != '#') {
-      split[++count] = strtok(NULL, " \t");
-    } //}}}
+    SplitLine(split, line);
   }
   free(mols);
   fclose(fr); //}}}

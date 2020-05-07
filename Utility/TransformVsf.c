@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;

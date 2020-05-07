@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -71,10 +65,40 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input> - input coordinate file //{{{
+  char input_coor[LINE];
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // variables - structures //{{{
+  BeadType *BeadType; // structure with info about all bead types
+  MoleculeType *MoleculeType; // structure with info about all molecule types
+  Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  Molecule *Molecule; // structure with info about every molecule
+  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -91,30 +115,6 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, " %s", argv[i]);
     fprintf(stdout, "\n\n");
   } //}}}
-
-  count = 0; // count mandatory arguments
-
-  // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);

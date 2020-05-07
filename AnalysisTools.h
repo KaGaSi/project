@@ -6,7 +6,53 @@
 #ifndef _ANALYSISTOOLS_H_
 #define _ANALYSISTOOLS_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <math.h>
+#include <time.h>
+#include <stdbool.h>
+#include "Errors.h"
 #include "Structs.h"
+#include "Options.h"
+
+// IsDouble() //{{{
+/*
+ * \brief Function to test if a string is double.
+ *
+ * \param [in] a   string to test
+ * \return 'true' if a is double, 'false' otherwise
+ */
+bool IsDouble(char *a); //}}}
+
+// IsPosDouble() //{{{
+/*
+ * \brief Function to test if a string is non-negative double.
+ *
+ * \param [in] a   string to test
+ * \return 'true' if a is non-negative double, 'false' otherwise
+ */
+bool IsPosDouble(char *a); //}}}
+
+// IsInteger() //{{{
+/*
+ * \brief Function to test if a string is integer.
+ *
+ * \param [in] a   string to test
+ * \return 'true' if a is integer, 'false' otherwise
+ */
+bool IsInteger(char *a); //}}}
+
+// SplitLine() //{{{
+/*
+ * \brief Function to split provided line.
+ *
+ * \param [out] out    array of strings
+ * \param [in]  line   string to split
+ * \return number of strings in the line
+ */
+int SplitLine(char out[30][100], char *line); //}}}
 
 // GetPBC() //{{{
 /*
