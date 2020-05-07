@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -81,10 +74,48 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
+  char input_coor[LINE];
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // <input.agg> - filename of input file with aggregate information //{{{
+  char input_agg[LINE];
+  strcpy(input_agg, argv[++count]); //}}}
+
+  // <output.vcf> - filename of output vcf file //{{{
+  char output_vcf[LINE];
+  strcpy(output_vcf, argv[++count]);
+
+  // test if <output.vcf> ends with '.vcf' (required by VMD)
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (ErrorExtension(output_vcf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -120,38 +151,6 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\n\n");
   } //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <input.vcf> - filename of input vcf file (must end with .vcf) //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <input.agg> - filename of input file with aggregate information //{{{
-  char input_agg[LINE];
-  strcpy(input_agg, argv[++count]); //}}}
-
-  // <output.vcf> - filename of output vcf file //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-
-  // test if <output.vcf> ends with '.vcf' (required by VMD)
-  ext = 1;
-  strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
@@ -166,7 +165,7 @@ int main(int argc, char *argv[]) {
   // vsf file is not needed anymore
   free(input_vsf);
 
-  // write all molecules{{{
+  // write all molecules //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = true;
   } //}}}
@@ -186,29 +185,26 @@ int main(int argc, char *argv[]) {
   if (strcmp(coor_file_from_agg, input_coor) != 0) {
     fprintf(stderr, "\nWARNING: the coordinate file (%s) ", input_coor);
     fprintf(stderr, "is different to the one in the aggregate file (%s).\n", coor_file_from_agg);
-    fprintf(stderr, "         Possible mismatch between beads present in both files can lead to undefined behaviour.\n\n");
+    fprintf(stderr, "         Mismatch between beads present in both files can lead to undefined behaviour.\n\n");
   }
 
   // skip <contacts> and <output.agg> in Aggregates command
   fscanf(agg, "%*s %*s");
 
   // read <type names> from Aggregates command //{{{
+  // TODO: fgets(line) & SplitLine()
   int test = getc(agg);
   while ((test = getc(agg)) != '-' && test != '\n') {
     ungetc(test, agg);
-
     char name[LINE];
     fscanf(agg, "%s", name);
     int type = FindBeadType(name, Counts, BeadType);
-
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\n", name, input_coor);
+      ErrorBeadType(input_coor, name, Counts, BeadType);
       exit(1);
     }
-
     BeadType[type].Use = true;
-
     // ignore spaces
     while((test = getc(agg)) == ' ')
       ;

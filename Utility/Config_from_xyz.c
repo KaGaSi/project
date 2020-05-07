@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -176,28 +170,24 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < beads; i++) {
     char line[LINE];
     fgets(line, sizeof(line), xyz);
-
-    // split the line into array //{{{
-    char *split[5];
-    split[0] = strtok(line, " \t");
-    int j = 0;
-    while (split[j] != NULL && j < 4) {
-      split[++j] = strtok(NULL, " \t");
-    } //}}}
+    char split[30][100];
+    int words = SplitLine(split, line);
 
     // error - less then four whitespace-separated strings //{{{
-    if (j < 4) {
+    if (words < 4) {
       fprintf(stderr, "\nError: not enough columns in %s in %d. timestep (%d. bead)\n\n", input_xyz, count, i);
     } //}}}
 
     // test if split[1-3] are doubles //{{{
     for (int j = 1; j < 4; j++) {
       // first character can be '-' (but must be longer) or a number
-      if ((split[j][0] < '0' || split[j][0] > '9') &&
-          split[j][0] != '-') {
-        fprintf(stderr, "\nError: wrong %d. coordinate in %d. timestep for %d. bead (%s)\n\n", j, count, i, split[j]);
-        exit(1);
-      } else if (split[j][0] == '-' && strlen(split[j]) == 1) {
+      // Error if:
+      // 1) starting without number or '-'
+      // 2) the whole word is just '-'
+      // 3) starting '-' isn't followed by a number
+      if (((split[j][0] < '0' || split[j][0] > '9') && split[j][0] != '-') || // 1)
+          (split[j][0] == '-' && (strlen(split[j]) == 1)) || // 2)
+          (split[j][0] == '-' && split[j][1] < '0' && split[j][1] > '9')) { // 3)
         fprintf(stderr, "\nError: wrong %d. coordinate in %d. timestep for %d. bead (%s)\n\n", j, count, i, split[j]);
         exit(1);
       }

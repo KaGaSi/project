@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -20,12 +14,12 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <1st input.vcf> <2nd input.vcf> <2nd input.vsf> ", cmd);
+  fprintf(ptr, "   %s <1st input.vcf> <2nd input.vsf> <2nd input.vcf> ", cmd);
   fprintf(ptr, "<output.vcf> <type names> <options>\n\n");
 
-  fprintf(ptr, "   <1st input.vcf>   input filename of 1st run (vcf format)\n");
-  fprintf(ptr, "   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
-  fprintf(ptr, "   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
+  fprintf(ptr, "   <1st input.vcf>   input filename of 1st run (vcf or vtf format)\n");
+  fprintf(ptr, "   <2nd input.vsf>   input filename of 2nd run (vsf or vtf format)\n");
+  fprintf(ptr, "   <2nd input.vcf>   input filename of 2nd run (vcf or vtf format)\n");
   fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
   fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
   fprintf(ptr, "   <options>\n");
@@ -94,10 +88,70 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <1st input> - first input coordinate file //{{{
+  char input_coor_1[LINE];
+  strcpy(input_coor_1, argv[++count]);
+
+  // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor_1, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf_1 = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor_1, '.'),".vtf") == 0) {
+    strcpy(input_vsf_1, input_coor_1);
+  } else {
+    strcpy(input_vsf_1, "traject.vsf");
+  } //}}}
+
+  // <2nd input.vsf> - second structure file //{{{
+  char *input_vsf_2 = calloc(LINE,sizeof(char *));
+  strcpy(input_vsf_2, argv[++count]);
+
+  // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
+  ext = 2;
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_vsf_2, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <2nd input> - second input coordinate file //{{{
+  char input_coor_2[LINE];
+  strcpy(input_coor_2, argv[++count]);
+
+  // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor_2, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
+  char output_vcf[LINE];
+  strcpy(output_vcf, argv[++count]);
+
+  // test if output coordinate file ends with '.vcf' (required by vmd)
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (ErrorExtension(output_vcf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf_1 = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf_1, &verbose, &silent, &script);
 
@@ -156,60 +210,6 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <1st input> - first input coordinate file //{{{
-  char input_coor_1[LINE];
-  strcpy(input_coor_1, argv[++count]);
-
-  // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor_1, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <2nd input> - second input coordinate file //{{{
-  char input_coor_2[LINE];
-  strcpy(input_coor_2, argv[++count]);
-
-  // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor_2, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <2nd input.vsf> - second structure file (must end with .vsf) //{{{
-  char *input_vsf_2 = calloc(LINE,sizeof(char *));
-  strcpy(input_vsf_2, argv[++count]);
-
-  // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
-  ext = 2;
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_vsf_2, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-
-  // test if output coordinate file ends with '.vcf' (required by vmd)
-  ext = 1;
-  strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
   // variables - structures //{{{
   // data from 1st run
   BeadType *BeadType1; // structure with info about all bead types
@@ -243,12 +243,11 @@ int main(int argc, char *argv[]) {
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType1);
-
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s or %s coordinate file\n\n", argv[count], input_coor_1, input_coor_2);
+      ErrorBeadType("\0", argv[count], Counts, BeadType1);
+      fprintf(stderr, "Note that all bead types must be in both coordinate files.\n\n");
       exit(1);
     }
-
     BeadType1[type].Write = true;
   } //}}}
 

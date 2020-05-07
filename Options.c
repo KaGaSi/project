@@ -11,16 +11,21 @@
 /**
  * Function for options common to most of the utilities.
  */
+// TODO: copy vsf_file to old_name; then if vsf_file[0] == '\0', copy old_name back to vsf_file
 void CommonOptions(int argc, char **argv, char **vsf_file,
                    bool *verbose, bool *silent, bool *script) {
 
   // -i <name> option - filename of input structure file //{{{
+  // save provided file name
+  char old_name[LINE];
+  strcpy(old_name, *vsf_file);
+  // test if '-i' option is there
   if (FileOption(argc, argv, "-i", vsf_file)) {
     exit(1);
   }
-  // default name
+  // copy back the old name if '-i' option is not present
   if (*vsf_file[0] == '\0') {
-    strcpy(*vsf_file, "traject.vsf");
+    strcpy(*vsf_file, old_name);
   }
   // test if structure file ends with '.vsf' or '.vtf'
   int ext = 2;

@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -99,10 +93,52 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input> - input coordinate file //{{{
+  char input_coor[LINE];
+  char *input_vsf = calloc(LINE,sizeof(char));
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
+  char output_vcf[LINE];
+  strcpy(output_vcf, argv[++count]);
+
+  // test if <output.vcf> filename ends with '.vcf' (required by VMD)
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (ErrorExtension(output_vcf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // variables - structures //{{{
+  BeadType *BeadType; // structure with info about all bead types
+  MoleculeType *MoleculeType; // structure with info about all molecule types
+  Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  Molecule *Molecule; // structure with info about every molecule
+  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -153,42 +189,6 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\n\n");
   } //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-
-  // test if <output.vcf> filename ends with '.vcf' (required by VMD)
-  ext = 1;
-  strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
-
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
@@ -198,15 +198,10 @@ int main(int argc, char *argv[]) {
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
-
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\nPresent bead types:\n", argv[count], input_coor);
-      for (int i = 0; i < Counts.TypesOfBeads; i++) {
-        fprintf(stderr, "   %s\n", BeadType[i].Name);
-      }
+      ErrorBeadType(input_coor, argv[count], Counts, BeadType);
       exit(1);
     }
-
     BeadType[type].Write = true;
   } //}}}
 
@@ -276,49 +271,6 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   Vector BoxLength = GetPBC(vcf, input_coor);
-//// get pbc from coordinate file //{{{
-//char line[LINE], line2[LINE];
-//Vector BoxLength;
-//while (fgets(line, sizeof(line), vcf)) {
-//  strcpy(line, TrimLine(line)); // trim excess whitespace
-//  strcpy(line2, line); // copy line to print in case of error
-
-//  // split the line into array //{{{
-//  char *split[30];
-//  split[0] = strtok(line, " \t:");
-//  int words = 0;
-//  while (split[words] != NULL && words < 29) {
-//    split[++words] = strtok(NULL, " \t:");
-//  } //}}}
-
-//  if (strcmp(split[0], "pbc") == 0) {
-//    BoxLength.x = atof(split[1]);
-//    BoxLength.y = atof(split[2]);
-//    BoxLength.z = atof(split[3]);
-//    break;
-//  // only certain keywords besides pbc can be present before the first coordinate block
-//  // 1) t(imestep) ... starting the coordinate block
-//  // 2) t(imestep) i(ndexed)/o(ordered) ... starting the coordinate block
-//  // 3) i(ndexed)/o(ordered) ... starting the coordinate block
-//  // 4) a(tom) ... in case of vtf file
-//  // 5) b(ond) ... in case of vtf file
-//  // 6) empty line
-//  // 7) comment
-//  } else if (!(split[0][0] == 't' && words == 1) && // 1)
-//             !(split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) && // 2)
-//             !(split[0][0] == 'o' || split[0][0] == 'i') && // 3)
-//             split[0][0] != 'a' && // 4)
-//             split[0][0] != 'b' && // 5)
-//             split[0][0] != '\n' && // 6)
-//             split[0][0] != '#') { // 7)
-//    fprintf(stderr, "\nError - %s: unrecognised line '%s'\n", input_coor, line2);
-//    if (line2[0] >= '0' && line2[0] <= '9' && words > 2) {
-//      fprintf(stderr, "        Possibly missing pbc line\n");
-//    }
-//    putc('\n', stderr);
-//    exit(1);
-//  }
-//}; //}}}
 
   // print information - verbose output //{{{
   if (verbose) {

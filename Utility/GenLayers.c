@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -176,15 +169,29 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // read box size //{{{
-  char line[LINE], *box[3];
+  char line[LINE], split[30][100];
   fgets(line, sizeof(line), fr);
-  box[0] = strtok(line, " \t");
-  box[1] = strtok(NULL, " \t");
-  box[2] = strtok(NULL, " \t");
+  int words = SplitLine(split, line);
+  // first line of the FIELD must be: <double> <double> <double> ...whatever
+  // Error if:
+  // 1) too few strings
+  // 2) enough strings, but not numbers
+  if (words < 3 || // 1
+      !IsPosDouble(split[0]) || // 2) first <double>
+      !IsPosDouble(split[1]) || // 2) first <double>
+      !IsPosDouble(split[2])) { // 2) first <double>
+    fprintf(stderr, "\nError: %s - first line must start with box size (i.e., three positive numbers)\n", input);
+    fprintf(stderr, "       Wrong line:");
+    for (int i = 0; i < words; i++) {
+      fprintf(stderr, " %s", split[i]);
+    }
+    fprintf(stderr, "\n\n");
+    exit(1);
+  }
   Vector BoxLength;
-  BoxLength.x = atof(box[0]);
-  BoxLength.y = atof(box[1]);
-  BoxLength.z = atof(box[2]); //}}}
+  BoxLength.x = atof(split[0]);
+  BoxLength.y = atof(split[1]);
+  BoxLength.z = atof(split[2]); //}}}
 
   // assumes number bead density equal to 3 for number of beads (if '-n' isn't used) //{{{
   if (number_of_beads > 0) {
@@ -215,37 +222,62 @@ int main(int argc, char *argv[]) {
   Molecule = calloc(Counts.Molecules, sizeof(struct Molecule));
 
   // read number of bead types //{{{
+  bool missing = true; // is 'species' keyword missing?
   while(fgets(line, sizeof(line), fr)) {
-    char *split;
-    split = strtok(line, " \t ");
-    if (strcmp(split, "species") == 0 ||
-        strcmp(split, "Species") == 0 ||
-        strcmp(split, "SPECIES") == 0 ) {
-      // solvent isn't in the FIELD-like, but it must be in the resulting vsf
-      Counts.TypesOfBeads = atoi(strtok(NULL, " \t")) + 1;
+    words = SplitLine(split, line);
+    if (strcasecmp(split[0], "species") == 0) {
+      missing = false;
+      // check if the next string is a number
+      if (words < 2 ||            // missing next string
+          !IsInteger(split[1])) { // next string isn't a number
+        fprintf(stderr, "\nError: %s - missing number of species\n", input);
+        fprintf(stderr, "       Wrong line:");
+        for (int j = 0; j < words; j++) {
+          fprintf(stderr, " %s", split[j]);
+        }
+        fprintf(stderr, "\n\n");
+        exit(1);
+      }
+      Counts.TypesOfBeads = atoi(split[1]) + 1;
       break;
     }
+  }
+  if (missing) {
+    fprintf(stderr, "\nError: %s - missing 'species' line\n\n", input);
+    exit(1);
   } //}}}
 
   BeadType = calloc(Counts.TypesOfBeads,sizeof(struct BeadType));
 
   // read info about bead types //{{{
   // number of beads is ignored, because GenLayers only generates the brush;
-  // other beads/molecules are added using AddToSystem
+  // other beads/molecules can be added using AddToSystem
   strcpy(BeadType[0].Name, "None"); // BeadType[0] is a placeholder for AddToSystem
   BeadType[0].Mass = 1;
   BeadType[0].Charge = 0;
   BeadType[0].Number = 0;
   for (int i = 1; i < Counts.TypesOfBeads; i++) {
     fgets(line, sizeof(line), fr);
-
-    // split the line into array
-    char *split[4];
-    split[0] = strtok(line, " \t");
-    for (int j = 1; j < 4; j++) {
-      split[j] = strtok(NULL, " \t");
+    words = SplitLine(split, line);
+    // Error:
+    // 1) empty line
+    // 2) less then four strings
+    // 3) second string isn't a positive double (mass)
+    // 4) third string isn't a double (charge)
+    // 5) fifth string isn't an integer (unbonded beads)
+    if (words == 1 && split[0][0] == '\0') { // 1)
+      fprintf(stderr, "\nError: %s - missing bead type line\n\n", input);
+    } else if (words < 4 ||                  // 2)
+               !IsPosDouble(split[1]) ||     // 3)
+               !IsDouble(split[2]) ||        // 4)
+               !IsInteger(split[3])) {       // 5)
+      fprintf(stderr, "\nError: %s - wrong bead type line:", input);
+      for (int j = 0; j < words; j++) {
+        fprintf(stderr, " %s", split[j]);
+      }
+      fprintf(stderr, "\n\n");
+      exit(1);
     }
-
     strcpy(BeadType[i].Name, split[0]);
     BeadType[i].Mass = atof(split[1]);
     BeadType[i].Charge = atof(split[2]);
@@ -254,16 +286,32 @@ int main(int argc, char *argv[]) {
 
   // TODO: generalize - for now, only the first molecule type is used
   // read number of molecule types //{{{
+  missing = true; // is molecule keyword missing?
   while(fgets(line, sizeof(line), fr)) {
-    char *split;
-    split = strtok(line, " \t ");
-    if (strncmp(split, "molecule", 8) == 0 ||
-        strncmp(split, "Molecule", 8) == 0 ||
-        strncmp(split, "MOLECULE", 8) == 0 ) {
-      Counts.TypesOfMolecules = atoi(strtok(NULL, " \t"));
+    words = SplitLine(split, line);
+    if (strncasecmp(split[0], "molecule", 8) == 0) {
+      missing = false;
+      // error - next string isn't a number
+      if (!IsInteger(split[1])) {
+        fprintf(stderr, "\nError: %s - missing number of molecule types\n", input);
+        fprintf(stderr, "       Wrong line:");
+        for (int i = 0; i < words; i++) {
+          fprintf(stderr, " %s", split[i]);
+        }
+        fprintf(stderr, "\n\n");
+        exit(1);
+      }
+      Counts.TypesOfMolecules = atoi(split[1]);
       break;
     }
+  }
+  if (missing) {
+    fprintf(stderr, "\nError: %s - missing 'molecule' line\n\n", input);
+    exit(1);
   } //}}}
+
+  // TODO: only for now, as only one molecule type is used for now
+  Counts.TypesOfMolecules = 1;
 
   MoleculeType = calloc(Counts.TypesOfMolecules, sizeof(struct MoleculeType));
   Vector **prototype = malloc(Counts.TypesOfMolecules*sizeof(struct Vector *));
@@ -272,25 +320,58 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     // name //{{{
     fgets(line, sizeof(line), fr);
-    strcpy(line, TrimLine(line)); // trim excess whitespace
-    strcpy(MoleculeType[i].Name, strtok(line, " \t")); //}}}
-    // number of molecules - irrelevant, decided by spacing //{{{
+    SplitLine(split, line);
+    if (split[0][0] == '\0') { // empty line
+      fprintf(stderr, "\nError: %s - blank line instead of molecule name\n", input);
+      fprintf(stderr, "       Beware that a missing 'finish' keyword in multi-molecule systems can make the error somewhat ambiguous.\n");
+      exit(1);
+    }
+    strcpy(MoleculeType[i].Name, split[0]); //}}}
+    // number of molecules - irrelevant, decided by spacing
     fgets(line, sizeof(line), fr);
-    strtok(line, " \t "); //}}}
     // number of beads //{{{
     fgets(line, sizeof(line), fr);
-    strtok(line, " \t ");
-    MoleculeType[i].nBeads = atoi(strtok(NULL, " \t"));
-    MoleculeType[i].Bead = calloc(MoleculeType[i].nBeads, sizeof(int));
-    prototype[i] = calloc(MoleculeType[i].nBeads, sizeof(Vector)); //}}}
-    // number & ids of beadtypes & mass //{{{
+    // error if not 'beads <int>'
+    if ((words = SplitLine(split, line)) < 2 ||
+        strncasecmp(split[0], "beads", 4) != 0 ||
+        !IsInteger(split[1])) {
+      fprintf(stderr, "\nError: %s - wrong or missing 'beads' line\n", input);
+      fprintf(stderr, "       Wrong line:");
+      for (int i = 0; i < words; i++) {
+        fprintf(stderr, " %s", split[i]);
+      }
+      fprintf(stderr, "\n\n");
+      exit(1);
+    }
+    MoleculeType[i].nBeads = atoi(split[1]);
+    MoleculeType[i].Bead = calloc(MoleculeType[i].nBeads, sizeof(int)); //}}}
+    // read bead lines //{{{
+    prototype[i] = calloc(MoleculeType[i].nBeads, sizeof(Vector));
+    // number & ids of beadtypes & mass
     MoleculeType[i].nBTypes = 0;
     MoleculeType[i].BType = calloc(1,sizeof(int));
     MoleculeType[i].Mass = 0;
     for (int j = 0; j < MoleculeType[i].nBeads; j++) {
       fgets(line, sizeof(line), fr);
+      words = SplitLine(split, line);
+      // error - not enough columns or not three coordinate //{{{
+      if (words < 4 || !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
+        fprintf(stderr, "\nError: %s - cannot read coordinates\n", input);
+        fprintf(stderr, "       Wrong line:");
+        for (int i = 0; i < words; i++) {
+          fprintf(stderr, " %s", split[i]);
+        }
+        fprintf(stderr, "\n\n");
+        exit(1);
+      } //}}}
       bool test = false;
-      int type = FindBeadType(strtok(line, " \t "), Counts, BeadType);
+      int type = FindBeadType(split[0], Counts, BeadType);
+      // error - wrong bead name //{{{
+      if (type == -1) {
+        ErrorBeadType(input, split[0], Counts, BeadType);
+        fprintf(stderr, "       Note that 'None' bead type is auto-generated, not read from a file.\n\n");
+        exit(1);
+      } //}}}
       MoleculeType[i].Bead[j] = type;
       for (int k = 0; k < MoleculeType[i].nBTypes; k++) {
         if (MoleculeType[i].BType[k] == type) {
@@ -305,35 +386,62 @@ int main(int argc, char *argv[]) {
       }
       MoleculeType[i].Mass += BeadType[type].Mass;
       // read coordinates
-      prototype[i][j].x = atof(strtok(NULL, " \t"));
-      prototype[i][j].y = atof(strtok(NULL, " \t"));
-      prototype[i][j].z = atof(strtok(NULL, " \t"));
+      prototype[i][j].x = atof(split[1]);
+      prototype[i][j].y = atof(split[2]);
+      prototype[i][j].z = atof(split[3]);
     } //}}}
     // number of bonds //{{{
     fgets(line, sizeof(line), fr);
-    strtok(line, " \t ");
-    MoleculeType[i].nBonds = atoi(strtok(NULL, " \t")); //}}}
+    words = SplitLine(split, line);
+    // error if not 'bonds <int>'
+    if (words < 2 ||
+        strncasecmp(split[0], "bonds", 4) != 0 ||
+        !IsInteger(split[1])) {
+      fprintf(stderr, "\nError: %s - wrong or missing 'bonds' line\n", input);
+      fprintf(stderr, "       Wrong line:");
+      for (int i = 0; i < words; i++) {
+        fprintf(stderr, " %s", split[i]);
+      }
+      fprintf(stderr, "\n\n");
+      exit(1);
+    }
+    MoleculeType[i].nBonds = atoi(split[1]); //}}}
     // connectivity //{{{
     MoleculeType[i].Bond = malloc(MoleculeType[i].nBonds*sizeof(int *));
     for (int j = 0; j < MoleculeType[i].nBonds; j++) {
       MoleculeType[i].Bond[j] = calloc(2, sizeof(int));
       fgets(line, sizeof(line), fr);
-      strtok(line, " \t ");
-      MoleculeType[i].Bond[j][0] = atoi(strtok(NULL, " \t")) - 1;
-      MoleculeType[i].Bond[j][1] = atoi(strtok(NULL, " \t")) - 1;
+      words = SplitLine(split, line);
+      // error if not '<string> <int> <int>'
+      if (words < 3 ||
+          !IsInteger(split[1]) || !IsInteger(split[2])) {
+        fprintf(stderr, "\nError: %s - wrong or missing 'bonds' line\n", input);
+        fprintf(stderr, "       Wrong line:");
+        for (int i = 0; i < words; i++) {
+          fprintf(stderr, " %s", split[i]);
+        }
+        fprintf(stderr, "\n\n");
+        exit(1);
+      }
+      MoleculeType[i].Bond[j][0] = atoi(split[1]) - 1;
+      MoleculeType[i].Bond[j][1] = atoi(split[2]) - 1;
     } //}}}
     // skip till 'finish' //{{{
+    missing = true;
     while(fgets(line, sizeof(line), fr)) {
-      char *split;
-      split = strtok(line, " \t\n");
-      if (strcmp(split, "finish") == 0 ||
-          strcmp(split, "Finish") == 0 ||
-          strcmp(split, "FINISH") == 0 ) {
+      SplitLine(split, line);
+      if (strcasecmp(split[0], "finish") == 0) {
+        missing = false;
         break;
       }
+    }
+    if (missing) {
+      fprintf(stderr, "\nError: %s - missing 'finish' line\n\n", input);
+      exit(1);
     } //}}}
   } //}}}
   fclose(fr);
+  free(input);
 
   // TODO: generalize for more moltypes
   // fill arrays - based on a single molecule type for now //{{{
@@ -454,27 +562,29 @@ int main(int argc, char *argv[]) {
   }
   strcat(stuff, "\n"); //}}}
 
-  // TODO: redo so that the None type is added only if needed
-  // remove None bead type if there are no extra beads //{{{
-  if (Counts.Bonded == Counts.Beads) {
-    for (int i = 1; i < Counts.TypesOfBeads; i++) {
-      strcpy(BeadType[i-1].Name, BeadType[i].Name);
-      BeadType[i-1].Number = BeadType[i].Number;
-      BeadType[i-1].Use = BeadType[i].Use;
-      BeadType[i-1].Write = BeadType[i].Write;
-      BeadType[i-1].Charge = BeadType[i].Charge;
-      BeadType[i-1].Mass = BeadType[i].Mass;
+  // count number of beads of each bead type //{{{
+  BeadType[0].Number = Counts.Unbonded; // None beads
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    for (int j = 0; j < MoleculeType[i].nBeads; j++) {
+      int btype = MoleculeType[i].Bead[j];
+      BeadType[btype].Number += MoleculeType[i].Number;
     }
-    for (int i = 0; i < Counts.Beads; i++) {
-      Bead[i].Type--;
-    }
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      for (int j = 0; j < MoleculeType[i].nBeads; j++) {
-        MoleculeType[i].Bead[j]--;
-      }
-    }
-    Counts.TypesOfBeads--;
   } //}}}
+
+  // remove bead types with 0 beads //{{{
+  count = 0;
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    if (BeadType[i].Number != 0) {
+      strcpy(BeadType[count].Name, BeadType[i].Name);
+      BeadType[count].Number = BeadType[i].Number;
+      BeadType[count].Use = BeadType[i].Use;
+      BeadType[count].Write = BeadType[i].Write;
+      BeadType[count].Charge = BeadType[i].Charge;
+      BeadType[count].Mass = BeadType[i].Mass;
+      count++;
+    }
+  }
+  Counts.TypesOfBeads = count; //}}}
 
   // write output vsf file
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
@@ -510,19 +620,6 @@ int main(int argc, char *argv[]) {
     putchar('\n');
     putchar('\n');
     VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-    // molecule prototypes
-    putchar('\n');
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      fprintf(stdout, "Prototype of %s\n", MoleculeType[i].Name);
-      for (int j = 0; j < MoleculeType[i].nBeads; j++) {
-        int btype = MoleculeType[i].Bead[j];
-        fprintf(stdout, "%8s %lf %lf %lf\n", BeadType[btype].Name,
-                                             prototype[i][j].x,
-                                             prototype[i][j].y,
-                                             prototype[i][j].z);
-      }
-      putchar('\n');
-    }
   } //}}}
 
   // free memory - to make valgrind happy //{{{
@@ -534,7 +631,6 @@ int main(int argc, char *argv[]) {
     free(prototype[i]);
   }
   free(prototype);
-  free(input);
   free(output_vcf); //}}}
 
   return 0;
