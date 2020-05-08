@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -20,12 +14,12 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <1st input.vcf> <2nd input.vcf> <2nd input.vsf> ", cmd);
+  fprintf(ptr, "   %s <1st input.vcf> <2nd input.vsf> <2nd input.vcf> ", cmd);
   fprintf(ptr, "<output.vcf> <type names> <options>\n\n");
 
-  fprintf(ptr, "   <1st input.vcf>   input filename of 1st run (vcf format)\n");
-  fprintf(ptr, "   <2nd input.vcf>   input filename of 2nd run (vcf format)\n");
-  fprintf(ptr, "   <2nd input.vsf>   input filename of 2nd run (vsf format)\n");
+  fprintf(ptr, "   <1st input.vcf>   input filename of 1st run (vcf or vtf format)\n");
+  fprintf(ptr, "   <2nd input.vsf>   input filename of 2nd run (vsf or vtf format)\n");
+  fprintf(ptr, "   <2nd input.vcf>   input filename of 2nd run (vcf or vtf format)\n");
   fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
   fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
   fprintf(ptr, "   <options>\n");
@@ -94,10 +88,70 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <1st input> - first input coordinate file //{{{
+  char input_coor_1[LINE];
+  strcpy(input_coor_1, argv[++count]);
+
+  // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor_1, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf_1 = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor_1, '.'),".vtf") == 0) {
+    strcpy(input_vsf_1, input_coor_1);
+  } else {
+    strcpy(input_vsf_1, "traject.vsf");
+  } //}}}
+
+  // <2nd input.vsf> - second structure file //{{{
+  char *input_vsf_2 = calloc(LINE,sizeof(char *));
+  strcpy(input_vsf_2, argv[++count]);
+
+  // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
+  ext = 2;
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_vsf_2, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <2nd input> - second input coordinate file //{{{
+  char input_coor_2[LINE];
+  strcpy(input_coor_2, argv[++count]);
+
+  // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  ext = 2;
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor_2, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
+  char output_vcf[LINE];
+  strcpy(output_vcf, argv[++count]);
+
+  // test if output coordinate file ends with '.vcf' (required by vmd)
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (ErrorExtension(output_vcf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf_1 = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf_1, &verbose, &silent, &script);
 
@@ -156,60 +210,6 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <1st input> - first input coordinate file //{{{
-  char input_coor_1[LINE];
-  strcpy(input_coor_1, argv[++count]);
-
-  // test if <1st input> ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor_1, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <2nd input> - second input coordinate file //{{{
-  char input_coor_2[LINE];
-  strcpy(input_coor_2, argv[++count]);
-
-  // test if <2nd input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor_2, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <2nd input.vsf> - second structure file (must end with .vsf) //{{{
-  char *input_vsf_2 = calloc(LINE,sizeof(char *));
-  strcpy(input_vsf_2, argv[++count]);
-
-  // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
-  ext = 2;
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_vsf_2, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-
-  // test if output coordinate file ends with '.vcf' (required by vmd)
-  ext = 1;
-  strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
   // variables - structures //{{{
   // data from 1st run
   BeadType *BeadType1; // structure with info about all bead types
@@ -243,12 +243,11 @@ int main(int argc, char *argv[]) {
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType1);
-
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s or %s coordinate file\n\n", argv[count], input_coor_1, input_coor_2);
+      ErrorBeadType("\0", argv[count], Counts, BeadType1);
+      fprintf(stderr, "Note that all bead types must be in both coordinate files.\n\n");
       exit(1);
     }
-
     BeadType1[type].Write = true;
   } //}}}
 
@@ -289,40 +288,23 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // 1st vcf file - skip till 'pbc' keyword //{{{
-  do {
-    if (fscanf(vcf_1, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor_1);
-    }
-  } while (strcmp(str, "pbc") != 0);
-
-  // read pbc
-  Vector BoxLength;
-  if (fscanf(vcf_1, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor_1);
+  // get to the pbc line in both input files //{{{
+  Vector BoxLength = GetPBC(vcf_1, input_coor_1);
+  Vector BoxLength_2 = GetPBC(vcf_2, input_coor_2);
+  // check that the box sizes are the same
+  if (BoxLength.x != BoxLength_2.x ||
+      BoxLength.y != BoxLength_2.y ||
+      BoxLength.z != BoxLength_2.z) {
+    fprintf(stderr, "\nError - different box sizes in provided coordinate files\n");
+    fprintf(stderr, "          %s: %lf %lf %lf\n", input_coor_1, BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stderr, "          %s: %lf %lf %lf\n\n", input_coor_1, BoxLength_2.x, BoxLength_2.y, BoxLength_2.z);
     exit(1);
-  }
-  // skip remainder of pbc line
-  while (getc(vcf_1) != '\n')
-    ; //}}}
+  } //}}}
 
-  // 2nd vcf file - skip till 'pbc' keword //{{{
-  do {
-    if (fscanf(vcf_2, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor_2);
-    }
-  } while (strcmp(str, "pbc") != 0);
-  // skip remainder of pbc line
-  while (getc(vcf_2) != '\n')
-    ;
-
-  // print pbc if verbose output
+  // print pbc if verbose output //{{{
   if (verbose) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
-  //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -446,7 +428,7 @@ int main(int argc, char *argv[]) {
 
   // connect Bead2 with Bead1 via Index arrays //{{{
   if (!silent && !script) {
-    fprintf(stdout, "\nWarning: connecting bead indices from the two runs may take a long time\n");
+    fprintf(stdout, "\nWarning: depending on the number of beads in the system, connecting bead indices from the two runs may take a long time\n\n");
   }
   bool used[Counts.Beads];
   for (int i = 0; i < Counts.Beads; i++) {

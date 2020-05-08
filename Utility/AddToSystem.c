@@ -1,12 +1,9 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
-#include <time.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
+
+// TODO: check the whole thing
+// 1) possible mess-ups in struct names
+// 2) check flags .Use and .Write and what they're used for
+// 3) weird (somehow) generation procedure... sometimes leads to unexplainable segfaults
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -105,10 +102,64 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input.vcf> - input coordinate file //{{{
+  char input_coor[LINE];
+  char *input_vsf = calloc(LINE,sizeof(char));
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // <out.vsf> - filename of output vcf file (must end with .vcf) //{{{
+  char output_vsf[LINE];
+  strcpy(output_vsf, argv[++count]);
+
+  // test if <out.vsf> filename ends with '.vsf' (required by VMD)
+  ext = 1;
+  strcpy(extension[0], ".vsf");
+  if (ErrorExtension(output_vsf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
+  char output_vcf[LINE];
+  strcpy(output_vcf, argv[++count]);
+
+  // test if <output.vcf> filename ends with '.vcf' (required by VMD)
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (ErrorExtension(output_vcf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // variables - structures //{{{
+  BeadType *BeadType; // structure with info about all bead types
+  MoleculeType *MoleculeType; // structure with info about all molecule types
+  Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  Molecule *Molecule; // structure with info about every molecule
+  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -129,8 +180,6 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   // 2) if vsf file exists, look for vcf
-  int ext;
-  char extension[2][5];
   if (add_vsf[0] != '\0') {
     ext = 2;
     strcpy(extension[0], ".vsf");
@@ -267,53 +316,7 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\n\n");
   } //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <input.vcf> - input coordinate file //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  ext = 2;
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <out.vsf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vsf[LINE];
-  strcpy(output_vsf, argv[++count]);
-
-  // test if <out.vsf> filename ends with '.vsf' (required by VMD)
-  ext = 1;
-  strcpy(extension[0], ".vsf");
-  if (ErrorExtension(output_vsf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <out.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-
-  // test if <output.vcf> filename ends with '.vcf' (required by VMD)
-  ext = 1;
-  strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
-
+printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
@@ -327,7 +330,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Write = BeadType[i].Use; // use Write flag to decide which bead types to use
     BeadType[i].Use = false;
-  }//}}}
+  } //}}}
 
   // -bt <name(s)> - specify what bead types to use //{{{
   if (BeadTypeOption(argc, argv, "-bt", false, Counts, &BeadType)) {
@@ -341,31 +344,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // skip till 'pbc' keyword //{{{
-  do {
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
-      exit(1);
-    }
-  } while (strcmp(str, "pbc") != 0); //}}}
-
-  // read pbc //{{{
-  Vector BoxLength;
-  char line[LINE];
-  fgets(line, sizeof(line), vcf);
-  // split the line into array
-  char *split[30];
-  split[0] = strtok(line, " \t");
-  int i = 0;
-  while (split[i] != NULL && i < 29) {
-    split[++i] = strtok(NULL, " \t");
-  }
-  BoxLength.x = atof(split[0]);
-  BoxLength.y = atof(split[1]);
-  BoxLength.z = atof(split[2]); //}}}
-  //}}}
+  Vector BoxLength = GetPBC(vcf, input_coor);
 
   // print original system //{{{
   if (verbose) {
@@ -470,21 +449,34 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
+    char line[LINE], split[30][100];
+    int words;
+
     // read number of bead types //{{{
-    // 1) skip till 'species' keyword
-    do {
-      // get whole line - max 1000 chars
-      fgets(line, sizeof(line), in_add);
-
-      // first string of the line
-      split[0] = strtok(line, " \t");
-
-    } while (strcmp(split[0], "species") != 0 &&
-             strcmp(split[0], "SPECIES") != 0 &&
-             strcmp(split[0], "Species") != 0);
-    // 2) after 'species' is number of bead types
-    split[1] = strtok(NULL, " \t");
-    Counts_add.TypesOfBeads = atoi(split[1]); //}}}
+    bool missing = true; // is 'species' keyword missing?
+    while(fgets(line, sizeof(line), in_add)) {
+      words = SplitLine(split, line);
+      if (strcasecmp(split[0], "species") == 0) {
+        missing = false;
+        // check if the next string is a number
+        if (words < 2 ||            // missing next string
+            !IsInteger(split[1])) { // next string isn't a number
+          fprintf(stderr, "\nError: %s - missing number of species\n", input_add);
+          fprintf(stderr, "       Wrong line:");
+          for (int j = 0; j < words; j++) {
+            fprintf(stderr, " %s", split[j]);
+          }
+          fprintf(stderr, "\n\n");
+          exit(1);
+        }
+        Counts_add.TypesOfBeads = atoi(split[1]);
+        break;
+      }
+    }
+    if (missing) {
+      fprintf(stderr, "\nError: %s - missing 'species' line\n\n", input_add);
+      exit(1);
+    } //}}}
 
     // added bead types
     BeadType_add = malloc(Counts_add.TypesOfBeads*sizeof(struct BeadType));
@@ -493,18 +485,31 @@ int main(int argc, char *argv[]) {
 
     // read bead type info //{{{
     for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
+      char line[LINE];
       fgets(line, sizeof(line), in_add);
-      // bead name
-      split[0] = strtok(line, " \t");
+      SplitLine(split, line);
+      // Error:
+      // 1) empty line
+      // 2) less then four strings
+      // 3) second string isn't a positive double (mass)
+      // 4) third string isn't a double (charge)
+      // 5) fifth string isn't an integer (unbonded beads)
+      if (words == 1 && split[0][0] == '\0') { // 1)
+        fprintf(stderr, "\nError: %s - missing bead type line\n\n", input_add);
+      } else if (words < 4 ||                  // 2)
+                 !IsPosDouble(split[1]) ||     // 3)
+                 !IsDouble(split[2]) ||        // 4)
+                 !IsInteger(split[3])) {       // 5)
+        fprintf(stderr, "\nError: %s - wrong bead type line:", input_add);
+        for (int j = 0; j < words; j++) {
+          fprintf(stderr, " %s", split[j]);
+        }
+        fprintf(stderr, "\n\n");
+        exit(1);
+      }
       strcpy(BeadType_add[i].Name, split[0]);
-      // bead mass
-      split[1] = strtok(NULL, " \t");
       BeadType_add[i].Mass = atof(split[1]);
-      // bead charge
-      split[2] = strtok(NULL, " \t");
       BeadType_add[i].Charge = atof(split[2]);
-      // number of unbonded beads
-      split[3] = strtok(NULL, " \t");
       BeadType_add[i].Number = atoi(split[3]);
       BeadType_add[i].Use = true;
       BeadType_add[i].Write = true;
@@ -526,21 +531,30 @@ int main(int argc, char *argv[]) {
       Counts_add.Beads += BeadType_add[i].Number;
     } //}}}
 
-    // read number of molecul types //{{{
-    // 1) skip till 'molecule' keyword
-    do {
-      // get whole line - max 1000 chars
-      fgets(line, sizeof(line), in_add);
-
-      // first string of the line
-      split[0] = strtok(line, " \t");
-
-    } while (strncmp(split[0], "molecules", 8) != 0 &&
-             strncmp(split[0], "MOLECULES", 8) != 0 &&
-             strncmp(split[0], "Molecules", 8) != 0);
-    // 2) after 'molecule' is number of molecule types
-    split[1] = strtok(NULL, " \t");
-    Counts_add.TypesOfMolecules = atoi(split[1]); //}}}
+    // read number of molecule types //{{{
+    missing = true; // is molecule keyword missing?
+    while(fgets(line, sizeof(line), in_add)) {
+      words = SplitLine(split, line);
+      if (strncasecmp(split[0], "molecule", 8) == 0) {
+        missing = false;
+        // error - next string isn't a number
+        if (!IsInteger(split[1])) {
+          fprintf(stderr, "\nError: %s - missing number of molecule types\n", input_add);
+          fprintf(stderr, "       Wrong line:");
+          for (int i = 0; i < words; i++) {
+            fprintf(stderr, " %s", split[i]);
+          }
+          fprintf(stderr, "\n\n");
+          exit(1);
+        }
+        Counts_add.TypesOfMolecules = atoi(split[1]);
+        break;
+      }
+    }
+    if (missing) {
+      fprintf(stderr, "\nError: %s - missing 'molecule' line\n\n", input_add);
+      exit(1);
+    } //}}}
 
     // allocate structures //{{{
     // added molecule types
@@ -552,32 +566,57 @@ int main(int argc, char *argv[]) {
 
     // read molecule info //{{{
     for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
-      // molecule name //{{{
+      // name //{{{
       fgets(line, sizeof(line), in_add);
-      strcpy(line, TrimLine(line)); // trim excess whitespace
-      split[0] = strtok(line, " \t");
+      SplitLine(split, line);
+      if (split[0][0] == '\0') { // empty line
+        fprintf(stderr, "\nError: %s - blank line instead of molecule name\n", input_add);
+        exit(1);
+      }
       strcpy(MoleculeType_add[i].Name, split[0]); //}}}
-      // number of molecules of given type //{{{
+      // number of molecules 'i' //{{{
       fgets(line, sizeof(line), in_add);
-      split[0] = strtok(line, " \t");
-      split[1] = strtok(NULL, " \t");
+      words = SplitLine(split, line);
+      // error if not 'nummols <int>'
+      if (words < 2 ||
+          strcasecmp(split[0], "nummols") != 0 ||
+          !IsInteger(split[1])) {
+        fprintf(stderr, "\nError: %s - wrong or missing 'nummols' line\n", input_add);
+        fprintf(stderr, "       Wrong line:");
+        for (int i = 0; i < words; i++) {
+          fprintf(stderr, " %s", split[i]);
+        }
+        fprintf(stderr, "\n\n");
+        exit(1);
+      }
       MoleculeType_add[i].Number = atoi(split[1]); //}}}
-      // number of beads in molecules of given type //{{{
+      // number of beads //{{{
       fgets(line, sizeof(line), in_add);
-      split[0] = strtok(line, " \t");
-      split[1] = strtok(NULL, " \t");
+      words = SplitLine(split, line);
+      // error if not 'beads <int>'
+      if ( words < 2 ||
+          strncasecmp(split[0], "beads", 4) != 0 ||
+          !IsInteger(split[1])) {
+        fprintf(stderr, "\nError: %s - wrong or missing 'beads' line\n", input_add);
+        fprintf(stderr, "       Wrong line:");
+        for (int i = 0; i < words; i++) {
+          fprintf(stderr, " %s", split[i]);
+        }
+        fprintf(stderr, "\n\n");
+        exit(1);
+      }
       MoleculeType_add[i].nBeads = atoi(split[1]);
-      MoleculeType_add[i].Bead = calloc(MoleculeType_add[i].nBeads, sizeof(int)); //}}}
+      MoleculeType_add[i].Bead = calloc(MoleculeType[i].nBeads, sizeof(int)); //}}}
+      // initially, set all flags to true
       MoleculeType_add[i].InVcf = true;
       MoleculeType_add[i].Use = true;
       MoleculeType_add[i].Write = true;
-
-      // total number of beads in the molecules of type 'i'
+      // number of beads in the molecules of type 'i'
       int beads = MoleculeType_add[i].Number * MoleculeType_add[i].nBeads;
-      // total number of molecules and beads so far
+      // number of molecules
       int total_mols = Counts_add.Molecules + MoleculeType_add[i].Number;
-      int total_beads = Counts_add.Beads+beads;
-
+      // number of all beads
+      int total_beads = Counts_add.Beads + beads;
       // realloc _add structures //{{{
       Bead_add = realloc(Bead_add, total_beads*sizeof(struct Bead));
       Molecule_add = realloc(Molecule_add, total_mols*sizeof(struct Molecule));
@@ -587,21 +626,34 @@ int main(int argc, char *argv[]) {
       MoleculeType_add[i].BType = malloc(1*sizeof(int));
       MoleculeType_add[i].nBTypes = 0;
       MoleculeType_add[i].Mass = 0; //}}}
-
+      // read bead types and coordinates //{{{
       // allocate array for coordinates of prototype molecule of type 'i'
       prototype[i] = malloc(MoleculeType_add[i].nBeads*sizeof(struct Vector));
-
-      // read bead types and coordinates
+      // helper vector to set coordinates of the first bead as [0,0,0]
       Vector zero_first;
       zero_first.x = 0;
       zero_first.y = 0;
       zero_first.z = 0;
       for (int j = 0; j < MoleculeType_add[i].nBeads; j++) {
         fgets(line, sizeof(line), in_add);
-        // bead name //{{{
-        split[0] = strtok(line, " \t");
+        words = SplitLine(split, line);
+        // error - not enough columns or not three coordinate //{{{
+        if (words < 4 || !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
+          fprintf(stderr, "\nError: %s - cannot read coordinates\n", input_add);
+          fprintf(stderr, "       Wrong line:");
+          for (int i = 0; i < words; i++) {
+            fprintf(stderr, " %s", split[i]);
+          }
+          fprintf(stderr, "\n\n");
+          exit(1);
+        } //}}}
         // is the bead type registered in the molecule already?
         int btype = FindBeadType(split[0], Counts_add, BeadType_add);
+        // error - wrong bead name //{{{
+        if (btype == -1) {
+          ErrorBeadType(input_add, split[0], Counts_add, BeadType_add);
+          exit(1);
+        } //}}}
         bool exists = false;
         for (int k = 0; k < MoleculeType_add[i].nBTypes; k++) {
           if (btype == MoleculeType_add[i].BType[k]) {
@@ -614,32 +666,26 @@ int main(int argc, char *argv[]) {
           MoleculeType_add[i].nBTypes++;
           MoleculeType_add[i].BType = realloc(MoleculeType_add[i].BType, MoleculeType_add[i].nBTypes*sizeof(int));
           MoleculeType_add[i].BType[MoleculeType_add[i].nBTypes-1] = btype;
-        } //}}}
+        }
         MoleculeType_add[i].Bead[j] = btype;
-
         // add bead's mass to molecule mass
         MoleculeType_add[i].Mass += BeadType_add[btype].Mass;
-
-        // bead coordinate //{{{
-        split[1] = strtok(NULL, " \t");
+        // read bead coordinates
         prototype[i][j].x = atof(split[1]);
-        split[2] = strtok(NULL, " \t");
         prototype[i][j].y = atof(split[2]);
-        split[3] = strtok(NULL, " \t");
-        prototype[i][j].z = atof(split[3]); //}}}
-
-        // first bead should have coordinates [0,0,0] //{{{
+        prototype[i][j].z = atof(split[3]);
+        // first bead should have coordinates [0,0,0]
+        // 1) save coordinates of the first bead
         if (j == 0) {
           zero_first.x = prototype[i][j].x;
           zero_first.y = prototype[i][j].y;
           zero_first.z = prototype[i][j].z;
-        } else {
-          prototype[i][j].x -= zero_first.x;
-          prototype[i][j].y -= zero_first.y;
-          prototype[i][j].z -= zero_first.z;
-        } //}}}
-      }
-
+        }
+        // 2) subtract the coordinates from all beads
+        prototype[i][j].x -= zero_first.x;
+        prototype[i][j].y -= zero_first.y;
+        prototype[i][j].z -= zero_first.z;
+      } //}}}
       // fill _add structures //{{{
       for (int j = 0; j < MoleculeType_add[i].nBeads; j++) {
         int btype = MoleculeType_add[i].Bead[j];
@@ -659,45 +705,65 @@ int main(int argc, char *argv[]) {
           BeadType_add[btype].Number++;
         }
       } //}}}
-
+      // update Counts_add structure //{{{
       Counts_add.Bonded += beads;
       Counts_add.Beads += beads;
       Counts_add.BeadsInVsf += beads;
-      Counts_add.Molecules += MoleculeType_add[i].Number;
-
-      // number of bonds in molecules of given type //{{{
+      Counts_add.Molecules += MoleculeType_add[i].Number; //}}}
+      // number of bonds //{{{
       fgets(line, sizeof(line), in_add);
-      split[0] = strtok(line, " \t");
-      split[1] = strtok(NULL, " \t");
+      words = SplitLine(split, line);
+      // error if not 'bonds <int>'
+      if (words < 2 ||
+          strncasecmp(split[0], "bonds", 4) != 0 ||
+          !IsInteger(split[1])) {
+        fprintf(stderr, "\nError: %s - wrong or missing 'bonds' line\n", input_add);
+        fprintf(stderr, "       Wrong line:");
+        for (int i = 0; i < words; i++) {
+          fprintf(stderr, " %s", split[i]);
+        }
+        fprintf(stderr, "\n\n");
+        exit(1);
+      }
       MoleculeType_add[i].nBonds = atoi(split[1]); //}}}
-
       // allocate Bond array //{{{
       MoleculeType_add[i].Bond = malloc(MoleculeType_add[i].nBonds*sizeof(int *));
       for (int j = 0; j < MoleculeType_add[i].nBonds; j++) {
         MoleculeType_add[i].Bond[j] = calloc(2, sizeof(int));
       } //}}}
-
-      // read bond info //{{{
-      for (int j = 0; j < MoleculeType_add[i].nBonds; j++) {
+      // connectivity //{{{
+      MoleculeType[i].Bond = malloc(MoleculeType[i].nBonds*sizeof(int *));
+      for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+        MoleculeType[i].Bond[j] = calloc(2, sizeof(int));
         fgets(line, sizeof(line), in_add);
-        split[0] = strtok(line, " \t");
-        split[1] = strtok(NULL, " \t");
-        split[2] = strtok(NULL, " \t");
+        words = SplitLine(split, line);
+        // error if not '<string> <int> <int>'
+        if (words < 3 ||
+            !IsInteger(split[1]) || !IsInteger(split[2])) {
+          fprintf(stderr, "\nError: %s - wrong or missing a bond line\n", input_add);
+          fprintf(stderr, "       Wrong line:");
+          for (int i = 0; i < words; i++) {
+            fprintf(stderr, " %s", split[i]);
+          }
+          fprintf(stderr, "\n\n");
+          exit(1);
+        }
         MoleculeType_add[i].Bond[j][0] = atoi(split[1]) - 1; // bead ids in FIELD start from 1
         MoleculeType_add[i].Bond[j][1] = atoi(split[2]) - 1;
       } //}}}
-
-      // skip till 'finish' keyword //{{{
-      do {
-        // get whole line - max 1000 chars
-        fgets(line, sizeof(line), in_add);
-        strcpy(line, TrimLine(line)); // trim excess whitespace
-
-        // first string of the line
-        split[0] = strtok(line, " \t");
-      } while (strcmp(split[0], "finish") != 0 &&
-               strcmp(split[0], "Finish") != 0 &&
-               strcmp(split[0], "FINISH") != 0); //}}}
+      // skip till 'finish' //{{{
+      missing = true;
+      while(fgets(line, sizeof(line), in_add)) {
+        SplitLine(split, line);
+        if (strcasecmp(split[0], "finish") == 0) {
+          missing = false;
+          break;
+        }
+      }
+      if (missing) {
+        fprintf(stderr, "\nError: %s - missing 'finish' line\n\n", input_add);
+        exit(1);
+      } //}}}
     } //}}}
 
     Counts_add.BeadsInVsf = Counts_add.Beads;
@@ -1061,6 +1127,7 @@ int main(int argc, char *argv[]) {
   srand(time(0));
 
   // count unbonded neutral beads //{{{
+  // TODO: change - it doesn't seem to take into account -xb option
   int can_be_exchanged = 0;
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
     int btype = Bead[i].Type;
@@ -1088,7 +1155,7 @@ int main(int argc, char *argv[]) {
 
       if (add_vsf[0] == '\0') { // randomly place monomers if FIELD-like file is used
         double min_dist;
-        if (lowest_dist != -1 || highest_dist != -1) { // ||
+        if (lowest_dist != -1 || highest_dist != -1) {
           do {
             random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
             random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
@@ -1097,7 +1164,6 @@ int main(int argc, char *argv[]) {
             min_dist = SQR(BoxLength.x * 100);
             for (int j = 0; j < Counts.Beads; j++) {
               int btype = Bead[j].Type;
-              // TODO: is that thing below true? ...anyway, use Counts_new now
               // j can be added monomeric bead, so it's type can be higher than the number of types
               if (btype < Counts.TypesOfBeads && BeadType[btype].Use) {
                 Vector dist;
@@ -1106,10 +1172,6 @@ int main(int argc, char *argv[]) {
                 if (dist.x < min_dist) {
                   min_dist = dist.x;
                 }
-              }
-              if ((lowest_dist != -1 && lowest_dist >= min_dist) ||
-                  (highest_dist != -1 && highest_dist <= min_dist)) {
-                break;
               }
             }
           } while ((lowest_dist != -1 && lowest_dist >= min_dist) ||

@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -124,46 +118,25 @@ int main(int argc, char *argv[]) {
   // read system information
   ReadStructure(input, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
-  if (verbose) {
+  if (verbose) { //{{{
     fprintf(stdout, "\nInformation about every bead:\n");
     PrintBead(Counts, Index, BeadType, Bead);
     fprintf(stdout, "\nInformation about every molecule:\n");
     PrintMolecule(Counts, Index, MoleculeType, Molecule, Bead, BeadType);
-  }
+  } //}}}
 
   // get box dimensions if -c is used //{{{
   Vector BoxLength;
   BoxLength.x = -1;
   if (input_coor[0] != '\0') {
-    // open input coordinate file //{{{
+    // open input coordinate file
     FILE *vcf;
     if ((vcf = fopen(input_coor, "r")) == NULL) {
       ErrorFileOpen(input_coor, 'r');
       exit(1);
-    } //}}}
-
-    char str[LINE];
-    // skip till 'pbc' keyword //{{{
-    do {
-      if (fscanf(vcf, "%s", str) != 1) {
-        fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
-        exit(1);
-      }
-    } while (strcmp(str, "pbc") != 0); //}}}
-
-    // read pbc
-    char line[LINE];
-    fgets(line, sizeof(line), vcf);
-    // split the line into array
-    char *split[30];
-    split[0] = strtok(line, " \t");
-    int i = 0;
-    while (split[i] != NULL && i < 29) {
-      split[++i] = strtok(NULL, " \t");
     }
-    BoxLength.x = atof(split[0]);
-    BoxLength.y = atof(split[1]);
-    BoxLength.z = atof(split[2]);
+
+    BoxLength = GetPBC(vcf, input_coor);
 
     fclose(vcf);
   }

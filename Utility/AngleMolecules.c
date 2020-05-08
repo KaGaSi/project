@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -22,7 +15,7 @@ to be connected by bonds.\n\n");
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <width> <output> <mol name(s)> <options>\n\n", cmd);
 
-  fprintf(ptr, "   <input>       input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <width>           width of a single bin in degrees\n");
   fprintf(ptr, "   <output>          output file with distribution of angles\n");
   fprintf(ptr, "   <mol name(s)>     molecule name(s) to calculate angles for\n");
@@ -83,10 +76,48 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input> - filename of input vcf file (must end with .vcf) //{{{
+  char input_coor[LINE];
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // <width> - number of starting timestep //{{{
+  // Error - non-numeric argument
+  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+    ErrorNaN("<width>");
+    Help(argv[0], true);
+    exit(1);
+  }
+  double width = atof(argv[count]);
+
+  // number of bins between 0 and 180 deg
+  int bins = ceil(180 / width); //}}}
+
+  // <output> - file name with dihedral angle distribution //{{{
+  char output_distr[LINE];
+  strcpy(output_distr, argv[++count]); //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -113,38 +144,6 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\n\n");
   } //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <input> - filename of input vcf file (must end with .vcf) //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <width> - number of starting timestep //{{{
-  // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    ErrorNaN("<width>");
-    Help(argv[0], true);
-    exit(1);
-  }
-  double width = atof(argv[count]);
-
-  // number of bins between 0 and 180 deg
-  int bins = ceil(180 / width); //}}}
-
-  // <output> - file name with dihedral angle distribution //{{{
-  char output_distr[LINE];
-  strcpy(output_distr, argv[++count]); //}}}
-
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
   MoleculeType *MoleculeType; // structure with info about all molecule types
@@ -153,6 +152,7 @@ int main(int argc, char *argv[]) {
   Molecule *Molecule; // structure with info about every molecule
   Counts Counts; // structure with number of beads, molecules, etc. //}}}
 
+printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
@@ -259,30 +259,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // skip till 'pbc' keyword
-  do {
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
-    }
-  } while (strcmp(str, "pbc") != 0);
-
-  // read pbc
-  Vector BoxLength;
-  if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
-    exit(1);
-  }
-
-  // skip remainder of pbc line
-  while (getc(vcf) != '\n')
-    ;
-
-  // print pbc if verbose output
-  if (verbose) {
-    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
-  } //}}}
+  Vector BoxLength = GetPBC(vcf, input_coor);
 
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));
