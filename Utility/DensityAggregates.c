@@ -1,11 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -26,7 +19,7 @@ only one column for 'A' bead type).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <input.agg> <width> <output.rho> <agg size(s)> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <input.agg> <width> <output> <agg size(s)> <options>\n\n", cmd);
 
   fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
   fprintf(ptr, "   <input.agg>       input agg file\n");
@@ -91,10 +84,57 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input> - input coordinate file //{{{
+  char input_coor[LINE];
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // <input.agg> - input agg file //{{{
+  char input_agg[LINE];
+  strcpy(input_agg, argv[++count]);
+
+  // test if <input.agg> ends with '.agg'
+  ext = 1;
+  strcpy(extension[0], ".agg");
+  if (ErrorExtension(input_agg, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <width> - width of single bin //{{{
+  // Error - non-numeric argument
+  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+    ErrorNaN("<width>");
+    Help(argv[0], true);
+    exit(1);
+  }
+  double width = atof(argv[count]); //}}}
+
+  // <output.rho> - filename with bead densities //{{{
+  char output_rho[LINE];
+  strcpy(output_rho, argv[++count]); //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -132,47 +172,6 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, " %s", argv[i]);
     fprintf(stdout, "\n\n");
   } //}}}
-
-  count = 0; // count mandatory arguments
-
-  // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <input.agg> - input agg file //{{{
-  char input_agg[LINE];
-  strcpy(input_agg, argv[++count]);
-
-  // test if <input.agg> ends with '.agg'
-  ext = 1;
-  strcpy(extension[0], ".agg");
-  if (ErrorExtension(input_agg, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <width> - width of single bin //{{{
-  // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
-    ErrorNaN("<width>");
-    Help(argv[0], true);
-    exit(1);
-  }
-  double width = atof(argv[count]); //}}}
-
-  // <output.rho> - filename with bead densities //{{{
-  char output_rho[LINE];
-  strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{
   BeadType *BeadType; // structure with info about all bead types
@@ -286,7 +285,7 @@ int main(int argc, char *argv[]) {
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s coordinate file\n\n", name, input_coor);
+      ErrorBeadType(input_coor, name, Counts, BeadType);
       exit(1);
     }
 
@@ -317,31 +316,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // skip till 'pbc' keyword
-  do {
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
-      exit(1);
-    }
-  } while (strcmp(str, "pbc") != 0);
-
-  // read pbc
-  Vector BoxLength;
-  if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "\nError: cannot read pbc from %s\n\n", input_coor);
-    exit(1);
-  }
-
-  // skip remainder of pbc line
-  while (getc(vcf) != '\n')
-    ;
-
-  // print pbc if verbose output
-  if (verbose) {
-    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
-  } //}}}
+  Vector BoxLength = GetPBC(vcf, input_coor);
 
   // number of bins //{{{
   double max_dist = 0.5 * Min3(BoxLength.x, BoxLength.y, BoxLength.z);
@@ -580,6 +555,7 @@ int main(int argc, char *argv[]) {
   // write densities to output file(s) //{{{
   for (int i = 0; i < aggs; i++) {
     FILE *out;
+    char str[LINE];
     // assemble correct name
     sprintf(str, "%s", output_rho);
     char str2[1030];

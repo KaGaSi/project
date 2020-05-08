@@ -1,11 +1,149 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
-#include <stdbool.h>
 #include "AnalysisTools.h"
-#include "Errors.h"
+
+bool IsPosDouble(char *a) { //{{{
+  // wrong first character - can be minus, dot, or number
+  if (a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
+    return false;
+  }
+  // only one dot can be present
+  bool dot = false;
+  if (a[0] == '.') {
+    dot = true;
+  }
+  // test the remaining characters - either digit, or dot (but only 1 in total)
+  for (int i = 1; i < strlen(a); i++) {
+    if (a[i] == '.') {
+      if (dot) { // has there been a dot already?
+        return false;
+      } else {
+        dot = true;
+      }
+    } else if (a[i] < '0' || a[i] > '9') {
+      return false;
+    }
+  }
+  return true;
+} //}}}
+
+bool IsDouble(char *a) { //{{{
+  // wrong first character - can be minus, dot, or number
+  if (a[0] != '-' && a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
+    return false;
+  }
+  // only one dot can be present
+  bool dot = false;
+  if (a[0] == '.') {
+    dot = true;
+  }
+  // test the remaining characters - either digit, or dot (but only 1 in total)
+  for (int i = 1; i < strlen(a); i++) {
+    if (a[i] == '.') {
+      if (dot) { // has there been a dot already?
+        return false;
+      } else {
+        dot = true;
+      }
+    } else if (a[i] < '0' || a[i] > '9') {
+      return false;
+    }
+  }
+  return true;
+} //}}}
+
+bool IsInteger(char *a) { //{{{
+  // test the remaining characters - either digit, or dot (but only 1 in total)
+  for (int i = 0; i < strlen(a); i++) {
+    if (a[i] < '0' || a[i] > '9') {
+      return false;
+    }
+  }
+  return true;
+} //}}}
+
+// split the line into array //{{{
+/**
+ * Function that splits the provided line into individual strings (using tab,
+ * space, and colon as a delimiter) and removes newline character from the end
+ * of the last string.
+ */
+int SplitLine(char out[30][100], char *line) {
+  // trim whitespaces at the beginning and end of line
+  strcpy(line, TrimLine(line));
+  // split into words separated by " ", tab, or colon
+  char *split[30];
+  split[0] = strtok(line, " \t:"); // first word
+  int words = 0;
+  while (split[words] != NULL && words < 29) {
+    words++; // start from 1, as the first split is already done
+    split[words] = strtok(NULL, " \t:");
+  }
+  // if the last word ends with newline, make it into '\0'
+  if (split[words-1][strlen(split[words-1])-1] == '\n') {
+    split[words-1][strlen(split[words-1])-1] = '\0';
+  }
+  if (split[words-1][0] == '\n') {
+    words--;
+  }
+  // if the last words is just '\0', disregard it
+  for (int i = 0; i < words; i++) {
+    strcpy(out[i], split[i]);
+  }
+ return words;
+} //}}}
+
+// GetPBC() //{{{
+/*
+ * Function to get box dimensions from the provided coordinate file.
+ */
+Vector GetPBC(FILE *vcf, char *input_coor) {
+
+  Vector BoxLength;
+
+  char line[LINE], line2[LINE];
+  while (fgets(line, sizeof(line), vcf)) {
+    strcpy(line2, line); // copy line to print in case of error
+
+    char split[30][100];
+    int words = SplitLine(split, line);
+//  // split the line into array //{{{
+//  char *split[30];
+//  split[0] = strtok(line, " \t:");
+//  int words = 0;
+//  while (split[words] != NULL && words < 29) {
+//    split[++words] = strtok(NULL, " \t:");
+//  } //}}}
+
+    if (strcmp(split[0], "pbc") == 0) {
+      BoxLength.x = atof(split[1]);
+      BoxLength.y = atof(split[2]);
+      BoxLength.z = atof(split[3]);
+      break;
+    // only certain keywords besides pbc can be present before the first coordinate block
+    // 1) t(imestep) ... starting the coordinate block
+    // 2) t(imestep) i(ndexed)/o(ordered) ... starting the coordinate block
+    // 3) i(ndexed)/o(ordered) ... starting the coordinate block
+    // 4) a(tom) ... in case of vtf file
+    // 5) b(ond) ... in case of vtf file
+    // 6) empty line
+    // 7) comment
+    } else if (!(split[0][0] == 't' && words == 1) && // 1)
+               !(split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) && // 2)
+               !(split[0][0] == 'o' || split[0][0] == 'i') && // 3)
+               split[0][0] != 'a' && // 4)
+               split[0][0] != 'b' && // 5)
+               split[0][0] != '\0' && // 6)
+               split[0][0] != '#') { // 7)
+      fprintf(stderr, "\nError - %s: unrecognised line '%s'\n", input_coor, line2);
+      if (line2[0] >= '0' && line2[0] <= '9' && words > 2) {
+        fprintf(stderr, "        Possibly missing pbc line\n");
+      }
+      putc('\n', stderr);
+      exit(1);
+    }
+  };
+
+  return BoxLength;
+} //}}}
 
 // ReadFIELD() - auxiliary for ReadStructure() //{{{
 /*
@@ -582,15 +720,17 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     bonds[i] = -1;
   } //}}}
+  char line2[LINE];
   while (fgets(line, sizeof(line), vsf)) {
     strcpy(line, TrimLine(line)); // trim excess whitespace
+    strcpy(line2, line); // copy line to print in case of error
 
     // split the line into array //{{{
     char *split[30];
     split[0] = strtok(line, " \t:");
-    int i = 0;
-    while (split[i] != NULL && i < 29) {
-      split[++i] = strtok(NULL, " \t:");
+    int words = 0;
+    while (split[words] != NULL && words < 29) {
+      split[++words] = strtok(NULL, " \t:");
     } //}}}
 
     // b(ond) lines in the form 'bond <int>: <int>'
@@ -605,6 +745,32 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       if (bonds[mol_type] == mol_id) {
         (*MoleculeType)[mol_type].nBonds++;
       }
+    /* Break while loop if at end of bond section
+     * Excepting comments or white lines, behind bonds section can be either coordinates (vtf file):
+     * timestep starting line can be
+     * 1) t(imestep) ...and nothing behind it
+     * 2) t(imestep) o(rdered)/i(ndexed)
+     * 3) o(rdered)/i(ndexed)
+     * or pbc line:
+     * 4) pbc <number> <number> <number>
+     */
+    } else if ((split[0][0] == 't' && words == 1) || // 1)
+               (split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) || // 2)
+               (split[0][0] == 'o' || split[0][0] == 'i') || // 3)
+               (strcmp("pbc", split[0]) == 0 && words > 3 && // 4)
+                split[1][0] >= '0' && split[1][0] && // 4) 1st <number>
+                split[2][0] >= '0' && split[1][0] && // 4) 2nd <number>
+                split[3][0] >= '0' && split[1][0])) { // 4) 3rd <number>
+      break;
+    // exit with error if not empty line or comment
+    } else if (split[0][0] != '\n' && // empty line
+               split[0][0] != '#') { // comment
+      fprintf(stderr, "\nError - %s: unrecognised line '%s'\n", vsf_file, line2);
+      if (line2[0] >= '0' && line2[0] <= '9' && words > 2) {
+        fprintf(stderr, "        Possibly missing 't(imestep) i(ndexed)/o(rdered)' line\n");
+      }
+      putc('\n', stderr);
+      exit(1);
     }
   } //}}}
 
@@ -683,9 +849,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
     // split the line into array //{{{
     char *split[30];
     split[0] = strtok(line, " \t:");
-    int i = 0;
-    while (split[i] != NULL && i < 29) {
-      split[++i] = strtok(NULL, " \t:");
+    int words = 0;
+    while (split[words] != NULL && words < 29) {
+      split[++words] = strtok(NULL, " \t:");
     } //}}}
     if (split[0][0] == 'b') { // b(ond) lines
       int mol_id = (*Bead)[atoi(split[1])].Molecule;
@@ -714,6 +880,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
         }
         count_bonds[mol_type]++;
       }
+    } else if (split[0][0] != '\n' && split[0][0] != '#') {
+      break;
     }
   }
   free(count_bonds);
@@ -776,10 +944,20 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts
       // 't(imestep)' line
       if (split[0][0] == 't' || split[0][0] == 'T') {
         split[1] = strtok(NULL, " \t");
-        if (split[1][0] != 'o' && split[1][0] != 'O' &&
+        // if only 't(imestep)' present, assume ordered timestep
+        if (split[1] == NULL) {
+          str[0] = 'o';
+          break;
+        // otherwise, error if 'i(ndexed)' or 'o(ordered)' not present
+        } else if (split[1][0] != 'o' && split[1][0] != 'O' &&
             split[1][0] != 'i' && split[1][0] != 'I') {
-          fprintf(stderr, "\nError: %s - no 'i(ndexed)' or 'o(rdered)' keyword after 't(imestep)' keyword\n", vcf_file);
+          // remove newline if present at the end of split[1]
+          if (split[1][strlen(split[1])-1] == '\n') {
+            split[1][strlen(split[1])-1] = '\0';
+          }
+          fprintf(stderr, "\nError: %s - unrecognised keywords '%s %s'", vsf_file, split[0], split[1]);
           exit(1);
+        // if no error, find if 'i(ndexed)' or 'o(rdered)' timestep
         } else {
           str[0] = split[1][0];
           break;
@@ -1699,6 +1877,9 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
 } //}}}
 
 // FindBeadType() //{{{
+/* Function to identify type of bead from its name; returns -1 on non-existent
+ * bead name.
+ */
 int FindBeadType(char *name, Counts Counts, BeadType *BeadType) {
   int type;
 
@@ -1935,7 +2116,8 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
         }
       } //}}}
     }
-  } //}}}
+  }
+  free(moved); //}}}
 
   // put aggregates' centre of mass into the simulation box //{{{
   for (int i = 0; i < Counts.Aggregates; i++) {
@@ -1965,78 +2147,12 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
       (*Bead)[bead].Position.z -= move.z * BoxLength.z;
     }
   } //}}}
-
-  // put monomeric beads in contact with their aggregates //{{{
-  for (int i = 0; i < Counts.Aggregates; i++) {
-    // go through monomeric beads in the aggregate
-    for (int j = 0; j < Aggregate[i].nMonomers; j++) {
-      int id1 = Aggregate[i].Monomer[j], id_move_to = -1;
-      double min_dist = 1000000;
-      // find smallest distance between th monomeric bead and bonded beads //{{{
-      for (int k = 0; k < Aggregate[i].nBeads; k++) {
-        int id2 = Aggregate[i].Bead[k];
-
-        // distance between the beads, including pbc
-        Vector dist;
-        dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
-        dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
-        dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
-        dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
-
-        if (dist.x < min_dist) {
-          min_dist = dist.x;
-          id_move_to = id2;
-        }
-      } //}}}
-
-      // move monomer if it's too far from aggregate
-      if (min_dist > distance) {
-
-        // distance between the beads, including pbc
-        Vector dist;
-        dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
-        dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
-        dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
-
-        // move id1 bead? //{{{
-        // x direction
-        while (dist.x > (BoxLength.x/2)) {
-          (*Bead)[id1].Position.x -= BoxLength.x;
-          dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
-        }
-        while (dist.x <= -(BoxLength.x/2)) {
-          (*Bead)[id1].Position.x += BoxLength.x;
-          dist.x = (*Bead)[id1].Position.x - (*Bead)[id_move_to].Position.x;
-        }
-        // y direction
-        while (dist.y > (BoxLength.y/2)) {
-          (*Bead)[id1].Position.y -= BoxLength.y;
-          dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
-        }
-        while (dist.y <= -(BoxLength.y/2)) {
-          (*Bead)[id1].Position.y += BoxLength.y;
-          dist.y = (*Bead)[id1].Position.y - (*Bead)[id_move_to].Position.y;
-        }
-        // z direction
-        while (dist.z > (BoxLength.z/2)) {
-          (*Bead)[id1].Position.z -= BoxLength.z;
-          dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
-        }
-        while (dist.z <= -(BoxLength.z/2)) {
-          (*Bead)[id1].Position.z += BoxLength.z;
-          dist.z = (*Bead)[id1].Position.z - (*Bead)[id_move_to].Position.z;
-        } //}}}
-      }
-    }
-  } //}}}
-
-  free(moved);
 } //}}}
 
 // RestorePBC() //{{{
 /**
- * Function to restore removed periodic boundary conditions. Used in case
- * of cell linked list, because it needs coordinates <0, BoxLength>.
+ * Function to restore removed periodic boundary conditions. Used also in case
+ * of cell linked lists, because they need coordinates <0, BoxLength>.
  */
 void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead) {
 
@@ -2624,6 +2740,10 @@ char * TrimLine(char *line) {
       trimmed[i] = trimmed[i+1];
     }
     length--;
+  }
+  // 3) if only 1 character remains, make it into newline (otherwise segfault happens)
+  if (length == 1 && (trimmed[0] == ' ' || trimmed[0] == '\t')) {
+    trimmed[0] = '\n';
   }
 
   return trimmed;

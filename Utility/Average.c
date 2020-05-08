@@ -1,12 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
-#include <time.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -135,34 +127,25 @@ int main ( int argc, char** argv ) {
     fgets(line, sizeof(line), fr); //}}}
 
     strcpy(line, TrimLine(line)); // trim excess whitespace
+    char split[30][100];
+    int words = SplitLine(split, line);
 
     // if not empty line or comment continue //{{{
-    char *split = strtok(line," \t");
-    if (split[0] != '#' &&
-        split[0] != '\n') {
-
+    if (split[0][0] != '#' &&
+        split[0][0] != '\n') {
+      // error - insufficient number of columns
+      if (words < column) {
+        fprintf(stderr, "\nError: only %d columns in %s on line %d\n\n", words, input, all_lines);
+        exit(1);
+      }
       // number of data lines
       lines++;
-
-      // read correct column //{{{
-      int col = 1; // number of columns in the line - first is already loaded in split
-      for (col = 1; col < column; col++) {
-        // load another 'split'
-        split = strtok(NULL, " \t");
-
-        // error - insufficient number of columns //{{{
-        if (split == NULL) {
-          fprintf(stderr, "\nError: nnly %d columns in %s on line %d (data line %d)\n\n", col, input, all_lines, lines);
-          exit(1);
-        } //}}}
-      } //}}}
-
-      // save the value //{{{
+      // save the value
       if (discard < lines) {
         int count = lines - discard - 1;
         data = realloc(data, (count+1)*sizeof(double));
-        data[count] = atof(split);
-      } //}}}
+        data[count] = atof(split[column-1]);
+      }
     } //}}}
   }
   fclose(fr); //}}}

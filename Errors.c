@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
-#include <stdbool.h>
 #include "Errors.h"
 
 // ErrorCoorRead() //{{{
@@ -98,4 +92,20 @@ void ErrorNaN(char *option) {
 void ErrorOption(char *option) {
   fprintf(stderr, "\nError: non-existent option '%s'\n", option);
   putchar('\n');
+} //}}}
+
+// ErrorBeadType() //{{{
+/** Error when non-existent bead is used.
+ */
+void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadType) {
+  if (file_name[0] != '\0') {
+    fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", file_name, bname);
+  } else {
+    fprintf(stderr, "\nError: non-existent bead name '%s'\n",  bname);
+  }
+  fprintf(stderr, "       Possible bead names: %s\n", BeadType[0].Name);
+  for (int i = 1; i < Counts.TypesOfBeads; i++) {
+    fprintf(stderr, "                            %s\n", BeadType[i].Name);
+  }
+  putc('\n', stderr);
 } //}}}
