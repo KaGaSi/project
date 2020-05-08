@@ -2,7 +2,12 @@
 
 This utility takes an existing system specified by \texttt{vcf} coordinate
 and \texttt{vsf} structure files and adds new beads into it placing them
-either randomly or using provided coordinates.
+either randomly or using provided coordinates. Because it is meant to
+produce configurations for new simulations, it required a coordinate file
+that contains all beads (i.e., all beads defined in the structure file,
+must be present in the coordinate). If an incomplete coordinate file,
+\texttt{AddToSystem} can show undefined behaviour, i.e., it can run without
+problems, exit with an error, or freeze.
 
 The new beads replace either neutral unbonded ones with the lowest indices
 (as ordered in the \texttt{vsf} file) from the original system or

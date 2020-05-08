@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -99,10 +93,52 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input> - input coordinate file //{{{
+  char input_coor[LINE];
+  char *input_vsf = calloc(LINE,sizeof(char));
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
+  char output_vcf[LINE];
+  strcpy(output_vcf, argv[++count]);
+
+  // test if <output.vcf> filename ends with '.vcf' (required by VMD)
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (ErrorExtension(output_vcf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // variables - structures //{{{
+  BeadType *BeadType; // structure with info about all bead types
+  MoleculeType *MoleculeType; // structure with info about all molecule types
+  Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  Molecule *Molecule; // structure with info about every molecule
+  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -153,42 +189,6 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\n\n");
   } //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-
-  // test if <output.vcf> filename ends with '.vcf' (required by VMD)
-  ext = 1;
-  strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
-
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
@@ -198,15 +198,10 @@ int main(int argc, char *argv[]) {
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
-
     if (type == -1) {
-      fprintf(stderr, "\nError: bead type '%s' is not in %s file\n\nPresent bead types:\n", argv[count], input_coor);
-      for (int i = 0; i < Counts.TypesOfBeads; i++) {
-        fprintf(stderr, "   %s\n", BeadType[i].Name);
-      }
+      ErrorBeadType(input_coor, argv[count], Counts, BeadType);
       exit(1);
     }
-
     BeadType[type].Write = true;
   } //}}}
 
@@ -275,31 +270,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // skip till 'pbc' keyword //{{{
-  do {
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
-      exit(1);
-    }
-  } while (strcmp(str, "pbc") != 0); //}}}
-
-  // read pbc //{{{
-  Vector BoxLength;
-  char line[LINE];
-  fgets(line, sizeof(line), vcf);
-  // split the line into array
-  char *split[30];
-  split[0] = strtok(line, " \t");
-  int i = 0;
-  while (split[i] != NULL && i < 29) {
-    split[++i] = strtok(NULL, " \t");
-  }
-  BoxLength.x = atof(split[0]);
-  BoxLength.y = atof(split[1]);
-  BoxLength.z = atof(split[2]); //}}}
-  //}}}
+  Vector BoxLength = GetPBC(vcf, input_coor);
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -568,6 +539,17 @@ int main(int argc, char *argv[]) {
       ErrorFileOpen(output_vcf, 'a');
       exit(1);
     }
+
+    // wrap coordinates? //{{{
+    if (wrap) {
+      RestorePBC(Counts, BoxLength, &Bead);
+    } // }}}
+
+    // join molecules? //{{{
+    if (join) {
+      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+    } //}}}
+
     WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
     fclose(out);
 

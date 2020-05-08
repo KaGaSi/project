@@ -1,10 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
 #include "../AnalysisTools.h"
-#include "../Options.h"
-#include "../Errors.h"
 
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
@@ -74,10 +68,44 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input> - input coordinate file //{{{
+  char input_coor[LINE];
+  strcpy(input_coor, argv[++count]);
+
+  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_coor, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  }
+  // if vtf, copy to input_vsf
+  char *input_vsf = calloc(LINE,sizeof(char));
+  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
+    strcpy(input_vsf, input_coor);
+  } else {
+    strcpy(input_vsf, "traject.vsf");
+  } //}}}
+
+  // <out.data> - output lammps data file //{{{
+  char output[LINE];
+  strcpy(output, argv[++count]); //}}}
+
+  // variables - structures //{{{
+  BeadType *BeadType; // structure with info about all bead types
+  MoleculeType *MoleculeType; // structure with info about all molecule types
+  Bead *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  Molecule *Molecule; // structure with info about every molecule
+  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  char *input_vsf = calloc(LINE,sizeof(char));
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -107,34 +135,6 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <out.data> - output lammps data file //{{{
-  char output[LINE];
-  strcpy(output, argv[++count]); //}}}
-
-  // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
-
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
@@ -145,30 +145,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // get pbc from coordinate file //{{{
-  char str[LINE];
-  // skip till 'pbc' keyword
-  do {
-    if (fscanf(vcf, "%s", str) != 1) {
-      fprintf(stderr, "\nError: cannot read a string from '%s' file\n\n", input_coor);
-    }
-  } while (strcmp(str, "pbc") != 0);
-
-  // read pbc
-  Vector BoxLength;
-  if (fscanf(vcf, "%lf %lf %lf", &BoxLength.x, &BoxLength.y, &BoxLength.z) != 3) {
-    fprintf(stderr, "Cannot read pbc from %s!\n", input_coor);
-    exit(1);
-  }
-
-  // skip remainder of pbc line
-  while (getc(vcf) != '\n')
-    ;
-
-  // print pbc if verbose output
-  if (verbose) {
-    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
-  } //}}}
+  Vector BoxLength = GetPBC(vcf, input_coor);
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -248,11 +225,11 @@ int main(int argc, char *argv[]) {
   // read till molecule keyword //{{{
   char line[LINE];
   while(fgets(line, sizeof(line), fr)) {
-    char *split;
-    split = strtok(line, " \t ");
-    if (strncmp(split, "molecule", 8) == 0 ||
-        strncmp(split, "Molecule", 8) == 0 ||
-        strncmp(split, "MOLECULE", 8) == 0 ) {
+    char split[30][100];
+    SplitLine(split, line);
+    if (strncmp(split[0], "molecule", 8) == 0 ||
+        strncmp(split[0], "Molecule", 8) == 0 ||
+        strncmp(split[0], "MOLECULE", 8) == 0 ) {
       break;
     }
   } //}}}
@@ -280,30 +257,27 @@ int main(int argc, char *argv[]) {
     mol_angle_types[i] = calloc(MoleculeType[i].nBonds, sizeof(int));
 
     // read till bond keyword //{{{
-    char *split[3];
+    char split[30][100];
     while(fgets(line, sizeof(line), fr)) {
-      split[0] = strtok(line, " \t ");
+      SplitLine(split, line);
       if (strncmp(split[0], "bond", 4) == 0 ||
           strncmp(split[0], "Bond", 4) == 0 ||
           strncmp(split[0], "BOND", 4) == 0 ) {
-        split[0] = strtok(NULL, " \t"); // number of bonds for the molecule
         break;
       }
     } //}}}
 
     // count bond types //{{{
     int exist = -1;
-    count = atoi(split[0]);
+    count = atoi(split[1]);
     for (int j = 0; j < count; j++) {
       fgets(line, sizeof(line), fr);
-      split[0] = strtok(line, " \t"); // 'harm' keyword
-      split[0] = strtok(NULL, " \t"); // bead ids
-      split[0] = strtok(NULL, " \t");
-      split[0] = strtok(NULL, " \t"); // spring strength
-      split[1] = strtok(NULL, " \t"); // bond length
+      SplitLine(split, line);
       exist = -1;
+      // check spring strength and equilibrium distance to test if the bond type exists
       for (int k = 0; k < count_bond_types; k++) {
-        if (bond_type[k][0] == atof(split[0]) && bond_type[k][1] == atof(split[1])){
+        // bond line is: 'harm <bead> <bead> <k> <r_0>', so use split[3] & split[4]
+        if (bond_type[k][0] == atof(split[3]) && bond_type[k][1] == atof(split[4])){
           exist = k;
         }
       }
@@ -311,8 +285,8 @@ int main(int argc, char *argv[]) {
         count_bond_types++;
         bond_type = realloc(bond_type, count_bond_types*sizeof(double *));
         bond_type[count_bond_types-1] = malloc(2*sizeof(double));
-        bond_type[count_bond_types-1][0] = atof(split[0]);
-        bond_type[count_bond_types-1][1] = atof(split[1]);
+        bond_type[count_bond_types-1][0] = atof(split[3]);
+        bond_type[count_bond_types-1][1] = atof(split[4]);
         exist = count_bond_types - 1;
       }
 
@@ -323,11 +297,10 @@ int main(int argc, char *argv[]) {
     angle_beads_n[i] = -1;
     exist = -1;
     while(fgets(line, sizeof(line), fr)) {
-      split[0] = strtok(line, " \t ");
+      SplitLine(split, line);
       if (strncmp(split[0], "angle", 5) == 0 ||
           strncmp(split[0], "Angle", 5) == 0 ||
           strncmp(split[0], "ANGLE", 5) == 0 ) {
-        split[0] = strtok(NULL, " \t"); // number of angles for the molecule
         exist = 1;
         break;
       } else if (strncmp(split[0], "finish", 6) == 0 ||
@@ -339,25 +312,21 @@ int main(int argc, char *argv[]) {
 
     // count angle types & angles (if any) //{{{
     if (exist == 1) {
-      angle_beads_n[i] = atoi(split[0]);
+      angle_beads_n[i] = atoi(split[1]);
       angle_beads[i] = malloc(angle_beads_n[i]*sizeof(int *));
       count_angles += angle_beads_n[i] * MoleculeType[i].Number;
       for (int j = 0; j < angle_beads_n[i]; j++) {
         angle_beads[i][j] = calloc(3, sizeof(int));
         fgets(line, sizeof(line), fr);
-        split[0] = strtok(line, " \t"); // 'harm' keyword
-        split[0] = strtok(NULL, " \t"); // bead ids
-        angle_beads[i][j][0] = atoi(split[0]) - 1;
-        split[0] = strtok(NULL, " \t");
-        angle_beads[i][j][1] = atoi(split[0]) - 1;
-        split[0] = strtok(NULL, " \t");
-        angle_beads[i][j][2] = atoi(split[0]) - 1;
-        split[0] = strtok(NULL, " \t"); // spring strength
-        split[1] = strtok(NULL, " \t"); // bond length
+        SplitLine(split, line);
+        angle_beads[i][j][0] = atoi(split[1]) - 1; // split[0] is 'harm' keyword
+        angle_beads[i][j][1] = atoi(split[2]) - 1;
+        angle_beads[i][j][2] = atoi(split[3]) - 1;
         // find if the bond type alread exists
         exist = -1;
+        // check spring strength and equilibrium angle to test if the angle type exists
         for (int k = 0; k < count_angle_types; k++) {
-          if (angle_type[k][0] == atof(split[0]) && angle_type[k][1] == atof(split[1])) {
+          if (angle_type[k][0] == atof(split[4]) && angle_type[k][1] == atof(split[5])) {
             exist = k;
           }
         }
