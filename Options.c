@@ -1,11 +1,27 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <stdbool.h>
 #include "Options.h"
-#include "AnalysisTools.h"
-#include "Errors.h"
+
+// CommonHelp() //{{{
+/**
+ * Function to print help for common options, either for `-h` help option
+ * or program error.
+ */
+void CommonHelp(bool error) {
+  FILE *ptr;
+  if (error) {
+    ptr = stderr;
+  } else {
+    ptr = stdout;
+  }
+
+  fprintf(ptr, "   <standard options>\n");
+  fprintf(ptr, "      -i <name>      use input .vsf file different from traject.vsf\n");
+//fprintf(ptr, "      -b <name>      file containing bond alternatives to FIELD\n");
+  fprintf(ptr, "      -v             verbose output\n");
+  fprintf(ptr, "      --silent       no output (overrides verbose option)\n");
+  fprintf(ptr, "      -h             print this help and exit\n");
+  fprintf(ptr, "      --script       no progress output (useful if output is routed to a file)\n");
+  fprintf(ptr, "      --version      print version number and exit\n");
+} //}}}
 
 // CommonOptions() //{{{
 /**
