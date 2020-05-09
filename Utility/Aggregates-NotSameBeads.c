@@ -65,37 +65,12 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
       contact[i][j] = 0;
   } //}}}
 
-  // cell size for cell linked list
+  // create cell-linked list //{{{
   double cell_size = sqrt(sqdist);
-
-  // number of cells in all three dimensions //{{{
   IntVector n_cells;
-  n_cells.x = ceil(BoxLength.x/cell_size),
-  n_cells.y = ceil(BoxLength.y/cell_size),
-  n_cells.z = ceil(BoxLength.z/cell_size); //}}}
-
-  // allocate memory for arrays for cell linked list
-  int *Head = malloc((n_cells.x*n_cells.y*n_cells.z)*sizeof(int));
-  int *Link = malloc((*Counts).Beads*sizeof(int));
-
-  // initialize Head array //{{{
-  for (int i = 0; i < (n_cells.x*n_cells.y*n_cells.z); i++) {
-    Head[i] = -1;
-  } //}}}
-
-  // sort beads into cells //{{{
-  for (int i = 0; i < (*Counts).Beads; i++) {
-    int cell = (int)((*Bead)[i].Position.x / cell_size)
-             + (int)((*Bead)[i].Position.y / cell_size) * n_cells.x
-             + (int)((*Bead)[i].Position.z / cell_size) * n_cells.x * n_cells.y;
-    Link[i] = Head[cell];
-    Head[cell] = i;
-  } //}}}
-
-  // coordinates of adjoining cells //{{{
-  int Dcx[14] = {0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1};
-  int Dcy[14] = {0, 0, 1, 1, 1,-1,-1,-1, 0, 0, 0, 1, 1, 1};
-  int Dcz[14] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1}; //}}}
+  int *Head, *Link;
+  int Dcx[14], Dcy[14], Dcz[14];
+  LinkedList(BoxLength, *Counts, *Bead, &Head, &Link, cell_size, &n_cells, Dcx, Dcy, Dcz); //}}}
 
   // disqualify '-xm'ed molecules //{{{
   for (int i = 0; i < (*Counts).Molecules; i++) {
@@ -107,13 +82,10 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   for (int c1z = 0; c1z < n_cells.z; c1z++) {
     for (int c1y = 0; c1y < n_cells.y; c1y++) {
       for (int c1x = 0; c1x < n_cells.x; c1x++) {
-
         // select first cell
         int cell1 = c1x + c1y * n_cells.x + c1z * n_cells.x * n_cells.y;
-
         // select first bead in the cell 'cell1'
         int i = Head[cell1];
-
         while (i != -1) {
           for (int k = 0; k < 14; k++) {
             int c2x = c1x + Dcx[k]; //{{{
@@ -136,7 +108,6 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
             // select second cell
             int cell2 = c2x + c2y * n_cells.x + c2z * n_cells.x * n_cells.y; //}}}
-
             // select bead in the cell 'cell2' //{{{
             int j;
             if (cell1 == cell2) { // next bead in 'cell1'
@@ -144,7 +115,6 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
             } else { // first bead in 'cell2'
               j = Head[cell2];
             } //}}}
-
             while (j != -1) {
               if ((*Bead)[i].Molecule != -1 && (*Bead)[j].Molecule != -1) { // both i and j must be in molecule)
                 int btype_i = (*Bead)[i].Type;

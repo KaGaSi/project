@@ -19,7 +19,7 @@
 
 // IsDouble() //{{{
 /*
- * \brief Function to test if a string is double.
+ * \brief Function to test if a string is a real number.
  *
  * \param [in] a   string to test
  * \return 'true' if a is double, 'false' otherwise
@@ -28,7 +28,7 @@ bool IsDouble(char *a); //}}}
 
 // IsPosDouble() //{{{
 /*
- * \brief Function to test if a string is non-negative double.
+ * \brief Function to test if a string is a non-negative real number.
  *
  * \param [in] a   string to test
  * \return 'true' if a is non-negative double, 'false' otherwise
@@ -37,7 +37,7 @@ bool IsPosDouble(char *a); //}}}
 
 // IsInteger() //{{{
 /*
- * \brief Function to test if a string is integer.
+ * \brief Function to test if a string is a non-negative whole number.
  *
  * \param [in] a   string to test
  * \return 'true' if a is integer, 'false' otherwise
@@ -495,4 +495,9 @@ void FreeAggregate(Counts Counts, Aggregate **Aggregate); //}}}
  * \return trimmed string
  */
 char* TrimLine(char *line); //}}}
+
+// LinkedList() //{{{
+void LinkedList(Vector BoxLength, Counts Counts, Bead *Bead,
+                int **Head, int **Link, double cell_size, IntVector *n_cells,
+                int *Dcx, int *Dcy, int *Dcz); //}}}
 #endif
