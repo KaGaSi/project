@@ -6,10 +6,15 @@
 #ifndef _OPTIONS_H_
 #define _OPTIONS_H_
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <stdbool.h>
+#include "AnalysisTools.h"
+
 #define VERSION "3.2-2"
 #define DATE "April 20, 2020"
-
-#include "Structs.h"
 
 // Help() //{{{
 /**
@@ -19,6 +24,14 @@
  * \param [out] error  is it help due to error or not?
  */
 void Help(char cmd[50], bool error); //}}}
+
+// CommonHelp() //{{{
+/**
+ * \brief Function printing help for common options.
+ *
+ * \param [in] error   `true` or `false` whether to use stderr or stdout
+ */
+void CommonHelp(bool error); //}}}
 
 // CommonOptions() //{{{
 /**

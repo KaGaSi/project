@@ -6,37 +6,6 @@
 #ifndef _STRUCTS_H_
 #define _STRUCTS_H_
 
-#define PI 3.141593 ///< value of pi
-
-#define LINE 1024 ///< maximum length of an array (for strings)
-
-#define SQR(x) ((x)*(x)) ///< macro for algebraic square
-#define CUBE(x) ((x)*(x)*(x)) ///< macro for algebraic cube
-
-// struct Vector //{{{
-/**
- * \brief 3D vector of floats.
- */
-typedef struct Vector {
-  double x, y, z;
-} Vector; //}}}
-
-// struct LongVector //{{{
-/**
- * \brief 3D vector of floats.
- */
-typedef struct LongVector {
-  long double x, y, z;
-} LongVector; //}}}
-
-// struct IntVector //{{{
-/**
- * \brief 3D vector of integers.
- */
-typedef struct IntVector {
-  int x, y, z;
-} IntVector; //}}}
-
 // struct Counts //{{{
 /**
  * \brief Total numbers of various things.

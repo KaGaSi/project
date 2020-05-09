@@ -12,6 +12,7 @@
 #include <math.h>
 #include <time.h>
 #include <stdbool.h>
+#include "General.h"
 #include "Structs.h"
 
 // ErrorCoorRead() //{{{

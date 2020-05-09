@@ -14,7 +14,8 @@ set(CMAKE_C_FLAGS_RELEASE "-O3") # for -DCMAKE_BUILD_TYPE=Release
 
 set(LIBRARIES Options
               AnalysisTools
-              Errors)
+              Errors
+              General)
 foreach(library ${LIBRARIES})
   add_library(${library} ${library}.c)
 endforeach(library)
