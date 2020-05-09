@@ -364,8 +364,8 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
           v.z = Bead[Molecule[i].Bead[bead[j+2]]].Position.z - Bead[Molecule[i].Bead[bead[j+1]]].Position.z;
           // calculate angle between the two vectors
           double size[2];
-          size[0] = sqrt(SQR(u.x) + SQR(u.y) + SQR(u.z));
-          size[1] = sqrt(SQR(v.x) + SQR(v.y) + SQR(v.z));
+          size[0] = Length(u);
+          size[1] = Length(v);
           double scalar = u.x * v.x + u.y * v.y + u.z * v.z;
           angle[i][j/beads_per_angle] = acos(scalar / (size[0] * size[1])); // in rad
           angle[i][j/beads_per_angle] *= 180 / PI; // in degrees

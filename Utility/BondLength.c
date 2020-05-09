@@ -327,7 +327,7 @@ int main(int argc, char *argv[]) {
           bond.y = Bead[id1].Position.y - Bead[id2].Position.y;
           bond.z = Bead[id1].Position.z - Bead[id2].Position.z;
 
-          bond.x = sqrt(SQR(bond.x) + SQR(bond.y) + SQR(bond.z)); //}}}
+          bond.x = Length(bond); //}}}
 
           // warn if bond is too long //{{{
           if (bond.x > warn) {
@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
             dist.y = Bead[id1].Position.y - Bead[id2].Position.y;
             dist.z = Bead[id1].Position.z - Bead[id2].Position.z;
 
-            dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z)); //}}}
+            dist.x = Length(dist); //}}}
 
             // mins & maxes //{{{
             if (dist.x < min_max_d_option[mtype][j/2][0]) {

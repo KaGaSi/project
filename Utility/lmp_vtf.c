@@ -503,7 +503,7 @@ int main(int argc, char *argv[]) {
 //    }
 //  } //}}}
 
-    // read and split next line //{{{
+    // read and split next line
     fgets(line, sizeof(line), fr);
     SplitLine(split, line);
   }

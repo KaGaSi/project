@@ -72,6 +72,15 @@ bool IsInteger(char *a) {
   return true;
 } //}}}
 
+// Length() //{{{
+/**
+ * Function to calculate vector length.
+ */
+double Length(Vector a) {
+  double length = sqrt(SQR(a.x) + SQR(a.y) + SQR(a.z));
+  return length;
+} //}}}
+
 // Min3() //{{{
 /**
  * Function returning the lowest number from three floats.

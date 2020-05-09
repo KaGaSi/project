@@ -321,7 +321,7 @@ int main(int argc, char *argv[]) {
 
             // distance between bead1 and bead2
             Vector rij = Distance(Bead[bead1].Position, Bead[bead2].Position, BoxLength);
-            rij.x = sqrt(SQR(rij.x) + SQR(rij.y) + SQR(rij.z));
+            rij.x = Length(rij);
 
             // count only distances up to half of the shortest box length
             if (rij.x < max_dist) {
