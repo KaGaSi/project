@@ -1894,7 +1894,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
                   // calculate distance between 'bead1' and 'bead2'
                   Vector dist = Distance((*Bead)[bead1].Position, (*Bead)[bead2].Position, BoxLength);
-                  dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+                  dist.x = Length(dist);
 
                   // move 'mol2' (or 'k') if 'bead1' and 'bead2' are in contact
                   if (dist.x <= distance) {
