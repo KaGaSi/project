@@ -1,31 +1,10 @@
 #include "AnalysisTools.h"
 
-bool IsPosDouble(char *a) { //{{{
-  // wrong first character - can be minus, dot, or number
-  if (a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
-    return false;
-  }
-  // only one dot can be present
-  bool dot = false;
-  if (a[0] == '.') {
-    dot = true;
-  }
-  // test the remaining characters - either digit, or dot (but only 1 in total)
-  for (int i = 1; i < strlen(a); i++) {
-    if (a[i] == '.') {
-      if (dot) { // has there been a dot already?
-        return false;
-      } else {
-        dot = true;
-      }
-    } else if (a[i] < '0' || a[i] > '9') {
-      return false;
-    }
-  }
-  return true;
-} //}}}
-
-bool IsDouble(char *a) { //{{{
+// IsDouble() //{{{
+/**
+ * Function to test if provided string is a real number.
+ */
+bool IsDouble(char *a) {
   // wrong first character - can be minus, dot, or number
   if (a[0] != '-' && a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
     return false;
@@ -50,7 +29,40 @@ bool IsDouble(char *a) { //{{{
   return true;
 } //}}}
 
-bool IsInteger(char *a) { //{{{
+// IsPosDouble() //{{{
+/**
+ * Function to test if provided string is a non-negative real number.
+ */
+bool IsPosDouble(char *a) {
+  // wrong first character - can be minus, dot, or number
+  if (a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
+    return false;
+  }
+  // only one dot can be present
+  bool dot = false;
+  if (a[0] == '.') {
+    dot = true;
+  }
+  // test the remaining characters - either digit, or dot (but only 1 in total)
+  for (int i = 1; i < strlen(a); i++) {
+    if (a[i] == '.') {
+      if (dot) { // has there been a dot already?
+        return false;
+      } else {
+        dot = true;
+      }
+    } else if (a[i] < '0' || a[i] > '9') {
+      return false;
+    }
+  }
+  return true;
+} //}}}
+
+// IsInteger() //{{{
+/**
+ * Function to test if provided string is a non-negative whole number.
+ */
+bool IsInteger(char *a) {
   // test the remaining characters - either digit, or dot (but only 1 in total)
   for (int i = 0; i < strlen(a); i++) {
     if (a[i] < '0' || a[i] > '9') {
@@ -60,7 +72,7 @@ bool IsInteger(char *a) { //{{{
   return true;
 } //}}}
 
-// split the line into array //{{{
+// SplitLine() //{{{
 /**
  * Function that splits the provided line into individual strings (using tab,
  * space, and colon as a delimiter) and removes newline character from the end
@@ -2747,4 +2759,41 @@ char * TrimLine(char *line) {
   }
 
   return trimmed;
+} //}}}
+
+// LinkedList() //{{{
+void LinkedList(Vector BoxLength, Counts Counts, Bead *Bead,
+                int **Head, int **Link, double cell_size, IntVector *n_cells,
+                int *Dcx, int *Dcy, int *Dcz) {
+
+  (*n_cells).x = ceil(BoxLength.x/cell_size),
+  (*n_cells).y = ceil(BoxLength.y/cell_size),
+  (*n_cells).z = ceil(BoxLength.z/cell_size);
+
+  // allocate arrays
+  *Head = malloc(((*n_cells).x*(*n_cells).y*(*n_cells).z)*sizeof(int));
+  *Link = malloc(Counts.Beads*sizeof(int));
+  for (int i = 0; i < ((*n_cells).x*(*n_cells).y*(*n_cells).z); i++) {
+    (*Head)[i] = -1;
+  }
+
+  // sort beads into cells //{{{
+  for (int i = 0; i < Counts.Beads; i++) {
+    int cell = (int)(Bead[i].Position.x / cell_size)
+             + (int)(Bead[i].Position.y / cell_size) * (*n_cells).x
+             + (int)(Bead[i].Position.z / cell_size) * (*n_cells).x * (*n_cells).y;
+    (*Link)[i] = (*Head)[cell];
+    (*Head)[cell] = i;
+  } //}}}
+
+  // coordinates of adjoining cells //{{{
+  int x[14] = {0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1,-1, 0, 1};
+  int y[14] = {0, 0, 1, 1, 1,-1,-1,-1, 0, 0, 0, 1, 1, 1};
+  int z[14] = {0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+  for (int i = 0; i < 14; i++) {
+    Dcx[i] = x[i];
+    Dcy[i] = y[i];
+    Dcz[i] = z[i];
+  }
+  //}}}
 } //}}}
