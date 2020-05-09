@@ -43,6 +43,15 @@ typedef struct IntVector {
   int x, y, z;
 } IntVector; //}}}
 
+// Length() //{{{
+/*
+ * \brief Function to calculate vector length.
+ *
+ * \param [in] a    vector
+ * \return a's length
+ */
+double Length(Vector a); //}}}
+
 // IsDouble() //{{{
 /*
  * \brief Function to test if a string is a real number.

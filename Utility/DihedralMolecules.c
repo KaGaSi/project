@@ -401,8 +401,8 @@ int main(int argc, char *argv[]) {
 
           // calculate angle between the two normals //{{{
           double size[2];
-          size[0] = sqrt(SQR(n[0].x) + SQR(n[0].y) + SQR(n[0].z));
-          size[1] = sqrt(SQR(n[1].x) + SQR(n[1].y) + SQR(n[1].z));
+          size[0] = Length(n[0]);
+          size[1] = Length(n[1]);
           double scalar = n[0].x * n[1].x + n[0].y * n[1].y + n[0].z * n[1].z;
           angle[i][j/beads_per_angle] = acos(scalar / (size[0] * size[1])); // in rad
 

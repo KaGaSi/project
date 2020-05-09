@@ -1231,7 +1231,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       random.x = (double)rand() / ((double)RAND_MAX) * 2 - 1; // random number <-1,1>
       random.y = (double)rand() / ((double)RAND_MAX) * 2 - 1;
       random.z = (double)rand() / ((double)RAND_MAX) * 2 - 1;
-      double dist = sqrt(SQR(random.x)+SQR(random.y)+SQR(random.z));
+      double dist = Length(random);
       random.x /= dist;
       random.y /= dist;
       random.z /= dist;

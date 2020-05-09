@@ -392,7 +392,7 @@ int main(int argc, char *argv[]) {
           int bead_j = Molecule[i].Bead[j];
 
           Vector dist = Distance(Bead[bead_j].Position, com, BoxLength);
-          dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+          dist.x = Length(dist);
 
           if (dist.x < max_dist) {
             int k = dist.x / width;
@@ -404,7 +404,7 @@ int main(int argc, char *argv[]) {
         // monomeric beads //{{{
         for (int j = 0; j < Counts.Unbonded; j++) {
           Vector dist = Distance(Bead[j].Position, com, BoxLength);
-          dist.x = sqrt(SQR(dist.x) + SQR(dist.y) + SQR(dist.z));
+          dist.x = Length(dist);
 
           if (dist.x < max_dist) {
             int k = dist.x / width;
