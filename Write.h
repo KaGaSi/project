@@ -47,4 +47,18 @@ void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
  */
 void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
               MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+
+// WriteAggregates() //{{{
+/**
+ * \brief Function writing agg file
+ *
+ * \param [in] step_count    current timestep
+ * \param [in] agg_file      name of output .agg file
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] MoleculeType  information about molecule types
+ * \param [in] Bead          coordinates of individual beads
+ * \param [in] Aggregates    information about aggregates
+ */
+void WriteAggregates(int step_count, char *agg_file, Counts Counts,
+                     MoleculeType *MoleculeType, Bead *Bead, Aggregate *Aggregate); //}}}
 #endif

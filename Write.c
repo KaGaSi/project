@@ -140,3 +140,51 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
   // close structure file
   fclose(fw);
 } //}}}
+
+// WriteAggregates() //{{{
+/**
+ * Function writiing (appending to .agg file) information about aggregates from
+ * given timestep.
+ */
+void WriteAggregates(int step_count, char *agg_file, Counts Counts,
+                     MoleculeType *MoleculeType, Bead *Bead, Aggregate *Aggregate) {
+
+  // get number of aggregates to write to agg_file //{{{
+  int number_of_aggs = 0;
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    if (Aggregate[i].Use) {
+      number_of_aggs++;
+    }
+  } //}}}
+
+  // open .agg file for appending //{{{
+  FILE *fw;
+  if ((fw = fopen(agg_file, "a")) == NULL) {
+    ErrorFileOpen(agg_file, 'a');
+    exit(1);
+  } //}}}
+
+  // print number of aggregates to agg file //{{{
+  fprintf(fw, "\nStep: %d\n%d\n\n", step_count, number_of_aggs);
+  // go through all aggregates
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    // write only those that aren't excluded
+    if (Aggregate[i].Use) {
+      // go through all molecules in aggregate 'i'
+      fprintf(fw, "%d :", Aggregate[i].nMolecules);
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        fprintf(fw, " %d", Aggregate[i].Molecule[j]+1);
+      }
+      putc('\n', fw);
+
+      // go through all monomeric beads in aggregate 'i'
+      fprintf(fw, "   %d :", Aggregate[i].nMonomers);
+      for (int j = 0; j < Aggregate[i].nMonomers; j++) {
+        fprintf(fw, " %d", Bead[Aggregate[i].Monomer[j]].Index);
+      }
+      putc('\n', fw);
+    }
+  } //}}}
+
+  fclose(fw);
+} //}}}
