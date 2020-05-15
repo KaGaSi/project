@@ -169,7 +169,7 @@ Vector Distance(Vector id1, Vector id2, Vector BoxLength); //}}}
  * \param [in]  line   string to split
  * \return number of strings in the line
  */
-int SplitLine(char out[30][100], char *line); //}}}
+int SplitLine(char out[30][100], char *line, char delim[8]); //}}}
 
 // TrimLine() //{{{
 /**

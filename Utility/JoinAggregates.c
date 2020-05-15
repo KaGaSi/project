@@ -170,52 +170,16 @@ int main(int argc, char *argv[]) {
     MoleculeType[i].Write = true;
   } //}}}
 
-  // open input aggregate file and read info from first line (Aggregates command) //{{{
+  // open input aggregate file and read first line (Aggregate command) //{{{
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
     ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
 
-  // read minimum distance for closeness check (<distance> argument in Aggregates utility)
-  double distance;
-  char coor_file_from_agg[128];
-  fscanf(agg, "%*s %s %lf", coor_file_from_agg, &distance);
-  // warn if a differently named vcf file is used than the one in agg file
-  if (strcmp(coor_file_from_agg, input_coor) != 0) {
-    fprintf(stderr, "\nWARNING: the coordinate file (%s) ", input_coor);
-    fprintf(stderr, "is different to the one in the aggregate file (%s).\n", coor_file_from_agg);
-    fprintf(stderr, "         Mismatch between beads present in both files can lead to undefined behaviour.\n\n");
-  }
-
-  // skip <contacts> and <output.agg> in Aggregates command
-  fscanf(agg, "%*s %*s");
-
-  // read <type names> from Aggregates command //{{{
-  // TODO: fgets(line) & SplitLine()
-  int test = getc(agg);
-  while ((test = getc(agg)) != '-' && test != '\n') {
-    ungetc(test, agg);
-    char name[LINE];
-    fscanf(agg, "%s", name);
-    int type = FindBeadType(name, Counts, BeadType);
-    // Error - specified bead type name not in vcf input file
-    if (type == -1) {
-      ErrorBeadType(input_coor, name, Counts, BeadType);
-      exit(1);
-    }
-    BeadType[type].Use = true;
-    // ignore spaces
-    while((test = getc(agg)) == ' ')
-      ;
-    ungetc(test, agg);
-  } //}}}
-  ungetc(test, agg);
-
-  while (getc(agg) != '\n')
-    ;
-  while (getc(agg) != '\n')
-    ; //}}}
+  double distance; // <distance> parameter from Aggregate command
+  int contacts; // <contacts> parameter from Aggregate command - not used here
+  ReadAggCommand(BeadType, Counts, input_coor, input_agg, agg, &distance, &contacts); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -277,6 +241,7 @@ int main(int argc, char *argv[]) {
 
   // skip first start-1 steps //{{{
   count = 0;
+  int test;
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
 
@@ -302,9 +267,6 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   }
-  if (test == '\0') {
-    exit(1);
-  }
   // print starting step? //{{{
   if (!silent) {
     if (script) {
@@ -318,8 +280,7 @@ int main(int argc, char *argv[]) {
   // is the vcf file continuing?
   if (ErrorDiscard(start, count, input_coor, vcf)) {
     exit(1);
-  }
-  //}}}
+  } //}}}
 
   // main loop //{{{
   count = 0; // count timesteps

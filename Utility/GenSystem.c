@@ -134,9 +134,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // read box size //{{{
-  char line[LINE], split[30][100];
+  char line[LINE], split[30][100], delim[8];
+  strcpy(delim, " \t");
   fgets(line, sizeof(line), fr);
-  int words = SplitLine(split, line);
+  int words = SplitLine(split, line, delim);
   // first line of the FIELD must be: <double> <double> <double> ...whatever
   // Error if:
   // 1) too few strings
@@ -161,7 +162,7 @@ int main(int argc, char *argv[]) {
   // read number of bead types //{{{
   bool missing = true; // is 'species' keyword missing?
   while(fgets(line, sizeof(line), fr)) {
-    words = SplitLine(split, line);
+    words = SplitLine(split, line, delim);
     if (strcasecmp(split[0], "species") == 0) {
       missing = false;
       // check if the next string is a number
@@ -192,7 +193,7 @@ int main(int argc, char *argv[]) {
   Counts.Beads = 0;
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     fgets(line, sizeof(line), fr);
-    words = SplitLine(split, line);
+    words = SplitLine(split, line, delim);
 
     // Error on the line: //{{{
     // 1) empty line
@@ -235,7 +236,7 @@ int main(int argc, char *argv[]) {
   // read number of molecule types //{{{
   missing = true; // is molecule keyword missing?
   while(fgets(line, sizeof(line), fr)) {
-    words = SplitLine(split, line);
+    words = SplitLine(split, line, delim);
     if (strncasecmp(split[0], "molecule", 8) == 0) {
       missing = false;
       // error - next string isn't a number
@@ -266,7 +267,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     // name //{{{
     fgets(line, sizeof(line), fr);
-    SplitLine(split, line);
+    SplitLine(split, line, delim);
     if (split[0][0] == '\0') { // empty line
       fprintf(stderr, "\nError: %s - blank line instead of molecule name.\n", input);
       fprintf(stderr, "       Beware that a missing 'finish' keyword in multi-molecule systems can make the error somewhat ambiguous.\n");
@@ -275,7 +276,7 @@ int main(int argc, char *argv[]) {
     strcpy(MoleculeType[i].Name, split[0]); //}}}
     // number of molecules 'i' //{{{
     fgets(line, sizeof(line), fr);
-    words = SplitLine(split, line);
+    words = SplitLine(split, line, delim);
     // error if not 'nummols <int>'
     if (words < 2 ||
         strcasecmp(split[0], "nummols") != 0 ||
@@ -292,7 +293,7 @@ int main(int argc, char *argv[]) {
     // number of beads //{{{
     fgets(line, sizeof(line), fr);
     // error if not 'beads <int>'
-    if ((words = SplitLine(split, line)) < 2 ||
+    if ((words = SplitLine(split, line, delim)) < 2 ||
         strncasecmp(split[0], "beads", 4) != 0 ||
         !IsInteger(split[1])) {
       fprintf(stderr, "\nError: %s - wrong or missing 'beads' line\n", input);
@@ -320,7 +321,7 @@ int main(int argc, char *argv[]) {
     MoleculeType[i].Mass = 0;
     for (int j = 0; j < MoleculeType[i].nBeads; j++) {
       fgets(line, sizeof(line), fr);
-      words = SplitLine(split, line);
+      words = SplitLine(split, line, delim);
       // error - not enough columns or not three coordinate //{{{
       if (words < 4 || !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
         fprintf(stderr, "\nError: %s - cannot read coordinates\n", input);
@@ -363,7 +364,7 @@ int main(int argc, char *argv[]) {
     } //}}}
     // number of bonds //{{{
     fgets(line, sizeof(line), fr);
-    words = SplitLine(split, line);
+    words = SplitLine(split, line, delim);
     // error if not 'bonds <int>'
     if (words < 2 ||
         strncasecmp(split[0], "bonds", 4) != 0 ||
@@ -382,7 +383,7 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < MoleculeType[i].nBonds; j++) {
       MoleculeType[i].Bond[j] = calloc(2, sizeof(int));
       fgets(line, sizeof(line), fr);
-      words = SplitLine(split, line);
+      words = SplitLine(split, line, delim);
       // error if not '<string> <int> <int>'
       if (words < 3 ||
           !IsInteger(split[1]) || !IsInteger(split[2])) {
@@ -404,7 +405,7 @@ int main(int argc, char *argv[]) {
     // skip till 'finish' //{{{
     missing = true;
     while(fgets(line, sizeof(line), fr)) {
-      SplitLine(split, line);
+      SplitLine(split, line, delim);
       if (strcasecmp(split[0], "finish") == 0) {
         missing = false;
         break;
@@ -457,8 +458,7 @@ int main(int argc, char *argv[]) {
 
   // skip to molecule section //{{{
   while(fgets(line, sizeof(line), fr)) {
-    char split[30][100];
-    SplitLine(split, line);
+    SplitLine(split, line, delim);
     if (strncmp(split[0], "molecules", 8) == 0 ||
         strncmp(split[0], "Molecules", 8) == 0 ||
         strncmp(split[0], "MOLECULES", 8) == 0 ) {
@@ -477,8 +477,7 @@ int main(int argc, char *argv[]) {
 
     // skip to bonds section //{{{
     while(fgets(line, sizeof(line), fr)) {
-      char split[30][100];
-      SplitLine(split, line);
+      SplitLine(split, line, delim);
       if (strncmp(split[0], "bonds", 4) == 0 ||
           strncmp(split[0], "Bonds", 4) == 0 ||
           strncmp(split[0], "BONDS", 4) == 0 ) {
@@ -490,8 +489,7 @@ int main(int argc, char *argv[]) {
     // if we assume linear molecule, there must be nBeads-1 bonds
     for (int j = 0; j < (MoleculeType[i].nBeads-1); j++) {
       fgets(line, sizeof(line), fr);
-      char split[30][100];
-      SplitLine(split, line);
+      SplitLine(split, line, delim);
       double length = atof(split[4]); // bond length is in fifth columne
       if (fabs(length) < 0.01) {
         length = 0.7;

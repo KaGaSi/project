@@ -126,9 +126,9 @@ int main ( int argc, char** argv ) {
     char line[LINE];
     fgets(line, sizeof(line), fr); //}}}
 
-    strcpy(line, TrimLine(line)); // trim excess whitespace
-    char split[30][100];
-    int words = SplitLine(split, line);
+    char split[30][100], delim[8];
+    strcpy(delim, " \t");
+    int words = SplitLine(split, line, delim);
 
     // if not empty line or comment continue //{{{
     if (split[0][0] != '#' &&
