@@ -170,8 +170,9 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < beads; i++) {
     char line[LINE];
     fgets(line, sizeof(line), xyz);
-    char split[30][100];
-    int words = SplitLine(split, line);
+    char split[30][100], delim[8];
+    strcpy(delim, " \t");
+    int words = SplitLine(split, line, delim);
 
     // error - less then four whitespace-separated strings //{{{
     if (words < 4) {

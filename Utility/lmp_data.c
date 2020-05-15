@@ -223,10 +223,10 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // read till molecule keyword //{{{
-  char line[LINE];
+  char line[LINE], split[30][100], delim[8];
+  strcpy(delim, " \t");
   while(fgets(line, sizeof(line), fr)) {
-    char split[30][100];
-    SplitLine(split, line);
+    SplitLine(split, line, delim);
     if (strncmp(split[0], "molecule", 8) == 0 ||
         strncmp(split[0], "Molecule", 8) == 0 ||
         strncmp(split[0], "MOLECULE", 8) == 0 ) {
@@ -257,12 +257,9 @@ int main(int argc, char *argv[]) {
     mol_angle_types[i] = calloc(MoleculeType[i].nBonds, sizeof(int));
 
     // read till bond keyword //{{{
-    char split[30][100];
     while(fgets(line, sizeof(line), fr)) {
-      SplitLine(split, line);
-      if (strncmp(split[0], "bond", 4) == 0 ||
-          strncmp(split[0], "Bond", 4) == 0 ||
-          strncmp(split[0], "BOND", 4) == 0 ) {
+      SplitLine(split, line, delim);
+      if (strcasecmp(split[0], "bond") == 0) {
         break;
       }
     } //}}}
@@ -272,12 +269,12 @@ int main(int argc, char *argv[]) {
     count = atoi(split[1]);
     for (int j = 0; j < count; j++) {
       fgets(line, sizeof(line), fr);
-      SplitLine(split, line);
+      SplitLine(split, line, delim);
       exist = -1;
       // check spring strength and equilibrium distance to test if the bond type exists
       for (int k = 0; k < count_bond_types; k++) {
         // bond line is: 'harm <bead> <bead> <k> <r_0>', so use split[3] & split[4]
-        if (bond_type[k][0] == atof(split[3]) && bond_type[k][1] == atof(split[4])){
+        if (bond_type[k][0] == atof(split[3]) && bond_type[k][1] == atof(split[4])) {
           exist = k;
         }
       }
@@ -297,15 +294,11 @@ int main(int argc, char *argv[]) {
     angle_beads_n[i] = -1;
     exist = -1;
     while(fgets(line, sizeof(line), fr)) {
-      SplitLine(split, line);
-      if (strncmp(split[0], "angle", 5) == 0 ||
-          strncmp(split[0], "Angle", 5) == 0 ||
-          strncmp(split[0], "ANGLE", 5) == 0 ) {
+      SplitLine(split, line, delim);
+      if (strcasecmp(split[0], "angle") == 0) {
         exist = 1;
         break;
-      } else if (strncmp(split[0], "finish", 6) == 0 ||
-                 strncmp(split[0], "Finish", 6) == 0 ||
-                 strncmp(split[0], "FINISH", 6) == 0 ) {
+      } else if (strcasecmp(split[0], "finish") == 0) {
         break;
       }
     } //}}}
@@ -318,7 +311,7 @@ int main(int argc, char *argv[]) {
       for (int j = 0; j < angle_beads_n[i]; j++) {
         angle_beads[i][j] = calloc(3, sizeof(int));
         fgets(line, sizeof(line), fr);
-        SplitLine(split, line);
+        SplitLine(split, line, delim);
         angle_beads[i][j][0] = atoi(split[1]) - 1; // split[0] is 'harm' keyword
         angle_beads[i][j][1] = atoi(split[2]) - 1;
         angle_beads[i][j][2] = atoi(split[3]) - 1;

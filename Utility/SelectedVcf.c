@@ -344,8 +344,7 @@ int main(int argc, char *argv[]) {
   // is the vcf file continuing?
   if (ErrorDiscard(start, count, input_coor, vcf)) {
     exit(1);
-  }
-  //}}}
+  } //}}}
 
   // main loop //{{{
   int count_n_opt = 0; // count saved steps if -n option is used

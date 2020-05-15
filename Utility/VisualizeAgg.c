@@ -502,44 +502,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  // read minimum distance for closeness check (<distance> argument in Aggregates utility)
-  double distance;
-  fscanf(agg, "%*s %*s %lf", &distance);
-
-  // skip <contacts> and <output.agg> in Aggregates command
-  fscanf(agg, "%*s %*s");
-
-  // read <type names> from Aggregates command //{{{
-  int test;
-  // reading ends if next argument (beginning with '-') or the following empty line is read
-  // TODO: fgets(line) & SplitLine()
-  while ((test = getc(agg)) != '-' && test != '\n') {
-    ungetc(test, agg);
-    char name[LINE];
-    fscanf(agg, "%s", name);
-    int type = FindBeadType(name, Counts, BeadType);
-    // Error - specified bead type name not in vcf input file
-    if (type == -1) {
-      ErrorBeadType(input_coor, name, Counts, BeadType);
-      exit(1);
-    }
-    BeadType[type].Use = true;
-    while ((test = getc(agg)) == ' ')
-      ;
-    ungetc(test, agg);
-  } //}}}
-  fclose(agg);
-
-  // open again for production run - to ensure the pointer position in file is correct (at first 'Step')
-  if ((agg = fopen(input_agg, "r")) == NULL) {
-    ErrorFileOpen(input_agg, 'r');
-    exit(1);
-  }
-
-  while (getc(agg) != '\n')
-    ;
-  while (getc(agg) != '\n')
-    ; //}}}
+  double distance; // <distance> parameter from Aggregate command
+  int contacts; // <contacts> parameter from Aggregate command - not used here
+  ReadAggCommand(BeadType, Counts, input_coor, input_agg, agg, &distance, &contacts); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -609,6 +574,7 @@ int main(int argc, char *argv[]) {
 
   // skip first start-1 steps //{{{
   count = 0;
+  int test;
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
 
