@@ -16,7 +16,8 @@
 #include "Structs.h"
 
 // ErrorCoorRead() //{{{
-/** \brief Incorrect reading of vcf file
+/**
+ * \brief Incorrect reading of vcf file
  *
  * \param [in] input_vcf  .vcf coordinate file
  * \param [in] bead       bead's line in its timestep in .vcf file where error occurred
@@ -27,7 +28,8 @@
 void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input_vsf); //}}}
 
 // ErrorArgNumber() //{{{
-/** \brief Insufficient number of arguments
+/**
+ * \brief Insufficient number of arguments
  *
  * \param [in] count  number of supplied arguments
  * \param [in] need   minimum number of required arguments
@@ -35,7 +37,8 @@ void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input
 void ErrorArgNumber(int count, int need); //}}}
 
 // ErrorDiscard() //{{{
-/** \brief Starting timestep is higher than the number of steps
+/**
+ * \brief Starting timestep is higher than the number of steps
  *
  * \param [in] start  starting timestep
  * \param [in] step   number of steps read
@@ -46,7 +49,8 @@ void ErrorArgNumber(int count, int need); //}}}
 bool ErrorDiscard(int start, int step, char *file, FILE *coor); //}}}
 
 // ErrorExtension() //{{{
-/** \brief Wrong file extension
+/**
+ * \brief Wrong file extension
  *
  * \param [in] file       filename
  * \param [in] number     number of correct extension(s)
@@ -56,7 +60,8 @@ bool ErrorDiscard(int start, int step, char *file, FILE *coor); //}}}
 bool ErrorExtension(char *file, int number, char extension[][5]); //}}}
 
 // ErrorFileOpen() //{{{
-/** \brief Cannot open file
+/**
+ * \brief Cannot open file
  *
  * \param [in] file  filename
  * \param [in] mode  open mode - r(ead), w(rite), a(ppend)
@@ -64,21 +69,24 @@ bool ErrorExtension(char *file, int number, char extension[][5]); //}}}
 void ErrorFileOpen(char *file, char mode); //}}}
 
 // ErrorNaN() //{{{
-/** \brief Non-numeric argument
+/**
+ * \brief Non-numeric argument
  *
  * \param [in] option   the option with wrong argument
  */
 void ErrorNaN(char *option); //}}}
 
 // ErrorOption() //{{{
-/** \brief Unknown option
+/**
+ * \brief Unknown option
  *
  * \param [in] option   the unknown option
  */
 void ErrorOption(char *option); //}}}
 
 // ErrorOption() //{{{
-/** \brief Non-existent bead.
+/**
+ * \brief Non-existent bead.
  *
  * \param [in] file_name   file the non-existent bead is in ('\0' for non-existent bead in command)
  * \param [in] bname       non-existent bead name
@@ -87,5 +95,12 @@ void ErrorOption(char *option); //}}}
  */
 void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadType); //}}}
 
-void ErrorPrintLine(char split[30][100], int words);
+//ErrorPrintLine() //{{{
+/**
+ * \brief Print provided strings to error output.
+ *
+ * \param [in] split     array of strings to prints
+ * \param [in] words     number of strings in the split array
+ */
+void ErrorPrintLine(char split[30][100], int words); //}}}
 #endif

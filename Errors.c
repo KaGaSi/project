@@ -120,7 +120,8 @@ void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadTy
 
 // ErrorPrintLine() //{{{
 /**
- * Print wrong line
+ * Print provided strings (array of strings generally created using
+ * SplitLine()) to error output.
  */
 void ErrorPrintLine(char split[30][100], int words) {
   fprintf(stderr, "        Wrong line:");

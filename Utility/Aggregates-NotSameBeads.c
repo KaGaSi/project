@@ -708,13 +708,6 @@ int main(int argc, char *argv[]) {
       fclose(joined);
     } //}}}
 
-    // open output .agg file for appending //{{{
-    if ((out = fopen(output_agg, "a")) == NULL) {
-      ErrorFileOpen(output_agg, 'a');
-      exit(1);
-    } //}}}
-
-    // write data to output .agg file //{{{
     // find the number of aggregates - remove aggregates only of excluded mols //{{{
     int no_excluded_aggs = 0;
     int test_count = 0; // to test that every molecule is in an aggregate
@@ -742,30 +735,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    // print number of aggregates to agg file
-    fprintf(out, "\nStep: %d\n%d\n\n", count, no_excluded_aggs);
-
-    // go through all aggregates
-    for (int i = 0; i < Counts.Aggregates; i++) {
-
-      if (Aggregate[i].Use) {
-        // go through all molecules in aggregate 'i'
-        fprintf(out, "%d :", Aggregate[i].nMolecules);
-        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          fprintf(out, " %d", Aggregate[i].Molecule[j]+1);
-        }
-        putc('\n', out);
-
-        // go through all monomeric beads in aggregate 'i'
-        fprintf(out, "   %d :", Aggregate[i].nMonomers);
-        for (int j = 0; j < Aggregate[i].nMonomers; j++) {
-          fprintf(out, " %d", Bead[Aggregate[i].Monomer[j]].Index);
-        }
-        putc('\n', out);
-      }
-    }
-
-    fclose(out); //}}}
+    WriteAggregates(count, output_agg, Counts, MoleculeType, Bead, Aggregate);
   }
 
   fclose(vcf);
