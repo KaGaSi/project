@@ -27,6 +27,8 @@ well as according to molecule connectivity. Angles are disregarded.\n\n");
   fprintf(ptr, "      --version      print version number and exit\n");
 } //}}}
 
+// TODO: error checking for input file
+
 int main(int argc, char *argv[]) {
 
   // -h/--version options - print stuff and exit //{{{
@@ -133,7 +135,9 @@ int main(int argc, char *argv[]) {
   // data file header lines must start with a number (or '#' for comment),
   // therefore read until something else is encountered
   line[0] = '\0';
-  char split[30][100]; // to hold individual strings from the line
+  char split[30][100], delim[8];
+  strcpy(delim, " \t");
+  // TODO: redo with do while - check split[0], not line[]
   while (line[0] == '\0' || // empty line
          line[0] == '#' || // comment line
          line[0] == '-' ||  // negative number
@@ -141,7 +145,7 @@ int main(int argc, char *argv[]) {
          (line[0] >= '0' && line[0] <= '9')) { // positive number
     // read one line
     fgets(line, sizeof(line), fr);
-    int words = SplitLine(split, line);
+    int words = SplitLine(split, line, delim);
 
     // read header data //{{{
     for (int i = 0; i < words; i++) {
@@ -229,7 +233,7 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i < Counts.TypesOfBeads; i++) {
         fgets(line, sizeof(line), fr);
         strcpy(line, TrimLine(line)); // trim excess whitespace
-        int words = SplitLine(split, line);
+        int words = SplitLine(split, line, delim);
         BeadType[i].Mass = atof(split[1]);
         // if there's a comment at the end of the line, consider it bead name
         if (words > 2 && split[2][0] == '#') {
@@ -262,7 +266,7 @@ int main(int argc, char *argv[]) {
       fgetpos(fr, &pos); // save file pointer
       for (int i = 0; i < Counts.Beads; i++) {
         fgets(line, sizeof(line), fr);
-        SplitLine(split, line);
+        SplitLine(split, line, delim);
 
         int id = atoi(split[0]) - 1, // in lammps, these start at 1
             mol_id = atoi(split[1]) - 1, // in lammps, molecules start with 1; unbonded atoms can be 0
@@ -362,7 +366,7 @@ int main(int argc, char *argv[]) {
       // read all bonds //{{{
       for (int i = 0; i < bonds; i++) {
         fgets(line, sizeof(line), fr);
-        SplitLine(split, line);
+        SplitLine(split, line, delim);
 
         int bead1 = atoi(split[2]) - 1; // in lammps, atom ids start at 1
         int bead2 = atoi(split[3]) - 1;
@@ -505,7 +509,7 @@ int main(int argc, char *argv[]) {
 
     // read and split next line
     fgets(line, sizeof(line), fr);
-    SplitLine(split, line);
+    SplitLine(split, line, delim);
   }
   free(mols);
   fclose(fr); //}}}

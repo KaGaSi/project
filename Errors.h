@@ -86,4 +86,6 @@ void ErrorOption(char *option); //}}}
  * \param [in] BeadType    information about bead types
  */
 void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadType); //}}}
+
+void ErrorPrintLine(char split[30][100], int words);
 #endif

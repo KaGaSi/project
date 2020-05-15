@@ -316,7 +316,6 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\n\n");
   } //}}}
 
-printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
@@ -449,13 +448,14 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       exit(1);
     } //}}}
 
-    char line[LINE], split[30][100];
+    char line[LINE], split[30][100], delim[8];
+    strcpy(delim, " \t"); // delimiters for SplitLine
     int words;
 
     // read number of bead types //{{{
     bool missing = true; // is 'species' keyword missing?
     while(fgets(line, sizeof(line), in_add)) {
-      words = SplitLine(split, line);
+      words = SplitLine(split, line, delim);
       if (strcasecmp(split[0], "species") == 0) {
         missing = false;
         // check if the next string is a number
@@ -487,7 +487,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
     for (int i = 0; i < Counts_add.TypesOfBeads; i++) {
       char line[LINE];
       fgets(line, sizeof(line), in_add);
-      SplitLine(split, line);
+      SplitLine(split, line, delim);
       // Error:
       // 1) empty line
       // 2) less then four strings
@@ -534,7 +534,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
     // read number of molecule types //{{{
     missing = true; // is molecule keyword missing?
     while(fgets(line, sizeof(line), in_add)) {
-      words = SplitLine(split, line);
+      words = SplitLine(split, line, delim);
       if (strncasecmp(split[0], "molecule", 8) == 0) {
         missing = false;
         // error - next string isn't a number
@@ -568,7 +568,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
     for (int i = 0; i < Counts_add.TypesOfMolecules; i++) {
       // name //{{{
       fgets(line, sizeof(line), in_add);
-      SplitLine(split, line);
+      SplitLine(split, line, delim);
       if (split[0][0] == '\0') { // empty line
         fprintf(stderr, "\nError: %s - blank line instead of molecule name\n", input_add);
         exit(1);
@@ -576,7 +576,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       strcpy(MoleculeType_add[i].Name, split[0]); //}}}
       // number of molecules 'i' //{{{
       fgets(line, sizeof(line), in_add);
-      words = SplitLine(split, line);
+      words = SplitLine(split, line, delim);
       // error if not 'nummols <int>'
       if (words < 2 ||
           strcasecmp(split[0], "nummols") != 0 ||
@@ -592,7 +592,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       MoleculeType_add[i].Number = atoi(split[1]); //}}}
       // number of beads //{{{
       fgets(line, sizeof(line), in_add);
-      words = SplitLine(split, line);
+      words = SplitLine(split, line, delim);
       // error if not 'beads <int>'
       if ( words < 2 ||
           strncasecmp(split[0], "beads", 4) != 0 ||
@@ -636,7 +636,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       zero_first.z = 0;
       for (int j = 0; j < MoleculeType_add[i].nBeads; j++) {
         fgets(line, sizeof(line), in_add);
-        words = SplitLine(split, line);
+        words = SplitLine(split, line, delim);
         // error - not enough columns or not three coordinate //{{{
         if (words < 4 || !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
           fprintf(stderr, "\nError: %s - cannot read coordinates\n", input_add);
@@ -712,7 +712,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       Counts_add.Molecules += MoleculeType_add[i].Number; //}}}
       // number of bonds //{{{
       fgets(line, sizeof(line), in_add);
-      words = SplitLine(split, line);
+      words = SplitLine(split, line, delim);
       // error if not 'bonds <int>'
       if (words < 2 ||
           strncasecmp(split[0], "bonds", 4) != 0 ||
@@ -736,7 +736,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       for (int j = 0; j < MoleculeType[i].nBonds; j++) {
         MoleculeType[i].Bond[j] = calloc(2, sizeof(int));
         fgets(line, sizeof(line), in_add);
-        words = SplitLine(split, line);
+        words = SplitLine(split, line, delim);
         // error if not '<string> <int> <int>'
         if (words < 3 ||
             !IsInteger(split[1]) || !IsInteger(split[2])) {
@@ -754,7 +754,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       // skip till 'finish' //{{{
       missing = true;
       while(fgets(line, sizeof(line), in_add)) {
-        SplitLine(split, line);
+        SplitLine(split, line, delim);
         if (strcasecmp(split[0], "finish") == 0) {
           missing = false;
           break;

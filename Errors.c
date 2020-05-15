@@ -1,7 +1,8 @@
 #include "Errors.h"
 
 // ErrorCoorRead() //{{{
-/** Error when reading vcf file
+/**
+ * Error when reading vcf file
  */
 void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input_vsf) {
   fprintf(stderr, "\nError: %s - cannot read coordinates (bead %d; step %d - '%s')\n\n", input_vcf, bead, step, stuff);
@@ -9,7 +10,8 @@ void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input
 } //}}}
 
 // ErrorArgNumber() //{{{
-/** Error when insufficient number of arguments
+/**
+ * Error when insufficient number of arguments
  */
 void ErrorArgNumber(int count, int need) {
   fprintf(stderr, "\nError: too few mandatory arguments (%d instead of %d)\n", count, need);
@@ -17,7 +19,8 @@ void ErrorArgNumber(int count, int need) {
 } //}}}
 
 // ErrorDiscard()  //{{{
-/** Error when number of starting step is higher then the total number of steps
+/**
+ * Error when number of starting step is higher then the total number of steps
  * in a coordinate file
  */
 bool ErrorDiscard(int start, int step, char *file, FILE *coor) {
@@ -33,7 +36,8 @@ bool ErrorDiscard(int start, int step, char *file, FILE *coor) {
 } //}}}
 
 // ErrorExtension() //{{{
-/** Error when missing or incorrect file extension
+/**
+ * Error when missing or incorrect file extension
  */
 bool ErrorExtension(char *file, int number, char extension[][5]) {
 
@@ -57,7 +61,8 @@ bool ErrorExtension(char *file, int number, char extension[][5]) {
 } //}}}
 
 // ErrorFileOpen() //{{{
-/** Error when open file
+/**
+ * Error when open file
  */
 void ErrorFileOpen(char *file, char mode) {
   fprintf(stderr, "\nError: cannot open '%s' for ", file);
@@ -79,7 +84,8 @@ void ErrorFileOpen(char *file, char mode) {
 } //}}}
 
 // ErrorNaN() //{{{
-/** Error when unknown non-numeric argument is present instead of a number
+/**
+ * Error when unknown non-numeric argument is present instead of a number
  */
 void ErrorNaN(char *option) {
   fprintf(stderr, "\nError: non-numeric argument for '%s'\n", option);
@@ -87,7 +93,8 @@ void ErrorNaN(char *option) {
 } //}}}
 
 // ErrorOption() //{{{
-/** Error when unknown option specified as argument
+/**
+ * Error when unknown option specified as argument
  */
 void ErrorOption(char *option) {
   fprintf(stderr, "\nError: non-existent option '%s'\n", option);
@@ -95,7 +102,8 @@ void ErrorOption(char *option) {
 } //}}}
 
 // ErrorBeadType() //{{{
-/** Error when non-existent bead is used.
+/**
+ * Error when non-existent bead is used.
  */
 void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadType) {
   if (file_name[0] != '\0') {
@@ -108,4 +116,16 @@ void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadTy
     fprintf(stderr, "                            %s\n", BeadType[i].Name);
   }
   putc('\n', stderr);
+} //}}}
+
+// ErrorPrintLine() //{{{
+/**
+ * Print wrong line
+ */
+void ErrorPrintLine(char split[30][100], int words) {
+  fprintf(stderr, "        Wrong line:");
+  for (int i = 0; i < words; i++) {
+    fprintf(stderr, " %s", split[i]);
+  }
+  fprintf(stderr, "\n\n");
 } //}}}

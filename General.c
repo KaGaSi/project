@@ -266,12 +266,12 @@ Vector Distance(Vector id1, Vector id2, Vector BoxLength) {
  * space, and colon as a delimiter) and removes newline character from the end
  * of the last string.
  */
-int SplitLine(char out[30][100], char *line) {
+int SplitLine(char out[30][100], char *line, char delim[8]) {
   // trim whitespaces at the beginning and end of line
   strcpy(line, TrimLine(line));
   // split into words separated by " ", tab, or colon
   char *split[30];
-  split[0] = strtok(line, " \t:"); // first word
+  split[0] = strtok(line, delim); // first word
   int words = 0;
   while (split[words] != NULL && words < 29) {
     words++; // start from 1, as the first split is already done
