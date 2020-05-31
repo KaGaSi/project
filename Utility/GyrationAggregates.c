@@ -228,6 +228,12 @@ int main(int argc, char *argv[]) {
     exit(0);
   } //}}}
 
+  bool types_for_gyr[Counts.TypesOfBeads];
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    types_for_gyr[i] = BeadType[i].Use;
+    BeadType[i].Use = false;
+  }
+
   // write initial stuff to output file //{{{
   FILE *out;
   if ((out = fopen(output, "w")) == NULL) {
@@ -290,6 +296,9 @@ int main(int argc, char *argv[]) {
       ErrorBeadType(Counts, BeadType);
       exit(1);
     }
+
+    BeadType[type].Use = true;
+
     while ((test = getc(agg)) == ' ')
       ;
     ungetc(test, agg);
@@ -454,7 +463,7 @@ int main(int argc, char *argv[]) {
           double agg_mass = 0;
           for (int j = 0; j < Aggregate[i].nBeads; j++) {
             int id = Aggregate[i].Bead[j];
-            if (BeadType[Bead[id].Type].Use) {
+            if (types_for_gyr[Bead[id].Type]) {
               list[n] = id;
               n++;
               agg_mass += BeadType[Bead[id].Type].Mass;
@@ -719,7 +728,6 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     fprintf(out, " %lf", (double)(molecules_sum)[0][i]/agg_counts_sum[0]);
   }
-  printf("xx%d\n", agg_counts_sum[0]);
   fprintf(out, " %lf", Rg_sum[0][0]/agg_counts_sum[0]); // <Rg>_n
   fprintf(out, " %lf", Rg_sum[0][1]/mass_sum[0][0]); // <Rg>_w
   fprintf(out, " %lf", Rg_sum[0][2]/mass_sum[0][1]); // <Rg>_z
