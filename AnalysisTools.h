@@ -75,7 +75,9 @@ void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead); //}}}
 /**
  * Function printing Molecule structure.
  */
-void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType); //}}}
+void PrintMolecule(Counts Counts, int *Index,
+                   MoleculeType *MoleculeType, Molecule *Molecule,
+                   BeadType *BeadType, Bead *Bead); //}}}
 
 // PrintAggregate() //{{{
 /**
@@ -194,7 +196,9 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
  * \param [out] Aggregate  Aggregate struct to sort
  * \param [in]  Counts     numbers of beads, molecules, etc.
  */
-void SortAggStruct(Aggregate **Aggregate, Counts Counts); //}}}
+void SortAggStruct(Aggregate **Aggregate, Counts Counts,
+                   Molecule *Molecule, MoleculeType *MoleculeType,
+                   Bead **Bead, BeadType *BeadType); //}}}
 
 // LinkedList() //{{{
 void LinkedList(Vector BoxLength, Counts Counts, Bead *Bead,

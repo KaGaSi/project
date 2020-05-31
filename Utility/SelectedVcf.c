@@ -191,15 +191,14 @@ int main(int argc, char *argv[]) {
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-  // vsf file is not needed anymore
   free(input_vsf);
 
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
     if (type == -1) {
-      ErrorBeadType(input_coor, argv[count], Counts, BeadType);
+      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      ErrorBeadType(Counts, BeadType);
       exit(1);
     }
     BeadType[type].Write = true;

@@ -165,7 +165,8 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType);
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      ErrorBeadType(input_coor, argv[count], Counts, BeadType);
+      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      ErrorBeadType(Counts, BeadType);
       exit(1);
     }
     BeadType[type].Use = true;

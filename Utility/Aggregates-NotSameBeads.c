@@ -253,7 +253,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
   } //}}}
 
   // sort aggregates according to ascending ids of first molecules
-  SortAggStruct(&(*Aggregate), *Counts);
+  SortAggStruct(&(*Aggregate), *Counts, *Molecule, MoleculeType, &(*Bead), BeadType);
 
   // assign aggregate id to every bonded bead in the aggregate //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
@@ -541,7 +541,8 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType);
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      ErrorBeadType(input_coor, argv[count], Counts, BeadType);
+      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      ErrorBeadType(Counts, BeadType);
       exit(1);
     }
     if (BeadType[type].Use) {
