@@ -244,7 +244,8 @@ int main(int argc, char *argv[]) {
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType1);
     if (type == -1) {
-      ErrorBeadType("\0", argv[count], Counts, BeadType1);
+      fprintf(stderr, "\nError: non-existent bead name '%s'\n", argv[count]);
+      ErrorBeadType(Counts, BeadType1);
       fprintf(stderr, "Note that all bead types must be in both coordinate files.\n\n");
       exit(1);
     }

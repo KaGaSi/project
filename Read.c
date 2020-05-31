@@ -91,7 +91,8 @@ void ReadAggCommand(BeadType *BeadType, Counts Counts,
     int type = FindBeadType(split[i], Counts, BeadType);
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      ErrorBeadType(input_coor, split[i], Counts, BeadType);
+      fprintf(stderr, "\nError: %s - non-existent bead name '%s' in Aggregate command\n", input_agg, split[i]);
+      ErrorBeadType(Counts, BeadType);
       exit(1);
     }
     BeadType[type].Use = true;
@@ -1355,4 +1356,419 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
     } //}}}
   }
   return error;
+} //}}}
+
+// ReadFieldPbc() //{{{
+/**
+ * Function reading box size from the first line of the FIELD-like file.
+ */
+void ReadFieldPbc(char *field, Vector *BoxLength) {
+  // open FIELD-like file //{{{
+  FILE *fr;
+  if ((fr = fopen(field, "r")) == NULL) {
+    ErrorFileOpen(field, 'r');
+    exit(1);
+  } //}}}
+
+  char line[LINE], split[30][100], delim[8];
+  strcpy(delim, " \t"); // delimiters for SplitLine()
+
+  // read box size //{{{
+  fgets(line, sizeof(line), fr);
+  int words = SplitLine(split, line, delim);
+  // first line of the FIELD must be: <double> <double> <double> ...whatever
+  // Error if:
+  // 1) too few strings
+  // 2) enough strings, but not numbers
+  if (words < 3 || // 1
+      !IsPosDouble(split[0]) || // 2) first <double>
+      !IsPosDouble(split[1]) || // 2) first <double>
+      !IsPosDouble(split[2])) { // 2) first <double>
+    fprintf(stderr, "\nError: %s - first line must start with box size (i.e., three positive numbers)\n", field);
+    ErrorPrintLine(split, words);
+    exit(1);
+  }
+  (*BoxLength).x = atof(split[0]);
+  (*BoxLength).y = atof(split[1]);
+  (*BoxLength).z = atof(split[2]); //}}}
+
+  fclose(fr);
+} //}}}
+
+// ReadFieldBeadType() //{{{
+/**
+ * Function reading the species section of the FIELD-like file.
+ */
+void ReadFieldBeadType(char *field, Counts *Counts, BeadType **BeadType, Bead **Bead) {
+
+  // open FIELD-like file //{{{
+  FILE *fr;
+  if ((fr = fopen(field, "r")) == NULL) {
+    ErrorFileOpen(field, 'r');
+    exit(1);
+  } //}}}
+
+  char line[LINE], split[30][100], delim[8];
+  strcpy(delim, " \t"); // delimiters for SplitLine()
+
+  // read number of bead types //{{{
+  bool missing = true; // is 'species' keyword missing?
+  while(fgets(line, sizeof(line), fr)) {
+    int words = SplitLine(split, line, delim);
+    if (strcasecmp(split[0], "species") == 0) {
+      missing = false;
+      // check if the next string is a number
+      if (words < 2 ||            // missing next string
+          !IsInteger(split[1])) { // next string isn't a number
+        fprintf(stderr, "\nError: %s - missing number of species\n", field);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      (*Counts).TypesOfBeads = atoi(split[1]);
+      break;
+    }
+  }
+  if (missing) {
+    fprintf(stderr, "\nError: %s - missing 'species' keyword\n\n", field);
+    exit(1);
+  } //}}}
+
+  *BeadType = calloc((*Counts).TypesOfBeads,sizeof(struct BeadType));
+
+  // read info about bead types //{{{
+  (*Counts).Unbonded = 0;
+  (*Counts).Beads = 0;
+  for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+    fgets(line, sizeof(line), fr);
+    int words = SplitLine(split, line, delim);
+
+    // Error on the line: //{{{
+    // 1) empty line
+    // 2) less then four strings
+    // 3) second string isn't a positive double (mass)
+    // 4) third string isn't a double (charge)
+    // 5) fifth string isn't an integer (unbonded beads)
+    if (words == 1 && split[0][0] == '\0') { // 1)
+      fprintf(stderr, "\nError: %s - no blank spaces permitted in the species section\n\n", field);
+      exit(1);
+    } else if (words < 4 ||                  // 2)
+               !IsPosDouble(split[1]) ||     // 3)
+               !IsDouble(split[2]) ||        // 4)
+               !IsInteger(split[3])) {       // 5)
+      fprintf(stderr, "\nError: %s - wrong species line\n", field);
+      ErrorPrintLine(split, words);
+      exit(1);
+    } //}}}
+
+    strcpy((*BeadType)[i].Name, split[0]);
+    (*BeadType)[i].Mass = atof(split[1]);
+    (*BeadType)[i].Charge = atof(split[2]);
+    (*BeadType)[i].Number = atoi(split[3]);
+    (*Counts).Unbonded += (*BeadType)[i].Number;
+  } //}}}
+
+  (*Counts).Beads = (*Counts).Unbonded;
+
+  // allocate & fill Bead array //{{{
+  *Bead = calloc((*Counts).Unbonded, sizeof(struct Bead));
+  int count = 0;
+  for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+    for (int j = 0; j < (*BeadType)[i].Number; j++) {
+      (*Bead)[count].Type = i;
+      (*Bead)[count].Molecule = -1;
+      (*Bead)[count].Index = count;
+      count++;
+    }
+  } //}}}
+
+  fclose(fr);
+} //}}}
+
+// ReadFieldMolecules() //{{{
+/**
+ * Function reading the molecules section of the FIELD-like file.
+ */
+void ReadFieldMolecules(char *field, Counts *Counts,
+                        BeadType **BeadType, Bead **Bead,
+                        MoleculeType **MoleculeType, Molecule **Molecule) {
+
+  // open FIELD-like file //{{{
+  FILE *fr;
+  if ((fr = fopen(field, "r")) == NULL) {
+    ErrorFileOpen(field, 'r');
+    exit(1);
+  } //}}}
+
+  char line[LINE], split[30][100], delim[8];
+  strcpy(delim, " \t"); // delimiters for SplitLine()
+
+  // read number of molecule types //{{{
+  bool missing = true; // is molecule keyword missing?
+  while(fgets(line, sizeof(line), fr)) {
+    int words = SplitLine(split, line, delim);
+    if (strncasecmp(split[0], "molecule", 8) == 0) {
+      missing = false;
+      // error - next string isn't a number
+      if (!IsInteger(split[1])) {
+        fprintf(stderr, "\nError: %s - missing number of molecule types\n", field);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      (*Counts).TypesOfMolecules = atoi(split[1]);
+      break;
+    }
+  }
+  if (missing) {
+    fprintf(stderr, "\nError: %s - missing 'molecule' line\n\n", field);
+    exit(1);
+  } //}}}
+
+  *MoleculeType = calloc((*Counts).TypesOfMolecules,sizeof(struct MoleculeType));
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].Number = 0;
+    (*MoleculeType)[i].nBeads = 0;
+    (*MoleculeType)[i].nBonds = 0;
+    (*MoleculeType)[i].BType = calloc((*Counts).TypesOfBeads, sizeof(int));
+  }
+
+  // test proper number of 'finish' keywords //{{{
+  fpos_t position;
+  fgetpos(fr, &position); // save pointer position
+  int count = 0;
+  while(fgets(line, sizeof(line), fr)) {
+    SplitLine(split, line, delim);
+    if (strcmp(split[0], "finish") == 0) {
+      count++;
+    }
+  }
+  if (count < (*Counts).TypesOfMolecules) {
+    fprintf(stderr, "\nError: %s - missing 'finish' keyword\n\n", field);
+    exit(1);
+  }
+  fsetpos(fr, &position); //}}}
+
+  // read info about molecule types //{{{
+  fgetpos(fr, &position); // save pointer position
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    // read i-th molecule name //{{{
+    fgets(line, sizeof(line), fr);
+    SplitLine(split, line, delim);
+    if (split[0][0] == '\0') {
+      fprintf(stderr, "\nError: %s - missing molecule name\n\n", field);
+      exit(1);
+    }
+    strcpy((*MoleculeType)[i].Name, split[0]); //}}}
+    // read number of the molecules //{{{
+    fgets(line, sizeof(line), fr);
+    int words = SplitLine(split, line, delim);
+    if (strcasecmp(split[0], "nummols") != 0) {
+      fprintf(stderr, "\nError: %s - missing 'nummols' keyword\n", field);
+      ErrorPrintLine(split, words);
+      exit(1);
+    }
+    if (words < 2 || !IsInteger(split[1])) {
+      fprintf(stderr, "\nError: %s - 'nummols' must be followed by a non-negative integer\n", field);
+      ErrorPrintLine(split, words);
+      exit(1);
+    }
+    (*MoleculeType)[i].Number = atoi(split[1]); //}}}
+    // read number of beads in the molecule //{{{
+    fgets(line, sizeof(line), fr);
+    words = SplitLine(split, line, delim);
+    if (strncasecmp(split[0], "beads", 4) != 0) {
+      fprintf(stderr, "\nError: %s - missing 'beads' keyword\n", field);
+      ErrorPrintLine(split, words);
+      exit(1);
+    }
+    if (words < 2 || !IsInteger(split[1])) {
+      fprintf(stderr, "\nError: %s - 'beads' must be followed by a non-negative integer\n", field);
+      ErrorPrintLine(split, words);
+      exit(1);
+    }
+    (*MoleculeType)[i].nBeads = atoi(split[1]);
+    (*MoleculeType)[i].Bead = calloc((*MoleculeType)[i].nBeads, sizeof(int)); //}}}
+    // read bead info //{{{
+    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+      fgets(line, sizeof(line), fr);
+      words = SplitLine(split, line, delim);
+      // bead line must be 'name <double> <double> <double>'
+      if (words < 4 ||
+          !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
+        fprintf(stderr, "\nError: %s - wrong bead line in molecule %s\n", field, (*MoleculeType)[i].Name);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      int type = FindBeadType(split[0], *Counts, *BeadType);
+      if (type == -1) {
+        fprintf(stderr, "\nError: %s - non-existent bead name '%s' in molecule %s\n", field, split[0], (*MoleculeType)[i].Name);
+        ErrorBeadType(*Counts, *BeadType);
+        exit(1);
+      }
+      (*MoleculeType)[i].Bead[j] = type;
+    } //}}}
+    // read number of bonds in the molecule //{{{
+    fgets(line, sizeof(line), fr);
+    words = SplitLine(split, line, delim);
+    if (strncasecmp(split[0], "bonds", 4) != 0) {
+      fprintf(stderr, "\nError: %s - missing 'bonds' keyword\n", field);
+      ErrorPrintLine(split, words);
+      exit(1);
+    }
+    if (words < 2 || !IsInteger(split[1])) {
+      fprintf(stderr, "\nError: %s - 'bonds' must be followed by a non-negative integer\n", field);
+      ErrorPrintLine(split, words);
+      exit(1);
+    }
+    (*MoleculeType)[i].nBonds = atoi(split[1]);
+    (*MoleculeType)[i].Bond = calloc((*MoleculeType)[i].nBonds, sizeof(int *));
+    for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
+      (*MoleculeType)[i].Bond[j] = calloc(2, sizeof(int));
+    } //}}}
+    // read bond info //{{{
+    for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
+      fgets(line, sizeof(line), fr);
+      words = SplitLine(split, line, delim);
+      // bead line must be '<type> <bead id> <bead id> <parameters - ignored>'
+      if (words < 3 ||
+          !IsInteger(split[1]) || atoi(split[1]) == 0 || // bead ids must start from 1
+          !IsInteger(split[2]) || atoi(split[2]) == 0) {
+        fprintf(stderr, "\nError: %s - wrong bond line in molecule %s\n", field, (*MoleculeType)[i].Name);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      (*MoleculeType)[i].Bond[j][0] = atoi(split[1]) - 1;
+      (*MoleculeType)[i].Bond[j][1] = atoi(split[2]) - 1;
+    } //}}}
+    (*Counts).Bonded += (*MoleculeType)[i].Number * (*MoleculeType)[i].nBeads;
+    (*Counts).Molecules += (*MoleculeType)[i].Number;
+    // skip till 'finish' //{{{
+    while(fgets(line, sizeof(line), fr)) {
+      SplitLine(split, line, delim);
+      if (strcasecmp(split[0], "finish") == 0) {
+        break;
+      }
+    } //}}}
+  }
+  // return the file pointer to the beginning of the molecules section
+  fsetpos(fr, &position); //}}}
+
+  // calculate molecule masses //{{{
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].Mass = 0;
+    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+      int btype = (*MoleculeType)[i].Bead[j];
+      (*MoleculeType)[i].Mass += (*BeadType)[btype].Mass;
+    }
+  } //}}}
+
+  // update the number beads in the system //{{{
+  (*Counts).Beads += (*Counts).Bonded;
+  (*Counts).BeadsInVsf = (*Counts).Beads;
+  *Bead = realloc(*Bead, (*Counts).Beads*sizeof(struct Bead));
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+      int btype = (*MoleculeType)[i].Bead[j];
+      (*BeadType)[btype].Number += (*MoleculeType)[i].Number;
+    }
+  } //}}}
+
+  // read coordinates of bonded beads //{{{
+  // get the coordinates from FIELD to each molecule
+  count = (*Counts).Unbonded;
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    // skip name, nummols, and beads lines //{{{
+    fgets(line, sizeof(line), fr);
+    fgets(line, sizeof(line), fr);
+    fgets(line, sizeof(line), fr); //}}}
+    // read bead lines //{{{
+    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+      fgets(line, sizeof(line), fr);
+      SplitLine(split, line, delim);
+      for (int k = 0; k < (*MoleculeType)[i].Number; k++) {
+        int id = count + k * (*MoleculeType)[i].nBeads;
+        (*Bead)[id].Position.x = atof(split[1]);
+        (*Bead)[id].Position.y = atof(split[2]);
+        (*Bead)[id].Position.z = atof(split[3]);
+      }
+      count++;
+    } //}}}
+    // set count to the first bead of the next molecule type
+    count += ((*MoleculeType)[i].Number - 1) * (*MoleculeType)[i].nBeads;
+    // skip till 'finish' //{{{
+    while(fgets(line, sizeof(line), fr)) {
+      SplitLine(split, line, delim);
+      if (strcasecmp(split[0], "finish") == 0) {
+        break;
+      }
+    } //}}}
+  } //}}}
+
+  fclose(fr);
+} //}}}
+
+// ReadField() //{{{
+/**
+ * Function reading the FIELD-like file; it completely fills provided structs,
+ * overriding any possible data in there. If the FIELD-like file is a source of
+ * some additional structure information, new structs must be used, and the
+ * data copied from there afterwards.
+ */
+void ReadField(char *field, Vector *BoxLength, Counts *Counts,
+               BeadType **BeadType, Bead **Bead, int **Index,
+               MoleculeType **MoleculeType, Molecule **Molecule) {
+
+  // read pbc only if required
+  if (BoxLength != NULL) {
+    ReadFieldPbc(field, &(*BoxLength));
+  }
+  ReadFieldBeadType(field, &(*Counts), &(*BeadType), &(*Bead));
+  ReadFieldMolecules(field, &(*Counts), &(*BeadType), &(*Bead), &(*MoleculeType), &(*Molecule));
+
+  // allocate Bead[].Aggregate array - needed only to free() //{{{
+  for (int i = 0; i < (*Counts).Beads; i++) {
+    (*Bead)[i].Aggregate = calloc(10, sizeof(int));
+  } //}}}
+
+  // fill MoleculeType[].BType array //{{{
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+      int type = (*MoleculeType)[i].Bead[j];
+      bool present = false;
+      for (int k = 0; k < (*MoleculeType)[i].nBTypes; k++) {
+        if (type == (*MoleculeType)[i].BType[k]) {
+          present = true;
+          break;
+        }
+      }
+      if (!present) {
+        (*MoleculeType)[i].BType[(*MoleculeType)[i].nBTypes] = type;
+        (*MoleculeType)[i].nBTypes++;
+      }
+    }
+  } //}}}
+
+  // fill Molecule & Bead structs //{{{
+  *Molecule = calloc((*Counts).Molecules,sizeof(struct Molecule));
+  int count_mol = 0, count_bead = (*Counts).Unbonded;
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    for (int j = 0; j < (*MoleculeType)[i].Number; j++) {
+      (*Molecule)[count_mol].Type = i;
+      (*Molecule)[count_mol].Bead = calloc((*MoleculeType)[i].nBeads, sizeof(int));
+      for (int k = 0; k < (*MoleculeType)[i].nBeads; k++) {
+        int btype = (*MoleculeType)[i].Bead[k];
+        (*Molecule)[count_mol].Bead[k] = count_bead;
+        (*Bead)[count_bead].Molecule = count_mol;
+        (*Bead)[count_bead].Type = btype;
+        (*Bead)[count_bead].Index = count_bead;
+        count_bead++;
+      }
+      count_mol++;
+    }
+  } //}}}
+
+  // fill Index - I don't thinks it's used right now //{{{
+  *Index = calloc((*Counts).Beads, sizeof(int));
+  for (int i = 0; i < (*Counts).Beads; i++) {
+    (*Index)[i] = i;
+  } //}}}
 } //}}}

@@ -105,12 +105,7 @@ void ErrorOption(char *option) {
 /**
  * Error when non-existent bead is used.
  */
-void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadType) {
-  if (file_name[0] != '\0') {
-    fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", file_name, bname);
-  } else {
-    fprintf(stderr, "\nError: non-existent bead name '%s'\n",  bname);
-  }
+void ErrorBeadType(Counts Counts, BeadType *BeadType) {
   fprintf(stderr, "       Possible bead names: %s\n", BeadType[0].Name);
   for (int i = 1; i < Counts.TypesOfBeads; i++) {
     fprintf(stderr, "                            %s\n", BeadType[i].Name);
@@ -124,7 +119,7 @@ void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadTy
  * SplitLine()) to error output.
  */
 void ErrorPrintLine(char split[30][100], int words) {
-  fprintf(stderr, "        Wrong line:");
+  fprintf(stderr, "       Wrong line:");
   for (int i = 0; i < words; i++) {
     fprintf(stderr, " %s", split[i]);
   }
