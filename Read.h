@@ -95,4 +95,21 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
 bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
                     BeadType *BeadType, Bead **Bead,
                     MoleculeType *MoleculeType, Molecule **Molecule, int *Index); //}}}
+
+// ReadField() //{{{
+/**
+ * \brief Function reading structure information from FIELD-like file
+ *
+ * \param [in]  field         input FIELD-like file
+ * \param [out] BoxLength     simulation box size
+ * \param [out] Counts        numbers of beads, molecules, etc.
+ * \param [out] BeadType      information about bead types
+ * \param [out] Bead          informationn about individual beads
+ * \param [out] Index         bead indices between program and vsf (i.e., opposite of Bead[].Index)
+ * \param [out] MoleculeType  information about molecule types
+ * \param [out] Molecule      information about individual molecules
+ * */
+void ReadField(char *field, Vector *BoxLength, Counts *Counts,
+               BeadType **BeadType, Bead **Bead, int **Index,
+               MoleculeType **MoleculeType, Molecule **Molecule); //}}}
 #endif

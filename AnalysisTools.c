@@ -33,8 +33,7 @@ void PrintCounts(Counts Counts) {
   fprintf(stdout, "Beads = %d, ", Counts.Beads);
   fprintf(stdout, "BeadsInVsf = %d, ", Counts.BeadsInVsf);
   fprintf(stdout, "TypesOfMolecules = %d, ", Counts.TypesOfMolecules);
-  fprintf(stdout, "Molecules = %d}\n", Counts.Molecules);
-  fprintf(stdout, "total number of beads: %d\n\n", Counts.Bonded+Counts.Unbonded);
+  fprintf(stdout, "Molecules = %d}\n\n", Counts.Molecules);
 } //}}}
 
 // PrintBeadType()  //{{{
@@ -77,10 +76,12 @@ void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *Molecule
       }
       fprintf(stdout, "%d-%d", MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
     }
-    fprintf(stdout, "}\n  nBTypes = %d\n  BType   = {", MoleculeType[i].nBTypes);
-    fprintf(stdout, "%s", BeadType[MoleculeType[i].BType[0]].Name);
-    for (int j = 1; j < MoleculeType[i].nBTypes; j++) {
-      fprintf(stdout, ", %s", BeadType[MoleculeType[i].BType[j]].Name);
+    fprintf(stdout, "}\n  nBTypes = %d\n  BType   = {", MoleculeType[0].nBTypes);
+    for (int j = 0; j < MoleculeType[i].nBTypes; j++) {
+      if (j != 0) {
+        fprintf(stdout, ", ");
+      }
+      fprintf(stdout, "%s", BeadType[MoleculeType[i].BType[j]].Name);
     }
     fprintf(stdout, "}\n  Mass    = %.5f}\n", MoleculeType[i].Mass);
   }
@@ -88,7 +89,7 @@ void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *Molecule
 
 // PrintBead() //{{{
 /**
- * Function printing Bead structure (useful for debugging).
+ * Function printing Bead structure.
  */
 void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
   fprintf(stdout, "Beads - <i> (<Bead[i].Index>; <Index[i]>)\n");
@@ -105,23 +106,34 @@ void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
 
 // PrintMolecule() //{{{
 /**
- * Function printing Molecule structure (useful for debugging).
+ * Function printing Molecule structure.
  */
-void PrintMolecule(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType) {
+void PrintMolecule(Counts Counts, int *Index,
+                   MoleculeType *MoleculeType, Molecule *Molecule,
+                   BeadType *BeadType, Bead *Bead) {
   fprintf(stdout, "Molecules\n");
   for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
     fprintf(stdout, "Molecule %3d (%s):\n", i+1, MoleculeType[type].Name);
+    fprintf(stdout, " BEAD INDICES (%d): internal (in vsf)\n", MoleculeType[type].nBeads);
     for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      fprintf(stdout, " %d (%d)", Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
+      fprintf(stdout, "   %d (%d)\n", Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
     }
-    fprintf(stdout, "\n");
+    fprintf(stdout, " BONDS (%d): internal (in vsf)\n", MoleculeType[type].nBonds);
+    for (int j = 0; j < MoleculeType[type].nBonds; j++) {
+      int bead1 = MoleculeType[type].Bond[j][0];
+      int bead1_1 = Molecule[i].Bead[bead1];
+      int bead2 = MoleculeType[type].Bond[j][1];
+      int bead2_1 = Molecule[i].Bead[bead2];
+      fprintf(stdout, "   %d-%d (%d-%d)\n", bead1_1, bead2_1, Bead[bead1_1].Index, Bead[bead2_1].Index);
+    }
   }
+  fprintf(stdout, "\n");
 } //}}}
 
 // PrintAggregate() //{{{
 /**
- * Function printing Aggregate structure (useful for debugging).
+ * Function printing Aggregate structure.
  */
 void PrintAggregate(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType, Aggregate *Aggregate) {
   fprintf(stdout, "Aggregates: %d\n", Counts.Aggregates);
@@ -351,10 +363,10 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                   }
                 }
               }
-              // if molekule 'k' (or 'mol2') has been moved, skip also remainder of molecules 'mol1' //{{{
+              // if molekule 'k' (or 'mol2') has been moved, skip also remainder of molecules 'mol1'
               if (moved[k]) {
                 break;
-              } //}}}
+              }
             }
           }
         }
@@ -684,8 +696,12 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
  * Sort an Aggregate struct using the bubble sort algorithm. The resulting
  * struct is arranged so that aggregates with the first molecule's lower id
  * come first.
+ *
+ * TODO: why doesn't it sort Aggregate[].Monomers? ...because there aren't any yet
  */
-void SortAggStruct(Aggregate **Aggregate, Counts Counts) {
+void SortAggStruct(Aggregate **Aggregate, Counts Counts,
+                   Molecule *Molecule, MoleculeType *MoleculeType,
+                   Bead **Bead, BeadType *BeadType) {
   for (int i = 0; i < (Counts.Aggregates-1); i++) {
     bool done = true;
     for (int j = 0; j < (Counts.Aggregates-i-1); j++) {
@@ -703,7 +719,7 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts) {
         }
         // switch bonded beads array
         Swap(&(*Aggregate)[j].nBeads, &(*Aggregate)[j+1].nBeads);
-        int beads; // number of molecules in the larger aggregate
+        int beads; // number of beads in the larger aggregate
         if ((*Aggregate)[j].nBeads > (*Aggregate)[j+1].nBeads) {
           beads = (*Aggregate)[j].nBeads;
         } else {
@@ -712,12 +728,37 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts) {
         for (int k = 0; k < beads; k++) {
           Swap(&(*Aggregate)[j].Bead[k], &(*Aggregate)[j+1].Bead[k]);
         }
+        // switch monomer beads array
+        Swap(&(*Aggregate)[j].nMonomers, &(*Aggregate)[j+1].nMonomers);
+        int mons; // larger number of monomers of the two aggregates
+        if ((*Aggregate)[j].nMonomers > (*Aggregate)[j+1].nMonomers) {
+          mons = (*Aggregate)[j].nMonomers;
+        } else {
+          mons = (*Aggregate)[j+1].nMonomers;
+        }
+        for (int k = 0; k < mons; k++) {
+          Swap(&(*Aggregate)[j].Monomer[k], &(*Aggregate)[j+1].Monomer[k]);
+        }
         done = false;
       }
     }
     if (done)
       break;
   }
+
+  // TODO: test that it's working correctly be prints in Aggregate's main()
+  // re-assign aggregate id to every bonded bead in the aggregate, correcting after sorting //{{{
+  for (int i = 0; i < Counts.Aggregates; i++) {
+    for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
+      int mol = (*Aggregate)[i].Molecule[j];
+      int mtype = Molecule[mol].Type;
+      for (int k = 0; k < MoleculeType[mtype].nBeads; k++) {
+        int id = Molecule[mol].Bead[k];
+        (*Bead)[id].nAggregates = 1;
+        (*Bead)[id].Aggregate[0] = i;
+      }
+    }
+  } //}}}
 } //}}}
 
 // LinkedList() //{{{

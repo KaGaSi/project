@@ -285,7 +285,8 @@ int main(int argc, char *argv[]) {
 
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
-      ErrorBeadType(input_coor, name, Counts, BeadType);
+      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, name);
+      ErrorBeadType(Counts, BeadType);
       exit(1);
     }
 

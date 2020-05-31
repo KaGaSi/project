@@ -84,18 +84,16 @@ void ErrorNaN(char *option); //}}}
  */
 void ErrorOption(char *option); //}}}
 
-// ErrorOption() //{{{
+// ErrorBeadType() //{{{
 /**
- * \brief Non-existent bead.
+ * Error when non-existent bead is used.
  *
- * \param [in] file_name   file the non-existent bead is in ('\0' for non-existent bead in command)
- * \param [in] bname       non-existent bead name
  * \param [in] Counts      numbers of beads, molecules, etc.
  * \param [in] BeadType    information about bead types
  */
-void ErrorBeadType(char *file_name, char *bname, Counts Counts, BeadType *BeadType); //}}}
+void ErrorBeadType(Counts Counts, BeadType *BeadType); //}}}
 
-//ErrorPrintLine() //{{{
+// ErrorPrintLine() //{{{
 /**
  * \brief Print provided strings to error output.
  *

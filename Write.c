@@ -106,22 +106,25 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
   // print beads //{{{
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
     // don't print beads with type 'type_def'
-    if (Bead[i].Type != type_def || Bead[i].Molecule != -1) {
+    int btype = Bead[i].Type;
+    int mol = Bead[i].Molecule;
+    if (btype != type_def || mol != -1) {
       fprintf(fw, "atom %7d ", i);
-      fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
-      fprintf(fw, "mass %9.5f ", BeadType[Bead[i].Type].Mass);
-      fprintf(fw, "charge %9.5f", BeadType[Bead[i].Type].Charge);
-      if (Bead[i].Molecule != -1) {
-        fprintf(fw, " resname %10s ", MoleculeType[Molecule[Bead[i].Molecule].Type].Name);
-        fprintf(fw, "resid %5d", Bead[i].Molecule+1);
+      fprintf(fw, "name %8s ", BeadType[btype].Name);
+      fprintf(fw, "mass %9.5f ", BeadType[btype].Mass);
+      fprintf(fw, "charge %9.5f", BeadType[btype].Charge);
+      if (mol != -1) {
+        int mtype = Molecule[mol].Type;
+        fprintf(fw, " resname %10s ", MoleculeType[mtype].Name);
+        fprintf(fw, "resid %5d", mol+1);
       }
       putc('\n', fw);
     // print highest bead id even if it's default type
     } else if (i == (Counts.BeadsInVsf-1)) {
       fprintf(fw, "atom %7d ", i);
-      fprintf(fw, "name %8s ", BeadType[Bead[i].Type].Name);
-      fprintf(fw, "mass %lf ", BeadType[Bead[i].Type].Mass);
-      fprintf(fw, "charge %lf", BeadType[Bead[i].Type].Charge);
+      fprintf(fw, "name %8s ", BeadType[btype].Name);
+      fprintf(fw, "mass %lf ", BeadType[btype].Mass);
+      fprintf(fw, "charge %lf", BeadType[btype].Charge);
       putc('\n', fw);
     }
   } //}}}
@@ -132,8 +135,8 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
     fprintf(fw, "# resid %d\n", i+1); // in VMD resid start with 1
     int mol_type = Molecule[i].Type;
     for (int j = 0; j < MoleculeType[mol_type].nBonds; j++) {
-      fprintf(fw, "bond %6d: %6d\n", Molecule[i].Bead[MoleculeType[mol_type].Bond[j][0]],
-                                     Molecule[i].Bead[MoleculeType[mol_type].Bond[j][1]]);
+      fprintf(fw, "bond %6d: %6d\n", Bead[Molecule[i].Bead[MoleculeType[mol_type].Bond[j][0]]].Index,
+                                     Bead[Molecule[i].Bead[MoleculeType[mol_type].Bond[j][1]]].Index);
     }
   } //}}}
 

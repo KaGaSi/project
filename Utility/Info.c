@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\nInformation about every bead:\n");
     PrintBead(Counts, Index, BeadType, Bead);
     fprintf(stdout, "\nInformation about every molecule:\n");
-    PrintMolecule(Counts, Index, MoleculeType, Molecule, Bead, BeadType);
+    PrintMolecule(Counts, Index, MoleculeType, Molecule, BeadType, Bead);
   } //}}}
 
   // get box dimensions if -c is used //{{{
