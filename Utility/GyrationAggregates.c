@@ -19,18 +19,19 @@ range.\n\n");
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <input.agg> <output> <options>\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <input.agg>       input agg file\n");
-  fprintf(ptr, "   <output>          output file with data during simulation run\n");
+  fprintf(ptr, "   <input>              input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <input.agg>          input agg file\n");
+  fprintf(ptr, "   <output>             output file with data during simulation run\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
-  fprintf(ptr, "      -bt            specify bead types to be used for calculation (default is all)\n");
-  fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
-  fprintf(ptr, "      -x <name(s)>   exclude aggregates containing only specified molecule(s)\n");
-  fprintf(ptr, "      -ps <file>     save per-size averages to a file\n");
-  fprintf(ptr, "      -n <int> <int> calculate for aggregate sizes in given range\n");
-  fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
+  fprintf(ptr, "      --joined          specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "      -bt               specify bead types to be used for calculation (default is all)\n");
+  fprintf(ptr, "      -m <name(s)>      agg size means number of <name(s)> molecule types in an aggregate\n");
+  fprintf(ptr, "      -x <name(s)>      exclude aggregates containing only specified molecule(s)\n");
+  fprintf(ptr, "      --only <name(s)>  use only aggregates composed of specified molecule(s)\n");
+  fprintf(ptr, "      -ps <file>        save per-size averages to a file\n");
+  fprintf(ptr, "      -n <int> <int>    calculate for aggregate sizes in given range\n");
+  fprintf(ptr, "      -st <int>         starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>          ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -73,6 +74,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
+        strcmp(argv[i], "--only") != 0 &&
         strcmp(argv[i], "-ps") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
@@ -223,16 +225,31 @@ int main(int argc, char *argv[]) {
   // count total number of excluded aggs
   long int exclude_count_agg = 0; //}}}
 
+  // '--only' option //{{{
+  int *only_specific_moltype_aggregates = calloc(Counts.TypesOfMolecules,sizeof(int));
+  if (MoleculeTypeOption2(argc, argv, "--only", &only_specific_moltype_aggregates, Counts, &MoleculeType)) {
+    exit(1);
+  }
+
+  // is '--only' used?
+  bool only = false;
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (only_specific_moltype_aggregates[i] == 1) {
+      only = true;
+      break;
+    }
+  } //}}}
+
   // -bt <name(s)> - specify what bead types to use //{{{
   if (BeadTypeOption(argc, argv, "-bt", true, Counts, &BeadType)) {
     exit(0);
-  } //}}}
+  }
 
   bool types_for_gyr[Counts.TypesOfBeads];
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     types_for_gyr[i] = BeadType[i].Use;
     BeadType[i].Use = false;
-  }
+  } //}}}
 
   // write initial stuff to output file //{{{
   FILE *out;
@@ -268,53 +285,19 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // open input aggregate file and read info from first line (Aggregates command) //{{{
+  double distance; // <distance> parameter from Aggregate command
+  int contacts; // <contacts> parameter from Aggregate command - not used here
+  ReadAggCommand(BeadType, Counts, input_coor, input_agg, &distance, &contacts);
+
+  // open input aggregate file and skip the first lines (Aggregate command & blank line) //{{{
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
     ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
-
-  // read minimum distance for closeness check (<distance> argument in Aggregates utility)
-  double distance;
-  fscanf(agg, "%*s %*s %lf", &distance);
-
-  // skip <contacts> and <output.agg> in Aggregates command
-  fscanf(agg, "%*s %*s");
-
-  // read <type names> from Aggregates command //{{{
-  // reading ends if next argument (beginning with '-') or the following empty line is read
-  while ((test = getc(agg)) != '-' && test != '\n') {
-    ungetc(test, agg);
-
-    char name[LINE];
-    fscanf(agg, "%s", name);
-    int type = FindBeadType(name, Counts, BeadType);
-    // Error - specified bead type name not in vcf input file
-    if (type == -1) {
-      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, name);
-      ErrorBeadType(Counts, BeadType);
-      exit(1);
-    }
-
-    BeadType[type].Use = true;
-
-    while ((test = getc(agg)) == ' ')
-      ;
-    ungetc(test, agg);
-  } //}}}
-  fclose(agg);
-
-  // open again for production run - to ensure the pointer position in file is correct (at first 'Step')
-  if ((agg = fopen(input_agg, "r")) == NULL) {
-    ErrorFileOpen(input_agg, 'r');
-    exit(1);
-  }
-
-  while (getc(agg) != '\n')
-    ;
-  while (getc(agg) != '\n')
-    ; //}}}
+  char line[LINE];
+  fgets(line, sizeof(line), agg);
+  fgets(line, sizeof(line), agg); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -432,11 +415,24 @@ int main(int argc, char *argv[]) {
           size++;
         }
       }
-      // is 'size' agg size in provided list?
-      int correct_size = -1;
-      for (int j = 0; j < Counts.Molecules; j++) {
-        if ((j+1) == size) {
-          correct_size = j;
+      int correct_size = size - 1; // all agg sizes are used - relic of old times
+      // make calculations only if agg size is well defined and within given range
+      if (size == 0 || size < range_As[0] || size > range_As[1]) {
+        continue;
+      } //}}}
+
+      // if '--only' is used, use only aggregates composed the specified molecule(s) //{{{
+      test = true;
+      if (only) {
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          int id = Aggregate[i].Molecule[j];
+          if (only_specific_moltype_aggregates[Molecule[id].Type] == 0) {
+            test = false; // a molecule is not of the required type
+            break;
+          }
+        }
+        if (!test) { // should the rest of the for loop agg i be skipped?
+          continue;
         }
       } //}}}
 
@@ -455,22 +451,20 @@ int main(int argc, char *argv[]) {
         continue;
       } //}}}
 
-      if (size != 0 && size >= range_As[0] && size <= range_As[1]) {
-        if (correct_size != -1) {
-          // copy bead ids to a separate array //{{{
-          int *list = malloc(Aggregate[i].nBeads*sizeof(int));
-          int n = 0;
-          double agg_mass = 0;
-          for (int j = 0; j < Aggregate[i].nBeads; j++) {
-            int id = Aggregate[i].Bead[j];
-            if (types_for_gyr[Bead[id].Type]) {
-              list[n] = id;
-              n++;
-              agg_mass += BeadType[Bead[id].Type].Mass;
-            }
-          } //}}}
-
-          Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+      if (correct_size != -1) {
+        // copy bead ids to a separate array //{{{
+        int *list = malloc(Aggregate[i].nBeads*sizeof(int));
+        int n = 0;
+        double agg_mass = 0;
+        for (int j = 0; j < Aggregate[i].nBeads; j++) {
+          int id = Aggregate[i].Bead[j];
+          int btype = Bead[id].Type;
+          if (types_for_gyr[btype]) {
+            list[n] = id;
+            n++;
+            agg_mass += BeadType[Bead[id].Type].Mass;
+          }
+        } //}}}
 
 //        // calcule Rg the 'usual way' -- for testing purposes //{{{
 //        double Rg2 = 0;
@@ -478,57 +472,58 @@ int main(int argc, char *argv[]) {
 //        test_com.x = 0;
 //        test_com.y = 0;
 //        test_com.z = 0;
+//        Vector com = GeomCentre(n, list, Bead);
 //        for (int j = 0; j < n; j++) {
 //          Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
 //          Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
-//          Rg2 += SQR(Bead[list[j]].Position.x) + SQR(Bead[list[j]].Position.y) + SQR(Bead[list[j]].Position.z);
 //          test_com.x += Bead[list[j]].Position.x;
 //          test_com.y += Bead[list[j]].Position.y;
 //          test_com.z += Bead[list[j]].Position.z;
 //        }
 //        Rg2 /= n; //}}}
 
-          free(list); // free array of bead ids for gyration calculation
+        Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
 
-          double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
+        free(list); // free array of bead ids for gyration calculation
 
-          if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
-            fprintf(stderr, "Error: negative eigenvalues (%lf, %lf, %lf)\n\n", eigen.x, eigen.y, eigen.z);
-          }
-          // agg masses
-          mass_step[0] += agg_mass; // for this timestep
-          mass_step[1] += SQR(agg_mass); // for this timestep
-          // radius of gyration
-          Rg_step[correct_size][0] += Rgi; // for number avg
-          Rg_step[correct_size][1] += Rgi * agg_mass; // for weight average
-          Rg_step[correct_size][2] += Rgi * SQR(agg_mass); // for z-average
-          // squared radius of gyration
-          sqrRg_step[correct_size][0] += SQR(Rgi); // for number avg
-          sqrRg_step[correct_size][1] += SQR(Rgi) * agg_mass; // for weight average
-          sqrRg_step[correct_size][2] += SQR(Rgi) * SQR(agg_mass); // for z-average
-          // relative shape anisotropy
-          Anis_step[correct_size] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
-          // acylindricity
-          Acyl_step[correct_size] += eigen.y - eigen.x;
-          // asphericity
-          Aspher_step[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
-          // gyration vector eigenvalues
-          eigen_step[correct_size].x += eigen.x;
-          eigen_step[correct_size].y += eigen.y;
-          eigen_step[correct_size].z += eigen.z;
-          // aggregate count
-          agg_counts_step[correct_size]++;
+        double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
 
-          // sum molecules and aggregates (if step between start and end)
-          if (count >= start && (end == -1 || count <= end)) {
-            agg_counts_sum[correct_size]++;
-            // aggregate mass
-            mass_sum[correct_size][0] += agg_mass;
-            mass_sum[correct_size][1] += SQR(agg_mass);
-            for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-              int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
-              molecules_sum[correct_size][mol_type]++;
-            }
+        if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
+          fprintf(stderr, "Error: negative eigenvalues (%lf, %lf, %lf)\n\n", eigen.x, eigen.y, eigen.z);
+        }
+        // agg masses
+        mass_step[0] += agg_mass; // for this timestep
+        mass_step[1] += SQR(agg_mass); // for this timestep
+        // radius of gyration
+        Rg_step[correct_size][0] += Rgi; // for number avg
+        Rg_step[correct_size][1] += Rgi * agg_mass; // for weight average
+        Rg_step[correct_size][2] += Rgi * SQR(agg_mass); // for z-average
+        // squared radius of gyration
+        sqrRg_step[correct_size][0] += SQR(Rgi); // for number avg
+        sqrRg_step[correct_size][1] += SQR(Rgi) * agg_mass; // for weight average
+        sqrRg_step[correct_size][2] += SQR(Rgi) * SQR(agg_mass); // for z-average
+        // relative shape anisotropy
+        Anis_step[correct_size] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
+        // acylindricity
+        Acyl_step[correct_size] += eigen.y - eigen.x;
+        // asphericity
+        Aspher_step[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
+        // gyration vector eigenvalues
+        eigen_step[correct_size].x += eigen.x;
+        eigen_step[correct_size].y += eigen.y;
+        eigen_step[correct_size].z += eigen.z;
+        // aggregate count
+        agg_counts_step[correct_size]++;
+
+        // sum molecules and aggregates (if step between start and end)
+        if (count >= start && (end == -1 || count <= end)) {
+          agg_counts_sum[correct_size]++;
+          // aggregate mass
+          mass_sum[correct_size][0] += agg_mass;
+          mass_sum[correct_size][1] += SQR(agg_mass);
+          for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+            int mol_type = Molecule[Aggregate[i].Molecule[j]].Type;
+            molecules_sum[correct_size][mol_type]++;
           }
         }
       }
@@ -767,7 +762,8 @@ int main(int argc, char *argv[]) {
   free(Aspher_sum);
   free(eigen_sum);
   free(stuff);
-  free(specific_moltype_for_size); //}}}
+  free(specific_moltype_for_size);
+  free(only_specific_moltype_aggregates); //}}}
 
   return 0;
 }

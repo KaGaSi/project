@@ -469,6 +469,29 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
   return com;
 } //}}}
 
+// GeomCentre() //{{{
+/**
+ * Function to calculate centre of mass for a given list of beads.
+ */
+Vector GeomCentre(int n, int *list, Bead *Bead) {
+
+  Vector cog;
+  cog.x = 0;
+  cog.y = 0;
+  cog.z = 0;
+
+  for (int i = 0; i < n; i++) {
+    cog.x += Bead[list[i]].Position.x;
+    cog.y += Bead[list[i]].Position.y;
+    cog.z += Bead[list[i]].Position.z;
+  }
+  cog.x /= n;
+  cog.y /= n;
+  cog.z /= n;
+
+  return cog;
+} //}}}
+
 // Gyration() //{{{
 /**
  * Function to calculate the principle moments of the gyration tensor.
@@ -491,13 +514,9 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   GyrationTensor.z.z = 0; //}}}
 
 // test print of given coordinates -- uncomment if need be //{{{
-//for (int i = 0; i < n; i++) {
-//  fprintf(stderr, " %10.5f %10.5f %10.5f \n", (*Bead)[list[i]].Position.x,
-//                                              (*Bead)[list[i]].Position.y,
-//                                              (*Bead)[list[i]].Position.z);
 //} //}}}
 
-  Vector com = CentreOfMass(n, list, *Bead, BeadType);
+  Vector com = GeomCentre(n, list, *Bead);
 //fprintf(stderr, "%lf %lf %lf\n", com.x, com.y, com.z);
 
   // move centre of mass to [0,0,0] //{{{
@@ -522,9 +541,6 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   GyrationTensor.y.y /= n;
   GyrationTensor.y.z /= n;
   GyrationTensor.z.z /= n; //}}}
-//fprintf(stderr, "Tensor: (%lf, %lf, %lf)\n", GyrationTensor.x.x, GyrationTensor.x.y, GyrationTensor.x.z);
-//fprintf(stderr, "        (%lf, %lf, %lf)\n", GyrationTensor.x.y, GyrationTensor.y.y, GyrationTensor.y.z);
-//fprintf(stderr, "        (%lf, %lf, %lf)\n", GyrationTensor.x.z, GyrationTensor.y.z, GyrationTensor.z.z);
 
   // char polynomial: a_cube * x^3 + b_cube * x^2 + c_cube * x + d_cube = 0 //{{{
   long double a_cube = -1;
@@ -540,7 +556,6 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
                   - SQR(GyrationTensor.x.z) * GyrationTensor.y.y
                   - SQR(GyrationTensor.x.y) * GyrationTensor.z.z
                   - SQR(GyrationTensor.y.z) * GyrationTensor.x.x; //}}}
-//fprintf(stderr, "character: %lfx^3 + %lfx^2 + %lfx^1 + %lfx^0;\n", a_cube, b_cube, c_cube, d_cube);
 
   // first root: either 0 or Newton's iterative method to get it //{{{
   long double root0 = 0;
@@ -563,14 +578,12 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
       root1 = tmp;
     }
   } //}}}
-//fprintf(stderr, "root0=%lf; ", root0);
 
   // determine paremeters of quadratic equation a_quad * x^2 + b_quad * x + c_quad = 0 //{{{
   // derived by division: (x^3 + (b_cube/a_cube) * x^2 + (c_cube/a_cube) * x + (d_cube/a_cube)):(x - root0)
   long double a_quad = 1;
   long double b_quad = b_cube / a_cube + root0;
   long double c_quad = SQR(root0) + b_cube / a_cube * root0 + c_cube/a_cube; //}}}
-//fprintf(stderr, "quad: %lfx^2 + %lfx + %lf; ", a_quad, b_quad, c_quad);
 
   // calculate & sort eigenvalues //{{{
   LongVector eigen;
@@ -584,7 +597,6 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   eigen2.y = eigen.y;
   eigen2.z = eigen.z;
   eigen2 = Sort3(eigen2); //}}}
-//fprintf(stderr, "eigen=(%lf, %lf, %lf)\n", eigen.x, eigen.y, eigen.z);
 
   return eigen2;
 } //}}}

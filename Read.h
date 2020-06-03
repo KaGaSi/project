@@ -26,13 +26,12 @@ Vector GetPBC(FILE *vcf, char *input_coor); //}}}
  * \param [in]  Counts        numbers of beads, molecules, etc.
  * \param [in]  input_coor    coordinate file
  * \param [in]  input_agg     aggregate file
- * \param [in]  agg           opened aggregate file
  * \param [out] distance      <distance> parameter from Aggregate command
  * \param [out] contacts      <contacts> parameter from Aggregate command
  */
 void ReadAggCommand(BeadType *BeadType, Counts Counts,
                     char *input_coor, char *input_agg,
-                    FILE *agg, double *distance, int *contacts); //}}}
+                    double *distance, int *contacts); //}}}
 
 // ReadStructure() //{{{
 /**
