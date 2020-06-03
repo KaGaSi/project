@@ -159,6 +159,17 @@ void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead); //}}}
  */
 Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
 
+// GeomCentre() //{{{
+/**
+ * \brief Function to calculate geometric centre for a collection of beads.
+ *
+ * \param [in] n              number of beads
+ * \param [in] list           list of bead ids (corresponding to indices in Bead struct)
+ * \param [in] Bead           information about individual beads (coordinates)
+ * \return coordinates of geometric centre of a given aggregate
+ */
+Vector GeomCentre(int n, int *list, Bead *Bead); //}}}
+
 // Gyration() //{{{
 /*
  * \brief Function calculating principal moments of the gyration tensor.

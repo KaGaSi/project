@@ -258,57 +258,19 @@ int main(int argc, char *argv[]) {
     aggs++; // number of aggregate sizes
   } //}}}
 
-  // open input aggregate file and read info from first line (Aggregates command) //{{{
+  double distance; // <distance> parameter from Aggregate command
+  int contacts; // <contacts> parameter from Aggregate command - not used here
+  ReadAggCommand(BeadType, Counts, input_coor, input_agg, &distance, &contacts);
+
+  // open input aggregate file and skip the first lines (Aggregate command & blank line) //{{{
   FILE *agg;
-  // open for the first time to read the distance and type names
   if ((agg = fopen(input_agg, "r")) == NULL) {
     ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
-
-  // read minimum distance for closeness check (<distance> argument in Aggregates utility)
-  double distance;
-  fscanf(agg, "%*s %*s %lf", &distance);
-
-  // skip <contacts> and <output.agg> in Aggregates command
-  fscanf(agg, "%*s %*s");
-
-  // read <type names> from Aggregates command //{{{
-  int test;
-  // reading ends if next argument (beginning with '-') or the following empty line is read
-  while ((test = getc(agg)) != '-' && test != '\n') {
-    ungetc(test, agg);
-
-    char name[LINE];
-    fscanf(agg, "%s", name);
-    int type = FindBeadType(name, Counts, BeadType);
-
-    // Error - specified bead type name not in vcf input file
-    if (type == -1) {
-      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, name);
-      ErrorBeadType(Counts, BeadType);
-      exit(1);
-    }
-
-    BeadType[type].Use = true;
-
-    while ((test = getc(agg)) == ' ')
-      ;
-    ungetc(test, agg);
-  } //}}}
-  fclose(agg);
-
-  // open again for production run - to ensure the pointer position in file is correct (at first 'Step')
-  if ((agg = fopen(input_agg, "r")) == NULL) {
-    ErrorFileOpen(input_agg, 'r');
-    exit(1);
-  }
-  // skip line with command to produce the agg file
-  while (getc(agg) != '\n')
-    ;
-  // skip empty line
-  while (getc(agg) != '\n')
-    ; //}}}
+  char line[LINE];
+  fgets(line, sizeof(line), agg);
+  fgets(line, sizeof(line), agg); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -361,6 +323,7 @@ int main(int argc, char *argv[]) {
 
   // skip first start-1 steps //{{{
   count = 0;
+  int test;
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
 
