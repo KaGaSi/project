@@ -170,16 +170,19 @@ int main(int argc, char *argv[]) {
     MoleculeType[i].Write = true;
   } //}}}
 
-  // open input aggregate file and read first line (Aggregate command) //{{{
+  double distance; // <distance> parameter from Aggregate command
+  int contacts; // <contacts> parameter from Aggregate command - not used here
+  ReadAggCommand(BeadType, Counts, input_coor, input_agg, &distance, &contacts);
+
+  // open input aggregate file and skip the first lines (Aggregate command & blank line) //{{{
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
     ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
-
-  double distance; // <distance> parameter from Aggregate command
-  int contacts; // <contacts> parameter from Aggregate command - not used here
-  ReadAggCommand(BeadType, Counts, input_coor, input_agg, agg, &distance, &contacts); //}}}
+  char line[LINE];
+  fgets(line, sizeof(line), agg);
+  fgets(line, sizeof(line), agg); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;

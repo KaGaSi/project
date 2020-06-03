@@ -41,7 +41,7 @@ The gyration tensor is by default calculated for whole aggregates, but
 
 Similarly to \texttt{DistrAgg}, the definition of aggregate size is
 flexible -- see Section~\ref{sec:DistrAgg} for explanations of the
-\texttt{-m} and \texttt{-x} options.
+\texttt{-m}, \texttt{-x}, and \texttt{--only} options.
 
 The starting step (\texttt{-st} option) and ending step (\texttt{-e}
 option) are used only for averages (both overall averages and per-size
@@ -55,7 +55,7 @@ Usage:
 \texttt{GyrationAggregates <input> <input.agg> <output> <options>}
 
 \noindent
-\begin{longtable}{p{0.265\textwidth}p{0.679\textwidth}}
+\begin{longtable}{p{0.30\textwidth}p{0.644\textwidth}}
   \toprule
   \multicolumn{2}{l}{Mandatory arguments} \\
   \midrule
@@ -75,6 +75,8 @@ Usage:
     the number of specified molecule type(s) in an aggregate \\
   \texttt{-x <mol name(s)>} & exclude aggregates containing only specified
     molecule type(s) \\
+  \texttt{--only <mol name(s)>} & use only aggregates composed of specified
+    molecule(s) \\
   \texttt{-n <int> <int>} & use only aggregate sizes in given range \\
   \texttt{-st <int>} & starting timestep for calculation (default: 1) \\
   \texttt{-e <int>} & ending timestep for calculation (default: none) \\

@@ -51,7 +51,15 @@ Vector GetPBC(FILE *vcf, char *input_coor) {
 // ReadAggCommand() //{{{
 void ReadAggCommand(BeadType *BeadType, Counts Counts,
                     char *input_coor, char *input_agg,
-                    FILE *agg, double *distance, int *contacts) {
+                    double *distance, int *contacts) {
+
+  // open input aggregate file
+  FILE *agg;
+  if ((agg = fopen(input_agg, "r")) == NULL) {
+    ErrorFileOpen(input_agg, 'r');
+    exit(1);
+  }
+
   // read first line (Aggregate command)
   char line[LINE], split[30][100], delim[8];
   strcpy(delim, " \t");
@@ -98,8 +106,7 @@ void ReadAggCommand(BeadType *BeadType, Counts Counts,
     BeadType[type].Use = true;
   }
 
-  // skip next line (empty line)
-  fgets(line, sizeof(line), agg);
+  fclose(agg);
 } //}}}
 
 // ReadStructure() //{{{
