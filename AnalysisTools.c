@@ -226,7 +226,8 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
     }
     (*Bead)[Molecule[i].Bead[MoleculeType[type].Bond[0][0]]].Flag = true;
     bool done = false;
-    while (!done) {
+    int test = 0; // if too many loops, just exit with error
+    while (!done && test < 1000) {
       for (int j = 0; j < MoleculeType[type].nBonds; j++) {
         int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
         int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
@@ -257,6 +258,10 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
           break;
         }
       }
+      test++;
+    }
+    if (test == 1000) {
+      fprintf(stderr, "\nError: unable connect molecule %s (resid %d)\n\n", MoleculeType[type].Name, i+1);
     }
   }
 } //}}}
@@ -282,7 +287,8 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
     moved[0] = true; //}}}
 
     bool done = false;
-    while (!done) {
+    int test = 0; // if too many loops, just exit with error
+    while (!done && test < 1000) {
 
       // go through all molecule pairs
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
@@ -380,6 +386,18 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
           break;
         }
       } //}}}
+      test++;
+    }
+    if (test == 1000) {
+      fprintf(stderr, "\nError: unable connect aggregate containing resids:\n");
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        fprintf(stderr, " %d", Aggregate[i].Molecule[j]);
+        if (j != (Aggregate[i].nMolecules)) {
+          fprintf(stderr, ",");
+        } else {
+          fprintf(stderr, "\n");
+        }
+      }
     }
   }
   free(moved); //}}}
