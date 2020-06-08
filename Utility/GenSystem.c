@@ -123,10 +123,9 @@ int main(int argc, char *argv[]) {
   MoleculeType *MoleculeType; // structure with info about all molecule types
   Bead *Bead; // structure with info about every bead
   Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc.
+  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc.
   Vector BoxLength;
-  int *Index;
-  ZeroCounts(&Counts); //}}}
+  int *Index; //}}}
 
   ReadField(input, &BoxLength, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 

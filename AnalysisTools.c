@@ -181,15 +181,12 @@ void PrintAggregate(Counts Counts, int *Index, MoleculeType *MoleculeType, Molec
  */
 int FindBeadType(char *name, Counts Counts, BeadType *BeadType) {
   int type;
-
-  // compare give 'name' with all known bead types & return bead type id
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     if (strcmp(name, BeadType[i].Name) == 0) {
       type = i;
       return type;
     }
   }
-
   // name isn't in BeadType struct
   return -1;
 } //}}}
@@ -197,23 +194,50 @@ int FindBeadType(char *name, Counts Counts, BeadType *BeadType) {
 // FindMoleculeType() //{{{
 int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType) {
   int type;
-
-  // compare give 'name' with all known bead types & return bead type id
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (strcmp(name, MoleculeType[i].Name) == 0) {
       type = i;
       return type;
     }
   }
-
   // name isn't in MoleculeType struct
   return(-1);
+} //}}}
+
+// Distance() //{{{
+/**
+ * Function calculating distance vector between two beads. It removes
+ * periodic boundary conditions and returns x, y, and z distances in the
+ * range <0, BoxLength/2).
+ */
+Vector Distance(Vector id1, Vector id2, Vector BoxLength) {
+  // distance vector
+  Vector rij;
+  rij.x = id1.x - id2.x;
+  rij.y = id1.y - id2.y;
+  rij.z = id1.z - id2.z;
+  // remove periodic boundary conditions in x-direction
+  while (rij.x >= (BoxLength.x/2))
+    rij.x = rij.x - BoxLength.x;
+  while (rij.x < -(BoxLength.x/2))
+    rij.x = rij.x + BoxLength.x;
+  // in y-direction
+  while (rij.y >= (BoxLength.y/2))
+    rij.y = rij.y - BoxLength.y;
+  while (rij.y < -(BoxLength.y/2))
+    rij.y = rij.y + BoxLength.y;
+  // in z-direction
+  while (rij.z >= (BoxLength.z/2))
+    rij.z = rij.z - BoxLength.z;
+  while (rij.z < -(BoxLength.z/2))
+    rij.z = rij.z + BoxLength.z;
+  return rij;
 } //}}}
 
 // RemovePBCMolecules() //{{{
 /**
  * Function to remove periodic boundary conditions from all individual
- * molecules, thus joining them
+ * molecules, thus joining them. 
  */
 void RemovePBCMolecules(Counts Counts, Vector BoxLength,
                         BeadType *BeadType, Bead **Bead,
@@ -224,14 +248,14 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
     for (int j = 0; j < MoleculeType[type].nBeads; j++) {
       (*Bead)[Molecule[i].Bead[j]].Flag = false; // no beads moved yet
     }
+    // first bead in the first bond is considered moved
     (*Bead)[Molecule[i].Bead[MoleculeType[type].Bond[0][0]]].Flag = true;
     bool done = false;
-    int test = 0; // if too many loops, just exit with error
+    int test = 0; // if too many loops, just leave the loop with error
     while (!done && test < 1000) {
       for (int j = 0; j < MoleculeType[type].nBonds; j++) {
         int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
         int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
-
         // move id1, if id2 is moved already
         if (!(*Bead)[id1].Flag && (*Bead)[id2].Flag) {
           Vector dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
@@ -251,6 +275,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
         }
       }
 
+      // exit if all beads have moved
       done = true;
       for (int j = 1; j < MoleculeType[type].nBeads; j++) {
         if (!(*Bead)[Molecule[i].Bead[j]].Flag) {
@@ -263,6 +288,30 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
     if (test == 1000) {
       fprintf(stderr, "\nError: unable connect molecule %s (resid %d)\n\n", MoleculeType[type].Name, i+1);
     }
+
+    // put molecule's centre of mass into the simulation box //{{{
+    Vector com = CentreOfMass(MoleculeType[type].nBeads, Molecule[i].Bead, *Bead, BeadType);
+    // by how many BoxLength's should com be moved?
+    // for distant molecules - it shouldn't happen, but better safe than sorry
+    IntVector move;
+    move.x = com.x / BoxLength.x;
+    move.y = com.y / BoxLength.y;
+    move.z = com.z / BoxLength.z;
+    if (com.x < 0) {
+      move.x--;
+    }
+    if (com.y < 0) {
+      move.y--;
+    }
+    if (com.z < 0) {
+      move.z--;
+    }
+    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+      int bead = Molecule[i].Bead[j];
+      (*Bead)[bead].Position.x -= move.x * BoxLength.x;
+      (*Bead)[bead].Position.y -= move.y * BoxLength.y;
+      (*Bead)[bead].Position.z -= move.z * BoxLength.z;
+    } //}}}
   }
 } //}}}
 
@@ -422,7 +471,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
     if (com.z < 0) {
       move.z--;
     }
-
+    // move all the beads
     for (int j = 0; j < Aggregate[i].nBeads; j++) {
       int bead = Aggregate[i].Bead[j];
       (*Bead)[bead].Position.x -= move.x * BoxLength.x;
@@ -469,12 +518,7 @@ void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead) {
  * Function to calculate centre of mass for a given list of beads.
  */
 Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
-
-  Vector com;
-  com.x = 0;
-  com.y = 0;
-  com.z = 0;
-
+  Vector com = {0, 0, 0};
   for (int i = 0; i < n; i++) {
     com.x += Bead[list[i]].Position.x * BeadType[Bead[list[i]].Type].Mass;
     com.y += Bead[list[i]].Position.y * BeadType[Bead[list[i]].Type].Mass;
@@ -483,7 +527,6 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
   com.x /= n;
   com.y /= n;
   com.z /= n;
-
   return com;
 } //}}}
 
@@ -492,12 +535,7 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
  * Function to calculate centre of mass for a given list of beads.
  */
 Vector GeomCentre(int n, int *list, Bead *Bead) {
-
-  Vector cog;
-  cog.x = 0;
-  cog.y = 0;
-  cog.z = 0;
-
+  Vector cog = {0, 0, 0};
   for (int i = 0; i < n; i++) {
     cog.x += Bead[list[i]].Position.x;
     cog.y += Bead[list[i]].Position.y;
@@ -506,7 +544,6 @@ Vector GeomCentre(int n, int *list, Bead *Bead) {
   cog.x /= n;
   cog.y /= n;
   cog.z /= n;
-
   return cog;
 } //}}}
 
@@ -515,27 +552,13 @@ Vector GeomCentre(int n, int *list, Bead *Bead) {
  * Function to calculate the principle moments of the gyration tensor.
  */
 Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) {
-  // gyration tensor (3x3 array) //{{{
+  // gyration tensor (3x3 array)
   // use long double to ensure precision -- previous problem with truncation in short chains
   struct Tensor {
     LongVector x, y, z;
-  } GyrationTensor;
-
-  GyrationTensor.x.x = 0;
-  GyrationTensor.x.y = 0;
-  GyrationTensor.x.z = 0;
-  GyrationTensor.y.x = 0;
-  GyrationTensor.y.y = 0;
-  GyrationTensor.y.z = 0;
-  GyrationTensor.z.x = 0;
-  GyrationTensor.z.y = 0;
-  GyrationTensor.z.z = 0; //}}}
-
-// test print of given coordinates -- uncomment if need be //{{{
-//} //}}}
+  } GyrationTensor = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
 
   Vector com = GeomCentre(n, list, *Bead);
-//fprintf(stderr, "%lf %lf %lf\n", com.x, com.y, com.z);
 
   // move centre of mass to [0,0,0] //{{{
   for (int i = 0; i < n; i++) {
@@ -610,7 +633,7 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   eigen.y = (-b_quad + sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
   eigen.z = (-b_quad - sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
 
-  Vector eigen2;
+  Vector eigen2; // change LongVector to Vector
   eigen2.x = eigen.x;
   eigen2.y = eigen.y;
   eigen2.z = eigen.z;
@@ -699,7 +722,6 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
     }
   }
 
-  // if residue with highest id is in no aggregate, create it //{{{
   // check if highest id residue is in aggregate //{{{
   bool test = false;
   for (int i = 0; i < (*Counts).Aggregates; i++) {
@@ -709,8 +731,7 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
       }
     }
   } //}}}
-
-  /* highest id residue not in any aggregate => create separate one */ //{{{
+  // if highest id residue isn't in any aggregate, create separate one //{{{
   if (!test) {
     int aggs = (*Counts).Aggregates;
     (*Aggregate)[aggs].nMolecules = 1;
@@ -718,7 +739,6 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
 
     (*Counts).Aggregates++;
   } //}}}
-  //}}}
 } //}}}
 
 // SortAggStruct() //{{{
@@ -726,8 +746,6 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
  * Sort an Aggregate struct using the bubble sort algorithm. The resulting
  * struct is arranged so that aggregates with the first molecule's lower id
  * come first.
- *
- * TODO: why doesn't it sort Aggregate[].Monomers? ...because there aren't any yet
  */
 void SortAggStruct(Aggregate **Aggregate, Counts Counts,
                    Molecule *Molecule, MoleculeType *MoleculeType,
@@ -736,7 +754,7 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts,
     bool done = true;
     for (int j = 0; j < (Counts.Aggregates-i-1); j++) {
       if ((*Aggregate)[j].Molecule[0] > (*Aggregate)[j+1].Molecule[0]) {
-        Swap(&(*Aggregate)[j].nMolecules, &(*Aggregate)[j+1].nMolecules);
+        SwapInt(&(*Aggregate)[j].nMolecules, &(*Aggregate)[j+1].nMolecules);
         // switch the whole Aggregate[].Molecule array
         int mols; // number of molecules in the larger aggregate
         if ((*Aggregate)[j].nMolecules > (*Aggregate)[j+1].nMolecules) {
@@ -745,10 +763,10 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts,
           mols = (*Aggregate)[j+1].nMolecules;
         }
         for (int k = 0; k < mols; k++) {
-          Swap(&(*Aggregate)[j].Molecule[k], &(*Aggregate)[j+1].Molecule[k]);
+          SwapInt(&(*Aggregate)[j].Molecule[k], &(*Aggregate)[j+1].Molecule[k]);
         }
         // switch bonded beads array
-        Swap(&(*Aggregate)[j].nBeads, &(*Aggregate)[j+1].nBeads);
+        SwapInt(&(*Aggregate)[j].nBeads, &(*Aggregate)[j+1].nBeads);
         int beads; // number of beads in the larger aggregate
         if ((*Aggregate)[j].nBeads > (*Aggregate)[j+1].nBeads) {
           beads = (*Aggregate)[j].nBeads;
@@ -756,10 +774,10 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts,
           beads = (*Aggregate)[j+1].nBeads;
         }
         for (int k = 0; k < beads; k++) {
-          Swap(&(*Aggregate)[j].Bead[k], &(*Aggregate)[j+1].Bead[k]);
+          SwapInt(&(*Aggregate)[j].Bead[k], &(*Aggregate)[j+1].Bead[k]);
         }
         // switch monomer beads array
-        Swap(&(*Aggregate)[j].nMonomers, &(*Aggregate)[j+1].nMonomers);
+        SwapInt(&(*Aggregate)[j].nMonomers, &(*Aggregate)[j+1].nMonomers);
         int mons; // larger number of monomers of the two aggregates
         if ((*Aggregate)[j].nMonomers > (*Aggregate)[j+1].nMonomers) {
           mons = (*Aggregate)[j].nMonomers;
@@ -767,7 +785,7 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts,
           mons = (*Aggregate)[j+1].nMonomers;
         }
         for (int k = 0; k < mons; k++) {
-          Swap(&(*Aggregate)[j].Monomer[k], &(*Aggregate)[j+1].Monomer[k]);
+          SwapInt(&(*Aggregate)[j].Monomer[k], &(*Aggregate)[j+1].Monomer[k]);
         }
         done = false;
       }
@@ -776,7 +794,6 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts,
       break;
   }
 
-  // TODO: test that it's working correctly be prints in Aggregate's main()
   // re-assign aggregate id to every bonded bead in the aggregate, correcting after sorting //{{{
   for (int i = 0; i < Counts.Aggregates; i++) {
     for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
@@ -824,8 +841,7 @@ void LinkedList(Vector BoxLength, Counts Counts, Bead *Bead,
     Dcx[i] = x[i];
     Dcy[i] = y[i];
     Dcz[i] = z[i];
-  }
-  //}}}
+  } //}}}
 } //}}}
 
 // SortBonds() //{{{
@@ -838,7 +854,7 @@ void SortBonds(int **bond, int length) {
   // first, check order in every bond
   for (int j = 0; j < length; j++) {
     if (bond[j][0] > bond[j][1]) {
-      Swap(&bond[j][0], &bond[j][1]);
+      SwapInt(&bond[j][0], &bond[j][1]);
     }
   }
   // second, bubble sort bonds
@@ -848,8 +864,8 @@ void SortBonds(int **bond, int length) {
       if ((bond[k][0] > bond[k+1][0]) || // swap if first beads are in wrong order
           (bond[k][0] == bond[k+1][0] && // or if they're the same, but second ones are in wrong order
           bond[k][1] > bond[k+1][1])) {
-        Swap(&bond[k][0], &bond[k+1][0]);
-        Swap(&bond[k][1], &bond[k+1][1]);
+        SwapInt(&bond[k][0], &bond[k+1][0]);
+        SwapInt(&bond[k][1], &bond[k+1][1]);
         swap = true;
       }
     }
@@ -858,21 +874,6 @@ void SortBonds(int **bond, int length) {
       break;
     }
   }
-} //}}}
-
-// ZeroCounts() //{{{
-/**
- * Zeroize Counts struct
- */
-void ZeroCounts(Counts *Counts) {
-  (*Counts).TypesOfBeads = 0;
-  (*Counts).TypesOfMolecules = 0;
-  (*Counts).Beads = 0;
-  (*Counts).Bonded = 0;
-  (*Counts).Unbonded = 0;
-  (*Counts).BeadsInVsf = 0;
-  (*Counts).Molecules = 0;
-  (*Counts).Aggregates = 0;
 } //}}}
 
 // FreeBead() //{{{
