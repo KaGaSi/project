@@ -19,7 +19,19 @@ typedef struct Counts {
       BeadsInVsf, ///< total number of all beads in .vsf file (not necessarily in .vcf)
       Molecules, ///< total number of molecules
       Aggregates; ///< total number of aggregates
-} Counts; //}}}
+} Counts;
+
+// Initialize Counts
+static const Counts ZeroCounts = {
+  .TypesOfBeads = 0,
+  .TypesOfMolecules = 0,
+  .Beads = 0,
+  .Bonded = 0,
+  .Unbonded = 0,
+  .BeadsInVsf = 0,
+  .Molecules = 0,
+  .Aggregates = 0,
+}; //}}}
 
 // struct BeadType //{{{
 /**

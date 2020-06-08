@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
   int *Index2; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule2; // structure with info about every molecule
   // Counts is the same for both runs
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information //{{{
   bool indexed = ReadStructure(input_vsf_1, input_coor_1, &Counts, &BeadType1, &Bead1, &Index1, &MoleculeType1, &Molecule1);

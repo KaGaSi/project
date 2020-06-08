@@ -110,14 +110,14 @@ double Max3(double x, double y, double z); //}}}
  */
 Vector Sort3(Vector in); //}}}
 
-// Swap() //{{{
+// SwapInt() //{{{
 /**
  * \brief Function to swap two integers.
  *
  * \param [in] a   first integer to swap
  * \param [in] b   second integer to swap
  */
-void Swap(int *a, int *b);
+void SwapInt(int *a, int *b);
 // }}}
 
 // SwapDouble() //{{{
@@ -149,17 +149,6 @@ void SwapBool(bool *a, bool *b);
  * \param [in]  mode    0 for ascending order, 1 for descending order
  */
 void SortArray(int **array, int length, int mode); //}}}
-
-// Distancet() //{{{
-/**
- * \brief Function to calculate distance vector between two beads.
- *
- * \param [in] id1         first coordinate vector
- * \param [in] id2         second coordinate vector
- * \param [in] BoxLength   dimensions of simulation box
- * \return distance vector between the two provided beads (without pbc)
- */
-Vector Distance(Vector id1, Vector id2, Vector BoxLength); //}}}
 
 // SplitLine() //{{{
 /*

@@ -111,12 +111,11 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // some variables //{{{
-  Counts Counts; // structure with number of beads, molecules, etc.
+  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc.
   Molecule *Molecule;
   MoleculeType *MoleculeType;
   Vector BoxLength;
   Vector box_lo; // {x,y,z}lo from data file to place beads in (0, BoxLength>
-  ZeroCounts(&Counts);
   int bonds = 0; // total number of bonds
 //int angles = 0; // total number of angles //}}}
 

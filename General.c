@@ -130,9 +130,7 @@ double Max3(double x, double y, double z) {
  * Function returning sorted numbers x < y < z.
  */
 Vector Sort3(Vector in) {
-
   Vector out;
-
   if (in.x < in.y) {
     if (in.y < in.z) {
       out.x = in.x;
@@ -162,15 +160,14 @@ Vector Sort3(Vector in) {
       out.z = in.x;
     }
   }
-
   return out;
 } //}}}
 
-// Swap() //{{{
+// SwapInt() //{{{
 /**
  * Swap two integers.
  */
-void Swap(int *a, int *b) {
+void SwapInt(int *a, int *b) {
   int swap = *a;
   *a = *b;
   *b = swap;
@@ -213,51 +210,17 @@ void SortArray(int **array, int length, int mode) {
     bool done = true;
     for (int j = 0 ; j < (length-i-1); j++) {
       if (mode == 0 && (*array)[j] > (*array)[j+1]) {
-        Swap(&(*array)[j], &(*array)[j+1]);
+        SwapInt(&(*array)[j], &(*array)[j+1]);
         done = false;
       }
       if (mode == 1 && (*array)[j] < (*array)[j+1]) {
-        Swap(&(*array)[j], &(*array)[j+1]);
+        SwapInt(&(*array)[j], &(*array)[j+1]);
         done = false;
       }
     }
     if (done)
       break;
   }
-} //}}}
-
-// Distance() //{{{
-/**
- * Function calculating distance vector between two beads. It removes
- * periodic boundary conditions and returns x, y, and z distances in the
- * range <0, BoxLength/2).
- */
-Vector Distance(Vector id1, Vector id2, Vector BoxLength) {
-
-  Vector rij;
-
-  // distance vector
-  rij.x = id1.x - id2.x;
-  rij.y = id1.y - id2.y;
-  rij.z = id1.z - id2.z;
-
-  // remove periodic boundary conditions in x-direction
-  while (rij.x >= (BoxLength.x/2))
-    rij.x = rij.x - BoxLength.x;
-  while (rij.x < -(BoxLength.x/2))
-    rij.x = rij.x + BoxLength.x;
-  // in y-direction
-  while (rij.y >= (BoxLength.y/2))
-    rij.y = rij.y - BoxLength.y;
-  while (rij.y < -(BoxLength.y/2))
-    rij.y = rij.y + BoxLength.y;
-  // in z-direction
-  while (rij.z >= (BoxLength.z/2))
-    rij.z = rij.z - BoxLength.z;
-  while (rij.z < -(BoxLength.z/2))
-    rij.z = rij.z + BoxLength.z;
-
-  return rij;
 } //}}}
 
 // SplitLine() //{{{

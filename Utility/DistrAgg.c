@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
   Bead *Bead; // structure with info about every bead
   int *Index; // revers of Bead[].Index
   Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   char null[1] = {'\0'}; // because ReadStructure & VerboseOutput check the first value in the array

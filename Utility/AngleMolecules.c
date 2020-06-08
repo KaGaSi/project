@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
   Bead *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
 
 printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
   // read system information
