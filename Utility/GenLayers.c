@@ -159,8 +159,7 @@ int main(int argc, char *argv[]) {
   MoleculeType *MoleculeType_field;
   Molecule *Molecule_field;
   Bead *Bead_field;
-  Counts Counts_field;
-  ZeroCounts(&Counts_field);
+  Counts Counts_field = ZeroCounts;
   Vector BoxLength;
   int *Index_field;
   //}}}
@@ -172,7 +171,7 @@ int main(int argc, char *argv[]) {
   MoleculeType *MoleculeType;
   Molecule *Molecule;
   Bead *Bead;
-  Counts Counts; //}}}
+  Counts Counts = ZeroCounts; //}}}
 
   // TODO: for now, only one molecule type is used
   Counts.TypesOfMolecules = 1;

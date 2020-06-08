@@ -105,6 +105,17 @@ int FindBeadType(char *name, Counts Counts, BeadType *BeadType); //}}}
  */
 int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}}}
 
+// Distancet() //{{{
+/**
+ * \brief Function to calculate distance vector between two beads.
+ *
+ * \param [in] id1         first coordinate vector
+ * \param [in] id2         second coordinate vector
+ * \param [in] BoxLength   dimensions of simulation box
+ * \return distance vector between the two provided beads (without pbc)
+ */
+Vector Distance(Vector id1, Vector id2, Vector BoxLength); //}}}
+
 // RemovePBCMolecules() //{{{
 /**
  * \brief Function to join all molecules.
@@ -224,14 +235,6 @@ void LinkedList(Vector BoxLength, Counts Counts, Bead *Bead,
  * \param [in]  length  number of bonds
  */
 void SortBonds(int **bond, int length); //}}}
-
-// ZeroCounts() //{{{
-/**
- * \brief Zeroize Counts structure.
- *
- * \param[in] Counts   Counts structure to zeroize
- */
-void ZeroCounts(Counts *Counts); //}}}
 
 // FreeBead() //{{{
 /**

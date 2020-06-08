@@ -532,7 +532,7 @@ int main(int argc, char *argv[]) {
   Bead *Bead; // structure with info about every bead
   int *Index; // reverse of Bead[].Index
   Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);

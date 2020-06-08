@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
   Bead *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   Molecule *Molecule; // structure with info about every molecule
-  Counts Counts; // structure with number of beads, molecules, etc. //}}}
+  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
 
   // options before reading system data //{{{
   bool silent;
@@ -439,8 +439,7 @@ int main(int argc, char *argv[]) {
   fclose(vcf); //}}}
 
   // create structures for new stuff //{{{
-  struct Counts Counts_add;
-  ZeroCounts(&Counts_add);
+  struct Counts Counts_add = ZeroCounts;
   struct Molecule *Molecule_add;
   struct MoleculeType *MoleculeType_add;
   struct BeadType *BeadType_add;
@@ -537,8 +536,7 @@ int main(int argc, char *argv[]) {
 
   // join original and added systems //{{{
   // create structures for new stuff
-  struct Counts Counts_new;
-  ZeroCounts(&Counts_new);
+  struct Counts Counts_new = ZeroCounts;
   struct BeadType *BeadType_new;
   struct MoleculeType *MoleculeType_new;
   struct Bead *Bead_new;
