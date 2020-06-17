@@ -108,12 +108,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   ReadStructure(input, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get box dimensions if -c is used //{{{
-  Vector BoxLength;
+  VECTOR BoxLength;
   BoxLength.x = -1;
   if (input_coor[0] != '\0') {
     // open input coordinate file
@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
   }
   free(input_coor); //}}}
 
-  // print information - verbose option //{{{
+  // print information /{{{
   VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule); //}}}
 
   // free memory - to make valgrind happy //{{{

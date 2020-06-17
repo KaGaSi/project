@@ -33,9 +33,9 @@
  * \param [in] MoleculeType  information about molecule types
  * \param [in] Molecule      information about individual molecules
  */
-void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
-                   BeadType *BeadType, Bead *Bead,
-                   MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+void VerboseOutput(char *input_vcf, COUNTS Counts, VECTOR BoxLength,
+                   BEADTYPE *BeadType, BEAD *Bead,
+                   MOLECULETYPE *MoleculeType, MOLECULE *Molecule); //}}}
 
 // PrintCounts()  //{{{
 /**
@@ -43,7 +43,7 @@ void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
  *
  * \param [in] Counts   numbers of beads, molecules, etc.
  */
-void PrintCounts(Counts Counts);
+void PrintCounts(COUNTS Counts);
 //}}}
 
 // PrintBeadType() //{{{
@@ -53,7 +53,7 @@ void PrintCounts(Counts Counts);
  * \param [in] Counts     numbers of beads, molecules, etc.
  * \param [in] BeadType   information about bead types
  */
-void PrintBeadType(Counts Counts, BeadType *BeadType); //}}}
+void PrintBeadType(COUNTS Counts, BEADTYPE *BeadType); //}}}
 
 // PrintMoleculeTypeType()  //{{{
 /**
@@ -63,27 +63,35 @@ void PrintBeadType(Counts Counts, BeadType *BeadType); //}}}
  * \param [in] BeadType      information about bead types
  * \param [in] MoleculeType  information about molecule types
  */
-void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *MoleculeType); //}}}
+void PrintMoleculeType(COUNTS Counts, BEADTYPE *BeadType, MOLECULETYPE *MoleculeType); //}}}
 
 // PrintBead() //{{{
 /**
  * Function printing Bead structure.
  */
-void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead); //}}}
+void PrintBead(COUNTS Counts, int *Index, BEADTYPE *BeadType, BEAD *Bead); //}}}
 
 // PrintMolecule() //{{{
 /**
  * Function printing Molecule structure.
  */
-void PrintMolecule(Counts Counts, int *Index,
-                   MoleculeType *MoleculeType, Molecule *Molecule,
-                   BeadType *BeadType, Bead *Bead); //}}}
+void PrintMolecule(COUNTS Counts, int *Index,
+                   MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
+                   BEADTYPE *BeadType, BEAD *Bead); //}}}
 
 // PrintAggregate() //{{{
 /**
  * Function printing Molecule structure.
  */
-void PrintAggregate(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType, Aggregate *Aggregate); //}}}
+void PrintAggregate(COUNTS Counts, int *Index,
+                    MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
+                    BEAD *Bead, BEADTYPE *BeadType, AGGREGATE *Aggregate); //}}}
+
+// PrintBondTypes() //{{{
+void PrintBondTypes(COUNTS Counts, PARAMS *bond_type);  //}}}
+
+// PrintAngleTypes() //{{{
+void PrintAngleTypes(COUNTS Counts, PARAMS *angle_type);  //}}}
 
 // FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name
@@ -93,7 +101,7 @@ void PrintAggregate(Counts Counts, int *Index, MoleculeType *MoleculeType, Molec
  * \param [in]  BeadType  information about bead types
  * \return bead type id corresponding to index in BeadType struct (or -1 if non-existent bead name)
  */
-int FindBeadType(char *name, Counts Counts, BeadType *BeadType); //}}}
+int FindBeadType(char *name, COUNTS Counts, BEADTYPE *BeadType); //}}}
 
 // FindMoleculeType() //{{{
 /** \brief Function to identify type of molecule from its name
@@ -103,7 +111,7 @@ int FindBeadType(char *name, Counts Counts, BeadType *BeadType); //}}}
  * \param [in]  MoleculeType  information about bead types
  * \return molecule type      id corresponding to index in BeadType struct (or -1 for non-existent molecule)
  */
-int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}}}
+int FindMoleculeType(char *name, COUNTS Counts, MOLECULETYPE *MoleculeType); //}}}
 
 // Distancet() //{{{
 /**
@@ -114,7 +122,7 @@ int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType); //}
  * \param [in] BoxLength   dimensions of simulation box
  * \return distance vector between the two provided beads (without pbc)
  */
-Vector Distance(Vector id1, Vector id2, Vector BoxLength); //}}}
+VECTOR Distance(VECTOR id1, VECTOR id2, VECTOR BoxLength); //}}}
 
 // RemovePBCMolecules() //{{{
 /**
@@ -127,9 +135,9 @@ Vector Distance(Vector id1, Vector id2, Vector BoxLength); //}}}
  * \param [in]  MoleculeType   information about molecule types
  * \param [in]  Molecule       information about individual molecules
  */
-void RemovePBCMolecules(Counts Counts, Vector BoxLength,
-                        BeadType *BeadType, Bead **Bead,
-                        MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+void RemovePBCMolecules(COUNTS Counts, VECTOR BoxLength,
+                        BEADTYPE *BeadType, BEAD **Bead,
+                        MOLECULETYPE *MoleculeType, MOLECULE *Molecule); //}}}
 
 // RemovePBCAggregates() //{{{
 /**
@@ -144,9 +152,9 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
  * \param [in]  MoleculeType   information about molecule types
  * \param [in]  Molecule       information about individual molecules
  */
-void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
-                         Vector BoxLength, BeadType *BeadType, Bead **Bead,
-                         MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
+                         VECTOR BoxLength, BEADTYPE *BeadType, BEAD **Bead,
+                         MOLECULETYPE *MoleculeType, MOLECULE *Molecule); //}}}
 
 // RestorePBC() //{{{
 /**
@@ -156,7 +164,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
  * \param [in]  BoxLength      dimension of the simulation box
  * \param [out] Bead           information about individual beads (coordinates)
  */
-void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead); //}}}
+void RestorePBC(COUNTS Counts, VECTOR BoxLength, BEAD **Bead); //}}}
 
 // CentreOfMass() //{{{
 /**
@@ -168,7 +176,7 @@ void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead); //}}}
  * \param [in] BeadType       information about beadtypes (masses)
  * \return coordinates of centre of mass of a given aggregate
  */
-Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
+VECTOR CentreOfMass(int n, int *list, BEAD *Bead, BEADTYPE *BeadType); //}}}
 
 // GeomCentre() //{{{
 /**
@@ -179,7 +187,7 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType); //}}}
  * \param [in] Bead           information about individual beads (coordinates)
  * \return coordinates of geometric centre of a given aggregate
  */
-Vector GeomCentre(int n, int *list, Bead *Bead); //}}}
+VECTOR GeomCentre(int n, int *list, BEAD *Bead); //}}}
 
 // Gyration() //{{{
 /*
@@ -193,8 +201,8 @@ Vector GeomCentre(int n, int *list, Bead *Bead); //}}}
  * \param [in] Bead          informationn about individual beads
  * \return vector with principal moments of gyration tensor (sorted as x<y<z)
  */
-Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
-                BeadType *BeadType, Bead **Bead); //}}}
+VECTOR Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength,
+                BEADTYPE *BeadType, BEAD **Bead); //}}}
 
 // EvaluateContacts() //{{{
 /**
@@ -206,8 +214,8 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength,
  * \param [in]  contacts      number of contacts for aggregate check
  * \param [in]  contact       2D array containing number of contacts between molecules
  */
-void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
-                      Molecule **Molecule,
+void EvaluateContacts(COUNTS *Counts, AGGREGATE **Aggregate,
+                      MOLECULE **Molecule,
                       int contacts, int **contact);
 //}}}
 
@@ -218,13 +226,13 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
  * \param [out] Aggregate  Aggregate struct to sort
  * \param [in]  Counts     numbers of beads, molecules, etc.
  */
-void SortAggStruct(Aggregate **Aggregate, Counts Counts,
-                   Molecule *Molecule, MoleculeType *MoleculeType,
-                   Bead **Bead, BeadType *BeadType); //}}}
+void SortAggStruct(AGGREGATE **Aggregate, COUNTS Counts,
+                   MOLECULE *Molecule, MOLECULETYPE *MoleculeType,
+                   BEAD **Bead, BEADTYPE *BeadType); //}}}
 
 // LinkedList() //{{{
-void LinkedList(Vector BoxLength, Counts Counts, Bead *Bead,
-                int **Head, int **Link, double cell_size, IntVector *n_cells,
+void LinkedList(VECTOR BoxLength, COUNTS Counts, BEAD *Bead,
+                int **Head, int **Link, double cell_size, INTVECTOR *n_cells,
                 int *Dcx, int *Dcy, int *Dcz); //}}}
 
 // SortBonds() //{{{
@@ -236,6 +244,15 @@ void LinkedList(Vector BoxLength, Counts Counts, Bead *Bead,
  */
 void SortBonds(int **bond, int length); //}}}
 
+// SortAngles() //{{{
+/**
+ * \brief Function to sort 2D array of bonds.
+ *
+ * \param [out] angle   2D array of angles
+ * \param [in]  length  number of angles
+ */
+void SortAngles(int **angle, int length); //}}}
+
 // FreeBead() //{{{
 /**
  * \brief Free memory allocated for Bead struct array.
@@ -243,7 +260,7 @@ void SortBonds(int **bond, int length); //}}}
  * \param [in]  Counts      number of beads, molecu.es, etc.
  * \param [out] Bead        information about individual beads
  */
-void FreeBead(Counts Counts, Bead **Bead); //}}}
+void FreeBead(COUNTS Counts, BEAD **Bead); //}}}
 
 // FreeMolecule() //{{{
 /**
@@ -252,7 +269,7 @@ void FreeBead(Counts Counts, Bead **Bead); //}}}
  * \param [in]  Counts      number of beads, molecu.es, etc.
  * \param [out] Molecule    information about individual molecules
  */
-void FreeMolecule(Counts Counts, Molecule **Molecule); //}}}
+void FreeMolecule(COUNTS Counts, MOLECULE **Molecule); //}}}
 
 // FreeMoleculeType() //{{{
 /**
@@ -261,7 +278,7 @@ void FreeMolecule(Counts Counts, Molecule **Molecule); //}}}
  * \param [in]  Counts         number of beads, molecu.es, etc.
  * \param [out] MoleculeType   information about individual molecules
  */
-void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType); //}}}
+void FreeMoleculeType(COUNTS Counts, MOLECULETYPE **MoleculeType); //}}}
 
 // FreeAggregate() //{{{
 /**
@@ -270,5 +287,5 @@ void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType); //}}}
  * \param [in]  Counts      number of beads, molecu.es, etc.
  * \param [out] Aggregate   information about individual molecules
  */
-void FreeAggregate(Counts Counts, Aggregate **Aggregate); //}}}
+void FreeAggregate(COUNTS Counts, AGGREGATE **Aggregate); //}}}
 #endif

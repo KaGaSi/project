@@ -12,7 +12,7 @@
       for (int k = 0; k < Aggregate[i].nBeads; k++) {
         int id2 = Aggregate[i].Bead[k];
         if (BeadType[(*Bead)[id2].Type].Use) {
-          Vector dist;
+          VECTOR dist;
           dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
           dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
           dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -43,7 +43,7 @@
           min_dist_2 = 1000000;
           for (int k = 0; k < Aggregate[i].nBeads; k++) {
             int id2 = Aggregate[i].Bead[k];
-            Vector dist;
+            VECTOR dist;
             dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
             dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
             dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -75,7 +75,7 @@
           min_dist_2 = 1000000;
           for (int k = 0; k < Aggregate[i].nBeads; k++) {
             int id2 = Aggregate[i].Bead[k];
-            Vector dist;
+            VECTOR dist;
             dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
             dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
             dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -107,7 +107,7 @@
           min_dist_2 = 1000000;
           for (int k = 0; k < Aggregate[i].nBeads; k++) {
             int id2 = Aggregate[i].Bead[k];
-            Vector dist;
+            VECTOR dist;
             dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
             dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
             dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -139,7 +139,7 @@
           min_dist_2 = 1000000;
           for (int k = 0; k < Aggregate[i].nBeads; k++) {
             int id2 = Aggregate[i].Bead[k];
-            Vector dist;
+            VECTOR dist;
             dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
             dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
             dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -171,7 +171,7 @@
           min_dist_2 = 1000000;
           for (int k = 0; k < Aggregate[i].nBeads; k++) {
             int id2 = Aggregate[i].Bead[k];
-            Vector dist;
+            VECTOR dist;
             dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
             dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
             dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -203,7 +203,7 @@
           min_dist_2 = 1000000;
           for (int k = 0; k < Aggregate[i].nBeads; k++) {
             int id2 = Aggregate[i].Bead[k];
-            Vector dist;
+            VECTOR dist;
             dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
             dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
             dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -233,7 +233,7 @@
         min_dist = 1000000;
         for (int k = 0; k < Aggregate[i].nBeads; k++) {
           int id2 = Aggregate[i].Bead[k];
-          Vector dist;
+          VECTOR dist;
           dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
           dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
           dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -267,10 +267,10 @@ printf("(%lf, %lf, %lf)\n", (*Bead)[10].Position.x,
       int id1 = Aggregate[i].Monomer[j];
       int near;
       double min_dist = 1000000;
-      Vector near_d;
+      VECTOR near_d;
       for (int k = 0; k < Aggregate[i].nBeads; k++) {
         int id2 = Aggregate[i].Bead[k];
-        Vector dist;
+        VECTOR dist;
         dist.x = (*Bead)[id1].Position.x - (*Bead)[id2].Position.x;
         dist.y = (*Bead)[id1].Position.y - (*Bead)[id2].Position.y;
         dist.z = (*Bead)[id1].Position.z - (*Bead)[id2].Position.z;
@@ -443,12 +443,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -516,7 +516,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // write initial stuff to output density file //{{{
   for (int i = 0; i < aggs; i++) {
@@ -554,7 +554,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // allocate Aggregate struct //{{{
-  Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
+  AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
   for (int i = 0; i < Counts.Molecules; i++) {
     // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
     Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));

@@ -127,12 +127,12 @@ int main(int argc, char *argv[]) {
   strcpy(output, argv[++count]); //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // options before reading system data //{{{
   bool silent;
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
       test = argv[i+1][0];
     }
   }
-  Vector normal;
+  VECTOR normal;
   switch(test) {
     case 120: // x
       normal.x = 1;
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -389,7 +389,7 @@ int main(int argc, char *argv[]) {
                           SQR(Bead[id1].Position.y - Bead[id2].Position.y) +
                           SQR(Bead[id1].Position.z - Bead[id2].Position.z);
           length = sqrt(length);
-          Vector unit;
+          VECTOR unit;
           unit.x = (Bead[id1].Position.x - Bead[id2].Position.x) / length;
           unit.y = (Bead[id1].Position.y - Bead[id2].Position.y) / length;
           unit.z = (Bead[id1].Position.z - Bead[id2].Position.z) / length;

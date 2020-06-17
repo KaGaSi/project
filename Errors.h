@@ -91,7 +91,7 @@ void ErrorOption(char *option); //}}}
  * \param [in] Counts      numbers of beads, molecules, etc.
  * \param [in] BeadType    information about bead types
  */
-void ErrorBeadType(Counts Counts, BeadType *BeadType); //}}}
+void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType); //}}}
 
 // ErrorPrintLine() //{{{
 /**

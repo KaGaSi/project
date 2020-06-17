@@ -20,7 +20,8 @@
  * \param [in] Molecule      coordinates of individual molecules
  * \param [in] stuff         array of chars containing comment line to place at the beginning
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *Bead, MoleculeType *MoleculeType, Molecule *Molecule, char *stuff); //}}}
+void WriteCoorIndexed(FILE *vcf_file, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
+                      MOLECULETYPE *MoleculeType, MOLECULE *Molecule, char *stuff); //}}}
 
 // WriteCoorXYZ() //{{{
 /**
@@ -31,8 +32,8 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts, BeadType *BeadType, Bead *B
  * \param [in] BeadType      information about bead types
  * \param [in] Bead          coordinates of individual beads
  */
-void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
-                  BeadType *BeadType, Bead *Bead); //}}}
+void WriteCoorXYZ(FILE *xyz_file, COUNTS Counts,
+                  BEADTYPE *BeadType, BEAD *Bead); //}}}
 
 // WriteVsf() //{{{
 /**
@@ -44,9 +45,10 @@ void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
  * \param [in] Bead          coordinates of individual beads
  * \param [in] MoleculeType  information about molecule types
  * \param [in] Molecule      coordinates of individual molecules
+ * \param [in] change        true or false if all molecules of a given type should contain the same beads as the first molecule of its kind in the vsf
  */
-void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
-              MoleculeType *MoleculeType, Molecule *Molecule); //}}}
+void WriteVsf(char *input_vsf, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
+              MOLECULETYPE *MoleculeType, MOLECULE *Molecule, bool change); //}}}
 
 // WriteAggregates() //{{{
 /**
@@ -59,6 +61,6 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
  * \param [in] Bead          coordinates of individual beads
  * \param [in] Aggregates    information about aggregates
  */
-void WriteAggregates(int step_count, char *agg_file, Counts Counts,
-                     MoleculeType *MoleculeType, Bead *Bead, Aggregate *Aggregate); //}}}
+void WriteAggregates(int step_count, char *agg_file, COUNTS Counts,
+                     MOLECULETYPE *MoleculeType, BEAD *Bead, AGGREGATE *Aggregate); //}}}
 #endif

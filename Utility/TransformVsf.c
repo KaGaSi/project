@@ -19,6 +19,7 @@ visualisation tool.\n\n");
   fprintf(ptr, "      -i <name>  use input .vsf file different from traject.vsf\n");
   fprintf(ptr, "      -v         verbose output\n");
   fprintf(ptr, "      -h         print this help and exit\n");
+  fprintf(ptr, "      --change   transform molecules according to the first one of each type\n");
   fprintf(ptr, "      --version  print version number and exit\n");
 } //}}}
 
@@ -52,6 +53,7 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
+        strcmp(argv[i], "--change") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-v") != 0) {
 
@@ -86,6 +88,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // print new vsf so that all molecules always contain the same beads as the
+  // first one of their type in the vsf
+  bool change = BoolOption(argc, argv, "--change");
+
   // output verbosity //{{{
   bool verbose = BoolOption(argc, argv, "-v"); // verbose output
   // }}}
@@ -107,12 +113,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   ReadStructure(input_vsf, "\0", &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -122,13 +128,13 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose option //{{{
   if (verbose) {
-    Vector BoxLength;
+    VECTOR BoxLength;
     BoxLength.x = -1;
     VerboseOutput("\0", Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
   // create & fill output vsf file
-  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
+  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, change);
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);

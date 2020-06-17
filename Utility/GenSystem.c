@@ -119,15 +119,17 @@ int main(int argc, char *argv[]) {
   //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc.
-  Vector BoxLength;
-  int *Index; //}}}
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength;
+  int *Index;
+  PARAMS *bond_type; // information about bond types
+  PARAMS *angle_type; // information about angle types //}}}
 
-  ReadField(input, &BoxLength, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  ReadField(input, &BoxLength, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule, &bond_type, &angle_type);
 
   // set all molecules & beads to 'write' //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -138,7 +140,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // create & fill output vsf file
-  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
+  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, false);
 
   // print information - verbose option //{{{
   if (verbose) {
@@ -414,7 +416,9 @@ int main(int argc, char *argv[]) {
     free(prototype_z[i]);
   }
   free(input);
-  free(output_vcf); //}}}
+  free(output_vcf);
+  free(angle_type);
+  free(bond_type); //}}}
 
   return 0;
 }

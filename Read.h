@@ -16,7 +16,7 @@
  * \param [in] input_coor  name of the coordinate file
  * \return vector with box dimensions
  */
-Vector GetPBC(FILE *vcf, char *input_coor); //}}}
+VECTOR GetPBC(FILE *vcf, char *input_coor); //}}}
 
 // ReadAggCommand() //{{{
 /**
@@ -29,7 +29,7 @@ Vector GetPBC(FILE *vcf, char *input_coor); //}}}
  * \param [out] distance      <distance> parameter from Aggregate command
  * \param [out] contacts      <contacts> parameter from Aggregate command
  */
-void ReadAggCommand(BeadType *BeadType, Counts Counts,
+void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
                     char *input_coor, char *input_agg,
                     double *distance, int *contacts); //}}}
 
@@ -49,9 +49,9 @@ void ReadAggCommand(BeadType *BeadType, Counts Counts,
  * \return 'true' or 'false' for .vcf file with indexed or ordered
  * timesteps, respectively
  * */
-bool ReadStructure(char *vsf_file, char *vcf_file, Counts *Counts,
-                   BeadType **BeadType, Bead **Bead, int **Index,
-                   MoleculeType **MoleculeType, Molecule **Molecule); //}}}
+bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
+                   BEADTYPE **BeadType, BEAD **Bead, int **Index,
+                   MOLECULETYPE **MoleculeType, MOLECULE **Molecule); //}}}
 
 // ReadCoordinates() //{{{
 /**
@@ -65,7 +65,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, Counts *Counts,
  * \param [out] stuff      first line of a timestep
  * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
  */
-int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, int *Index, Bead **Bead, char **stuff); //}}}
+int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff); //}}}
 
 // SkipCoor() //{{{
 /**
@@ -76,7 +76,7 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, Counts Counts, int *Index, Bea
  * \param [out] stuff      first line of a timestep
  * \return 1 if premature end of file or 0 for no error
  */
-bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
+bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff); //}}}
 
 // ReadAggregates() //{{{
 /**
@@ -91,9 +91,9 @@ bool SkipCoor(FILE *vcf_file, Counts Counts, char **stuff); //}}}
  * \param [out] Molecule      information about individual molecules
  * \return 1 if 'Last Step' detected or 0 for no error
  */
-bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
-                    BeadType *BeadType, Bead **Bead,
-                    MoleculeType *MoleculeType, Molecule **Molecule, int *Index); //}}}
+bool ReadAggregates(FILE *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
+                    BEADTYPE *BeadType, BEAD **Bead,
+                    MOLECULETYPE *MoleculeType, MOLECULE **Molecule, int *Index); //}}}
 
 // ReadField() //{{{
 /**
@@ -107,8 +107,11 @@ bool ReadAggregates(FILE *agg_file, Counts *Counts, Aggregate **Aggregate,
  * \param [out] Index         bead indices between program and vsf (i.e., opposite of Bead[].Index)
  * \param [out] MoleculeType  information about molecule types
  * \param [out] Molecule      information about individual molecules
+ * \param [out] bond_types    information abount bond types
+ * \param [out] angle_types   information abount angle types
  * */
-void ReadField(char *field, Vector *BoxLength, Counts *Counts,
-               BeadType **BeadType, Bead **Bead, int **Index,
-               MoleculeType **MoleculeType, Molecule **Molecule); //}}}
+void ReadField(char *field, VECTOR *BoxLength, COUNTS *Counts,
+               BEADTYPE **BeadType, BEAD **Bead, int **Index,
+               MOLECULETYPE **MoleculeType, MOLECULE **Molecule,
+               PARAMS **bond_types, PARAMS **angle_types); //}}}
 #endif
