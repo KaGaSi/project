@@ -212,19 +212,19 @@ int main(int argc, char *argv[]) {
 
   // variables - structures //{{{
   // data from 1st run
-  BeadType *BeadType1; // structure with info about all bead types
-  MoleculeType *MoleculeType1; // structure with info about all molecule types
-  Bead *Bead1; // structure with info about every bead
+  BEADTYPE *BeadType1; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType1; // structure with info about all molecule types
+  BEAD *Bead1; // structure with info about every bead
   int *Index1; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule1; // structure with info about every molecule
+  MOLECULE *Molecule1; // structure with info about every molecule
   // data from 2nd run
-  BeadType *BeadType2; // structure with info about all bead types
-  MoleculeType *MoleculeType2; // structure with info about all molecule types
-  Bead *Bead2; // structure with info about every bead
+  BEADTYPE *BeadType2; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType2; // structure with info about all molecule types
+  BEAD *Bead2; // structure with info about every bead
   int *Index2; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule2; // structure with info about every molecule
+  MOLECULE *Molecule2; // structure with info about every molecule
   // Counts is the same for both runs
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information //{{{
   bool indexed = ReadStructure(input_vsf_1, input_coor_1, &Counts, &BeadType1, &Bead1, &Index1, &MoleculeType1, &Molecule1);
@@ -290,8 +290,8 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // get to the pbc line in both input files //{{{
-  Vector BoxLength = GetPBC(vcf_1, input_coor_1);
-  Vector BoxLength_2 = GetPBC(vcf_2, input_coor_2);
+  VECTOR BoxLength = GetPBC(vcf_1, input_coor_1);
+  VECTOR BoxLength_2 = GetPBC(vcf_2, input_coor_2);
   // check that the box sizes are the same
   if (BoxLength.x != BoxLength_2.x ||
       BoxLength.y != BoxLength_2.y ||

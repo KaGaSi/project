@@ -145,14 +145,13 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
-printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
@@ -259,7 +258,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));
@@ -353,7 +352,7 @@ printf("struct: %s\ncoor:   %s\n", input_vsf, input_coor);
       int mol_type_i = Molecule[i].Type;
       if (MoleculeType[mol_type_i].Use) {
         for (int j = 0; j < number_of_beads; j += beads_per_angle) {
-          Vector u, v;
+          VECTOR u, v;
           // first vector
           u.x = Bead[Molecule[i].Bead[bead[j+0]]].Position.x - Bead[Molecule[i].Bead[bead[j+1]]].Position.x;
           u.y = Bead[Molecule[i].Bead[bead[j+0]]].Position.y - Bead[Molecule[i].Bead[bead[j+1]]].Position.y;

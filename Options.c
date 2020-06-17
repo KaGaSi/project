@@ -102,8 +102,8 @@ bool VersionOption(int argc, char **argv) {
  * specified molecule types `Use = false` and the rest `Use = true`.
  * Arguments: `-x <name(s)>`
  */
-bool ExcludeOption(int argc, char **argv, Counts Counts,
-                   MoleculeType **MoleculeType) {
+bool ExcludeOption(int argc, char **argv, COUNTS Counts,
+                   MOLECULETYPE **MoleculeType) {
 
   // set all molecules to use //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -188,7 +188,7 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
  * <name(s)>`
  */
 bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
-                    Counts Counts, BeadType **BeadType) {
+                    COUNTS Counts, BEADTYPE **BeadType) {
 
   // specify what bead types to use - either specified by '-bt' option or all
   int types = -1;
@@ -449,8 +449,8 @@ bool FileOption(int argc, char **argv, char *opt, char **name) {
  * Generic option for molecule type that can take one
  * argument. The option is an argument of this function.
  */
-bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts
-    Counts, MoleculeType **MoleculeType) {
+bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
+                        COUNTS Counts, MOLECULETYPE **MoleculeType) {
 
   *moltype = -1;
   for (int i = 1; i < argc; i++) {
@@ -482,8 +482,8 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts
  * Generic option for molecule types. The option is an argument of this
  * function.
  */
-bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts
-    Counts, MoleculeType **MoleculeType) {
+bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
+                         COUNTS Counts, MOLECULETYPE **MoleculeType) {
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {

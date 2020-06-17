@@ -171,12 +171,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -237,7 +237,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // number of bins
   int bins = ceil(Min3(BoxLength.x, BoxLength.y, BoxLength.z) / (3 * width));
@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
   char *stuff = calloc(LINE, sizeof(char));
 
   // allocate Aggregate struct //{{{
-  Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
+  AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
   for (int i = 0; i < Counts.Molecules; i++) {
     // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
     Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
@@ -394,7 +394,7 @@ int main(int argc, char *argv[]) {
           temp_elstat[j] = 0;
         } //}}}
 
-        Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
+        VECTOR com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
 
         // move beads so that com is in the box's centre
         for (int j = 0; j < Counts.Beads; j++) {
@@ -427,7 +427,7 @@ int main(int argc, char *argv[]) {
               int M2 = round(2 * PI * sin(angle1) / d2);
               for (int nn = 0; nn < M2; nn++) {
                 double angle2 = 2 * PI * nn / M2;
-                Vector point;
+                VECTOR point;
                 point.x = r * sin(angle1) * cos(angle2);
                 point.y = r * sin(angle1) * sin(angle2);
                 point.z = r * cos(angle1);
@@ -439,7 +439,7 @@ int main(int argc, char *argv[]) {
                 // again, this loop is inside other loops.
                 for (int l = 0; l < Counts.Beads; l++) {
                   if (BeadType[Bead[l].Type].Charge != 0) {
-                    Vector dist;
+                    VECTOR dist;
                     dist = Distance(Bead[l].Position, point, BoxLength);
                     double rij = Length(dist);
                     double coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
@@ -451,7 +451,7 @@ int main(int argc, char *argv[]) {
                     if (max_dist < 0);
 
                     // periodic images //{{{
-                    Vector dist_orig;
+                    VECTOR dist_orig;
                     dist_orig.x = dist.x;
                     dist_orig.y = dist.y;
                     dist_orig.z = dist.z;

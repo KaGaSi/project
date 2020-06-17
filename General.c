@@ -76,7 +76,7 @@ bool IsInteger(char *a) {
 /**
  * Function to calculate vector length.
  */
-double Length(Vector a) {
+double Length(VECTOR a) {
   double length = sqrt(SQR(a.x) + SQR(a.y) + SQR(a.z));
   return length;
 } //}}}
@@ -129,8 +129,8 @@ double Max3(double x, double y, double z) {
 /**
  * Function returning sorted numbers x < y < z.
  */
-Vector Sort3(Vector in) {
-  Vector out;
+VECTOR Sort3(VECTOR in) {
+  VECTOR out;
   if (in.x < in.y) {
     if (in.y < in.z) {
       out.x = in.x;

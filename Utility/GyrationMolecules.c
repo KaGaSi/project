@@ -137,12 +137,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
   double *Anis_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
   double *Acyl_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
   double *Aspher_sum = calloc(Counts.TypesOfMolecules, sizeof(double));
-  struct Vector *eigen_sum = calloc(Counts.TypesOfMolecules, sizeof(struct Vector)); //}}}
+  VECTOR *eigen_sum = calloc(Counts.TypesOfMolecules, sizeof(VECTOR)); //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]) {
     double *Anis_step = calloc(Counts.TypesOfMolecules,sizeof(double));
     double *Acyl_step = calloc(Counts.TypesOfMolecules,sizeof(double));
     double *Aspher_step = calloc(Counts.TypesOfMolecules,sizeof(double));
-    struct Vector *eigen_step = calloc(Counts.TypesOfMolecules,sizeof(struct Vector)); //}}}
+    VECTOR *eigen_step = calloc(Counts.TypesOfMolecules,sizeof(VECTOR)); //}}}
 
     // calculate shape descriptors //{{{
     for (int i = 0; i < Counts.Molecules; i++) {
@@ -279,7 +279,7 @@ int main(int argc, char *argv[]) {
           }
         } //}}}
 
-        Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+        VECTOR eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
 
         free(list); // free array of bead ids for gyration calculation
 

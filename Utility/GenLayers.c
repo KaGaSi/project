@@ -155,23 +155,24 @@ int main(int argc, char *argv[]) {
   //}}}
 
   // structures for info from field //{{{
-  BeadType *BeadType_field;
-  MoleculeType *MoleculeType_field;
-  Molecule *Molecule_field;
-  Bead *Bead_field;
-  Counts Counts_field = ZeroCounts;
-  Vector BoxLength;
+  BEADTYPE *BeadType_field;
+  MOLECULETYPE *MoleculeType_field;
+  MOLECULE *Molecule_field;
+  BEAD *Bead_field;
+  COUNTS Counts_field = InitCounts;
+  VECTOR BoxLength;
   int *Index_field;
-  //}}}
+  PARAMS *bond_type;
+  PARAMS *angle_type; //}}}
 
-  ReadField(input, &BoxLength, &Counts_field, &BeadType_field, &Bead_field, &Index_field, &MoleculeType_field, &Molecule_field);
+  ReadField(input, &BoxLength, &Counts_field, &BeadType_field, &Bead_field, &Index_field, &MoleculeType_field, &Molecule_field, &bond_type, &angle_type);
 
   // structures for info for final system //{{{
-  BeadType *BeadType;
-  MoleculeType *MoleculeType;
-  Molecule *Molecule;
-  Bead *Bead;
-  Counts Counts = ZeroCounts; //}}}
+  BEADTYPE *BeadType;
+  MOLECULETYPE *MoleculeType;
+  MOLECULE *Molecule;
+  BEAD *Bead;
+  COUNTS Counts = InitCounts; //}}}
 
   // TODO: for now, only one molecule type is used
   Counts.TypesOfMolecules = 1;
@@ -400,7 +401,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // write output vsf file
-  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule);
+  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, false);
 
   // adjust for gap value (-g option) //{{{
   for (int i = 0; i < Counts.Molecules; i++) {
@@ -446,6 +447,8 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts_field, &Molecule_field);
   FreeBead(Counts_field, &Bead_field);
   free(Index_field);
+  free(bond_type);
+  free(angle_type);
   free(output_vcf);
   free(input); //}}}
 

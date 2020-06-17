@@ -25,7 +25,7 @@
  */
 typedef struct Vector {
   double x, y, z;
-} Vector; //}}}
+} VECTOR; //}}}
 
 // struct LongVector //{{{
 /**
@@ -33,7 +33,7 @@ typedef struct Vector {
  */
 typedef struct LongVector {
   long double x, y, z;
-} LongVector; //}}}
+} LONGVECTOR; //}}}
 
 // struct IntVector //{{{
 /**
@@ -41,7 +41,7 @@ typedef struct LongVector {
  */
 typedef struct IntVector {
   int x, y, z;
-} IntVector; //}}}
+} INTVECTOR; //}}}
 
 // Length() //{{{
 /*
@@ -50,7 +50,7 @@ typedef struct IntVector {
  * \param [in] a    vector
  * \return a's length
  */
-double Length(Vector a); //}}}
+double Length(VECTOR a); //}}}
 
 // IsDouble() //{{{
 /*
@@ -108,7 +108,7 @@ double Max3(double x, double y, double z); //}}}
  * \param [in] in   first double precision number
  * \return sorted vector
  */
-Vector Sort3(Vector in); //}}}
+VECTOR Sort3(VECTOR in); //}}}
 
 // SwapInt() //{{{
 /**

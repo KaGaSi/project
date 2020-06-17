@@ -105,7 +105,7 @@ void ErrorOption(char *option) {
 /**
  * Error when non-existent bead is used.
  */
-void ErrorBeadType(Counts Counts, BeadType *BeadType) {
+void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType) {
   fprintf(stderr, "       Possible bead names: %s\n", BeadType[0].Name);
   for (int i = 1; i < Counts.TypesOfBeads; i++) {
     fprintf(stderr, "                            %s\n", BeadType[i].Name);

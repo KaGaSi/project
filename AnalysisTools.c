@@ -5,9 +5,9 @@
  * Function providing standard verbose output (for cases when verbose
  * option is used). It prints most of the information about used system.
  */
-void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
-                   BeadType *BeadType, Bead *Bead,
-                   MoleculeType *MoleculeType, Molecule *Molecule) {
+void VerboseOutput(char *input_vcf, COUNTS Counts, VECTOR BoxLength,
+                   BEADTYPE *BeadType, BEAD *Bead,
+                   MOLECULETYPE *MoleculeType, MOLECULE *Molecule) {
 
   putchar('\n');
   if (BoxLength.x != -1) {
@@ -25,28 +25,37 @@ void VerboseOutput(char *input_vcf, Counts Counts, Vector BoxLength,
 /**
  * Function printing Counts structure.
  */
-void PrintCounts(Counts Counts) {
-  fprintf(stdout, "Counts.{");
-  fprintf(stdout, "TypesOfBeads = %d, ", Counts.TypesOfBeads);
-  fprintf(stdout, "Bonded = %d, ", Counts.Bonded);
-  fprintf(stdout, "Unbonded = %d, ", Counts.Unbonded);
-  fprintf(stdout, "Beads = %d, ", Counts.Beads);
-  fprintf(stdout, "BeadsInVsf = %d, ", Counts.BeadsInVsf);
-  fprintf(stdout, "TypesOfMolecules = %d, ", Counts.TypesOfMolecules);
-  fprintf(stdout, "Molecules = %d}\n\n", Counts.Molecules);
+void PrintCounts(COUNTS Counts) {
+  fprintf(stdout, "Counts = {\n");
+  fprintf(stdout, "  .TypesOfBeads     = %d,\n", Counts.TypesOfBeads);
+  fprintf(stdout, "  .Bonded           = %d,\n", Counts.Bonded);
+  fprintf(stdout, "  .Unbonded         = %d,\n", Counts.Unbonded);
+  fprintf(stdout, "  .Beads            = %d,\n", Counts.Beads);
+  if (Counts.BeadsInVsf != Counts.Beads) {
+    fprintf(stdout, "  .BeadsInVsf       = %d,\n", Counts.BeadsInVsf);
+  }
+  fprintf(stdout, "  .TypesOfMolecules = %d,\n", Counts.TypesOfMolecules);
+  fprintf(stdout, "  .Molecules        = %d,\n", Counts.Molecules);
+  if (Counts.TypesOfBonds != -1) {
+    fprintf(stdout, "  .TypesOfBonds     = %d,\n", Counts.TypesOfBonds);
+  }
+  if (Counts.TypesOfAngles != -1) {
+    fprintf(stdout, "  .TypesOfAngles    = %d,\n", Counts.TypesOfAngles);
+  }
+  fprintf(stdout, "}\n\n");
 } //}}}
 
 // PrintBeadType()  //{{{
 /**
  * Function printing BeadType structure.
  */
-void PrintBeadType(Counts Counts, BeadType *BeadType) {
+void PrintBeadType(COUNTS Counts, BEADTYPE *BeadType) {
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    fprintf(stdout, "BeadType[%2d].{", i);
-    fprintf(stdout, "Name =%10s, ", BeadType[i].Name);
-    fprintf(stdout, "Number =%7d, ", BeadType[i].Number);
-    fprintf(stdout, "Charge =%9.5f, ", BeadType[i].Charge);
-    fprintf(stdout, "Mass = %.5f}\n", BeadType[i].Mass);
+    fprintf(stdout, "BeadType[%2d] = {", i);
+    fprintf(stdout, ".Name =%10s, ", BeadType[i].Name);
+    fprintf(stdout, ".Number =%7d, ", BeadType[i].Number);
+    fprintf(stdout, ".Charge =%9.5f, ", BeadType[i].Charge);
+    fprintf(stdout, ".Mass = %.5f}\n", BeadType[i].Mass);
 //  fprintf(stdout, "Use = %3s, ", BeadType[i].Use? "Yes":"No");
 //  fprintf(stdout, "Write = %3s}\n", BeadType[i].Write? "Yes":"No");
   }
@@ -57,33 +66,59 @@ void PrintBeadType(Counts Counts, BeadType *BeadType) {
 /**
  * Function printing MoleculeType structure.
  */
-void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *MoleculeType) {
+void PrintMoleculeType(COUNTS Counts, BEADTYPE *BeadType, MOLECULETYPE *MoleculeType) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    fprintf(stdout, "MoleculeType[%2d].{\n", i);
-    fprintf(stdout, "  Name    = %s\n", MoleculeType[i].Name);
-    fprintf(stdout, "  Number  = %d\n", MoleculeType[i].Number);
-    fprintf(stdout, "  nBeads  = %d\n  Bead    = {", MoleculeType[i].nBeads);
+    fprintf(stdout, "MoleculeType[%2d] = {\n", i);
+    fprintf(stdout, "  .Name    = %s,\n", MoleculeType[i].Name);
+    fprintf(stdout, "  .Number  = %d,\n", MoleculeType[i].Number);
+    // print bead types (list all beads) //{{{
+    fprintf(stdout, "  .nBeads  = %d,\n", MoleculeType[i].nBeads);
+    fprintf(stdout, "  .Bead    = {");
     for (int j = 0; j < MoleculeType[i].nBeads; j++) {
       if (j != 0) {
         fprintf(stdout, ", ");
       }
       fprintf(stdout, "%s", BeadType[MoleculeType[i].Bead[j]].Name);
     }
-    fprintf(stdout, "}\n  nBonds  = %d\n  Bond    = {", MoleculeType[i].nBonds);
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      if (j != 0) {
-        fprintf(stdout, ", ");
+    fprintf(stdout, "},\n"); //}}}
+    // print bonds if there are any //{{{
+    if (MoleculeType[i].nBonds > 0) {
+      fprintf(stdout, "  .nBonds  = %d,\n", MoleculeType[i].nBonds);
+      fprintf(stdout, "  .Bond    = {");
+      for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+        if (j != 0) {
+          fprintf(stdout, ", ");
+        }
+        fprintf(stdout, "%d-%d", MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
+        if (MoleculeType[i].Bond[j][2] != -1) {
+          fprintf(stdout, "(%d)", MoleculeType[i].Bond[j][2]+1);
+        }
       }
-      fprintf(stdout, "%d-%d", MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
-    }
-    fprintf(stdout, "}\n  nBTypes = %d\n  BType   = {", MoleculeType[0].nBTypes);
+    } //}}}
+    // print angles if there are any //{{{
+    if (MoleculeType[i].nAngles > 0) {
+      fprintf(stdout, "},\n  .nAngles = %d,\n  .Angle   = {", MoleculeType[i].nAngles);
+      for (int j = 0; j < MoleculeType[i].nAngles; j++) {
+        if (j != 0) {
+          fprintf(stdout, ", ");
+        }
+        fprintf(stdout, "%d-%d-%d", MoleculeType[i].Angle[j][0]+1,
+                                    MoleculeType[i].Angle[j][1]+1,
+                                    MoleculeType[i].Angle[j][2]+1);
+        if (MoleculeType[i].Angle[j][3] != -1) {
+          fprintf(stdout, "(%d)", MoleculeType[i].Angle[j][3]+1);
+        }
+      }
+    } //}}}
+    // print bead types (just the which are present) //{{{
+    fprintf(stdout, "},\n  .nBTypes = %d,\n  .BType   = {", MoleculeType[0].nBTypes);
     for (int j = 0; j < MoleculeType[i].nBTypes; j++) {
       if (j != 0) {
         fprintf(stdout, ", ");
       }
       fprintf(stdout, "%s", BeadType[MoleculeType[i].BType[j]].Name);
-    }
-    fprintf(stdout, "}\n  Mass    = %.5f}\n", MoleculeType[i].Mass);
+    } //}}}
+    fprintf(stdout, "},\n  .Mass    = %.5f,\n}\n", MoleculeType[i].Mass);
   }
 } //}}}
 
@@ -91,7 +126,7 @@ void PrintMoleculeType(Counts Counts, BeadType *BeadType, MoleculeType *Molecule
 /**
  * Function printing Bead structure.
  */
-void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
+void PrintBead(COUNTS Counts, int *Index, BEADTYPE *BeadType, BEAD *Bead) {
   fprintf(stdout, "Beads - <i> (<Bead[i].Index>; <Index[i]>)\n");
   for (int i = 0; i < Counts.Beads; i++) {
     int type = Bead[i].Type;
@@ -108,9 +143,9 @@ void PrintBead(Counts Counts, int *Index, BeadType *BeadType, Bead *Bead) {
 /**
  * Function printing Molecule structure.
  */
-void PrintMolecule(Counts Counts, int *Index,
-                   MoleculeType *MoleculeType, Molecule *Molecule,
-                   BeadType *BeadType, Bead *Bead) {
+void PrintMolecule(COUNTS Counts, int *Index,
+                   MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
+                   BEADTYPE *BeadType, BEAD *Bead) {
   fprintf(stdout, "Molecules\n");
   for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
@@ -135,7 +170,9 @@ void PrintMolecule(Counts Counts, int *Index,
 /**
  * Function printing Aggregate structure.
  */
-void PrintAggregate(Counts Counts, int *Index, MoleculeType *MoleculeType, Molecule *Molecule, Bead *Bead, BeadType *BeadType, Aggregate *Aggregate) {
+void PrintAggregate(COUNTS Counts, int *Index,
+                    MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
+                    BEAD *Bead, BEADTYPE *BeadType, AGGREGATE *Aggregate) {
   fprintf(stdout, "Aggregates: %d\n", Counts.Aggregates);
   for (int i = 0; i < Counts.Aggregates; i++) {
     // print molecules
@@ -175,11 +212,27 @@ void PrintAggregate(Counts Counts, int *Index, MoleculeType *MoleculeType, Molec
   }
 } //}}}
 
+// PrintBondTypes() //{{{
+void PrintBondTypes(COUNTS Counts, PARAMS *bond_type) {
+  for (int i = 0; i < Counts.TypesOfBonds; i++) {
+    fprintf(stdout, "bond %2d: k = %lf, r_0 = %lf \n", i+1, bond_type[i].a, bond_type[i].b);
+  }
+  putc('\n', stdout);
+} //}}}
+
+// PrintAngleTypes() //{{{
+void PrintAngleTypes(COUNTS Counts, PARAMS *angle_type) {
+  for (int i = 0; i < Counts.TypesOfAngles; i++) {
+    fprintf(stdout, "angle %2d: k = %lf, r_0 = %lf \n", i+1, angle_type[i].a, angle_type[i].b);
+  }
+  putc('\n', stdout);
+} //}}}
+
 // FindBeadType() //{{{
 /* Function to identify type of bead from its name; returns -1 on non-existent
  * bead name.
  */
-int FindBeadType(char *name, Counts Counts, BeadType *BeadType) {
+int FindBeadType(char *name, COUNTS Counts, BEADTYPE *BeadType) {
   int type;
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     if (strcmp(name, BeadType[i].Name) == 0) {
@@ -192,7 +245,7 @@ int FindBeadType(char *name, Counts Counts, BeadType *BeadType) {
 } //}}}
 
 // FindMoleculeType() //{{{
-int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType) {
+int FindMoleculeType(char *name, COUNTS Counts, MOLECULETYPE *MoleculeType) {
   int type;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (strcmp(name, MoleculeType[i].Name) == 0) {
@@ -210,9 +263,9 @@ int FindMoleculeType(char *name, Counts Counts, MoleculeType *MoleculeType) {
  * periodic boundary conditions and returns x, y, and z distances in the
  * range <0, BoxLength/2).
  */
-Vector Distance(Vector id1, Vector id2, Vector BoxLength) {
+VECTOR Distance(VECTOR id1, VECTOR id2, VECTOR BoxLength) {
   // distance vector
-  Vector rij;
+  VECTOR rij;
   rij.x = id1.x - id2.x;
   rij.y = id1.y - id2.y;
   rij.z = id1.z - id2.z;
@@ -237,11 +290,11 @@ Vector Distance(Vector id1, Vector id2, Vector BoxLength) {
 // RemovePBCMolecules() //{{{
 /**
  * Function to remove periodic boundary conditions from all individual
- * molecules, thus joining them. 
+ * molecules, thus joining them.
  */
-void RemovePBCMolecules(Counts Counts, Vector BoxLength,
-                        BeadType *BeadType, Bead **Bead,
-                        MoleculeType *MoleculeType, Molecule *Molecule) {
+void RemovePBCMolecules(COUNTS Counts, VECTOR BoxLength,
+                        BEADTYPE *BeadType, BEAD **Bead,
+                        MOLECULETYPE *MoleculeType, MOLECULE *Molecule) {
 
   for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
@@ -258,7 +311,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
         int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
         // move id1, if id2 is moved already
         if (!(*Bead)[id1].Flag && (*Bead)[id2].Flag) {
-          Vector dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
+          VECTOR dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
 
           (*Bead)[id1].Position.x = (*Bead)[id2].Position.x - dist.x;
           (*Bead)[id1].Position.y = (*Bead)[id2].Position.y - dist.y;
@@ -266,7 +319,7 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
           (*Bead)[id1].Flag = true;
         // move id2, if id1 was moved already
         } else if ((*Bead)[id1].Flag && !(*Bead)[id2].Flag) {
-          Vector dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
+          VECTOR dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
 
           (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
           (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
@@ -290,10 +343,10 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
     }
 
     // put molecule's centre of mass into the simulation box //{{{
-    Vector com = CentreOfMass(MoleculeType[type].nBeads, Molecule[i].Bead, *Bead, BeadType);
+    VECTOR com = CentreOfMass(MoleculeType[type].nBeads, Molecule[i].Bead, *Bead, BeadType);
     // by how many BoxLength's should com be moved?
     // for distant molecules - it shouldn't happen, but better safe than sorry
-    IntVector move;
+    INTVECTOR move;
     move.x = com.x / BoxLength.x;
     move.y = com.y / BoxLength.y;
     move.z = com.z / BoxLength.z;
@@ -320,9 +373,9 @@ void RemovePBCMolecules(Counts Counts, Vector BoxLength,
  * Function to remove periodic boundary conditions from all aggregates,
  * thus joining them.
  */
-void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
-                         Vector BoxLength, BeadType *BeadType, Bead **Bead,
-                         MoleculeType *MoleculeType, Molecule *Molecule) {
+void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
+                         VECTOR BoxLength, BEADTYPE *BeadType, BEAD **Bead,
+                         MOLECULETYPE *MoleculeType, MOLECULE *Molecule) {
 
   bool *moved = malloc(Counts.Molecules*sizeof(bool));
 
@@ -361,7 +414,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
                     BeadType[(*Bead)[bead2].Type].Use) {
 
                   // calculate distance between 'bead1' and 'bead2'
-                  Vector dist = Distance((*Bead)[bead1].Position, (*Bead)[bead2].Position, BoxLength);
+                  VECTOR dist = Distance((*Bead)[bead1].Position, (*Bead)[bead2].Position, BoxLength);
                   dist.x = Length(dist);
 
                   // move 'mol2' (or 'k') if 'bead1' and 'bead2' are in contact
@@ -453,12 +506,12 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
 
   // put aggregates' centre of mass into the simulation box //{{{
   for (int i = 0; i < Counts.Aggregates; i++) {
-    Vector com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead,
+    VECTOR com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead,
                               *Bead, BeadType);
 
     // by how many BoxLength's should com by moved?
     // for distant aggregates - it shouldn't happen, but better safe than sorry
-    IntVector move;
+    INTVECTOR move;
     move.x = com.x / BoxLength.x;
     move.y = com.y / BoxLength.y;
     move.z = com.z / BoxLength.z;
@@ -486,7 +539,7 @@ void RemovePBCAggregates(double distance, Aggregate *Aggregate, Counts Counts,
  * Function to restore removed periodic boundary conditions. Used also in case
  * of cell linked lists, because they need coordinates <0, BoxLength>.
  */
-void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead) {
+void RestorePBC(COUNTS Counts, VECTOR BoxLength, BEAD **Bead) {
 
   for (int i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
     // x direction
@@ -517,8 +570,8 @@ void RestorePBC(Counts Counts, Vector BoxLength, Bead **Bead) {
 /**
  * Function to calculate centre of mass for a given list of beads.
  */
-Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
-  Vector com = {0, 0, 0};
+VECTOR CentreOfMass(int n, int *list, BEAD *Bead, BEADTYPE *BeadType) {
+  VECTOR com = {0, 0, 0};
   for (int i = 0; i < n; i++) {
     com.x += Bead[list[i]].Position.x * BeadType[Bead[list[i]].Type].Mass;
     com.y += Bead[list[i]].Position.y * BeadType[Bead[list[i]].Type].Mass;
@@ -534,8 +587,8 @@ Vector CentreOfMass(int n, int *list, Bead *Bead, BeadType *BeadType) {
 /**
  * Function to calculate centre of mass for a given list of beads.
  */
-Vector GeomCentre(int n, int *list, Bead *Bead) {
-  Vector cog = {0, 0, 0};
+VECTOR GeomCentre(int n, int *list, BEAD *Bead) {
+  VECTOR cog = {0, 0, 0};
   for (int i = 0; i < n; i++) {
     cog.x += Bead[list[i]].Position.x;
     cog.y += Bead[list[i]].Position.y;
@@ -551,14 +604,14 @@ Vector GeomCentre(int n, int *list, Bead *Bead) {
 /**
  * Function to calculate the principle moments of the gyration tensor.
  */
-Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *BeadType, Bead **Bead) {
+VECTOR Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength, BEADTYPE *BeadType, BEAD **Bead) {
   // gyration tensor (3x3 array)
   // use long double to ensure precision -- previous problem with truncation in short chains
   struct Tensor {
-    LongVector x, y, z;
+    LONGVECTOR x, y, z;
   } GyrationTensor = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
 
-  Vector com = GeomCentre(n, list, *Bead);
+  VECTOR com = GeomCentre(n, list, *Bead);
 
   // move centre of mass to [0,0,0] //{{{
   for (int i = 0; i < n; i++) {
@@ -627,13 +680,13 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
   long double c_quad = SQR(root0) + b_cube / a_cube * root0 + c_cube/a_cube; //}}}
 
   // calculate & sort eigenvalues //{{{
-  LongVector eigen;
+  LONGVECTOR eigen;
   eigen.x = root0; // found out by Newton's method
   // roots of the quadratic equation
   eigen.y = (-b_quad + sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
   eigen.z = (-b_quad - sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
 
-  Vector eigen2; // change LongVector to Vector
+  VECTOR eigen2; // change LONGVECTOR to VECTOR
   eigen2.x = eigen.x;
   eigen2.y = eigen.y;
   eigen2.z = eigen.z;
@@ -647,8 +700,8 @@ Vector Gyration(int n, int *list, Counts Counts, Vector BoxLength, BeadType *Bea
  * Function evaluating contacts for aggregate detection for Aggregate and
  * Aggregate-NotSameBeads utilities.
  */
-void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
-                      Molecule **Molecule,
+void EvaluateContacts(COUNTS *Counts, AGGREGATE **Aggregate,
+                      MOLECULE **Molecule,
                       int contacts, int **contact) {
   // first molecule
   for (int i = 1; i < (*Counts).Molecules; i++) {
@@ -747,9 +800,9 @@ void EvaluateContacts(Counts *Counts, Aggregate **Aggregate,
  * struct is arranged so that aggregates with the first molecule's lower id
  * come first.
  */
-void SortAggStruct(Aggregate **Aggregate, Counts Counts,
-                   Molecule *Molecule, MoleculeType *MoleculeType,
-                   Bead **Bead, BeadType *BeadType) {
+void SortAggStruct(AGGREGATE **Aggregate, COUNTS Counts,
+                   MOLECULE *Molecule, MOLECULETYPE *MoleculeType,
+                   BEAD **Bead, BEADTYPE *BeadType) {
   for (int i = 0; i < (Counts.Aggregates-1); i++) {
     bool done = true;
     for (int j = 0; j < (Counts.Aggregates-i-1); j++) {
@@ -809,8 +862,8 @@ void SortAggStruct(Aggregate **Aggregate, Counts Counts,
 } //}}}
 
 // LinkedList() //{{{
-void LinkedList(Vector BoxLength, Counts Counts, Bead *Bead,
-                int **Head, int **Link, double cell_size, IntVector *n_cells,
+void LinkedList(VECTOR BoxLength, COUNTS Counts, BEAD *Bead,
+                int **Head, int **Link, double cell_size, INTVECTOR *n_cells,
                 int *Dcx, int *Dcy, int *Dcz) {
 
   (*n_cells).x = ceil(BoxLength.x/cell_size),
@@ -866,6 +919,42 @@ void SortBonds(int **bond, int length) {
           bond[k][1] > bond[k+1][1])) {
         SwapInt(&bond[k][0], &bond[k+1][0]);
         SwapInt(&bond[k][1], &bond[k+1][1]);
+        SwapInt(&bond[k][2], &bond[k+1][2]);
+        swap = true;
+      }
+    }
+    // if no swap was made, the array is sorted
+    if (!swap) {
+      break;
+    }
+  }
+} //}}}
+
+// SortAngles() //{{{
+/**
+ * Function to sort an angle array. As each angle contains a 3-member array
+ * with the middle number being the 'centre' of the angle (i.e., it must remain
+ * in the middle). Sort it so that the first index is lower than the third one
+ * and then ascendingly according to the first indices.
+ */
+void SortAngles(int **angle, int length) {
+  // first, check order of the 1st and 3rd id in every angle
+  for (int j = 0; j < length; j++) {
+    if (angle[j][0] > angle[j][2]) {
+      SwapInt(&angle[j][0], &angle[j][2]);
+    }
+  }
+  // second, bubble sort angles
+  for (int j = 0; j < (length-1); j++) {
+    bool swap = false;
+    for (int k = 0; k < (length-j-1); k++) {
+      if ((angle[k][0] > angle[k+1][0]) || // swap if first beads are in wrong order
+          (angle[k][0] == angle[k+1][0] &&
+           angle[k][2] > angle[k+1][2])) { // or if they're the same, but 3rd ones are in wrong order
+        SwapInt(&angle[k][0], &angle[k+1][0]);
+        SwapInt(&angle[k][1], &angle[k+1][1]);
+        SwapInt(&angle[k][2], &angle[k+1][2]);
+        SwapInt(&angle[k][3], &angle[k+1][3]);
         swap = true;
       }
     }
@@ -881,7 +970,7 @@ void SortBonds(int **bond, int length) {
  * Free memory allocated for Bead struct array. This function makes it
  * easier to add other arrays to the Bead struct in the future
  */
-void FreeBead(Counts Counts, Bead **Bead) {
+void FreeBead(COUNTS Counts, BEAD **Bead) {
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
     free((*Bead)[i].Aggregate);
   }
@@ -893,7 +982,7 @@ void FreeBead(Counts Counts, Bead **Bead) {
  * Free memory allocated for Molecule struct array. This function makes it
  * easier other arrays to the Molecule struct in the future
  */
-void FreeMolecule(Counts Counts, Molecule **Molecule) {
+void FreeMolecule(COUNTS Counts, MOLECULE **Molecule) {
   for (int i = 0; i < Counts.Molecules; i++) {
     free((*Molecule)[i].Bead);
   }
@@ -905,13 +994,17 @@ void FreeMolecule(Counts Counts, Molecule **Molecule) {
  * Free memory allocated for MoleculeType struct array. This function makes
  * it easier other arrays to the MoleculeType struct in the future
  */
-void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType) {
+void FreeMoleculeType(COUNTS Counts, MOLECULETYPE **MoleculeType) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
       free((*MoleculeType)[i].Bond[j]);
     }
+    for (int j = 0; j < (*MoleculeType)[i].nAngles; j++) {
+      free((*MoleculeType)[i].Angle[j]);
+    }
     free((*MoleculeType)[i].Bead);
     free((*MoleculeType)[i].Bond);
+    free((*MoleculeType)[i].Angle);
     free((*MoleculeType)[i].BType);
   }
   free(*MoleculeType);
@@ -922,7 +1015,7 @@ void FreeMoleculeType(Counts Counts, MoleculeType **MoleculeType) {
  * Free memory allocated for Aggregate struct array. This function makes it
  * easier other arrays to the Aggregate struct in the future
  */
-void FreeAggregate(Counts Counts, Aggregate **Aggregate) {
+void FreeAggregate(COUNTS Counts, AGGREGATE **Aggregate) {
   for (int i = 0; i < Counts.Molecules; i++) {
     free((*Aggregate)[i].Molecule);
     free((*Aggregate)[i].Bead);

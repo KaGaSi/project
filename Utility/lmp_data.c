@@ -18,7 +18,7 @@ It assumes molecules have bonds and can also have angles, but no dihedrals.\n\n"
   fprintf(ptr, "   <out.data>        output lammps data file\n");
   fprintf(ptr, "   <options>\n");
   fprintf(ptr, "      -f <name>      FIELD-like file (default: FIELD)\n");
-  fprintf(ptr, "      --srp          add one more bead type for srp");
+  fprintf(ptr, "      --srp          add one more bead type for srp\n");
   fprintf(ptr, "      -st <step>     timestep for creating the output file (default: last)\n");
   CommonHelp(error);
 } //}}}
@@ -95,14 +95,6 @@ int main(int argc, char *argv[]) {
   char output[LINE];
   strcpy(output, argv[++count]); //}}}
 
-  // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
-
   // options before reading system data //{{{
   bool silent;
   bool verbose;
@@ -135,8 +127,64 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
 
-  // read system information
+  // variables - structures for info from vsf //{{{
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
+
+  // read system information from vsf
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+
+  // variables - structures for info from FIELD //{{{
+  BEADTYPE *BeadType_new; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType_new; // structure with info about all molecule types
+  BEAD *Bead_new; // structure with info about every bead
+  int *Index_new; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  MOLECULE *Molecule_new; // structure with info about every molecule
+  COUNTS Counts_new = InitCounts; // structure with number of beads, molecules, etc.
+  PARAMS *bond_type; // information about bond types
+  PARAMS *angle_type; // information about angle types //}}}
+
+  // read system information from FIELD (mainly bond & angle types)
+  ReadField(input, NULL, &Counts_new, &BeadType_new, &Bead_new, &Index_new, &MoleculeType_new, &Molecule_new, &bond_type, &angle_type);
+
+  // add bond types & angles from field to all molecules from vsf //{{{
+  Counts.TypesOfBonds = Counts_new.TypesOfBonds;
+  Counts.TypesOfAngles = Counts_new.TypesOfAngles;
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    // identify molecule from vsf to the one from FIELD (via Name)
+    int mol_field = -1;
+    for (int j = 0; j < Counts_new.TypesOfMolecules; j++) {
+      if (strcmp(MoleculeType[i].Name, MoleculeType_new[j].Name) == 0) {
+        mol_field = j;
+      }
+    }
+    // if the molecule is in FIELD, add bond types & angles
+    if (mol_field != -1) {
+      // copy bond types - assumes sorted bond arrays in both molecules which
+      // should have been done while reading vsf and FIELD files
+      for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+        MoleculeType[i].Bond[j][2] = MoleculeType_new[mol_field].Bond[j][2];
+      }
+      // copy angles - vsf contains no angles
+      MoleculeType[i].nAngles = MoleculeType_new[mol_field].nAngles;
+      MoleculeType[i].Angle = calloc(MoleculeType[i].nAngles, sizeof(int *));
+      for (int j = 0; j < MoleculeType[i].nAngles; j++) {
+        MoleculeType[i].Angle[j] = calloc(4, sizeof(int));
+        MoleculeType[i].Angle[j][0] = MoleculeType_new[mol_field].Angle[j][0];
+        MoleculeType[i].Angle[j][1] = MoleculeType_new[mol_field].Angle[j][1];
+        MoleculeType[i].Angle[j][2] = MoleculeType_new[mol_field].Angle[j][2];
+        MoleculeType[i].Angle[j][3] = MoleculeType_new[mol_field].Angle[j][3];
+      }
+    // warn if the molecule type isn't in FIELD
+    } else {
+      fprintf(stderr, "\nWarning: molecule %s is not in %s.\n", MoleculeType[i].Name, input);
+      fprintf(stderr, "         No bonds or angles will be printed to %s for molecule(s) of this type.\n\n", output);
+    }
+  } //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -145,11 +193,13 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    PrintBondTypes(Counts, bond_type);
+    PrintAngleTypes(Counts, angle_type);
   } //}}}
 
   // warn if not all beads //{{{
@@ -187,7 +237,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  // restore pointer position in FIELD file
+  // restore pointer position in vcf file
   fsetpos(vcf, &pos);
 
   // read coordinates //{{{
@@ -208,168 +258,12 @@ int main(int argc, char *argv[]) {
 
   fclose(vcf); //}}}
 
-  // count number of bonds //{{{
-  int count_bonds = 0;
+  // count total number of bonds & angles //{{{
+  int count_bonds = 0,
+      count_angles = 0;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     count_bonds += MoleculeType[i].Number * MoleculeType[i].nBonds;
-  } //}}}
-
-  // read stuff from FIELD //{{{
-  // open FIELD-like file //{{{
-  FILE *fr;
-  if ((fr = fopen(input, "r")) == NULL) {
-    ErrorFileOpen(input, 'r');
-    exit(1);
-  } //}}}
-
-  // read till molecule keyword //{{{
-  char line[LINE], split[30][100], delim[8];
-  strcpy(delim, " \t");
-  while(fgets(line, sizeof(line), fr)) {
-    SplitLine(split, line, delim);
-    if (strncmp(split[0], "molecule", 8) == 0 ||
-        strncmp(split[0], "Molecule", 8) == 0 ||
-        strncmp(split[0], "MOLECULE", 8) == 0 ) {
-      break;
-    }
-  } //}}}
-
-  // read data for each molecule type
-  int count_bond_types = 0, count_angle_types = 0, count_angles = 0;
-  // info about bond types (to be realloc'd)
-  double **bond_type = malloc(1*sizeof(double *));
-  bond_type[0] = malloc(2*sizeof(double));
-  bond_type[0][0] = -1; // k (harm spring strength)
-  bond_type[0][1] = -1; // r_0 (equilibrium distance)
-  // info about angle types (to be realloc'd)
-  double **angle_type = malloc(1*sizeof(double *));
-  angle_type[0] = malloc(2*sizeof(double));
-  angle_type[0][0] = -1; // k (harm spring strength)
-  angle_type[0][1] = -1; // angle_0 (equilibrium angle)
-  // info about bond and angle types for each molecule
-  int *mol_bond_types[Counts.TypesOfMolecules];
-  int *mol_angle_types[Counts.TypesOfMolecules];
-  // beads in individual angles
-  int angle_beads_n[Counts.TypesOfMolecules];
-  int **angle_beads[Counts.TypesOfMolecules];
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    mol_bond_types[i] = calloc(MoleculeType[i].nBonds, sizeof(int));
-    mol_angle_types[i] = calloc(MoleculeType[i].nBonds, sizeof(int));
-
-    // read till bond keyword //{{{
-    while(fgets(line, sizeof(line), fr)) {
-      SplitLine(split, line, delim);
-      if (strcasecmp(split[0], "bond") == 0) {
-        break;
-      }
-    } //}}}
-
-    // count bond types //{{{
-    int exist = -1;
-    count = atoi(split[1]);
-    for (int j = 0; j < count; j++) {
-      fgets(line, sizeof(line), fr);
-      SplitLine(split, line, delim);
-      exist = -1;
-      // check spring strength and equilibrium distance to test if the bond type exists
-      for (int k = 0; k < count_bond_types; k++) {
-        // bond line is: 'harm <bead> <bead> <k> <r_0>', so use split[3] & split[4]
-        if (bond_type[k][0] == atof(split[3]) && bond_type[k][1] == atof(split[4])) {
-          exist = k;
-        }
-      }
-      if (exist == -1) {
-        count_bond_types++;
-        bond_type = realloc(bond_type, count_bond_types*sizeof(double *));
-        bond_type[count_bond_types-1] = malloc(2*sizeof(double));
-        bond_type[count_bond_types-1][0] = atof(split[3]);
-        bond_type[count_bond_types-1][1] = atof(split[4]);
-        exist = count_bond_types - 1;
-      }
-
-      mol_bond_types[i][j] = exist;
-    } //}}}
-
-    // read angles (if present) //{{{
-    angle_beads_n[i] = -1;
-    exist = -1;
-    while(fgets(line, sizeof(line), fr)) {
-      SplitLine(split, line, delim);
-      if (strcasecmp(split[0], "angle") == 0) {
-        exist = 1;
-        break;
-      } else if (strcasecmp(split[0], "finish") == 0) {
-        break;
-      }
-    } //}}}
-
-    // count angle types & angles (if any) //{{{
-    if (exist == 1) {
-      angle_beads_n[i] = atoi(split[1]);
-      angle_beads[i] = malloc(angle_beads_n[i]*sizeof(int *));
-      count_angles += angle_beads_n[i] * MoleculeType[i].Number;
-      for (int j = 0; j < angle_beads_n[i]; j++) {
-        angle_beads[i][j] = calloc(3, sizeof(int));
-        fgets(line, sizeof(line), fr);
-        SplitLine(split, line, delim);
-        angle_beads[i][j][0] = atoi(split[1]) - 1; // split[0] is 'harm' keyword
-        angle_beads[i][j][1] = atoi(split[2]) - 1;
-        angle_beads[i][j][2] = atoi(split[3]) - 1;
-        // find if the bond type alread exists
-        exist = -1;
-        // check spring strength and equilibrium angle to test if the angle type exists
-        for (int k = 0; k < count_angle_types; k++) {
-          if (angle_type[k][0] == atof(split[4]) && angle_type[k][1] == atof(split[5])) {
-            exist = k;
-          }
-        }
-        if (exist == -1) { // add a new bond type if this doesn't exist
-          count_angle_types++;
-          angle_type = realloc(angle_type, count_angle_types*sizeof(double *));
-          angle_type[count_angle_types-1] = malloc(2*sizeof(double));
-          angle_type[count_angle_types-1][0] = atof(split[0]);
-          angle_type[count_angle_types-1][1] = atof(split[1]);
-          exist = count_angle_types - 1;
-        }
-
-        mol_angle_types[i][j] = exist;
-      }
-    } //}}}
-  }
-  fclose(fr); //}}}
-
-  // print information about bonds and angles (verbouse output) //{{{
-  if (verbose) {
-    fprintf(stdout, "Bond types:\n");
-    for (int i = 0; i < count_bond_types; i++) {
-      fprintf(stdout, " %lf %lf\n", bond_type[i][0], bond_type[i][1]);
-    }
-    fprintf(stdout, "Bonds in molecules (<type> <bead 1> <bead 2>):\n");
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      fprintf(stdout, " %s (%d bonds)\n", MoleculeType[i].Name, MoleculeType[i].nBonds);
-      for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-        fprintf(stdout, "  %2d: %3d %3d %3d\n", j+1, mol_bond_types[i][j]+1, MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
-      }
-    }
-    fprintf(stdout, "Angle types:\n");
-    for (int i = 0; i < count_angle_types; i++) {
-      fprintf(stdout, " %lf %lf\n", angle_type[i][0], angle_type[i][1]);
-    }
-    fprintf(stdout, "Angles in molecules (<type> <bead 1> <bead 2> <bead 3>):\n");
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      fprintf(stdout, " %s ", MoleculeType[i].Name);
-      if (angle_beads_n[i] == -1) {
-        fprintf(stdout, "(no angles)\n");
-      } else {
-        fprintf(stdout, "(%d angles)\n", angle_beads_n[i]);
-      }
-      for (int j = 0; j < angle_beads_n[i]; j++) {
-        int id1 = angle_beads[i][j][0];
-        int id2 = angle_beads[i][j][1];
-        int id3 = angle_beads[i][j][2];
-        fprintf(stdout, "  %2d: %3d %3d %3d %3d\n", j+1, mol_angle_types[i][j]+1, id1+1, id2+1, id3+1);
-      }
-    }
+    count_angles += MoleculeType[i].Number * MoleculeType[i].nAngles;
   } //}}}
 
   // create lammps data file //{{{
@@ -392,8 +286,8 @@ int main(int argc, char *argv[]) {
   } else {
     fprintf(out, "%7d atom types\n", Counts.TypesOfBeads);
   }
-  fprintf(out, "%7d bond types\n", count_bond_types);
-  fprintf(out, "%7d angle types\n", count_angle_types);
+  fprintf(out, "%7d bond types\n", Counts.TypesOfBonds);
+  fprintf(out, "%7d angle types\n", Counts.TypesOfAngles);
   putc('\n', out); //}}}
 
   // print box size //{{{
@@ -413,21 +307,21 @@ int main(int argc, char *argv[]) {
   putc('\n', out); //}}}
 
   // print bond coefficients //{{{
-  if (count_bond_types > 0) {
+  if (Counts.TypesOfBonds > 0) {
     fprintf(out, "Bond Coeffs\n\n");
-    for (int i = 0; i < count_bond_types; i++) {
+    for (int i = 0; i < Counts.TypesOfBonds; i++) {
       // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
-      fprintf(out, "%2d %lf %lf\n", i+1, bond_type[i][0]/2, bond_type[i][1]);
+      fprintf(out, "%2d %lf %lf\n", i+1, bond_type[i].a/2, bond_type[i].b);
     }
     putc('\n', out);
   } //}}}
 
   // print angle coefficients //{{{
-  if (count_angle_types > 0) {
+  if (Counts.TypesOfAngles > 0) {
     fprintf(out, "Angle Coeffs\n\n");
-    for (int i = 0; i < count_angle_types; i++) {
+    for (int i = 0; i < Counts.TypesOfAngles; i++) {
       // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
-      fprintf(out, "%2d %lf %lf\n", i+1, angle_type[i][0]/2, angle_type[i][1]);
+      fprintf(out, "%2d %lf %lf\n", i+1, angle_type[i].a/2, angle_type[i].b);
     }
     putc('\n', out);
   } //}}}
@@ -451,37 +345,39 @@ int main(int argc, char *argv[]) {
   putc('\n', out); //}}}
 
   // print bond information //{{{
-  if (count_bond_types != 0) {
+  if (count_bonds > 0) {
     fprintf(out, "Bonds\n\n");
     count = 0;
     for (int i = 0; i < Counts.Molecules; i++) {
-      int type = Molecule[i].Type;
-      for (int j = 0; j < MoleculeType[type].nBonds; j++) {
+      int mtype = Molecule[i].Type;
+      for (int j = 0; j < MoleculeType[mtype].nBonds; j++) {
         count++;
-        int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
-        int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
-        fprintf(out, "%7d %3d %7d %7d\n", count, mol_bond_types[type][j]+1, id1+1, id2+1);
+        int type = MoleculeType[mtype].Bond[j][0];
+        int id1 = Molecule[i].Bead[MoleculeType[mtype].Bond[j][0]];
+        int id2 = Molecule[i].Bead[MoleculeType[mtype].Bond[j][1]];
+        fprintf(out, "%7d %3d %7d %7d\n", count, type+1, id1+1, id2+1);
       }
     }
     putc('\n', out);
   } //}}}
 
   // print angle information //{{{
-  if (count_angle_types != 0) {
+  if (count_angles > 0) {
     fprintf(out, "Angles\n\n");
     count = 0;
     for (int i = 0; i < Counts.Molecules; i++) {
-
-      int type = Molecule[i].Type;
-      for (int j = 0; j < angle_beads_n[type]; j++) {
+      int mtype = Molecule[i].Type;
+      for (int j = 0; j < MoleculeType[mtype].nAngles; j++) {
         count++;
-        int id1 = Molecule[i].Bead[angle_beads[type][j][0]];
-        int id2 = Molecule[i].Bead[angle_beads[type][j][1]];
-        int id3 = Molecule[i].Bead[angle_beads[type][j][2]];
-        fprintf(out, "%7d %3d %7d %7d %7d\n", count, mol_angle_types[type][j]+1, id1+1, id2+1, id3+1);
+        int type = MoleculeType[mtype].Angle[j][3];
+        int id1 = Molecule[i].Bead[MoleculeType[mtype].Angle[j][0]];
+        int id2 = Molecule[i].Bead[MoleculeType[mtype].Angle[j][1]];
+        int id3 = Molecule[i].Bead[MoleculeType[mtype].Angle[j][2]];
+        fprintf(out, "%7d %3d %7d %7d %7d\n", count, type+1, id1+1, id2+1, id3+1);
       }
     }
-  }//}}}
+    putc('\n', out);
+  } //}}}
 
   fclose(out); //}}}
 
@@ -491,8 +387,17 @@ int main(int argc, char *argv[]) {
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
+
+  free(BeadType_new);
+  free(Index_new);
+  FreeMoleculeType(Counts_new, &MoleculeType_new);
+  FreeMolecule(Counts_new, &Molecule_new);
+  FreeBead(Counts_new, &Bead_new);
+
   free(stuff);
   free(input);
+  free(angle_type);
+  free(bond_type);
   //}}}
 
   return 0;
