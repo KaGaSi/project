@@ -151,12 +151,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -271,7 +271,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));
@@ -375,7 +375,7 @@ int main(int argc, char *argv[]) {
         // first plane is given by 0 1 2 and second plane by 1 2 3
         for (int j = 0; j < number_of_beads; j += beads_per_angle) {
           // plane normals //{{{
-          Vector u[2], v[2], n[2];
+          VECTOR u[2], v[2], n[2];
           // vectors in first plane (points 0 1 2): u=1-2; v=1-2
           u[0].x = Bead[Molecule[i].Bead[dihedral[j+1]]].Position.x - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.x;
           u[0].y = Bead[Molecule[i].Bead[dihedral[j+1]]].Position.y - Bead[Molecule[i].Bead[dihedral[j+2]]].Position.y;

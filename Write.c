@@ -1,4 +1,4 @@
-#include "Read.h"
+#include "Write.h"
 
 // WriteCoorIndexed() //{{{
 /**
@@ -6,9 +6,9 @@
  * in BeadType and MoleculeType structures only certain bead types will be
  * saved into the indexed timestep in .vcf file.
  */
-void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
-                      BeadType *BeadType, Bead *Bead,
-                      MoleculeType *MoleculeType, Molecule *Molecule,
+void WriteCoorIndexed(FILE *vcf_file, COUNTS Counts,
+                      BEADTYPE *BeadType, BEAD *Bead,
+                      MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
                       char *stuff) {
 
   // print blank line
@@ -40,8 +40,8 @@ void WriteCoorIndexed(FILE *vcf_file, Counts Counts,
 } //}}}
 
 // WriteCoorXYZ() //{{{
-void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
-                  BeadType *BeadType, Bead *Bead) {
+void WriteCoorXYZ(FILE *xyz_file, COUNTS Counts,
+                  BEADTYPE *BeadType, BEAD *Bead) {
 
   // count beads to write
   int count = 0;
@@ -68,8 +68,8 @@ void WriteCoorXYZ(FILE *xyz_file, Counts Counts,
  * Function creating `.vsf` structure file for use in conjunction with
  * `.vcf` coordinate file for better visualisation via VMD program.
  */
-void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
-              MoleculeType *MoleculeType, Molecule *Molecule) {
+void WriteVsf(char *input_vsf, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
+              MOLECULETYPE *MoleculeType, MOLECULE *Molecule, bool change) {
 
   // opten structure file //{{{
   FILE *fw;
@@ -110,9 +110,24 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
     int mol = Bead[i].Molecule;
     if (btype != type_def || mol != -1) {
       fprintf(fw, "atom %7d ", i);
-      fprintf(fw, "name %8s ", BeadType[btype].Name);
-      fprintf(fw, "mass %9.5f ", BeadType[btype].Mass);
-      fprintf(fw, "charge %9.5f", BeadType[btype].Charge);
+      if (mol != -1 && change) {
+        int mtype = Molecule[mol].Type;
+        int n;
+        for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
+          if (i == Molecule[mol].Bead[j]) {
+            n = j;
+            break;
+          }
+        }
+        btype = MoleculeType[mtype].Bead[n];
+        fprintf(fw, "name %8s ", BeadType[btype].Name);
+        fprintf(fw, "mass %9.5f ", BeadType[btype].Mass);
+        fprintf(fw, "charge %9.5f", BeadType[btype].Charge);
+      } else {
+        fprintf(fw, "name %8s ", BeadType[btype].Name);
+        fprintf(fw, "mass %9.5f ", BeadType[btype].Mass);
+        fprintf(fw, "charge %9.5f", BeadType[btype].Charge);
+      }
       if (mol != -1) {
         int mtype = Molecule[mol].Type;
         fprintf(fw, " resname %10s ", MoleculeType[mtype].Name);
@@ -149,8 +164,8 @@ void WriteVsf(char *input_vsf, Counts Counts, BeadType *BeadType, Bead *Bead,
  * Function writiing (appending to .agg file) information about aggregates from
  * given timestep.
  */
-void WriteAggregates(int step_count, char *agg_file, Counts Counts,
-                     MoleculeType *MoleculeType, Bead *Bead, Aggregate *Aggregate) {
+void WriteAggregates(int step_count, char *agg_file, COUNTS Counts,
+                     MOLECULETYPE *MoleculeType, BEAD *Bead, AGGREGATE *Aggregate) {
 
   // get number of aggregates to write to agg_file //{{{
   int number_of_aggs = 0;

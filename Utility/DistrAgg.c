@@ -124,6 +124,7 @@ int main(int argc, char *argv[]) {
   bool silent;
   bool verbose;
   char *input_vsf = calloc(LINE,sizeof(char));
+  strcpy(input_vsf, "traject.vsf");
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
@@ -154,12 +155,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // revers of Bead[].Index
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   char null[1] = {'\0'}; // because ReadStructure & VerboseOutput check the first value in the array
@@ -304,8 +305,7 @@ int main(int argc, char *argv[]) {
   long int only_count_agg = 0; //}}}
 
   // allocate Aggregate struct //{{{
-  Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
-
+  AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
   for (int i = 0; i < Counts.Molecules; i++) {
     Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
     Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
@@ -315,7 +315,7 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     fprintf(stdout, "Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
-    Vector BoxLength;
+    VECTOR BoxLength;
     BoxLength.x = -1;
     VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}

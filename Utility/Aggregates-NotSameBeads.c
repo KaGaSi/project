@@ -33,10 +33,10 @@ types 'A' and 'B' are given, it considers only 'A-B' pairs.\n\n");
 /**
  * Function to determine distribution of molecules in aggregates.
  */
-void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int contacts,
+void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, int sqdist, int contacts,
                          int *xm_mols, bool **xm_use_mol,
-                         Vector BoxLength, BeadType *BeadType, Bead **Bead,
-                         MoleculeType *MoleculeType, Molecule **Molecule) {
+                         VECTOR BoxLength, BEADTYPE *BeadType, BEAD **Bead,
+                         MOLECULETYPE *MoleculeType, MOLECULE **Molecule) {
 
   // zeroize //{{{
   (*Counts).Aggregates = 0;
@@ -67,7 +67,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
   // create cell-linked list //{{{
   double cell_size = sqrt(sqdist);
-  IntVector n_cells;
+  INTVECTOR n_cells;
   int *Head, *Link;
   int Dcx[14], Dcy[14], Dcz[14];
   LinkedList(BoxLength, *Counts, *Bead, &Head, &Link, cell_size, &n_cells, Dcx, Dcy, Dcz); //}}}
@@ -128,7 +128,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                 if ((BeadType[btype_i].Use && (*xm_use_mol)[mol_i] && xm_mols[mtype_j]) ||
                     (BeadType[btype_j].Use && (*xm_use_mol)[mol_j] && xm_mols[mtype_i])) {
 
-                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  VECTOR rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
                   rij.x = SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
 
                   if (rij.x <= sqdist) {
@@ -207,7 +207,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
                     (*Bead)[i].Type != (*Bead)[j].Type) { // do not use pairs of bead with the same type
 
                   // calculate distance between i and j beads
-                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  VECTOR rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
                   rij.x = SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
 
                   // are 'i' and 'j' close enough?
@@ -327,7 +327,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                 if (!in_agg) {
                   // calculate distance between i and j beads
-                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  VECTOR rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                   // test if 'i' is near 'j''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) <= sqdist) {
@@ -357,7 +357,7 @@ void CalculateAggregates(Aggregate **Aggregate, Counts *Counts, int sqdist, int 
 
                 if (!in_agg) {
                   // calculate distance between i and j beads
-                  Vector rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
+                  VECTOR rij = Distance((*Bead)[i].Position, (*Bead)[j].Position, BoxLength);
 
                   // test if 'j' is near 'i''s aggregate
                   if ((SQR(rij.x)+SQR(rij.y)+SQR(rij.z)) <= sqdist) {
@@ -523,12 +523,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // reverse of Bead[].Index
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -601,7 +601,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {
@@ -636,7 +636,7 @@ int main(int argc, char *argv[]) {
   char *stuff = calloc(LINE, sizeof(char));
 
   // allocate Aggregate struct //{{{
-  Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
+  AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
   for (int i = 0; i < Counts.Molecules; i++) {
     // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
     Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));

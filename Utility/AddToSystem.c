@@ -143,12 +143,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // options before reading system data //{{{
   bool silent;
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]) {
   if (range[0] > range[1]) {
     SwapDouble(&range[0], &range[1]);
   }
-  Vector constraint[2];
+  VECTOR constraint[2];
   constraint[0].x = range[0];
   constraint[1].x = range[1]; //}}}
   // y direcion //{{{
@@ -352,7 +352,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // print original system //{{{
   if (verbose) {
@@ -364,7 +364,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // define box size using constraints (-c{x,y,z} options)//{{{
-  Vector new_box;
+  VECTOR new_box;
   if (constraint[1].x != 0) {
     new_box.x = constraint[1].x - constraint[0].x;
   } else {
@@ -439,17 +439,19 @@ int main(int argc, char *argv[]) {
   fclose(vcf); //}}}
 
   // create structures for new stuff //{{{
-  struct Counts Counts_add = ZeroCounts;
-  struct Molecule *Molecule_add;
-  struct MoleculeType *MoleculeType_add;
-  struct BeadType *BeadType_add;
-  struct Bead *Bead_add;
-//struct Vector **prototype;
+  COUNTS Counts_add = InitCounts;
+  MOLECULE *Molecule_add;
+  MOLECULETYPE *MoleculeType_add;
+  BEADTYPE *BeadType_add;
+  BEAD *Bead_add;
+//struct VECTOR **prototype;
   int *Index_add;
+  PARAMS *bond_type; // information about bond types
+  PARAMS *angle_type; // information about angle types
   //}}}
 
   if (add_vsf[0] == '\0') { // read stuff to be added FIELD
-    ReadField(input_add, NULL, &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add);
+    ReadField(input_add, NULL, &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add, &bond_type, &angle_type);
   } else { // read stuff to add from vtf file(s) ('-vtf' option) //{{{
     bool indexed_add = ReadStructure(add_vsf, add_vcf, &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add);
     // open input coordinate file
@@ -486,7 +488,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < Counts_add.Molecules; i++) {
       int mtype = Molecule_add[i].Type;
       // geometric centre
-      Vector centre;
+      VECTOR centre;
       centre.x = 0;
       centre.y = 0;
       centre.z = 0;
@@ -536,11 +538,11 @@ int main(int argc, char *argv[]) {
 
   // join original and added systems //{{{
   // create structures for new stuff
-  struct Counts Counts_new = ZeroCounts;
-  struct BeadType *BeadType_new;
-  struct MoleculeType *MoleculeType_new;
-  struct Bead *Bead_new;
-  struct Molecule *Molecule_new;
+  COUNTS Counts_new = InitCounts;
+  BEADTYPE *BeadType_new;
+  MOLECULETYPE *MoleculeType_new;
+  BEAD *Bead_new;
+  MOLECULE *Molecule_new;
   int *Index_new;
 
   Counts_new.Beads = Counts.Beads;
@@ -754,7 +756,7 @@ int main(int argc, char *argv[]) {
     VerboseOutput(input_coor, Counts_new, BoxLength, BeadType_new, Bead_new, MoleculeType_new, Molecule_new);
   } //}}}
   // create & fill output vsf file
-  WriteVsf(output_vsf, Counts_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new);
+  WriteVsf(output_vsf, Counts_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new, false);
 
   // square lowest/highest distance, if '-ld' and/or '-hd' options used //{{{
   if (lowest_dist != -1) {
@@ -772,7 +774,7 @@ int main(int argc, char *argv[]) {
   if (add_vsf[0] == '\0') { // randomly place monomers if FIELD-like file is used
     for (int i = 0; i < Counts_new.Unbonded; i++) {
       if (Bead_new[i].Flag) { // is this an original bead to be exchanged?
-        Vector random;
+        VECTOR random;
 
         double min_dist;
         if (lowest_dist != -1 || highest_dist != -1) {
@@ -786,7 +788,7 @@ int main(int argc, char *argv[]) {
               int btype = Bead[j].Type;
               // j can be added monomeric bead, so it's type can be higher than the number of types
               if (btype < Counts.TypesOfBeads && BeadType[btype].Use) {
-                Vector dist;
+                VECTOR dist;
                 dist = Distance(Bead[j].Position, random, BoxLength);
                 dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
                 if (dist.x < min_dist) {
@@ -838,8 +840,8 @@ int main(int argc, char *argv[]) {
     for (int i = Counts.Molecules; i < Counts_new.Molecules; i++) {
       int mtype = Molecule_new[i].Type;
 
-      Vector rotated[MoleculeType_new[mtype].nBeads];
-      Vector random = {0};
+      VECTOR rotated[MoleculeType_new[mtype].nBeads];
+      VECTOR random = {0};
 
       // rotate the molecule randomly //{{{
       // random rotation axis
@@ -854,7 +856,7 @@ int main(int argc, char *argv[]) {
       double angle = (double)rand() / ((double)RAND_MAX) * PI;
       // create rotation matrix
       struct Tensor {
-        Vector x, y, z;
+        VECTOR x, y, z;
       } rot;
       rot.x.x = cos(angle) + SQR(random.x) * (1 - cos(angle));
       rot.x.y = random.x * random.y * (1 - cos(angle)) - random.z * sin(angle);
@@ -895,7 +897,7 @@ int main(int argc, char *argv[]) {
             int btype_j = Bead[j].Type;
             // j can be added monomeric bead, so it's type can be higher than the number of types
             if (btype_j < Counts.TypesOfBeads && BeadType[btype_j].Use) {
-              Vector dist;
+              VECTOR dist;
               dist = Distance(Bead[j].Position, random, BoxLength);
               dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
               if (dist.x < min_dist) {
@@ -1002,10 +1004,8 @@ int main(int argc, char *argv[]) {
   free(input_add);
   free(add_vsf);
   free(add_vcf);
-//for (int i = 0; i < Counts_new.TypesOfMolecules; i++) {
-//  free(prototype[i]);
-//}
-//free(prototype);
+  free(angle_type);
+  free(bond_type);
   //}}}
 
   return 0;

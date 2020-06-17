@@ -111,11 +111,11 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // some variables //{{{
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc.
-  Molecule *Molecule;
-  MoleculeType *MoleculeType;
-  Vector BoxLength;
-  Vector box_lo; // {x,y,z}lo from data file to place beads in (0, BoxLength>
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  MOLECULE *Molecule;
+  MOLECULETYPE *MoleculeType;
+  VECTOR BoxLength;
+  VECTOR box_lo; // {x,y,z}lo from data file to place beads in (0, BoxLength>
   int bonds = 0; // total number of bonds
 //int angles = 0; // total number of angles //}}}
 
@@ -203,7 +203,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // fill something in BeadType struct //{{{
-  BeadType *BeadType = calloc(Counts.TypesOfBeads, sizeof(struct BeadType));
+  BEADTYPE *BeadType = calloc(Counts.TypesOfBeads, sizeof(struct BeadType));
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     sprintf(BeadType[i].Name, "bead%d", i+1);
     BeadType[i].Use = true;
@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // bead struct memory allocation //{{{
-  Bead *Bead = calloc(Counts.Beads, sizeof(struct Bead));
+  BEAD *Bead = calloc(Counts.Beads, sizeof(struct Bead));
   for (int i = 0; i < Counts.Beads; i++) {
     Bead[i].Aggregate = calloc(1, sizeof(int));
   } //}}}
@@ -549,7 +549,7 @@ int main(int argc, char *argv[]) {
   fclose(fw); //}}}
 
   // create & fill output vsf file
-  WriteVsf(output_vsf, Counts, BeadType, Bead, MoleculeType, Molecule);
+  WriteVsf(output_vsf, Counts, BeadType, Bead, MoleculeType, Molecule, false);
 
   // free memory (to make valgrind happy) //{{{
   free(BeadType);

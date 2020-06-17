@@ -47,7 +47,7 @@ void CommonHelp(bool error); //}}}
 void CommonOptions(int argc, char **argv, char **vsf_file,
                    bool *verbose, bool *silent, bool *script); //}}}
 
-// VerboseLongOption() //{{{
+//// VerboseLongOption() //{{{
 /**
  * \brief Option whether to use long verbose output (overrides
  * VerboseShortOutput) (`-V`).
@@ -57,7 +57,7 @@ void CommonOptions(int argc, char **argv, char **vsf_file,
  * \param [out] verbose      bool for `-v` option (verbose output)
  * \return `true` or `false` for error on common options
  */
-void VerboseLongOption(int argc, char **argv, bool *verbose); //}}}
+//void VerboseLongOption(int argc, char **argv, bool *verbose); //}}}
 
 // SilentOption() //{{{
 /**
@@ -91,8 +91,8 @@ bool VersionOption(int argc, char **argv); //}}}
  * \param [out] MoleculeType information about molecule types
  * \return `true` or `false` error or not error
  */
-bool ExcludeOption(int argc, char **argv, Counts Counts,
-                   MoleculeType **MoleculeType); //}}}
+bool ExcludeOption(int argc, char **argv, COUNTS Counts,
+                   MOLECULETYPE **MoleculeType); //}}}
 
 // JoinCoorOption() //{{{
 /**
@@ -121,7 +121,7 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf); //}}}
  * \return `true` or `false` error or not error
  */
 bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
-                    Counts Counts, BeadType **BeadType); //}}}
+                    COUNTS Counts, BEADTYPE **BeadType); //}}}
 
 // BoolOption() //{{{
 /**
@@ -228,8 +228,8 @@ bool FileOption(int argc, char **argv, char *opt, char **name); //}}}
  * \param [in]  MoleculeType information about molecule types
  * \return `true` or `false` for error
  */
-bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts Counts,
-                        MoleculeType **MoleculeType); //}}}
+bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
+                        COUNTS counts, MOLECULETYPE **MoleculeType); //}}}
 
 // MoleculeTypeOption2() //{{{
 /**
@@ -243,6 +243,6 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype, Counts C
  * \param [in]  MoleculeType information about molecule types
  * \return `true` or `false` for error
  */
-bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype, Counts Counts,
-                         MoleculeType **MoleculeType); //}}}
+bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
+                         COUNTS Counts, MOLECULETYPE **MoleculeType); //}}}
 #endif

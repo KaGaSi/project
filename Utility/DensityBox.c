@@ -148,12 +148,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -218,7 +218,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // number of bins //{{{
   double max_dist;

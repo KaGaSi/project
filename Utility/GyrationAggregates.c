@@ -167,12 +167,12 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
@@ -306,13 +306,13 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));
 
   // allocate Aggregate struct //{{{
-  Aggregate *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
+  AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
   for (int i = 0; i < Counts.Molecules; i++) {
     // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
     Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
@@ -341,7 +341,7 @@ int main(int argc, char *argv[]) {
   // asphericity: only normal sum
   double *Aspher_sum = calloc(Counts.Molecules,sizeof(double));
   // gyration tensor eigenvalues
-  struct Vector *eigen_sum = calloc(Counts.Molecules,sizeof(struct Vector));
+  VECTOR *eigen_sum = calloc(Counts.Molecules,sizeof(VECTOR));
   // total mass of aggregates: [size][0] normal sum, [size][1] sum of squares
   long int **mass_sum = malloc(Counts.Molecules*sizeof(int *));
   // number of molecule types in aggregates: [size][mol type] only normal sum
@@ -396,7 +396,7 @@ int main(int argc, char *argv[]) {
     double *Anis_step = calloc(Counts.Molecules,sizeof(double));
     double *Acyl_step = calloc(Counts.Molecules,sizeof(double));
     double *Aspher_step = calloc(Counts.Molecules,sizeof(double));
-    struct Vector *eigen_step = calloc(Counts.Molecules,sizeof(struct Vector));
+    VECTOR *eigen_step = calloc(Counts.Molecules,sizeof(VECTOR));
     for (int i = 0; i < Counts.Molecules; i++) {
       Rg_step[i] = calloc(3,sizeof(double));
       sqrRg_step[i] = calloc(3,sizeof(double));
@@ -468,13 +468,13 @@ int main(int argc, char *argv[]) {
 
 //        // calcule Rg the 'usual way' -- for testing purposes //{{{
 //        double Rg2 = 0;
-//        Vector test_com;
+//        VECTOR test_com;
 //        test_com.x = 0;
 //        test_com.y = 0;
 //        test_com.z = 0;
-//        Vector com = GeomCentre(n, list, Bead);
+//        VECTOR com = GeomCentre(n, list, Bead);
 //        for (int j = 0; j < n; j++) {
-//          Vector rij = Distance(Bead[list[j]].Position, com, BoxLength);
+//          VECTOR rij = Distance(Bead[list[j]].Position, com, BoxLength);
 //          Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
 //          test_com.x += Bead[list[j]].Position.x;
 //          test_com.y += Bead[list[j]].Position.y;
@@ -482,7 +482,7 @@ int main(int argc, char *argv[]) {
 //        }
 //        Rg2 /= n; //}}}
 
-        Vector eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+        VECTOR eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
 
         free(list); // free array of bead ids for gyration calculation
 

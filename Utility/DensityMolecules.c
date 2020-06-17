@@ -113,12 +113,12 @@ int main(int argc, char *argv[]) {
   strcpy(output_rho, argv[++count]); //}}}
 
   // variables - structures //{{{
-  BeadType *BeadType; // structure with info about all bead types
-  MoleculeType *MoleculeType; // structure with info about all molecule types
-  Bead *Bead; // structure with info about every bead
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  Molecule *Molecule; // structure with info about every molecule
-  Counts Counts = ZeroCounts; // structure with number of beads, molecules, etc. //}}}
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // options before reading system data //{{{
   bool silent;
@@ -259,7 +259,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  Vector BoxLength = GetPBC(vcf, input_coor);
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // number of bins //{{{
   double max_dist = 0.5 * Min3(BoxLength.x, BoxLength.y, BoxLength.z);
@@ -369,7 +369,7 @@ int main(int argc, char *argv[]) {
       if (MoleculeType[mol_type_i].Use) {
 
         // determine centre to calculate densities from //{{{
-        Vector com;
+        VECTOR com;
         if (centre[mol_type_i] == -1 ) { // use molecule's centre of mass
           com = CentreOfMass(MoleculeType[mol_type_i].nBeads, Molecule[i].Bead, Bead, BeadType);
         } else { // use centre[mol_type_i]-th molecule's bead as com
@@ -391,7 +391,7 @@ int main(int argc, char *argv[]) {
         for (int j = 0; j < MoleculeType[mol_type_i].nBeads; j++) {
           int bead_j = Molecule[i].Bead[j];
 
-          Vector dist = Distance(Bead[bead_j].Position, com, BoxLength);
+          VECTOR dist = Distance(Bead[bead_j].Position, com, BoxLength);
           dist.x = Length(dist);
 
           if (dist.x < max_dist) {
@@ -403,7 +403,7 @@ int main(int argc, char *argv[]) {
 
         // monomeric beads //{{{
         for (int j = 0; j < Counts.Unbonded; j++) {
-          Vector dist = Distance(Bead[j].Position, com, BoxLength);
+          VECTOR dist = Distance(Bead[j].Position, com, BoxLength);
           dist.x = Length(dist);
 
           if (dist.x < max_dist) {
