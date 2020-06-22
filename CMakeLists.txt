@@ -56,11 +56,12 @@ set(UTILS AddToSystem
   target_link_libraries(${utility} ${LIBRARIES} m)
 endforeach(utility)
 
-#set(ONETIME PlaceSquares)
-#        foreach(utility ${ONETIME})
-#  add_executable(${utility} OneTime/${utility}.c)
-#  target_link_libraries(${utility} m ${LIBRARIES})
-#endforeach(utility)
+set(ONETIME DensityBox_mod
+            Adsorbed)
+        foreach(utility ${ONETIME})
+  add_executable(${utility} OneTime/${utility}.c)
+  target_link_libraries(${utility} m ${LIBRARIES})
+endforeach(utility)
 
 # this somehow specifies fortran compiler
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
