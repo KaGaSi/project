@@ -478,7 +478,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
                 IsPosDouble(split[2]))) { // 4) 3rd <number>
       break;
     // exit with error if not empty line or comment
-    } else if (split[0][0] != '\n' && // empty line
+    } else if (split[0][0] != '\0' && // empty line
                split[0][0] != '#') { // comment
       fprintf(stderr, "\nError - %s: unrecognised line\n", vsf_file);
       ErrorPrintLine(split, words);
