@@ -1068,6 +1068,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     (*BeadType)[i].Write = false;
   } //}}}
 
+  // allocate memory for MoleculeType[].Angles (just to free later) //{{{
+  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].nAngles = 0;
+    (*MoleculeType)[i].Angle = calloc(1, sizeof(int *));
+  } //}}}
+
   return indexed;
 } //}}}
 
