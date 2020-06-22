@@ -232,7 +232,7 @@ void SortArray(int **array, int length, int mode) {
 int SplitLine(char out[30][100], char *line, char delim[8]) {
   // trim whitespaces at the beginning and end of line
   strcpy(line, TrimLine(line));
-  // split into words separated by " ", tab, or colon
+  // split into words separated by delimiters in delim array
   char *split[30];
   split[0] = strtok(line, delim); // first word
   int words = 0;
@@ -244,14 +244,18 @@ int SplitLine(char out[30][100], char *line, char delim[8]) {
   if (split[words-1][strlen(split[words-1])-1] == '\n') {
     split[words-1][strlen(split[words-1])-1] = '\0';
   }
-  if (split[words-1][0] == '\n') {
+  // if the last words is just '\0', disregard it
+  if (split[words-1][0] == '\0') {
     words--;
   }
-  // if the last words is just '\0', disregard it
+  // copy splits into the output array
   for (int i = 0; i < words; i++) {
     strcpy(out[i], split[i]);
   }
- return words;
+  if (words == 0) {
+    out[0][0] = '\0';
+  }
+  return words;
 } //}}}
 
 // TrimLine //{{{
