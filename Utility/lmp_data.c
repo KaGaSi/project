@@ -352,7 +352,7 @@ int main(int argc, char *argv[]) {
       int mtype = Molecule[i].Type;
       for (int j = 0; j < MoleculeType[mtype].nBonds; j++) {
         count++;
-        int type = MoleculeType[mtype].Bond[j][0];
+        int type = MoleculeType[mtype].Bond[j][2];
         int id1 = Molecule[i].Bead[MoleculeType[mtype].Bond[j][0]];
         int id2 = Molecule[i].Bead[MoleculeType[mtype].Bond[j][1]];
         fprintf(out, "%7d %3d %7d %7d\n", count, type+1, id1+1, id2+1);
