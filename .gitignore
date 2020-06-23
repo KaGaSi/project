@@ -2,7 +2,6 @@ test*
 build
 doc
 cscope*
-OneTime
 tags
 *aux
 *latexmk
