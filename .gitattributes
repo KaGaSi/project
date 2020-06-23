@@ -1,1 +1,1 @@
-*.pdf merge=ours
+CMakeLists.txt .gitignore merge=ours
