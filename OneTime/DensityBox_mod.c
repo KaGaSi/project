@@ -10,7 +10,9 @@ void Help(char cmd[50], bool error) { //{{{
 MODIFIED VERSION THAT CHECKS WHETHER SOME MOLECULAR BEADS ARE NEAR/FAR FROM \
 BOX END.\n\
 DensityBox utility calculates number density for all bead types in the \
-direction of specified axis (x, y, or z).\n\n");
+direction of specified axis (x, y, or z). This modified version calculates \
+density for molecules based on the relative position of the first and last \
+beads and the box edge.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
