@@ -1,1 +1,2 @@
-CMakeLists.txt .gitignore merge=ours
+CMakeLists.txt merge=ours
+.gitignore merge=ours
