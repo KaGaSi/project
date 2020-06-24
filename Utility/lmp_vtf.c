@@ -117,6 +117,7 @@ int main(int argc, char *argv[]) {
   VECTOR BoxLength;
   VECTOR box_lo; // {x,y,z}lo from data file to place beads in (0, BoxLength>
   int bonds = 0; // total number of bonds
+  int angles = 0; // total number of angles
 //int angles = 0; // total number of angles //}}}
 
   // open <input> //{{{
@@ -133,52 +134,102 @@ int main(int argc, char *argv[]) {
   // read data file header //{{{
   // data file header lines must start with a number (or '#' for comment),
   // therefore read until something else is encountered
-  line[0] = '\0';
   char split[30][100], delim[8];
+  int words;
   strcpy(delim, " \t");
-  // TODO: redo with do while - check split[0], not line[]
-  while (line[0] == '\0' || // empty line
-         line[0] == '#' || // comment line
-         line[0] == '-' ||  // negative number
-         line[0] == '\n' ||  // just white space
-         (line[0] >= '0' && line[0] <= '9')) { // positive number
-    // read one line
+  do {
     fgets(line, sizeof(line), fr);
-    int words = SplitLine(split, line, delim);
-
-    // read header data //{{{
-    for (int i = 0; i < words; i++) {
-      if (strcmp(split[i], "atoms") == 0) {
-        Counts.BeadsInVsf = atoi(split[0]);
-        Counts.Beads = atoi(split[0]);
+    words = SplitLine(split, line, delim);
+    // number of atoms //{{{
+    if (words > 1 && strcmp(split[1], "atoms") == 0) {
+      if (!IsInteger(split[0])) {
+        fprintf(stderr, "\nError: %s - 'atoms' keyword must be preceded by integer\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
       }
-      if (strcmp(split[i], "bonds") == 0) {
-        bonds = atoi(split[0]);
-      }
-//    if (strcmp(split[i], "angles") == 0) {
-//      angles = atoi(split[0]);
-//    }
-      if (strcmp(split[i], "atom") == 0 &&
-          (i+1) < words && strcmp(split[i+1], "types") == 0) {
-        Counts.TypesOfBeads = atoi(split[0]);
-      }
-      if (strcmp(split[i], "xlo") == 0 &&
-          (i+1) < words && strcmp(split[i+1], "xhi") == 0) {
-        BoxLength.x = atof(split[1]) - atof(split[0]);
-        box_lo.x = atof(split[0]);
-      }
-      if (strcmp(split[i], "ylo") == 0 &&
-          (i+1) < words && strcmp(split[i+1], "yhi") == 0) {
-        BoxLength.y = atof(split[1]) - atof(split[0]);
-        box_lo.y = atof(split[0]);
-      }
-      if (strcmp(split[i], "zlo") == 0 &&
-          (i+1) < words && strcmp(split[i+1], "zhi") == 0) {
-        BoxLength.z = atof(split[1]) - atof(split[0]);
-        box_lo.z = atof(split[0]);
-      }
+      Counts.BeadsInVsf = atoi(split[0]);
+      Counts.Beads = atoi(split[0]);
     } //}}}
-  } //}}}
+    // number of bonds //{{{
+    if (words > 1 && strcmp(split[1], "bonds") == 0) {
+      if (!IsInteger(split[0])) {
+        fprintf(stderr, "\nError: %s - 'bonds' keyword must be preceded by integer\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      bonds = atoi(split[0]);
+    } //}}}
+    // number of angles //{{{
+    if (words > 1 && strcmp(split[1], "bonds") == 0) {
+      if (!IsInteger(split[0])) {
+        fprintf(stderr, "\nError: %s - 'angles' keyword must be preceded by integer\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      angles = atoi(split[0]);
+      if (angles);
+    } //}}}
+    // number of bead types //{{{
+    if (words > 2 && strcmp(split[1], "atom") == 0 && strcmp(split[2], "types") == 0) {
+      if (!IsInteger(split[0])) {
+        fprintf(stderr, "\nError: %s - 'atom types' keyword must be preceded by integer\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      Counts.TypesOfBeads = atoi(split[0]);
+    } //}}}
+    // number of bond types //{{{
+    if (words > 2 && strcmp(split[1], "bond") == 0 && strcmp(split[2], "types") == 0) {
+      if (!IsInteger(split[0])) {
+        fprintf(stderr, "\nError: %s - 'bond types' keyword must be preceded by integer\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      Counts.TypesOfBonds = atoi(split[0]);
+    } //}}}
+    // number of angle types //{{{
+    if (words > 2 && strcmp(split[1], "angle") == 0 && strcmp(split[2], "types") == 0) {
+      if (!IsInteger(split[0])) {
+        fprintf(stderr, "\nError: %s - 'angle types' keyword must be preceded by integer\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      Counts.TypesOfAngles = atoi(split[0]);
+    } //}}}
+    // box length in x //{{{
+    if (words > 3 && strcmp(split[2], "xlo") == 0 && strcmp(split[3], "xhi") == 0) {
+      if (!IsDouble(split[0]) || !IsDouble(split[1])) {
+        fprintf(stderr, "\nError: %s - 'xlo xhi' keyword must be preceded by two floats\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      BoxLength.x = atof(split[1]) - atof(split[0]);
+      box_lo.x = atof(split[0]);
+    } //}}}
+    // box length in y //{{{
+    if (words > 3 && strcmp(split[2], "ylo") == 0 && strcmp(split[3], "yhi") == 0) {
+      if (!IsDouble(split[0]) || !IsDouble(split[1])) {
+        fprintf(stderr, "\nError: %s - 'ylo yhi' keyword must be preceded by two floats\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      BoxLength.y = atof(split[1]) - atof(split[0]);
+      box_lo.y = atof(split[0]);
+    } //}}}
+    // box length in x //{{{
+    if (words > 3 && strcmp(split[2], "zlo") == 0 && strcmp(split[3], "zhi") == 0) {
+      if (!IsDouble(split[0]) || !IsDouble(split[1])) {
+        fprintf(stderr, "\nError: %s - 'zlo zhi' keyword must be preceded by two floats\n", input);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      BoxLength.z = atof(split[1]) - atof(split[0]);
+      box_lo.z = atof(split[0]);
+    } //}}}
+  } while (words == 0 ||
+           split[0][0] == '#' ||
+           IsDouble(split[0]) ||
+           IsInteger(split[0])); //}}}
 
   // some error checking //{{{
   if (Counts.TypesOfBeads == 0) {
@@ -229,10 +280,16 @@ int main(int argc, char *argv[]) {
     if (strcmp(split[0], "Masses") == 0) {
       // skip one line (mandatory in lammps data format)
       fgets(line, sizeof(line), fr);
+      // get mass of every bead
       for (int i = 0; i < Counts.TypesOfBeads; i++) {
         fgets(line, sizeof(line), fr);
-        strcpy(line, TrimLine(line)); // trim excess whitespace
-        int words = SplitLine(split, line, delim);
+        words = SplitLine(split, line, delim);
+        // error if incorrect line //{{{
+        if (words < 2 || !IsInteger(split[0]) || !IsPosDouble(split[1])) {
+          fprintf(stderr, "\nError: %s - each line in 'Masses' section must start with '<int> <float>'\n", input);
+          ErrorPrintLine(split, words);
+          exit(1);
+        } //}}}
         BeadType[i].Mass = atof(split[1]);
         // if there's a comment at the end of the line, consider it bead name
         if (words > 2 && split[2][0] == '#') {
@@ -508,7 +565,7 @@ int main(int argc, char *argv[]) {
 
     // read and split next line
     fgets(line, sizeof(line), fr);
-    SplitLine(split, line, delim);
+    words = SplitLine(split, line, delim);
   }
   free(mols);
   fclose(fr); //}}}

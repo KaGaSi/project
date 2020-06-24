@@ -119,9 +119,12 @@ void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType) {
  * SplitLine()) to error output.
  */
 void ErrorPrintLine(char split[30][100], int words) {
-  fprintf(stderr, "        Wrong line:|");
+  fprintf(stderr, "       Wrong line: |");
   for (int i = 0; i < words; i++) {
-    fprintf(stderr, " %s", split[i]);
+    if (i != 0) {
+      putc(' ', stderr);
+    }
+    fprintf(stderr, "%s", split[i]);
   }
   fprintf(stderr, "|\n\n");
 } //}}}
