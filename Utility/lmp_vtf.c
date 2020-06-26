@@ -275,7 +275,6 @@ int main(int argc, char *argv[]) {
       monomer = 0; // monomer beads designated by mol_ID = 0 in data file
   while ((test = getc(fr)) != EOF) {
     ungetc(test, fr);
-
     // atom masses //{{{
     if (strcmp(split[0], "Masses") == 0) {
       // skip one line (mandatory in lammps data format)
@@ -304,26 +303,33 @@ int main(int argc, char *argv[]) {
         }
       }
     } //}}}
-
     // atoms section //{{{
     if (strcmp(split[0], "Atoms") == 0) {
+      // array for number of beads in each molecule
       mols = calloc(Counts.Beads, sizeof(int));
       // array for list of beads in each molecule
+      // bead_mols[i] ... molecule's id; bead_mols[][i] ... molecule's beads
       int **bead_mols = calloc(Counts.Beads, sizeof(int *));
       for (int i = 0; i < Counts.Beads; i++) {
         bead_mols[i] = calloc(1, sizeof(int));
       }
-
       // skip one line (mandatory in lammps data format)
       fgets(line, sizeof(line), fr);
-
       // go through atom section to get basic info //{{{
       fpos_t pos; // set file counter
       fgetpos(fr, &pos); // save file pointer
       for (int i = 0; i < Counts.Beads; i++) {
         fgets(line, sizeof(line), fr);
-        SplitLine(split, line, delim);
-
+        words = SplitLine(split, line, delim);
+        // format of each line: <id> <mol_id> <btype> <charge> <x> <y> <z>
+        // Error - incorrect format //{{{
+        if (words < 7 ||
+            !IsInteger(split[0]) || !IsInteger(split[1]) || !IsInteger(split[2]) ||
+            !IsDouble(split[3]) || !IsDouble(split[4]) || !IsDouble(split[5]) || !IsDouble(split[6])) {
+          fprintf(stderr, "\nError: %s - each 'Atoms' line must be <id> <mol_id> <bead type> <charge> <x> <y> <z>\n", input);
+          ErrorPrintLine(split, words);
+          exit(1);
+        } //}}}
         int id = atoi(split[0]) - 1, // in lammps, these start at 1
             mol_id = atoi(split[1]) - 1, // in lammps, molecules start with 1; unbonded atoms can be 0
             btype = atoi(split[2]) - 1; // in lammps, these start at 1
@@ -331,7 +337,7 @@ int main(int argc, char *argv[]) {
         if (mol_id == -1) { // corresponds to 0 in the data file
           monomer++;
           Bead[id].Molecule = -1;
-        } else {
+        } else { // possibly in a molecule (if more beads share its mol_id)
           mols[mol_id]++;
           bead_mols[mol_id] = realloc(bead_mols[mol_id], mols[mol_id]*sizeof(int));
           bead_mols[mol_id][mols[mol_id]-1] = id;
@@ -346,9 +352,7 @@ int main(int argc, char *argv[]) {
         Bead[id].Index = id;
         Index[id] = id;
       } //}}}
-
       Counts.Unbonded = monomer;
-
       // go through possible molecules and remove 1-bead molecules //{{{
       count = 0; // count real molecules (i.e., those with more than 1 bead)
       for (int i = 0; i < Counts.Beads; i++) {
@@ -366,7 +370,7 @@ int main(int argc, char *argv[]) {
           count++;
         }
       } //}}}
-
+      // TODO: is the 'remove 1-bead...' necessary? Join with 'allocate Molecule struct...'
       // remove 1-bead molecules from mols array and sort bead_mols arrayy according to ascending bead index //{{{
       count = 0; // count real molecules (i.e., those with more than 1 bead)
       for (int i = 0; i < Counts.Beads; i++) {
@@ -381,12 +385,11 @@ int main(int argc, char *argv[]) {
           SortArray(&bead_mols[count], mols[i], 0);
           count++;
         }
-      }
-      // zeroize unused part of mols array - just to be on the save side
+      } //}}}
+      // zeroize unused part of mols array - just to be on the save side //{{{
       for (int i = Counts.Molecules; i < Counts.Beads; i++) {
         mols[i] = 0;
       } //}}}
-
       // allocate Molecule struct and fill Molecule[].Bead array //{{{
       Molecule = calloc(Counts.Molecules, sizeof(struct Molecule));
       for (int i = 0; i < Counts.Molecules; i++) {
@@ -395,14 +398,12 @@ int main(int argc, char *argv[]) {
           Molecule[i].Bead[j] = bead_mols[i][j];
         }
       } //}}}
-
       // free helper array  //{{{
       for (int i = 0; i < Counts.Beads; i++) {
         free(bead_mols[i]);
       }
       free(bead_mols); //}}}
     } //}}}
-
     // bonds section //{{{
     if (strcmp(split[0], "Bonds") == 0) {
       // allocate helper arrays to hold bond info //{{{
@@ -415,29 +416,32 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i < Counts.Molecules; i++) {
          mol_bonds[i] = calloc(1, sizeof(int *));
       } //}}}
-
       // skip one line (mandatory in lammps data format)
       fgets(line, sizeof(line), fr);
-
       // read all bonds //{{{
       for (int i = 0; i < bonds; i++) {
         fgets(line, sizeof(line), fr);
-        SplitLine(split, line, delim);
-
+        words = SplitLine(split, line, delim);
+        // format of each line: <bond id> <bond type> <bead1> <bead2>
+        // Error - incorrect format //{{{
+        if (words < 4 ||
+            !IsInteger(split[0]) || !IsInteger(split[1]) ||
+            !IsInteger(split[2]) || !IsInteger(split[3])) {
+          fprintf(stderr, "\nError: %s - each 'Bonds' line must be <bond id> <bond type> <bead1d> <bead2>\n", input);
+          ErrorPrintLine(split, words);
+          exit(1);
+        } //}}}
         int bead1 = atoi(split[2]) - 1; // in lammps, atom ids start at 1
         int bead2 = atoi(split[3]) - 1;
-
         // assign molecule to the bond
         int mol = Bead[bead1].Molecule;
-
         // error when the second bead is in different molecule //{{{
         if (mol != Bead[bead2].Molecule) {
-          fprintf(stderr, "\nError in bond #%d in %s: ", atoi(split[0]), input);
+          fprintf(stderr, "\nError in bond %d in %s: ", atoi(split[0]), input);
           fprintf(stderr, "atoms %d and %d are in different molecules ", bead1+1, bead2+1);
           fprintf(stderr, "(%d and %d)\n\n", mol+1, Bead[bead2].Molecule+1);
           exit(1);
         } //}}}
-
         // increment number of bonds in the molecule
         bonds_per_mol[mol]++;
         int bond = bonds_per_mol[mol];
@@ -447,15 +451,13 @@ int main(int argc, char *argv[]) {
         mol_bonds[mol][bond-1][0] = bead1;
         mol_bonds[mol][bond-1][1] = bead2;
       } //}}}
-
       // sort bonds according to the id of the first bead in a bond //{{{
       for (int i = 0; i < Counts.Molecules; i++) {
         SortBonds(mol_bonds[i], bonds_per_mol[i]);
       } //}}}
-
       // minimize mol_bonds based on lowest id in each molecule //{{{
       for (int i = 0; i < Counts.Molecules; i++) {
-        int lowest = 1000000;
+        int lowest = Counts.Beads; // just some high number
         for (int j = 0; j < mols[i]; j++) {
           if (Molecule[i].Bead[j] < lowest) {
             lowest = Molecule[i].Bead[j];
@@ -466,7 +468,6 @@ int main(int argc, char *argv[]) {
           mol_bonds[i][j][1] -= lowest;
         }
       } //}}}
-
       // identify molecule type based on bead order and connectivity //{{{
       MoleculeType = calloc(1, sizeof(struct MoleculeType));
       for (int i = 0; i < Counts.Molecules; i++) {
@@ -501,7 +502,6 @@ int main(int argc, char *argv[]) {
             }
           }
         } //}}}
-
         // add new type? //{{{
         if (!exists) {
           int mtype = Counts.TypesOfMolecules;
@@ -518,7 +518,7 @@ int main(int argc, char *argv[]) {
           for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
             int btype = Bead[Molecule[i].Bead[j]].Type;
             MoleculeType[mtype].Bead[j] = btype;
-            exists = false; // recycling the bool
+            exists = false; // recycling the bool to check if btype is alread in BType[]
             for (int k = 0; k < MoleculeType[mtype].nBTypes; k++) {
               if (MoleculeType[mtype].BType[k] == btype) {
                 exists = true;
@@ -543,7 +543,6 @@ int main(int argc, char *argv[]) {
           Counts.TypesOfMolecules++;
         } //}}}
       } //}}}
-
       // free helper arrays //{{{
       for (int i = 0; i < Counts.Molecules; i++) {
         for (int j = 0; j < bonds_per_mol[i]; j++) {
@@ -554,7 +553,6 @@ int main(int argc, char *argv[]) {
       free(mol_bonds);
       free(bonds_per_mol); //}}}
     } //}}}
-
 //  // ignore angles //{{{
 //  if (strcmp(split[0], "Angles") == 0) {
 //    fgets(line, sizeof(line), fr);
@@ -562,7 +560,6 @@ int main(int argc, char *argv[]) {
 //      fgets(line, sizeof(line), fr);
 //    }
 //  } //}}}
-
     // read and split next line
     fgets(line, sizeof(line), fr);
     words = SplitLine(split, line, delim);
