@@ -27,7 +27,9 @@ well as according to molecule connectivity. Angles are disregarded.\n\n");
   fprintf(ptr, "      --version      print version number and exit\n");
 } //}}}
 
-// TODO: error checking for input file
+// TODO: read angles
+
+// TODO: make data file reading into a separate function in Read.c
 
 int main(int argc, char *argv[]) {
 
@@ -118,7 +120,8 @@ int main(int argc, char *argv[]) {
   VECTOR box_lo; // {x,y,z}lo from data file to place beads in (0, BoxLength>
   int bonds = 0; // total number of bonds
   int angles = 0; // total number of angles
-//int angles = 0; // total number of angles //}}}
+  PARAMS *bond_type; // information about bond types
+  PARAMS *angle_type; // information about angle types //}}}
 
   // open <input> //{{{
   FILE *fr;
@@ -160,7 +163,7 @@ int main(int argc, char *argv[]) {
       bonds = atoi(split[0]);
     } //}}}
     // number of angles //{{{
-    if (words > 1 && strcmp(split[1], "bonds") == 0) {
+    if (words > 1 && strcmp(split[1], "angles") == 0) {
       if (!IsInteger(split[0])) {
         fprintf(stderr, "\nError: %s - 'angles' keyword must be preceded by integer\n", input);
         ErrorPrintLine(split, words);
@@ -268,6 +271,8 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   int *Index = calloc(Counts.Beads, sizeof(int)); // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  bond_type = calloc(Counts.TypesOfBonds, sizeof(PARAMS));
+  angle_type = calloc(Counts.TypesOfAngles, sizeof(PARAMS));
 
   // read body of data file //{{{
   int test,
@@ -276,7 +281,7 @@ int main(int argc, char *argv[]) {
   while ((test = getc(fr)) != EOF) {
     ungetc(test, fr);
     // atom masses //{{{
-    if (strcmp(split[0], "Masses") == 0) {
+    if (words > 0 && strcmp(split[0], "Masses") == 0) {
       // skip one line (mandatory in lammps data format)
       fgets(line, sizeof(line), fr);
       // get mass of every bead
@@ -303,8 +308,44 @@ int main(int argc, char *argv[]) {
         }
       }
     } //}}}
+    // bond coefficients //{{{
+    if (words > 1 && strcmp(split[0], "Bond") == 0 && strcmp(split[1], "Coeffs") == 0) {
+      // skip one line (mandatory in lammps data format)
+      fgets(line, sizeof(line), fr);
+      // get mass of every bead
+      for (int i = 0; i < Counts.TypesOfBonds; i++) {
+        fgets(line, sizeof(line), fr);
+        words = SplitLine(split, line, delim);
+        // error if incorrect line //{{{
+        if (words < 3 || !IsInteger(split[0]) || !IsPosDouble(split[1]) || !IsPosDouble(split[2])) {
+          fprintf(stderr, "\nError: %s - each line in 'Bond Coeffs' section must start with '<int> <float> <float>'\n", input);
+          ErrorPrintLine(split, words);
+          exit(1);
+        } //}}}
+        bond_type[i].a = atof(split[1]);
+        bond_type[i].b = atof(split[2]);
+      }
+    } //}}}
+    // angle coefficients //{{{
+    if (words > 1 && strcmp(split[0], "Angle") == 0 && strcmp(split[1], "Coeffs") == 0) {
+      // skip one line (mandatory in lammps data format)
+      fgets(line, sizeof(line), fr);
+      // get mass of every bead
+      for (int i = 0; i < Counts.TypesOfAngles; i++) {
+        fgets(line, sizeof(line), fr);
+        words = SplitLine(split, line, delim);
+        // error if incorrect line //{{{
+        if (words < 3 || !IsInteger(split[0]) || !IsPosDouble(split[1]) || !IsPosDouble(split[2])) {
+          fprintf(stderr, "\nError: %s - each line in 'Angle Coeffs' section must start with '<int> <float> <float>'\n", input);
+          ErrorPrintLine(split, words);
+          exit(1);
+        } //}}}
+        angle_type[i].a = atof(split[1]);
+        angle_type[i].b = atof(split[2]);
+      }
+    } //}}}
     // atoms section //{{{
-    if (strcmp(split[0], "Atoms") == 0) {
+    if (words > 0 && strcmp(split[0], "Atoms") == 0) {
       // array for number of beads in each molecule
       mols = calloc(Counts.Beads, sizeof(int));
       // array for list of beads in each molecule
@@ -405,7 +446,7 @@ int main(int argc, char *argv[]) {
       free(bead_mols); //}}}
     } //}}}
     // bonds section //{{{
-    if (strcmp(split[0], "Bonds") == 0) {
+    if (words > 0 && strcmp(split[0], "Bonds") == 0) {
       // allocate helper arrays to hold bond info //{{{
       // number of bonds in each molecule
       int *bonds_per_mol = calloc(Counts.Molecules, sizeof(int));
@@ -431,6 +472,7 @@ int main(int argc, char *argv[]) {
           ErrorPrintLine(split, words);
           exit(1);
         } //}}}
+        int type = atoi(split[1]) - 1; // in lammps, bond types start at 1
         int bead1 = atoi(split[2]) - 1; // in lammps, atom ids start at 1
         int bead2 = atoi(split[3]) - 1;
         // assign molecule to the bond
@@ -447,9 +489,10 @@ int main(int argc, char *argv[]) {
         int bond = bonds_per_mol[mol];
         // add bonded beads to the molecule they belong to
         mol_bonds[mol] = realloc(mol_bonds[mol], bond*sizeof(int *));
-        mol_bonds[mol][bond-1] = calloc(2, sizeof(int));
+        mol_bonds[mol][bond-1] = calloc(3, sizeof(int));
         mol_bonds[mol][bond-1][0] = bead1;
         mol_bonds[mol][bond-1][1] = bead2;
+        mol_bonds[mol][bond-1][2] = type;
       } //}}}
       // sort bonds according to the id of the first bead in a bond //{{{
       for (int i = 0; i < Counts.Molecules; i++) {
@@ -535,9 +578,10 @@ int main(int argc, char *argv[]) {
           MoleculeType[mtype].nBonds = bonds_per_mol[i];
           MoleculeType[mtype].Bond = calloc(MoleculeType[mtype].nBonds, sizeof(int *));
           for (int j = 0; j < MoleculeType[mtype].nBonds; j++) {
-            MoleculeType[mtype].Bond[j] = calloc(2, sizeof(int));
+            MoleculeType[mtype].Bond[j] = calloc(3, sizeof(int));
             MoleculeType[mtype].Bond[j][0] = mol_bonds[i][j][0];
             MoleculeType[mtype].Bond[j][1] = mol_bonds[i][j][1];
+            MoleculeType[mtype].Bond[j][2] = mol_bonds[i][j][2];
           }
           MoleculeType[mtype].Write = true;
           Counts.TypesOfMolecules++;
@@ -553,13 +597,25 @@ int main(int argc, char *argv[]) {
       free(mol_bonds);
       free(bonds_per_mol); //}}}
     } //}}}
-//  // ignore angles //{{{
-//  if (strcmp(split[0], "Angles") == 0) {
-//    fgets(line, sizeof(line), fr);
-//    for (int i = 0; i < angles; i++) {
-//      fgets(line, sizeof(line), fr);
-//    }
-//  } //}}}
+    // TODO: angles //{{{
+    if (words > 0 && strcmp(split[0], "Angles") == 0) {
+      // TODO: bonds-like helper arrays
+      fgets(line, sizeof(line), fr);
+      // read all angles //{{{
+      for (int i = 0; i < angles; i++) {
+        fgets(line, sizeof(line), fr);
+        words = SplitLine(split, line, delim);
+        // format of each line: <angle id> <angle type> <bead1> <bead2> <bead3>
+        // Error - incorrect format //{{{
+        if (words < 5 ||
+            !IsInteger(split[0]) || !IsInteger(split[1]) ||
+            !IsInteger(split[2]) || !IsInteger(split[3]) || !IsInteger(split[4])) {
+          fprintf(stderr, "\nError: %s - each 'Angles' line must be <angle id> <angle type> <bead1d> <bead2> <bead3>\n", input);
+          ErrorPrintLine(split, words);
+          exit(1);
+        } //}}}
+      } //}}}
+    } //}}}
     // read and split next line
     fgets(line, sizeof(line), fr);
     words = SplitLine(split, line, delim);
@@ -578,6 +634,8 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput("\0", Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    PrintBondTypes(Counts, bond_type);
+    PrintAngleTypes(Counts, angle_type);
   } //}}}
 
   // write out.vcf file //{{{
@@ -587,12 +645,12 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  // print command
-  fprintf(fw, "#Created by: lmp_vtf");
-    for (int i = 1; i < argc; i++) {
-      fprintf(fw, " %s", argv[i]);
-    }
-  fprintf(fw, "\n");
+  // print command to output vcf file
+  fprintf(fw, "# Created by: lmp_vtf");
+  for (int i = 1; i < argc; i++) {
+    fprintf(fw, " %s", argv[i]);
+  }
+  fprintf(fw, " (AnalysisTools version %s; https://github.com/KaGaSi/AnalysisTools/releases)\n", VERSION);
 
   fprintf(fw, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
 
@@ -610,5 +668,7 @@ int main(int argc, char *argv[]) {
   FreeBead(Counts, &Bead);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
-  free(Index); //}}}
+  free(Index);
+  free(angle_type);
+  free(bond_type); //}}}
 }
