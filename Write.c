@@ -78,6 +78,8 @@ void WriteVsf(char *input_vsf, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
     exit(1);
   } //}}}
 
+  fprintf(fw, "# Created by AnalysisTools version %s (https://github.com/KaGaSi/AnalysisTools/releases)\n", VERSION);
+
   // find most common type of bead and make it default //{{{
   int type_def = -1, count = 0;
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
