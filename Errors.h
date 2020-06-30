@@ -101,4 +101,14 @@ void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType); //}}}
  * \param [in] words     number of strings in the split array
  */
 void ErrorPrintLine(char split[30][100], int words); //}}}
+
+// WarnElNeutrality() //{{{
+/**
+ * \brief Function warning about charged system
+ *
+ * \param [in] Counts    numbers of beads, molecules, etc.
+ * \param [in] BeadType  informationn about bead types
+ * \param [in] file      file name containing the system data
+ */
+void WarnElNeutrality(COUNTS Counts, BEADTYPE *BeadType, char *file); //}}}
 #endif
