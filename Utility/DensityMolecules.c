@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
 
   // <width> - number of starting timestep //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsInteger(argv[++count])) {
     ErrorNaN("<width>");
     Help(argv[0], true);
     exit(1);
@@ -143,7 +143,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -173,7 +175,9 @@ int main(int argc, char *argv[]) {
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (mol_type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: molecule '%s' is not included in %s\n\n", argv[count], input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -224,11 +228,13 @@ int main(int argc, char *argv[]) {
         int mol_type = FindMoleculeType(argv[i+j], Counts, MoleculeType);
 
         if (mol_type == -1) {
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "\nError: molecule '%s' does not exist in FIELD ('-c' option)\n\n", argv[i+j]);
+          fprintf(stderr, "\033[0m");
           exit(1);
         } else {
           // Error - non-numeric argument //{{{
-          if (argv[i+j+1][0] < '0' || argv[i+j+1][0] > '9') {
+          if (!IsInteger(argv[i+j+1])) {
             ErrorNaN("-c");
             Help(argv[0], true);
             exit(1);
@@ -240,9 +246,11 @@ int main(int argc, char *argv[]) {
 
           // Error - too high bead number //{{{
           if (centre[mol_type] > MoleculeType[mol_type].nBeads) {
+            fprintf(stderr, "\033[1;31m");
             fprintf(stderr, "\nError: incorrect number in '-c' option (%dth bead in molecule "
               "%s containing only %d beads)\n\n", centre[mol_type]+1, MoleculeType[mol_type].Name,
               MoleculeType[mol_type].nBeads);
+            fprintf(stderr, "\033[0m");
             exit(1);
           } //}}}
         }
@@ -307,7 +315,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "Error: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }

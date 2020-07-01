@@ -197,7 +197,9 @@ int main(int argc, char *argv[]) {
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
     if (type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType);
       exit(1);
     }
@@ -326,7 +328,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -419,7 +423,9 @@ int main(int argc, char *argv[]) {
           count_n_opt++;
         } else {
           if (SkipCoor(vcf, Counts, &stuff)) {
+            fprintf(stderr, "\033[1;31m");
             fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+            fprintf(stderr, "\033[0m");
             exit(1);
           }
         }
@@ -508,7 +514,9 @@ int main(int argc, char *argv[]) {
         }
 
         if (SkipCoor(vcf, Counts, &stuff)) {
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+          fprintf(stderr, "\033[0m");
           exit(1);
         }
       } //}}}

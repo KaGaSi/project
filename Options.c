@@ -127,12 +127,14 @@ bool ExcludeOption(int argc, char **argv, COUNTS Counts,
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
 
         if (type == -1) { // is it in vsf?
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "Error: non-existent molecule name (%s)\n", argv[i+1+j]);
           fprintf(stderr, "Molecule names in structure file:\n");
           for (int k = 0; k < Counts.TypesOfMolecules; k++) {
             fprintf(stderr, "%3d %s\n", k, (*MoleculeType)[k].Name);
           }
           putc('\n', stderr);
+          fprintf(stderr, "\033[0m");
           return(true);
         } else {
           // exclude that molecule
@@ -171,8 +173,9 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
       // test if <joined.vcf> filename ends with '.vcf' (required by VMD) //{{{
       char *dot = strrchr(joined_vcf, '.');
       if (!dot || (strcmp(dot, ".vcf") && strcmp(dot, ".vtf"))) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: '%s' does not have .vcf ending!\n", joined_vcf);
-
+        fprintf(stderr, "\033[0m");
         return(true);
       } //}}}
     }
@@ -242,11 +245,15 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
 
       // Error - non-numeric or missing argument //{{{
       if ((i+1) >= argc) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Missing numeric argument for '%s' option!\n", opt);
+        fprintf(stderr, "\033[0m");
         return(true);
       }
       if ((i+1) >= argc || argv[i+1][0] < '0' || argv[i+1][0] > '9') {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Non-numeric argement for '%s' option!\n", opt);
+        fprintf(stderr, "\033[0m");
         return(true);
       } //}}}
 
@@ -269,11 +276,15 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value) {
 
       // Error - non-numeric or missing argument //{{{
       if ((i+1) >= argc) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Missing numeric argument for '%s' option!\n", opt);
+        fprintf(stderr, "\033[0m");
         return(true);
       }
       if ((i+1) >= argc || argv[i+1][0] < '0' || argv[i+1][0] > '9') {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Non-numeric argement for '%s' option!\n", opt);
+        fprintf(stderr, "\033[0m");
         return(true);
       } //}}}
 
@@ -302,7 +313,9 @@ bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *value
 
         // Error - non-numeric or missing argument //{{{
         if (argv[arg][0] < '0' || argv[i+1+n][0] > '9') {
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "Error: option '%s' - non-numeric argement(s)\n", opt);
+          fprintf(stderr, "\033[0m");
           return true;
         } //}}}
 
@@ -345,7 +358,9 @@ bool MultiDoubleOption(int argc, char **argv, char *opt, int *count, double *val
 
         // Error - non-numeric or missing argument //{{{
         if (argv[arg][0] < '0' || argv[i+1+n][0] > '9') {
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "Error: option '%s' - non-numeric argement(s)\n", opt);
+          fprintf(stderr, "\033[0m");
           return true;
         } //}}}
 
@@ -384,8 +399,10 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, c
       // Error - no output file name //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-' ||
           (argv[i+1][0] >= '0' && argv[i+1][0] <= '9')) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Error: option '%s' - missing output file name", opt);
         fprintf(stderr, " (or the file name begins with '-' or a number)\n");
+        fprintf(stderr, "\033[0m");
         return false;
       } //}}}
       strcpy(file, argv[i+1+n]);
@@ -395,7 +412,9 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, c
 
         // Error - non-numeric or missing argument //{{{
         if ((i+2+n) >= argc || argv[i+2+n][0] < '0' || argv[i+2+n][0] > '9') {
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "Error: option '%s' - non-numeric argement(s)\n", opt);
+          fprintf(stderr, "\033[0m");
           return true;
         } //}}}
 
@@ -458,17 +477,21 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
 
       // Error - missing or wrong argument //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Missing argument for '%s' option (or molecule name beginning with a dash)!\n", opt);
+        fprintf(stderr, "\033[0m");
         return(true);
       } //}}}
 
       *moltype = FindMoleculeType(argv[i+1], Counts, *MoleculeType);
       if (*moltype == -1) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Error: molecule '%s' does not exist in structure file ('%s' option)!\n\n", argv[i+1], opt);
         fprintf(stderr, "   Present molecule types:\n");
         for (int j = 0; j < Counts.TypesOfMolecules; j++) {
           fprintf(stderr, "%s\n", (*MoleculeType)[j].Name);
         }
+        fprintf(stderr, "\033[0m");
         return(true);
       }
     }
@@ -495,7 +518,9 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
 
       // Error - missing or wrong argument //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Missing argument for '%s' option (or molecule name beginning with a dash)!\n", opt);
+        fprintf(stderr, "\033[0m");
         return(true);
       } //}}}
 
@@ -505,11 +530,13 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
 
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
         if (type == -1) { // is argv[i+1+j] in vsf?
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "Error: molecule '%s' does not exist in the provided coordinate file ('%s' option)!\n\n", argv[i+1+j], opt);
           fprintf(stderr, "   Present molecule types:\n");
           for (int k = 0; k < Counts.TypesOfMolecules; k++) {
             fprintf(stderr, "%s\n", (*MoleculeType)[k].Name);
           }
+          fprintf(stderr, "\033[0m");
           return(true);
         }
         (*moltype)[type] = 1;

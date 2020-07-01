@@ -196,14 +196,18 @@ int main(int argc, char *argv[]) {
               exit(1);
             }
             if (ErrorExtension(add_vcf, ext, extension)) {
+              fprintf(stderr, "\033[1;31m");
               fprintf(stderr, "       Wrong second filename!\n");
+              fprintf(stderr, "\033[0m");
               Help(argv[0], true);
               exit(1);
             }
             strcpy(argv[i+1], temp); // restore vsf filename
             break;
           } else { // there's no more cli arguments
+            fprintf(stderr, "\033[1;31m");
             fprintf(stderr, "\nError: option -vtf is missing second filename!\n");
+            fprintf(stderr, "\033[0m");
             Help(argv[0], true);
             exit(1);
           }
@@ -241,7 +245,9 @@ int main(int argc, char *argv[]) {
       }
     }
     if (!bt) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: if '-ld' and/or '-hd' is used, '-bt' must be specified as well\n\n");
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   } //}}}
@@ -254,7 +260,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (test != 2) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: option '-cx' requires two numeric arguments\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   // make sure first number is smaller
@@ -271,7 +279,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (test != 2) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: option '-cy' requires two numeric arguments\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   // make sure first number is smaller
@@ -287,7 +297,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (test != 2) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: option '-cz' requires two numeric arguments\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   // make sure first number is smaller
@@ -398,7 +410,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -434,7 +448,9 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
   } else {
+    fprintf(stderr, "\033[1;33m");
     fprintf(stderr, "\nWarning: using last step in %s (%d)\n", input_coor, count);
+    fprintf(stderr, "\033[0m");
   }
   fclose(vcf); //}}}
 
@@ -477,9 +493,11 @@ int main(int argc, char *argv[]) {
   }
   // count beads to be added
   if (Counts_add.Beads > can_be_exchanged) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: insufficient beads to exchange\n");
     fprintf(stderr, "     Number of exchangeable beads in the original system: %d\n", can_be_exchanged);
     fprintf(stderr, "     Number of beads to be added: %d\n\n", Counts_add.Beads);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -549,6 +567,8 @@ int main(int argc, char *argv[]) {
   Counts_new.BeadsInVsf = Counts.BeadsInVsf;
   Counts_new.Bonded = Counts.Bonded + Counts_add.Bonded;
   Counts_new.Unbonded = Counts.Beads - Counts_new.Bonded;
+  Counts_new.TypesOfBonds = Counts_add.TypesOfBonds;
+  Counts_new.TypesOfAngles = Counts_add.TypesOfAngles;
   Counts_new.Molecules = Counts.Molecules + Counts_add.Molecules;
   // fill BeadType struct for the new system
   Counts_new.TypesOfBeads = Counts.TypesOfBeads;
@@ -599,10 +619,12 @@ int main(int argc, char *argv[]) {
     MoleculeType_new[i].nBonds = MoleculeType[i].nBonds;
     MoleculeType_new[i].Bond = calloc(MoleculeType_new[i].nBonds, sizeof(int *));
     for (int j = 0; j < MoleculeType_new[i].nBonds; j++) {
-      MoleculeType_new[i].Bond[j] = calloc(2, sizeof(int));
+      MoleculeType_new[i].Bond[j] = calloc(3, sizeof(int));
       MoleculeType_new[i].Bond[j][0] = MoleculeType[i].Bond[j][0];
       MoleculeType_new[i].Bond[j][1] = MoleculeType[i].Bond[j][1];
+      MoleculeType_new[i].Bond[j][2] = MoleculeType[i].Bond[j][2];
     }
+    MoleculeType_new[i].nAngles = 0;
     MoleculeType_new[i].nBTypes = MoleculeType[i].nBTypes;
     MoleculeType_new[i].BType = calloc(MoleculeType_new[i].nBTypes, sizeof(int));
     for (int j = 0; j < MoleculeType_new[i].nBTypes; j++) {
@@ -638,9 +660,19 @@ int main(int argc, char *argv[]) {
       MoleculeType_new[type].nBonds = MoleculeType_add[i].nBonds;
       MoleculeType_new[type].Bond = calloc(MoleculeType_new[type].nBonds, sizeof(int *));
       for (int j = 0; j < MoleculeType_new[type].nBonds; j++) {
-        MoleculeType_new[type].Bond[j] = calloc(2, sizeof(int));
+        MoleculeType_new[type].Bond[j] = calloc(3, sizeof(int));
         MoleculeType_new[type].Bond[j][0] = MoleculeType_add[i].Bond[j][0];
         MoleculeType_new[type].Bond[j][1] = MoleculeType_add[i].Bond[j][1];
+        MoleculeType_new[type].Bond[j][2] = MoleculeType_add[i].Bond[j][2];
+      }
+      MoleculeType_new[type].nAngles = MoleculeType_add[i].nAngles;
+      MoleculeType_new[type].Angle = calloc(MoleculeType_new[type].nAngles, sizeof(int *));
+      for (int j = 0; j < MoleculeType_new[type].nAngles; j++) {
+        MoleculeType_new[type].Angle[j] = calloc(4, sizeof(int));
+        MoleculeType_new[type].Angle[j][0] = MoleculeType_add[i].Angle[j][0];
+        MoleculeType_new[type].Angle[j][1] = MoleculeType_add[i].Angle[j][1];
+        MoleculeType_new[type].Angle[j][2] = MoleculeType_add[i].Angle[j][2];
+        MoleculeType_new[type].Angle[j][3] = MoleculeType_add[i].Angle[j][3];
       }
       MoleculeType_new[type].nBTypes = MoleculeType_add[i].nBTypes;
       MoleculeType_new[type].BType = calloc(MoleculeType_new[type].nBTypes, sizeof(int));
