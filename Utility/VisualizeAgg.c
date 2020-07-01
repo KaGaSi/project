@@ -430,7 +430,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
   //}}}
@@ -485,7 +487,7 @@ int main(int argc, char *argv[]) {
   while (++count < argc && argv[count][0] != '-') {
 
     // Error - non-numeric argument //{{{
-    if (argv[count][0] < '1' || argv[count][0] > '9') {
+    if (!IsInteger(argv[count])) {
       ErrorNaN("<agg sizes>");
       exit(1);
     } //}}}
@@ -594,13 +596,17 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, count, stuff);
+      fprintf(stderr, "\033[0m");
       test = '\0';
       exit(1);
     }
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -642,7 +648,9 @@ int main(int argc, char *argv[]) {
       }
       count--; // because last step isn't processed
       count_vcf--;
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, count_vcf, stuff);
+      fprintf(stderr, "\033[0m");
       break;
     } //}}}
 
