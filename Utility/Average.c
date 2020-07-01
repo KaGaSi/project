@@ -81,7 +81,7 @@ int main ( int argc, char** argv ) {
 
   // <column> - column number to analyze //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsInteger(argv[++count])) {
     ErrorNaN("<column>");
     Help(argv[0], true);
     exit(1);
@@ -90,7 +90,7 @@ int main ( int argc, char** argv ) {
 
   // <discard> - number of lines to discard from the file beginning //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsInteger(argv[++count])) {
     ErrorNaN("<discard>");
     Help(argv[0], true);
     exit(1);
@@ -99,7 +99,7 @@ int main ( int argc, char** argv ) {
 
   // <n_blocks> - number of blocks for binning //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsInteger(argv[++count])) {
     ErrorNaN("<n_blocks>");
     Help(argv[0], true);
     exit(1);
@@ -135,7 +135,9 @@ int main ( int argc, char** argv ) {
         split[0][0] != '\n') {
       // error - insufficient number of columns
       if (words < column) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: only %d columns in %s on line %d\n\n", words, input, all_lines);
+        fprintf(stderr, "\033[0m");
         exit(1);
       }
       // number of data lines
@@ -152,8 +154,10 @@ int main ( int argc, char** argv ) {
 
   // error - <discard> is too large //{{{
   if (discard >= lines) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: <discard> parameter is too large (%d) - ", discard);
     fprintf(stderr, "there are only %d data lines in %s\n\n", lines, input);
+    fprintf(stderr, "\033[0m");
     Help(argv[0], true);
     exit(1);
   } //}}}

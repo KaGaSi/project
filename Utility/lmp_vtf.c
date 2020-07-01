@@ -182,23 +182,33 @@ int main(int argc, char *argv[]) {
 
   // some error checking //{{{
   if (Counts.TypesOfBeads == 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - missing 'atom types' line (or is 0) in %s\n\n", input);
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (Counts.BeadsInVsf == 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - missing 'atoms' line (or is 0) in %s\n\n", input);
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (BoxLength.x == 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - missing 'xlo xhi' line (or is 0 0) in %s\n\n", input);
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (BoxLength.y == 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - missing 'ylo yhi' line (or is 0 0) in %s\n\n", input);
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (BoxLength.z == 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - missing 'zlo zhi' line (or is 0 0) in %s\n\n", input);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -375,9 +385,11 @@ int main(int argc, char *argv[]) {
 
         // error when the second bead is in different molecule //{{{
         if (mol != Bead[bead2].Molecule) {
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "\nError in bond #%d in %s: ", atoi(split[0]), input);
           fprintf(stderr, "atoms %d and %d are in different molecules ", bead1+1, bead2+1);
           fprintf(stderr, "(%d and %d)\n\n", mol+1, Bead[bead2].Molecule+1);
+          fprintf(stderr, "\033[0m");
           exit(1);
         } //}}}
 

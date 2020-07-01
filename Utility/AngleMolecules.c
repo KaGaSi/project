@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
 
   // <width> - number of starting timestep //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<width>");
     Help(argv[0], true);
     exit(1);
@@ -164,12 +164,14 @@ int main(int argc, char *argv[]) {
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (mol_type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: molecule '%s' is not included in %s\n", argv[count], input_coor);
       fprintf(stderr, "   Present molecule types:\n");
       for (int i = 0; i < Counts.TypesOfMolecules; i++) {
         fprintf(stderr, "     %s\n", MoleculeType[i].Name);
       }
       putc('\n', stderr);
+      fprintf(stderr, "\033[0m");
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -190,7 +192,9 @@ int main(int argc, char *argv[]) {
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: '-n' option - number of bead ids must be dividable by three\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -200,7 +204,9 @@ int main(int argc, char *argv[]) {
     // Error - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && bead[i] >= MoleculeType[j].nBeads) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: '-n' option - %d is larger than the number of beads in molecule %s\n\n", bead[i], MoleculeType[j].Name);
+        fprintf(stderr, "\033[0m");
         Help(argv[0], true);
         exit(1);
       }
@@ -299,7 +305,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -376,7 +384,9 @@ int main(int argc, char *argv[]) {
           if (k < bins) {
             distr[mol_type_i][j/beads_per_angle][k]++;
           } else {
+            fprintf(stderr, "\033[1;33m");
             fprintf(stdout, "\nWarning: weird angle: %lf degrees\n", angle[i][j/beads_per_angle]);
+            fprintf(stderr, "\033[0m");
           }
         }
       }

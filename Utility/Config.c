@@ -135,7 +135,9 @@ int main(int argc, char *argv[]) {
 
   // warn if not all beads //{{{
   if (Counts.Beads != Counts.BeadsInVsf) {
+    fprintf(stderr, "\033[1;33m");
     fprintf(stdout, "\nWarning: '%s' does not contain all beads from '%s'\n\n", input_coor, input_vsf);
+    fprintf(stderr, "\033[0m");
   } //}}}
 
   // vsf file is not needed anymore
@@ -162,7 +164,9 @@ int main(int argc, char *argv[]) {
     fgetpos(vcf, &pos);
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       pos = pos_old;
       count--;
     }
