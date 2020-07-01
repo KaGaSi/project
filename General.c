@@ -203,7 +203,9 @@ void SwapBool(bool *a, bool *b) {
  */
 void SortArray(int **array, int length, int mode) {
   if (mode != 0 && mode != 1) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - SortArray(): use 0 or 1 for sorting mode\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   for (int i = 0 ; i < (length-1); i++) {

@@ -90,7 +90,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (test != 2) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: option '-s' requires two numeric arguments\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
