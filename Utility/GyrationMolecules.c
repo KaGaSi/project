@@ -124,7 +124,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
   //}}}
@@ -166,7 +168,9 @@ int main(int argc, char *argv[]) {
 
     // wrong molecule name //{{{
     if (!test) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: non-existent molecule name: %s\n\n", argv[count]);
+      fprintf(stderr, "\033[0m");
       exit(1);
     } //}}}
   } //}}}
@@ -286,7 +290,9 @@ int main(int argc, char *argv[]) {
         double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
 
         if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
-          fprintf(stderr, "Error: negative eigenvalues (%lf, %lf, %lf)\n\n", eigen.x, eigen.y, eigen.z);
+          fprintf(stderr, "\033[1;33m");
+          fprintf(stderr, "\nWarning: negative eigenvalues (%lf, %lf, %lf)\n", eigen.x, eigen.y, eigen.z);
+          fprintf(stderr, "\033[0m");
         }
         // radius of gyration
         Rg_step[mol_type] += Rgi; // for number avg

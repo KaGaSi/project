@@ -185,11 +185,15 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end_1 != -1 && start_1 > end_1) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: For the first run, starting step (%d) is higher than ending step (%d)\n", start_1, end_1);
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (end_2 != -1 && start_2 > end_2) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: For the first run, starting step (%d) is higher than ending step (%d)\n", start_2, end_2);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -244,9 +248,13 @@ int main(int argc, char *argv[]) {
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType1);
     if (type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: non-existent bead name '%s'\n", argv[count]);
+      fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType1);
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "Note that all bead types must be in both coordinate files.\n\n");
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
     BeadType1[type].Write = true;
@@ -296,9 +304,11 @@ int main(int argc, char *argv[]) {
   if (BoxLength.x != BoxLength_2.x ||
       BoxLength.y != BoxLength_2.y ||
       BoxLength.z != BoxLength_2.z) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - different box sizes in provided coordinate files\n");
     fprintf(stderr, "          %s: %lf %lf %lf\n", input_coor_1, BoxLength.x, BoxLength.y, BoxLength.z);
     fprintf(stderr, "          %s: %lf %lf %lf\n\n", input_coor_1, BoxLength_2.x, BoxLength_2.y, BoxLength_2.z);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -429,7 +439,9 @@ int main(int argc, char *argv[]) {
 
   // connect Bead2 with Bead1 via Index arrays //{{{
   if (!silent && !script) {
+    fprintf(stderr, "\033[1;33m");
     fprintf(stdout, "\nWarning: depending on the number of beads in the system, connecting bead indices from the two runs may take a long time\n\n");
+    fprintf(stderr, "\033[0m");
   }
   bool used[Counts.Beads];
   for (int i = 0; i < Counts.Beads; i++) {

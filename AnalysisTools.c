@@ -339,7 +339,9 @@ void RemovePBCMolecules(COUNTS Counts, VECTOR BoxLength,
       test++;
     }
     if (test == 1000) {
-      fprintf(stderr, "\nError: unable connect molecule %s (resid %d)\n\n", MoleculeType[type].Name, i+1);
+      fprintf(stderr, "\033[1;33m");
+      fprintf(stderr, "\nWarning: unable connect molecule %s (resid %d)\n\n", MoleculeType[type].Name, i+1);
+      fprintf(stderr, "\033[0m");
     }
 
     // put molecule's centre of mass into the simulation box //{{{
@@ -491,7 +493,8 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
       test++;
     }
     if (test == 1000) {
-      fprintf(stderr, "\nError: unable connect aggregate containing resids:\n");
+      fprintf(stderr, "\033[1;33m");
+      fprintf(stderr, "\nWarning: unable connect aggregate containing resids:\n");
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         fprintf(stderr, " %d", Aggregate[i].Molecule[j]);
         if (j != (Aggregate[i].nMolecules)) {
@@ -500,6 +503,7 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
           fprintf(stderr, "\n");
         }
       }
+      fprintf(stderr, "\033[0m");
     }
   }
   free(moved); //}}}
