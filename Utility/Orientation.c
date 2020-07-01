@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 
   // <width> - width of a single bin //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<width>");
     Help(argv[0], true);
     exit(1);
@@ -154,7 +154,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -164,7 +166,9 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-a") == 0) {
       // Error - missing argument //{{{
       if ((i+1) >= argc) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "Missing numeric argument for '-a' option!\n");
+        fprintf(stderr, "\033[0m");
         Help(argv[0], true);
         exit(1);
       } //}}}
@@ -189,7 +193,9 @@ int main(int argc, char *argv[]) {
       normal.z = 1;
       break;
     default:
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: argument to -a option must be 'x', 'y', or 'z'\n\n");
+      fprintf(stderr, "\033[0m");
       Help(argv[0], true);
       exit(1);
   }
@@ -219,7 +225,9 @@ int main(int argc, char *argv[]) {
     int type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: molecule type '%s' is not in %s file\n\n", argv[count], input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
 
@@ -244,24 +252,32 @@ int main(int argc, char *argv[]) {
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: '-n' option - number of bead ids must be divisible by two\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
   for (int i = 0; i < number_of_beads; i++) {
-    // Error - too high id for specific molecule //{{{
+    // Warning - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && bead[i] > MoleculeType[j].nBeads) {
         if ((i%2) == 1 || bead[i+1] <= MoleculeType[j].nBeads) { // warning if one is higher
+          fprintf(stderr, "\033[1;33m");
           fprintf(stderr, "\nWarning: '-n' option - %d is larger than the number of beads in %s; using %d instead\n", bead[i], MoleculeType[j].Name, MoleculeType[j].nBeads);
+          fprintf(stderr, "\033[0m");
         } else if ((i%2) == 0 && bead[i+1] > MoleculeType[j].nBeads) {
+          fprintf(stderr, "\033[1;33m");
           fprintf(stderr, "\nWarning: '-n' option - both %d and %d are larger than the number of beads in %s; this pair is ignored\n", bead[i], bead[i+1], MoleculeType[j].Name);
+          fprintf(stderr, "\033[0m");
         }
       }
     } //}}}
     // Error - two same beads //{{{
     if ((i%2) == 0 && bead[i] == bead[i+1]) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: '-n' option - each pair must contain two different bead ids (invalid: %d %d)\n", bead[i], bead[i+1]-1);
+      fprintf(stderr, "\033[0m");
       Help(argv[0], true);
       exit(1);
     } //}}}
@@ -312,7 +328,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }

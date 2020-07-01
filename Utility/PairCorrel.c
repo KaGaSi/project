@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
 
   // <width> - width of single bin //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<width>");
     Help(argv[0], true);
     exit(1);
@@ -128,7 +128,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -165,7 +167,9 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType);
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType);
       exit(1);
     }
@@ -248,13 +252,17 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
   if (test == EOF) {
     fflush(stdout);
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: premature end of %s file - %d steps to discard, but %d steps in all\n\n", input_coor, start, count);
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   // print number of starting step? //{{{
