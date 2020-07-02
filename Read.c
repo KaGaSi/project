@@ -1114,6 +1114,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     (*MoleculeType)[i].Angle = calloc(1, sizeof(int *));
   } //}}}
 
+  // check electroneutrality
+  WarnElNeutrality(*Counts, *BeadType, vsf_file);
+
   return indexed;
 } //}}}
 
