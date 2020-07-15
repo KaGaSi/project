@@ -38,8 +38,8 @@ can be written to an output '.vcf' file (with indexed timesteps).\n\n");
 /**
  * Function to determine distribution of molecules in aggregates.
  */
-void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, int sqdist, int contacts,
-                         int *xm_mols, bool **xm_use_mol,
+void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, double sqdist,
+                         int contacts, int *xm_mols, bool **xm_use_mol,
                          VECTOR BoxLength, BEADTYPE *BeadType, BEAD **Bead,
                          MOLECULETYPE *MoleculeType, MOLECULE **Molecule) {
 
@@ -469,7 +469,7 @@ int main(int argc, char *argv[]) {
 
   // <distance> - number of starting timestep //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<distance>");
     Help(argv[0], true);
     exit(1);
@@ -478,7 +478,7 @@ int main(int argc, char *argv[]) {
 
   // <contacts> - number of steps to skip per one used //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsInteger(argv[++count])) {
     ErrorNaN("<contacts>");
     Help(argv[0], true);
     exit(1);
@@ -545,12 +545,16 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType);
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType);
       exit(1);
     }
     if (BeadType[type].Use) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: bead type %s specified more than once\n\n", argv[count]);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
     BeadType[type].Use = true;
@@ -654,7 +658,7 @@ int main(int argc, char *argv[]) {
   if (verbose) {
     VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
 
-    fprintf(stdout, "\n   Distance for closeness check: %lf\n", distance);
+    fprintf(stdout, "   Distance for closeness check: %lf\n", distance);
     fprintf(stdout, "   Number of needed contacts for aggregate check: %d\n", contacts);
     if (xm) {
       fprintf(stdout, "   Ignore molecules close to:");
@@ -735,8 +739,10 @@ int main(int argc, char *argv[]) {
 
     // are all molecules accounted for? //{{{
     if (test_count != Counts.Molecules) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: not all molecules were assigned to aggregates\n");
       fprintf(stderr, "       Counts.Molecules = %5d; Molecules in aggregates: %d\n\n", Counts.Molecules, test_count);
+      fprintf(stderr, "\033[0m");
       exit(1);
     } //}}}
 

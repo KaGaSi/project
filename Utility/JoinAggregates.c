@@ -139,7 +139,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
   //}}}
@@ -261,12 +263,16 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      fprintf(stderr, "\033[0m");
       test = '\0';
       break;
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -307,7 +313,9 @@ int main(int argc, char *argv[]) {
       }
       count--; // because last step isn't processed
       count_vcf--; // because last step isn't processed
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file (%d. step - '%s')\n\n", input_agg, count_vcf, stuff);
+      fprintf(stderr, "\033[0m");
       break;
     } //}}}
 
@@ -349,7 +357,9 @@ int main(int argc, char *argv[]) {
       }
 
       if (SkipCoor(vcf, Counts, &stuff)) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+        fprintf(stderr, "\033[0m");
         exit(1);
       }
 
@@ -357,7 +367,9 @@ int main(int argc, char *argv[]) {
       if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
         count--; // because last step isn't processed
         count_vcf--; // because last step isn't processed
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: premature end of %s file (%d. step - '%s')\n\n", input_agg, count_vcf, stuff);
+        fprintf(stderr, "\033[0m");
         break;
       } //}}}
     } //}}}

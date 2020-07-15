@@ -17,8 +17,8 @@
  * \param [in]  MoleculeType  information about molecule types
  * \param [in]  Molecule      information about individual molecules
  */
-void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, int sqdist, int contacts,
-                         int *xm_mols, bool **xm_use_mol,
+void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, double sqdist,
+                         int contacts, int *xm_mols, bool **xm_use_mol,
                          VECTOR BoxLength, BEADTYPE *BeadType, BEAD **Bead,
                          MOLECULETYPE *MoleculeType, MOLECULE **Molecule); //}}}
 #endif

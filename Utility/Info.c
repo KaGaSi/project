@@ -118,6 +118,9 @@ int main(int argc, char *argv[]) {
   // read system information
   ReadStructure(input, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
+  // warn if not electroneutral
+  WarnElNeutrality(Counts, BeadType, input);
+
   if (verbose) { //{{{
     fprintf(stdout, "\nInformation about every bead:\n");
     PrintBead(Counts, Index, BeadType, Bead);
