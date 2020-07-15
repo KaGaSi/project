@@ -108,7 +108,9 @@ int main(int argc, char *argv[]) {
 
   int beads;
   if (fscanf(xyz, "%d", &beads) != 1) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "Error: cannot read number of beads from %s\n\n", input_xyz);
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   fclose(xyz); //}}}
@@ -176,7 +178,9 @@ int main(int argc, char *argv[]) {
 
     // error - less then four whitespace-separated strings //{{{
     if (words < 4) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: not enough columns in %s in %d. timestep (%d. bead)\n\n", input_xyz, count, i);
+      fprintf(stderr, "\033[0m");
     } //}}}
 
     // test if split[1-3] are doubles //{{{
@@ -189,7 +193,9 @@ int main(int argc, char *argv[]) {
       if (((split[j][0] < '0' || split[j][0] > '9') && split[j][0] != '-') || // 1)
           (split[j][0] == '-' && (strlen(split[j]) == 1)) || // 2)
           (split[j][0] == '-' && split[j][1] < '0' && split[j][1] > '9')) { // 3)
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: wrong %d. coordinate in %d. timestep for %d. bead (%s)\n\n", j, count, i, split[j]);
+        fprintf(stderr, "\033[0m");
         exit(1);
       }
       // other characters can be numbers or decimal point or newline (last character of 4th split)
@@ -200,7 +206,9 @@ int main(int argc, char *argv[]) {
             split[j][k] != '\n' &&
             split[j][k] != 'e' &&
             split[j][k] != '-' ) {
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "\nError: wrong %d. coordinate in %d. timestep for %d. bead (%s)\n\n", j, count, i, split[j]);
+          fprintf(stderr, "\033[0m");
           exit(1);
         }
       }

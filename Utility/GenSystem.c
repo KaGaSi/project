@@ -6,9 +6,12 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stderr;
   } else {
     ptr = stdout;
+    fprintf(stderr, "\033[1;33m");
     fprintf(stdout, "\
 Warning: This utility was not extensively tested and is in fact not a \
-very good generator of initial configuration.\n\n\
+very good generator of initial configuration.\n\n");
+    fprintf(stderr, "\033[0m");
+    fprintf(stdout, "\
 GenSystem reads information from a FIELD-like file to create vsf \
 structure file and generate coordinates for all beads (used, e.g., as \
 initial configuration for a simulation). This utility only creates linear \
