@@ -1981,4 +1981,7 @@ void ReadField(char *field, VECTOR *BoxLength, COUNTS *Counts,
   for (int i = 0; i < (*Counts).Beads; i++) {
     (*Index)[i] = i;
   } //}}}
+
+  // check electroneutrality
+  WarnElNeutrality(*Counts, *BeadType, field);
 } //}}}
