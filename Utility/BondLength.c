@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
 
   // <width> - width of a single bin //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<width>");
     Help(argv[0], true);
     exit(1);
@@ -129,7 +129,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
   //}}}
@@ -160,7 +162,9 @@ int main(int argc, char *argv[]) {
     int type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: molecule type '%s' is not in %s file\n\n", argv[count], input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
 
@@ -184,14 +188,18 @@ int main(int argc, char *argv[]) {
 
   // Error: wrong number of integers //{{{
   if (output_d[0] != '\0' && (number_of_beads%2) != 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: '-d' option - number of bead ids must be even\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
   // Error: same bead ids //{{{
   for (int i = 0; i < number_of_beads; i += 2) {
     if (bead[i] == bead[i+1] || bead[i] == 0 || bead[i+1] == 0) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: '-d' option - the bead indices must be non-zero and different\n");
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   } //}}}
@@ -264,7 +272,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -331,6 +341,7 @@ int main(int argc, char *argv[]) {
 
           // warn if bond is too long //{{{
           if (bond.x > warn) {
+            fprintf(stderr, "\033[1;33m");
             fprintf(stderr, "\nWarning: bond longer than %lf\n", warn);
             fprintf(stderr, " Step: %d\n", count_vcf);
             fprintf(stderr, " Beads: %6d (%s): %lf %lf %lf\n", Bead[id1].Index,
@@ -344,6 +355,7 @@ int main(int argc, char *argv[]) {
                                                                Bead[id2].Position.y,
                                                                Bead[id2].Position.z);
             fprintf(stderr, " Bond length: %lf\n", bond.x);
+            fprintf(stderr, "\033[0m");
           } //}}}
 
           // btype1 must be lower then btype2

@@ -142,7 +142,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
   //}}}
@@ -177,7 +179,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (test != 2) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: option '-n' requires two numeric arguments\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
 
@@ -240,12 +244,16 @@ int main(int argc, char *argv[]) {
       } else if (specific_moltype_for_size[i] && types[0][0] != -1 && types[1][0] == -1) {
         types[1][0] = i;
       } else if (specific_moltype_for_size[i]) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: '-c' option - more than two molecule types for composition distribution\n\n");
+        fprintf(stderr, "\033[0m");
         exit(1);
       }
     }
     if (types[0][0] == -1 || types[1][0] == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "Error: '-c' option - less than two molecule types for composition distribution\n");
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
     for (int i = 0; i < comp_number_of_sizes; i++) {
@@ -267,7 +275,9 @@ int main(int argc, char *argv[]) {
   }
   // error if wrong number of names
   if (count != 0 && count != 2) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: '-nc' option - exactly two molecule names are required\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
   // assign provided molecule names
@@ -280,7 +290,9 @@ int main(int argc, char *argv[]) {
   }
   // warning if -nc is used, but not -c
   if (count == 2 && comp_number_of_sizes == 0 && !silent) {
+    fprintf(stderr, "\033[1;33m");
     fprintf(stdout, "\nWarning: '-nc' option has no effect if '-c' option is not present\n\n");
+    fprintf(stderr, "\033[0m");
   }
   //}}}
 

@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
 
   // <width> - number of starting timestep //{{{
   // Error - non-numeric argument
-  if (argv[++count][0] < '0' || argv[count][0] > '9') {
+  if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<width>");
     Help(argv[0], true);
     exit(1);
@@ -138,7 +138,9 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
   //}}}
@@ -170,7 +172,9 @@ int main(int argc, char *argv[]) {
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
 
     if (mol_type == -1) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "Error: molecule '%s' does not exist in FIELD\n\n", argv[count]);
+      fprintf(stderr, "\033[0m");
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -194,7 +198,9 @@ int main(int argc, char *argv[]) {
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
+    fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: '-n' option - number of bead ids must be divisible by six.\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
 
@@ -204,7 +210,9 @@ int main(int argc, char *argv[]) {
     // Error - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && dihedral[i] >= MoleculeType[j].nBeads) {
+        fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: '-n' option - %d is larger than the number of beads in molecule %s (%d beads)\n\n", dihedral[i]+1, MoleculeType[j].Name, MoleculeType[j].nBeads);
+        fprintf(stderr, "\033[0m");
         Help(argv[0], true);
         exit(1);
       }
@@ -215,7 +223,9 @@ int main(int argc, char *argv[]) {
     if (dihedral[i] == dihedral[i+1] ||
         dihedral[i] == dihedral[i+2] ||
         dihedral[i+1] == dihedral[i+2]) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: '-n' option - a plane must be specified by three different beads (wrong trio: %d %d %d)\n", dihedral[i], dihedral[i+1], dihedral[i+2]);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   } //}}}
@@ -308,7 +318,9 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     if (SkipCoor(vcf, Counts, &stuff)) {
+      fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -422,7 +434,9 @@ int main(int argc, char *argv[]) {
           if (k < bins) {
             distr[mol_type][j/beads_per_angle][k]++;
           } else {
+            fprintf(stderr, "\033[1;33m");
             fprintf(stdout, "\nWarning - weird angle: %lf degrees\n", angle[i][j/beads_per_angle]);
+            fprintf(stderr, "\033[0m");
           }
         }
       }
