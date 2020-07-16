@@ -463,6 +463,7 @@ int main(int argc, char *argv[]) {
       // bond list for each molecule
       // [i][j][] ... bond id in the molecule 'i'
       // [i][][0] & [i][][1] ... ids of connected beads in molecule 'i'
+      // [i][][2] ... bond type
       int ***mol_bonds = calloc(Counts.Molecules, sizeof(int **));
       for (int i = 0; i < Counts.Molecules; i++) {
          mol_bonds[i] = calloc(1, sizeof(int *));
@@ -534,7 +535,8 @@ int main(int argc, char *argv[]) {
             bool same_conn = true;
             for (int k = 0; k < MoleculeType[j].nBonds; k++) {
               if (MoleculeType[j].Bond[k][0] != mol_bonds[i][k][0] ||
-                  MoleculeType[j].Bond[k][1] != mol_bonds[i][k][1]) {
+                  MoleculeType[j].Bond[k][1] != mol_bonds[i][k][1] ||
+                  MoleculeType[j].Bond[k][2] != mol_bonds[i][k][2]) {
                 same_conn = false;
                 break;
               }
@@ -573,7 +575,7 @@ int main(int argc, char *argv[]) {
           for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
             int btype = Bead[Molecule[i].Bead[j]].Type;
             MoleculeType[mtype].Bead[j] = btype;
-            exists = false; // recycling the bool to check if btype is alread in BType[]
+            exists = false; // recycling the bool to check if btype is already in BType[]
             for (int k = 0; k < MoleculeType[mtype].nBTypes; k++) {
               if (MoleculeType[mtype].BType[k] == btype) {
                 exists = true;
@@ -581,9 +583,9 @@ int main(int argc, char *argv[]) {
             }
             if (!exists) { // recycled exists
               int types = MoleculeType[mtype].nBTypes;
+              MoleculeType[mtype].nBTypes++;
               MoleculeType[mtype].BType = realloc(MoleculeType[mtype].BType, (types+1)*sizeof(int));
               MoleculeType[mtype].BType[types] = btype;
-              MoleculeType[mtype].nBTypes++;
             }
           }
           // copy bonds
@@ -595,6 +597,7 @@ int main(int argc, char *argv[]) {
             MoleculeType[mtype].Bond[j][1] = mol_bonds[i][j][1];
             MoleculeType[mtype].Bond[j][2] = mol_bonds[i][j][2];
           }
+          MoleculeType[mtype].nAngles = 0;
           MoleculeType[mtype].Write = true;
           Counts.TypesOfMolecules++;
         } //}}}
@@ -609,9 +612,20 @@ int main(int argc, char *argv[]) {
       free(mol_bonds);
       free(bonds_per_mol); //}}}
     } //}}}
-    // TODO: angles //{{{
+    // angles section //{{{
     if (words > 0 && strcmp(split[0], "Angles") == 0) {
-      // TODO: bonds-like helper arrays
+      // allocate helper arrays to hold angle info //{{{
+      // number of angles in each molecule
+      int *angles_per_mol = calloc(Counts.Molecules, sizeof(int));
+      // bond list for each molecule
+      // [i][j][] ... bond id in the molecule 'i'
+      // [i][][0] & [i][][1] & [i][][2] ... ids of connected beads in molecule 'i'
+      // [i][][3] ... angle type
+      int ***mol_angles = calloc(Counts.Molecules, sizeof(int **));
+      for (int i = 0; i < Counts.Molecules; i++) {
+         mol_angles[i] = calloc(1, sizeof(int *));
+      } //}}}
+      // skip one line (mandatory in lammps data format)
       fgets(line, sizeof(line), fr);
       // read all angles //{{{
       for (int i = 0; i < angles; i++) {
@@ -626,7 +640,158 @@ int main(int argc, char *argv[]) {
           ErrorPrintLine(split, words);
           exit(1);
         } //}}}
+        int type = atoi(split[1]) - 1; // in lammps, bond types start at 1
+        int bead1 = atoi(split[2]) - 1; // in lammps, atom ids start at 1
+        int bead2 = atoi(split[3]) - 1;
+        int bead3 = atoi(split[4]) - 1;
+        // assign molecule to the bond
+        int mol = Bead[bead1].Molecule;
+        // error when the second bead is in different molecule //{{{
+        if (mol != Bead[bead2].Molecule || mol != Bead[bead3].Molecule) {
+          fprintf(stderr, "\033[1;31m");
+          fprintf(stderr, "\nError in angle #%d in %s: ", atoi(split[0]), input);
+          fprintf(stderr, "atoms %d, %d, and %d are in different molecules ", bead1+1, bead2+1, bead3+1);
+          fprintf(stderr, "(%d, %d, and %d)\n\n", mol+1, Bead[bead2].Molecule+1, Bead[bead3].Molecule+1);
+          fprintf(stderr, "\033[0m");
+          exit(1);
+        } //}}}
+        // increment number of bonds in the molecule
+        angles_per_mol[mol]++;
+        int angle = angles_per_mol[mol];
+        // add angle beads to the molecule they belong to
+        mol_angles[mol] = realloc(mol_angles[mol], angle*sizeof(int *));
+        mol_angles[mol][angle-1] = calloc(4, sizeof(int));
+        mol_angles[mol][angle-1][0] = bead1;
+        mol_angles[mol][angle-1][1] = bead2;
+        mol_angles[mol][angle-1][2] = bead3;
+        mol_angles[mol][angle-1][3] = type;
       } //}}}
+      // sort angles according to the id of the first bead in a bond //{{{
+      for (int i = 0; i < Counts.Molecules; i++) {
+        SortAngles(mol_angles[i], angles_per_mol[i]);
+      } //}}}
+      // minimize mol_angles based on lowest id in each molecule //{{{
+      for (int i = 0; i < Counts.Molecules; i++) {
+        int lowest = Counts.Beads; // just some high number
+        for (int j = 0; j < mols[i]; j++) {
+          if (Molecule[i].Bead[j] < lowest) {
+            lowest = Molecule[i].Bead[j];
+          }
+        }
+        for (int j = 0; j < angles_per_mol[i]; j++) {
+          mol_angles[i][j][0] -= lowest;
+          mol_angles[i][j][1] -= lowest;
+          mol_angles[i][j][2] -= lowest;
+        }
+      } //}}}
+      // add angles to existing molecule types (or create a new one differing only in angles)
+      int extra = 0; // number of molecule types differing in angles
+      for (int i = 0; i < Counts.Molecules; i++) {
+        int mtype = Molecule[i].Type;
+        if (MoleculeType[mtype].nAngles == 0) { // add angles if there are no angles in the molecule type //{{{
+          MoleculeType[mtype].nAngles = angles_per_mol[i];
+          MoleculeType[mtype].Angle = calloc(MoleculeType[mtype].nAngles, sizeof(int *));
+          for (int j = 0; j < MoleculeType[mtype].nAngles; j++) {
+            MoleculeType[mtype].Angle[j] = calloc(4, sizeof(int));
+            MoleculeType[mtype].Angle[j][0] = mol_angles[i][j][0];
+            MoleculeType[mtype].Angle[j][1] = mol_angles[i][j][1];
+            MoleculeType[mtype].Angle[j][2] = mol_angles[i][j][2];
+            MoleculeType[mtype].Angle[j][3] = mol_angles[i][j][3];
+          } //}}}
+        } else { // if angles already present, check whether they're the same //{{{
+          bool exists = true;
+          // same number of angles? //{{{
+          if (MoleculeType[mtype].nAngles != angles_per_mol[i]) {
+            exists = false;
+          } //}}}
+          // same angles as in mtype? //{{{
+          for (int j = 0; j < angles_per_mol[i] && j < MoleculeType[mtype].nAngles; j++) {
+            if (MoleculeType[mtype].Angle[j][0] != mol_angles[i][j][0] ||
+                MoleculeType[mtype].Angle[j][1] != mol_angles[i][j][1] ||
+                MoleculeType[mtype].Angle[j][2] != mol_angles[i][j][2] ||
+                MoleculeType[mtype].Angle[j][3] != mol_angles[i][j][3] ) {
+              exists = false;
+            }
+          } //}}}
+          // check against angle-generated molecule types //{{{
+          // If its angles aren't the same as in mtype, check against other
+          // types (i.e., against newly generated thanks to different angles)
+          if (!exists) {
+            for (int j = (mtype+1); j < Counts.TypesOfMolecules; j++) {
+              if (MoleculeType[j].nAngles == angles_per_mol[i]) {
+                int count = 0;
+                for (int k = 0; k < MoleculeType[j].nAngles; k++) {
+                  if (MoleculeType[j].Angle[k][0] == mol_angles[i][k][0] &&
+                      MoleculeType[j].Angle[k][1] == mol_angles[i][k][1] &&
+                      MoleculeType[j].Angle[k][2] == mol_angles[i][k][2] &&
+                      MoleculeType[j].Angle[k][3] == mol_angles[i][k][3] ) {
+                    count++;
+                  }
+                }
+                if (count == angles_per_mol[i]) {
+                  exists = true;
+                  MoleculeType[j].Number++;
+                  MoleculeType[mtype].Number--;
+                  Molecule[i].Type = j;
+                  break;
+                }
+              }
+            }
+          } //}}}
+          // create a new molecule type //{{{
+          if (!exists) {
+            printf("Different angles\n");
+            extra++;
+            int new = Counts.TypesOfMolecules;
+            Molecule[i].Type = new;
+            Counts.TypesOfMolecules++;
+            MoleculeType = realloc(MoleculeType, (new+1)*sizeof(struct MoleculeType));
+            char name[19];
+            sprintf(name, "%s_%d", MoleculeType[mtype].Name, extra);
+            strcpy(MoleculeType[new].Name, name);
+            MoleculeType[new].Number = 1;
+            MoleculeType[mtype].Number--;
+            MoleculeType[new].nBeads = MoleculeType[mtype].nBeads;
+            MoleculeType[new].Bead = calloc(MoleculeType[new].nBeads, sizeof(int));
+            for (int j = 0; j < MoleculeType[new].nBeads; j++) {
+              MoleculeType[new].Bead[j] = MoleculeType[mtype].Bead[j];
+            }
+            MoleculeType[new].nBonds = MoleculeType[mtype].nBonds;
+            MoleculeType[new].Bond = calloc(MoleculeType[new].nBonds, sizeof(int *));
+            for (int j = 0; j < MoleculeType[new].nBonds; j++) {
+              MoleculeType[new].Bond[j] = calloc(3, sizeof(int));
+              MoleculeType[new].Bond[j][0] = MoleculeType[mtype].Bond[j][0];
+              MoleculeType[new].Bond[j][1] = MoleculeType[mtype].Bond[j][1];
+              MoleculeType[new].Bond[j][2] = MoleculeType[mtype].Bond[j][2];
+            }
+            MoleculeType[new].nAngles = MoleculeType[mtype].nAngles;
+            MoleculeType[new].Angle = calloc(MoleculeType[new].nAngles, sizeof(int *));
+            for (int j = 0; j < MoleculeType[new].nAngles; j++) {
+              MoleculeType[new].Angle[j] = calloc(4, sizeof(int));
+              MoleculeType[new].Angle[j][0] = mol_angles[i][j][0];
+              MoleculeType[new].Angle[j][1] = mol_angles[i][j][1];
+              MoleculeType[new].Angle[j][2] = mol_angles[i][j][2];
+              MoleculeType[new].Angle[j][3] = mol_angles[i][j][3];
+            }
+            MoleculeType[new].nBTypes = MoleculeType[mtype].nBTypes;
+            MoleculeType[new].BType = calloc(MoleculeType[new].nBTypes, sizeof(int));
+            for (int j = 0; j < MoleculeType[new].nBTypes; j++) {
+              MoleculeType[new].BType[j] = MoleculeType[mtype].BType[j];
+            }
+            MoleculeType[new].Mass = MoleculeType[mtype].Mass;
+            MoleculeType[new].Write = true;
+          } //}}}
+        } //}}}
+      }
+      // free helper arrays //{{{
+      for (int i = 0; i < Counts.Molecules; i++) {
+        for (int j = 0; j < angles_per_mol[i]; j++) {
+          free(mol_angles[i][j]);
+        }
+        free(mol_angles[i]);
+      }
+      free(mol_angles);
+      free(angles_per_mol); //}}}
     } //}}}
     // read and split next line
     fgets(line, sizeof(line), fr);
