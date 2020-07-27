@@ -1812,7 +1812,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     (*Counts).Molecules += (*MoleculeType)[i].Number;
     // skip till 'finish' //{{{
     if (strcasecmp(split[0], "finish") == 0) {
-      break;
+      continue;
     }
     while(fgets(line, sizeof(line), fr)) {
       SplitLine(split, line, delim);
@@ -1941,6 +1941,7 @@ void ReadField(char *field, VECTOR *BoxLength, COUNTS *Counts,
 
   // fill MoleculeType[].BType array //{{{
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
+    (*MoleculeType)[i].nBTypes = 0;
     for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
       int type = (*MoleculeType)[i].Bead[j];
       bool present = false;

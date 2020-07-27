@@ -526,13 +526,22 @@ int main(int argc, char *argv[]) {
       } //}}}
       // identify molecule type based on bead order and connectivity //{{{
       MoleculeType = calloc(1, sizeof(struct MoleculeType));
+      // number of molecule types differing in connectivity but not in beads - naming purposes
+      int *diff_conn = calloc(1, sizeof(int));
+      // number of molecule types differing in bead order - naming purposes
+      int mtype_bead = 0;
       for (int i = 0; i < Counts.Molecules; i++) {
-        bool exists = false; // is molecule 'i' of known type?
+        // is molecule 'i' of known type?
+        bool exists = false;
+        // do 'i' and given molecule type share connectivity and bead order?
+        bool same_conn = true, same_bead = true;
+        // molecule type with which 'i' shares bead order - naming purposes
+        int type_bead = -1;
         for (int j = 0; j < Counts.TypesOfMolecules; j++) { //{{{
           if (MoleculeType[j].nBeads == mols[i] && // same number of molecules?
               MoleculeType[j].nBonds == bonds_per_mol[i]) { // same number of bonds?
             // same connectivity?
-            bool same_conn = true;
+            same_conn = true;
             for (int k = 0; k < MoleculeType[j].nBonds; k++) {
               if (MoleculeType[j].Bond[k][0] != mol_bonds[i][k][0] ||
                   MoleculeType[j].Bond[k][1] != mol_bonds[i][k][1] ||
@@ -542,13 +551,16 @@ int main(int argc, char *argv[]) {
               }
             }
             // same bead types?
-            bool same_bead = true;
+            same_bead = true;
             for (int k = 0; k < MoleculeType[j].nBeads; k++) {
               int btype = Bead[Molecule[i].Bead[k]].Type;
               if (MoleculeType[j].Bead[k] != btype) {
                 same_bead = false;
                 break;
               }
+            }
+            if (same_bead && type_bead == -1) {
+              type_bead = j;
             }
             // if the molecule has the same connectivity and bead order, it's of known type
             if (same_conn && same_bead) {
@@ -563,8 +575,18 @@ int main(int argc, char *argv[]) {
         if (!exists) {
           int mtype = Counts.TypesOfMolecules;
           MoleculeType = realloc(MoleculeType, (mtype+1)*sizeof(struct MoleculeType));
-          // molecule name is 'mol<number>'
-          sprintf(MoleculeType[mtype].Name, "mol%d", mtype+1);
+          diff_conn = realloc(diff_conn, (mtype+1)*sizeof(int));
+          diff_conn[mtype] = 0;
+          // molecule name
+          if (same_bead && !same_conn) { // same beads - mol<type_bead>-b#
+            diff_conn[type_bead]++;
+            char name[5];
+            strcpy(name, MoleculeType[type_bead].Name);
+            sprintf(MoleculeType[mtype].Name, "%s-b%d", name, diff_conn[type_bead]);
+          } else { // same connectivity or both different - mol#
+            mtype_bead++;
+            sprintf(MoleculeType[mtype].Name, "mol%d", mtype_bead);
+          }
           Molecule[i].Type = mtype;
           MoleculeType[mtype].Number = 1;
           // copy bead sequence and determine BTypes stuff
@@ -598,6 +620,7 @@ int main(int argc, char *argv[]) {
             MoleculeType[mtype].Bond[j][2] = mol_bonds[i][j][2];
           }
           MoleculeType[mtype].nAngles = 0;
+          MoleculeType[mtype].Angle = calloc(1, sizeof(int *));
           MoleculeType[mtype].Write = true;
           Counts.TypesOfMolecules++;
         } //}}}
@@ -610,7 +633,8 @@ int main(int argc, char *argv[]) {
         free(mol_bonds[i]);
       }
       free(mol_bonds);
-      free(bonds_per_mol); //}}}
+      free(bonds_per_mol);
+      free(diff_conn); //}}}
     } //}}}
     // angles section //{{{
     if (words > 0 && strcmp(split[0], "Angles") == 0) {
@@ -685,12 +709,13 @@ int main(int argc, char *argv[]) {
         }
       } //}}}
       // add angles to existing molecule types (or create a new one differing only in angles)
-      int extra = 0; // number of molecule types differing in angles
+      // ...'basic' molecule types already generated in bonds section
+      int *extra = calloc(Counts.TypesOfMolecules, sizeof(int)); // number of molecule types differing in angles
       for (int i = 0; i < Counts.Molecules; i++) {
         int mtype = Molecule[i].Type;
         if (MoleculeType[mtype].nAngles == 0) { // add angles if there are no angles in the molecule type //{{{
           MoleculeType[mtype].nAngles = angles_per_mol[i];
-          MoleculeType[mtype].Angle = calloc(MoleculeType[mtype].nAngles, sizeof(int *));
+          MoleculeType[mtype].Angle = realloc(MoleculeType[mtype].Angle, MoleculeType[mtype].nAngles*sizeof(int *));
           for (int j = 0; j < MoleculeType[mtype].nAngles; j++) {
             MoleculeType[mtype].Angle[j] = calloc(4, sizeof(int));
             MoleculeType[mtype].Angle[j][0] = mol_angles[i][j][0];
@@ -740,14 +765,13 @@ int main(int argc, char *argv[]) {
           } //}}}
           // create a new molecule type //{{{
           if (!exists) {
-            printf("Different angles\n");
-            extra++;
             int new = Counts.TypesOfMolecules;
+            extra[mtype]++;
             Molecule[i].Type = new;
             Counts.TypesOfMolecules++;
             MoleculeType = realloc(MoleculeType, (new+1)*sizeof(struct MoleculeType));
             char name[19];
-            sprintf(name, "%s_%d", MoleculeType[mtype].Name, extra);
+            sprintf(name, "%s-a%d", MoleculeType[mtype].Name, extra[mtype]);
             strcpy(MoleculeType[new].Name, name);
             MoleculeType[new].Number = 1;
             MoleculeType[mtype].Number--;
@@ -791,7 +815,8 @@ int main(int argc, char *argv[]) {
         free(mol_angles[i]);
       }
       free(mol_angles);
-      free(angles_per_mol); //}}}
+      free(angles_per_mol);
+      free(extra); //}}}
     } //}}}
     // read and split next line
     fgets(line, sizeof(line), fr);

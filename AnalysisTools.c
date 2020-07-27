@@ -111,7 +111,7 @@ void PrintMoleculeType(COUNTS Counts, BEADTYPE *BeadType, MOLECULETYPE *Molecule
       }
     } //}}}
     // print bead types (just the which are present) //{{{
-    fprintf(stdout, "},\n  .nBTypes = %d,\n  .BType   = {", MoleculeType[0].nBTypes);
+    fprintf(stdout, "},\n  .nBTypes = %d,\n  .BType   = {", MoleculeType[i].nBTypes);
     for (int j = 0; j < MoleculeType[i].nBTypes; j++) {
       if (j != 0) {
         fprintf(stdout, ", ");
@@ -215,7 +215,7 @@ void PrintAggregate(COUNTS Counts, int *Index,
 // PrintBondTypes() //{{{
 void PrintBondTypes(COUNTS Counts, PARAMS *bond_type) {
   for (int i = 0; i < Counts.TypesOfBonds; i++) {
-    fprintf(stdout, "bond %2d: k = %lf, r_0 = %lf \n", i+1, bond_type[i].a, bond_type[i].b);
+    fprintf(stdout, "bond %2d: k = %lf, r_0 = %lf\n", i+1, bond_type[i].a, bond_type[i].b);
   }
   putc('\n', stdout);
 } //}}}
@@ -223,7 +223,7 @@ void PrintBondTypes(COUNTS Counts, PARAMS *bond_type) {
 // PrintAngleTypes() //{{{
 void PrintAngleTypes(COUNTS Counts, PARAMS *angle_type) {
   for (int i = 0; i < Counts.TypesOfAngles; i++) {
-    fprintf(stdout, "angle %2d: k = %lf, r_0 = %lf \n", i+1, angle_type[i].a, angle_type[i].b);
+    fprintf(stdout, "angle %2d: k = %lf, r_0 = %lf\n", i+1, angle_type[i].a, angle_type[i].b);
   }
   putc('\n', stdout);
 } //}}}
