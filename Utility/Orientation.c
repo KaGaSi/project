@@ -226,8 +226,10 @@ int main(int argc, char *argv[]) {
 
     if (type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: molecule type '%s' is not in %s file\n\n", argv[count], input_coor);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+      fprintf(stderr, " - non-existent molecule type \033[1;33m%s\033[1;31m\n", argv[count]);
       fprintf(stderr, "\033[0m");
+      ErrorMoleculeType(Counts, MoleculeType);
       exit(1);
     }
 
@@ -253,7 +255,7 @@ int main(int argc, char *argv[]) {
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: '-n' option - number of bead ids must be divisible by two\n\n");
+    fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - number of bead ids must be divisible by two\n\n");
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
@@ -276,7 +278,7 @@ int main(int argc, char *argv[]) {
     // Error - two same beads //{{{
     if ((i%2) == 0 && bead[i] == bead[i+1]) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: '-n' option - each pair must contain two different bead ids (invalid: %d %d)\n", bead[i], bead[i+1]-1);
+      fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - each pair must contain two different bead ids (invalid: %d %d)\n", bead[i], bead[i+1]-1);
       fprintf(stderr, "\033[0m");
       Help(argv[0], true);
       exit(1);
@@ -329,7 +331,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -367,7 +369,7 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff);
       exit(1);
     } //}}}
 

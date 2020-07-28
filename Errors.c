@@ -4,11 +4,25 @@
 /**
  * Error when reading vcf file
  */
-void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input_vsf) {
+void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff) {
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "\nError: %s - cannot read coordinates (bead %d; step %d - '%s')\n\n", input_vcf, bead, step, stuff);
-  fprintf(stderr, "\033[0m");
-  putchar('\n');
+  fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - cannot read coordinates ", input_vcf);
+  fprintf(stderr, "(bead \033[1;33m%d\033[1;31m; step \033[1;33m%d\033[1;31m", bead, step);
+  if (stuff[0] != '\0') {
+    char split[30][100];
+    fprintf(stderr, " beginning with |");
+    int words = SplitLine(split, stuff, " \t");
+    fprintf(stderr, "\033[1;33m");
+    for (int i = 0; i < words; i++) {
+      fprintf(stderr, "%s", split[i]);
+      if (i != (words-1)) {
+        fprintf(stderr, " ");
+      }
+    }
+    fprintf(stderr, "\033[1;31m");
+    fprintf(stderr, "|");
+  }
+  fprintf(stderr, ")\n\033[0m");
 } //}}}
 
 // ErrorArgNumber() //{{{
@@ -31,13 +45,15 @@ bool ErrorDiscard(int start, int step, char *file, FILE *coor) {
   if ((test = getc(coor)) == EOF) {
     fflush(stdout);
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: %s - starting timestep (%d) is higher than the total number of steps (%d)\n\n", file, start, step);
+    fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", file);
+    fprintf(stderr, " - starting timestep (\033[1;33m%d\033[1;31m) is higher", step);
+    fprintf(stderr, " than the total number of steps (\033[1;33m%d\033[1;31m)\n\n", step);
+    fprintf(stderr, "\033[0m");
     return true;
   } else {
     ungetc(test,coor);
+    return false;
   }
-  fprintf(stderr, "\033[0m");
-  return false;
 } //}}}
 
 // ErrorExtension() //{{{
@@ -45,17 +61,14 @@ bool ErrorDiscard(int start, int step, char *file, FILE *coor) {
  * Error when missing or incorrect file extension
  */
 bool ErrorExtension(char *file, int number, char extension[][5]) {
-
   char *dot = strrchr(file, '.');
-
   for (int i = 0; i < number; i++) {
     if (dot && strcmp(dot, extension[i]) == 0) {
       return false;
     }
   }
-
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "\nError: '%s' does not have a correct extension (", file);
+  fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m does not have a correct extension (", file);
   for (int i = 0; i < number; i++) {
     if (i < (number-1)) {
       fprintf(stderr, "'%s', ", extension[i]);
@@ -73,7 +86,7 @@ bool ErrorExtension(char *file, int number, char extension[][5]) {
  */
 void ErrorFileOpen(char *file, char mode) {
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "\nError: cannot open '%s' for ", file);
+  fprintf(stderr, "\nError: cannot open \033[1;33m%s\033[1;31m for ", file);
   switch(mode) {
     case 'r':
       fprintf(stderr, "reading\n");
@@ -94,11 +107,11 @@ void ErrorFileOpen(char *file, char mode) {
 
 // ErrorNaN() //{{{
 /**
- * Error when unknown non-numeric argument is present instead of a number
+ * Error when non-numeric argument is present instead of a number
  */
 void ErrorNaN(char *option) {
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "\nError: non-numeric argument for '%s'\n\n", option);
+  fprintf(stderr, "\nError: non-numeric argument for \033[1;33m%s\033[1;31m\n\n", option);
   fprintf(stderr, "\033[0m");
 } //}}}
 
@@ -108,7 +121,7 @@ void ErrorNaN(char *option) {
  */
 void ErrorOption(char *option) {
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "\nError: non-existent option '%s'\n\n", option);
+  fprintf(stderr, "\nError: non-existent option \033[1;33m%s\033[1;31m\n\n", option);
   fprintf(stderr, "\033[0m");
 } //}}}
 
@@ -126,6 +139,20 @@ void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType) {
   fprintf(stderr, "\033[0m");
 } //}}}
 
+// ErrorMoleculeType() //{{{
+/**
+ * Error when non-existent molecule is used.
+ */
+void ErrorMoleculeType(COUNTS Counts, MOLECULETYPE *MoleculeType) {
+  fprintf(stderr, "\033[1;31m");
+  fprintf(stderr, "       Possible molecule names: %s\n", MoleculeType[0].Name);
+  for (int i = 1; i < Counts.TypesOfMolecules; i++) {
+    fprintf(stderr, "                            %s\n", MoleculeType[i].Name);
+  }
+  putc('\n', stderr);
+  fprintf(stderr, "\033[0m");
+} //}}}
+
 // ErrorPrintLine() //{{{
 /**
  * Print provided strings (array of strings generally created using
@@ -133,8 +160,8 @@ void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType) {
  */
 void ErrorPrintLine(char split[30][100], int words) {
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "        Wrong line:|");
-  fprintf(stderr, "\033[0m");
+  fprintf(stderr, "       Wrong line:|");
+  fprintf(stderr, "\033[1;33m");
   for (int i = 0; i < words; i++) {
     if (i != 0) {
       putc(' ', stderr);
@@ -142,7 +169,7 @@ void ErrorPrintLine(char split[30][100], int words) {
     fprintf(stderr, "%s", split[i]);
   }
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, " |\n\n");
+  fprintf(stderr, "|\n\n");
   fprintf(stderr, "\033[0m");
 } //}}}
 
@@ -157,7 +184,8 @@ void WarnElNeutrality(COUNTS Counts, BEADTYPE *BeadType, char *file) {
   }
   if (charge != 0) {
     fprintf(stderr, "\033[1;33m");
-    fprintf(stderr, "\nWarning: system in %s has net electric charge (q = %lf)!\n\n", file, charge);
+    fprintf(stderr, "\nWarning: system in \033[1;36m%s\033[1;33m", file);
+    fprintf(stderr, "has net electric charge (q = \033[1;36m%lf\033[1;33m)!\n\n", charge);
     fprintf(stderr, "\033[0m");
   }
 } //}}}

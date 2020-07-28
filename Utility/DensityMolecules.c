@@ -176,8 +176,10 @@ int main(int argc, char *argv[]) {
 
     if (mol_type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: molecule '%s' is not included in %s\n\n", argv[count], input_coor);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+      fprintf(stderr, " - non-existent molecule \033[1;33m%s\033[1;31m", argv[count]);
       fprintf(stderr, "\033[0m");
+      ErrorMoleculeType(Counts, MoleculeType);
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -229,8 +231,9 @@ int main(int argc, char *argv[]) {
 
         if (mol_type == -1) {
           fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "\nError: molecule '%s' does not exist in FIELD ('-c' option)\n\n", argv[i+j]);
+          fprintf(stderr, "\nError: \033[1;33m-c\033[1;31m option - non-existent molecule \033[1;33m%s\033[1;31m\n", argv[i+j]);
           fprintf(stderr, "\033[0m");
+          ErrorMoleculeType(Counts, MoleculeType);
           exit(1);
         } else {
           // Error - non-numeric argument //{{{
@@ -247,9 +250,8 @@ int main(int argc, char *argv[]) {
           // Error - too high bead number //{{{
           if (centre[mol_type] > MoleculeType[mol_type].nBeads) {
             fprintf(stderr, "\033[1;31m");
-            fprintf(stderr, "\nError: incorrect number in '-c' option (%dth bead in molecule "
-              "%s containing only %d beads)\n\n", centre[mol_type]+1, MoleculeType[mol_type].Name,
-              MoleculeType[mol_type].nBeads);
+            fprintf(stderr, "\nError: \033[1;33m-c\033[1;31m option - bead index \033[1;33m%d\033[1;31m", centre[mol_type]+1);
+            fprintf(stderr, " is too high for molecule \033[1;33m%s\033[1;31m", MoleculeType[mol_type].Name);
             fprintf(stderr, "\033[0m");
             exit(1);
           } //}}}
@@ -316,7 +318,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "Error: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "Error: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -355,7 +357,7 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff);
       exit(1);
     } //}}}
 

@@ -160,14 +160,14 @@ int main(int argc, char *argv[]) {
   // <molecule names> - names of molecule types to use //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindMoleculeType(argv[count], Counts, MoleculeType);
-
     if (type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: molecule type '%s' is not in %s file\n\n", argv[count], input_coor);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+      fprintf(stderr, " - non-existent molecule type \033[1;33m%s\033[1;31m\n\n", argv[count]);
       fprintf(stderr, "\033[0m");
+      ErrorMoleculeType(Counts, MoleculeType);
       exit(1);
     }
-
     MoleculeType[type].Use = true;
   } //}}}
 
@@ -273,7 +273,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -311,7 +311,7 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff);
       exit(1);
     } //}}}
 

@@ -186,9 +186,6 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
-  // vsf file is not needed anymore
-  free(input_vsf);
-
   // '-m' option //{{{
   int *specific_moltype_for_size;
   specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
@@ -342,16 +339,11 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
-      fprintf(stderr, "\033[0m");
-      test = '\0';
+      ErrorCoorRead(input_coor, test, count, stuff);
       exit(1);
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: cannot read coordinates from %s (%d. step - '%s'; %d. bead)\n\n", input_coor, count, stuff, test);
-      fprintf(stderr, "\033[0m");
+      ErrorCoorRead(input_coor, test, count, stuff);
       exit(1);
     }
   }
@@ -394,7 +386,7 @@ int main(int argc, char *argv[]) {
       count--; // because last step isn't processed
       count_vcf--;
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, count_vcf, stuff);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_agg);
       fprintf(stderr, "\033[0m");
       break;
     } //}}}
@@ -402,7 +394,7 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff);
       exit(1);
     } //}}}
 
@@ -591,6 +583,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // free memory - to make valgrind happy //{{{
+  free(input_vsf);
   free(BeadType);
   free(Index);
   FreeAggregate(Counts, &Aggregate);

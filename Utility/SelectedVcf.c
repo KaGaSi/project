@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType);
     if (type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - non-existent bead name \033[1;33m%s\033[1;31m\n", input_coor, argv[count]);
       fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType);
       exit(1);
@@ -329,7 +329,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -370,7 +370,7 @@ int main(int argc, char *argv[]) {
       // read coordinates
       if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+        ErrorCoorRead(input_coor, test, count_vcf, stuff);
         exit(1);
       }
       continue;
@@ -382,7 +382,7 @@ int main(int argc, char *argv[]) {
           // read coordinates //{{{
           if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
             // print newline to stdout if Step... doesn't end with one
-            ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+            ErrorCoorRead(input_coor, test, count_vcf, stuff);
             exit(1);
           } //}}}
 
@@ -424,7 +424,7 @@ int main(int argc, char *argv[]) {
         } else {
           if (SkipCoor(vcf, Counts, &stuff)) {
             fprintf(stderr, "\033[1;31m");
-            fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+            fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
             fprintf(stderr, "\033[0m");
             exit(1);
           }
@@ -436,7 +436,7 @@ int main(int argc, char *argv[]) {
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
         // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+        ErrorCoorRead(input_coor, test, count_vcf, stuff);
         exit(1);
       } //}}}
 
@@ -515,7 +515,7 @@ int main(int argc, char *argv[]) {
 
         if (SkipCoor(vcf, Counts, &stuff)) {
           fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+          fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
           fprintf(stderr, "\033[0m");
           exit(1);
         }

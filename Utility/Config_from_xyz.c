@@ -109,7 +109,7 @@ int main(int argc, char *argv[]) {
   int beads;
   if (fscanf(xyz, "%d", &beads) != 1) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "Error: cannot read number of beads from %s\n\n", input_xyz);
+    fprintf(stderr, "Error: cannot read number of beads from \033[1;33m%s\033[1;31m\n\n", input_xyz);
     fprintf(stderr, "\033[0m");
     exit(1);
   }
@@ -179,38 +179,22 @@ int main(int argc, char *argv[]) {
     // error - less then four whitespace-separated strings //{{{
     if (words < 4) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: not enough columns in %s in %d. timestep (%d. bead)\n\n", input_xyz, count, i);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_xyz);
+      fprintf(stderr, " - not enough columns in \033[1;33m%d\033[1;31m. timestep\n", count);
       fprintf(stderr, "\033[0m");
+      ErrorPrintLine(split, words);
+      exit(1);
     } //}}}
 
     // test if split[1-3] are doubles //{{{
     for (int j = 1; j < 4; j++) {
-      // first character can be '-' (but must be longer) or a number
-      // Error if:
-      // 1) starting without number or '-'
-      // 2) the whole word is just '-'
-      // 3) starting '-' isn't followed by a number
-      if (((split[j][0] < '0' || split[j][0] > '9') && split[j][0] != '-') || // 1)
-          (split[j][0] == '-' && (strlen(split[j]) == 1)) || // 2)
-          (split[j][0] == '-' && split[j][1] < '0' && split[j][1] > '9')) { // 3)
+      if (!IsDouble(split[j])) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: wrong %d. coordinate in %d. timestep for %d. bead (%s)\n\n", j, count, i, split[j]);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_xyz);
+        fprintf(stderr, " - non-numeric coordinate in %d. timestep\n\n", count);
         fprintf(stderr, "\033[0m");
+        ErrorPrintLine(split, words);
         exit(1);
-      }
-      // other characters can be numbers or decimal point or newline (last character of 4th split)
-      // they can also be 'e' or '-' in case of number format 1.0e-1
-      for (int k = 1; k < strlen(split[j]); k++) {
-        if ((split[j][k] < '0' || split[j][k] > '9') &&
-            split[j][k] != '.' &&
-            split[j][k] != '\n' &&
-            split[j][k] != 'e' &&
-            split[j][k] != '-' ) {
-          fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "\nError: wrong %d. coordinate in %d. timestep for %d. bead (%s)\n\n", j, count, i, split[j]);
-          fprintf(stderr, "\033[0m");
-          exit(1);
-        }
       }
     } //}}}
 

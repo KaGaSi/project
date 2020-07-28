@@ -411,7 +411,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -444,12 +444,12 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff);
       exit(1);
     } //}}}
   } else {
     fprintf(stderr, "\033[1;33m");
-    fprintf(stderr, "\nWarning: using last step in %s (%d)\n", input_coor, count);
+    fprintf(stderr, "\nWarning: using last step in \033[1;36m%s\033[1;33m (\033[1;36m%d\033[1;33m)\n", input_coor, count);
     fprintf(stderr, "\033[0m");
   }
   fclose(vcf); //}}}
@@ -477,7 +477,7 @@ int main(int argc, char *argv[]) {
     }
     // read coordinates
     if ((test = ReadCoordinates(indexed_add, vcf, Counts_add, Index_add, &Bead_add, &stuff)) != 0) {
-      ErrorCoorRead(add_vcf, test, 0, stuff, add_vsf);
+      ErrorCoorRead(add_vcf, test, 0, stuff);
       exit(1);
     }
     fclose(vcf);
@@ -495,8 +495,8 @@ int main(int argc, char *argv[]) {
   if (Counts_add.Beads > can_be_exchanged) {
     fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError: insufficient beads to exchange\n");
-    fprintf(stderr, "     Number of exchangeable beads in the original system: %d\n", can_be_exchanged);
-    fprintf(stderr, "     Number of beads to be added: %d\n\n", Counts_add.Beads);
+    fprintf(stderr, "     Number of exchangeable beads in the original system: \033[1;33m%d\033[1;31m\n", can_be_exchanged);
+    fprintf(stderr, "     Number of beads to be added: \033[1;33m%d\033[1;31m\n\n", Counts_add.Beads);
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}

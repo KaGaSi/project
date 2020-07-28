@@ -188,7 +188,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (test != 2) {
-    fprintf(stderr, "\nError: option '-n' needs two numeric arguments\n\n");
+    fprintf(stderr, "\033[1;33m");
+    fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option needs two numeric arguments\n\n");
+    fprintf(stderr, "\033[0m");
     exit(1);
   }
 
@@ -372,14 +374,16 @@ int main(int argc, char *argv[]) {
         putchar('\n');
       }
       count--; // because last step isn't processed
-      fprintf(stderr, "\nError: premature end of %s file (after %d. step - '%s')\n\n", input_agg, count, stuff);
+      fprintf(stderr, "\033[1;31m");
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_agg);
+      fprintf(stderr, "\033[0m");
       break;
     } //}}}
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff);
       exit(1);
     } //}}}
 
@@ -489,7 +493,9 @@ int main(int argc, char *argv[]) {
         double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
 
         if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
+          fprintf(stderr, "\033[1;31m");
           fprintf(stderr, "Error: negative eigenvalues (%lf, %lf, %lf)\n\n", eigen.x, eigen.y, eigen.z);
+          fprintf(stderr, "\033[0m");
         }
         // agg masses
         mass_step[0] += agg_mass; // for this timestep
