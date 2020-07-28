@@ -37,8 +37,10 @@ VECTOR GetPBC(FILE *vcf, char *input_coor) {
                split[0][0] != '\0' && // 6)
                split[0][0] != '#') { // 7)
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError - %s: unrecognised line '%s'\n", input_coor, line2);
-      if (line2[0] >= '0' && line2[0] <= '9' && words > 2) {
+      fprintf(stderr, "\nError - \033[1;33m%s\033[1;31m", input_coor);
+      ErrorPrintLine(split, words);
+      fprintf(stderr, "\033[1;31m");
+      if (IsInteger(split[0]) && words > 2) {
         fprintf(stderr, "        Possibly missing pbc line\n");
       }
       putc('\n', stderr);
@@ -61,61 +63,59 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
     ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
-
   // read first line (Aggregate command)
   char line[LINE], split[30][100], delim[8];
   strcpy(delim, " \t");
   fgets(line, sizeof(line), agg);
   int words = SplitLine(split, line, delim);
-
-  // errof if not enough striings for an Aggregate command
+  // errof if not enough striings for an Aggregate command //{{{
   if (words < 6) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError - %s: first line must contain a valid Aggregates command\n", input_agg);
+    fprintf(stderr, "\nError - \033[1;33m%s\033[1;31m: first line must contain a valid Aggregates command\n", input_agg);
     fprintf(stderr, "\033[0m");
     ErrorPrintLine(split, words);
     exit(1);
-  }
-
-  // read minimum distance for closeness check (<distance> argument in Aggregates utility)
+  } //}}}
+  // read minimum distance for closeness check (<distance> argument in Aggregates utility) //{{{
   if (!IsPosDouble(split[2])) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError - %s: <distance> from Aggregate command must be a non-negative real number\n", input_agg);
+    fprintf(stderr, "\nError - \033[1;33m%s\033[1;31m: <distance> from Aggregate command must be a non-negative real number\n", input_agg);
     fprintf(stderr, "\033[0m");
     ErrorPrintLine(split, words);
     exit(1);
   }
-  *distance = atof(split[2]);
-  // read number of contacts aggregate check (<contacts> argument in Aggregates utility)
+  *distance = atof(split[2]); //}}}
+  // read number of contacts aggregate check (<contacts> argument in Aggregates utility) //{{{
   if (!IsInteger(split[3])) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError - %s: <contacts> from Aggregate command must be a non-negative whole number\n", input_agg);
+    fprintf(stderr, "\nError - \033[1;33m%s\033[1;31m: <contacts> from Aggregate command must be a non-negative whole number\n", input_agg);
     fprintf(stderr, "\033[0m");
     ErrorPrintLine(split, words);
     exit(1);
   }
-  *contacts = atof(split[3]);
-  // warn if a differently named vcf file is used than the one in agg file
+  *contacts = atof(split[3]); //}}}
+  // warn if a differently named vcf file is used than the one in agg file //{{{
   if (strcmp(split[1], input_coor) != 0) {
-    fprintf(stderr, "\nWARNING: the coordinate file (%s) ", input_coor);
-    fprintf(stderr, "is different to the one in the aggregate file (%s).\n", split[1]);
+    fprintf(stderr, "\033[1;33m");
+    fprintf(stderr, "\nWARNING: the coordinate file (\033[1;36m%s\033[1;33m) ", input_coor);
+    fprintf(stderr, "is different to the one in the aggregate file (\033[1;36m%s\033[1;33m).\n", split[1]);
     fprintf(stderr, "         Mismatch between beads present in both files can lead to undefined behaviour.\n\n");
-  }
-
-  // read <type names> from Aggregates command
+    fprintf(stderr, "\033[0m");
+  } //}}}
+  // read <type names> from Aggregates command //{{{
   for (int i = 5; i < words && split[i][0] != '-'; i++) {
     int type = FindBeadType(split[i], Counts, BeadType);
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - non-existent bead name '%s' in Aggregate command\n", input_agg, split[i]);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m -", input_agg);
+      fprintf(stderr, " - non-existent bead name \033[1;33m%s\033[1;31m in Aggregate command\n", split[i]);
       fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType);
       exit(1);
     }
     BeadType[type].Use = true;
-  }
-
+  } //}}}
   fclose(agg);
 } //}}}
 
@@ -171,7 +171,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       // error - odd number of values: a(tom) lines are composed of 'keyword <value>' pairs //{{{
       if ((words % 2) == 1) { // because it's split[0] ... split[2n-1]
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - odd number of strings an atom line\n", vsf_file);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - odd number of strings an atom line\n", vsf_file);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -198,7 +198,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
           } else if (strcmp(split[j], "charge") == 0 || strcmp(split[j], "q") == 0) {
             if (!IsDouble(split[j+1])) {
               fprintf(stderr, "\033[1;31m");
-              fprintf(stderr, "\nError: %s - atom charge must be a real number\n", vsf_file);
+              fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - atom charge must be a real number\n", vsf_file);
               fprintf(stderr, "\033[0m");
               ErrorPrintLine(split, words);
               exit(1);
@@ -207,7 +207,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
           } else if (strncmp(split[j], "mass", 1) == 0) {
             if (!IsPosDouble(split[j+1])) {
               fprintf(stderr, "\033[1;31m");
-              fprintf(stderr, "\nError: %s - atom charge must be a non-negative real number\n", vsf_file);
+              fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - atom charge must be a non-negative real number\n", vsf_file);
               fprintf(stderr, "\033[0m");
               ErrorPrintLine(split, words);
               exit(1);
@@ -223,7 +223,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
         }
         if (!name) {
           fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "\nError: %s - atom line must contain 'name'\n", vsf_file);
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - atom line must contain 'name'\n", vsf_file);
           fprintf(stderr, "\033[0m");
           ErrorPrintLine(split, words);
           exit(1);
@@ -231,7 +231,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
         continue; // skip the rest of the line
       } else if (!IsInteger(split[1])) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - 'a(tom)' must be followed by 'default' or a whole number\n", vsf_file);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'a(tom)' must be followed by 'default' or a whole number\n", vsf_file);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -240,7 +240,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       } //}}}
 
       // check that line contains either both 'resid' and 'resname' or neither //{{{
-      // TODO: only resid is necessary, if not resname, add some autogenerated, creating a new MoleculeType
+      // TODO: only resid is necessary, if not resname, add some autogenerated name, creating a new MoleculeType
       int test = 0;
       for (int i = 2; i < words && test < 2; i+= 2) {
         if (strcmp("resname", split[i]) == 0) {
@@ -249,7 +249,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
           test++;
           if (!IsInteger(split[i+1]) || atoi(split[i+1]) == 0) {
             fprintf(stderr, "\033[1;31m");
-            fprintf(stderr, "\nError: %s - 'resid' must be followed by a positive whole number\n", vsf_file);
+            fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'resid' must be followed by a positive whole number\n", vsf_file);
             fprintf(stderr, "\033[0m");
             ErrorPrintLine(split, words);
             exit(1);
@@ -258,7 +258,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       }
       if (test == 1) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - atom line must contain both 'resid' and 'resname'\n", vsf_file);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - atom line must contain both 'resid' and 'resname'\n", vsf_file);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -309,7 +309,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
           if (atoi(split[i+1]) > max_mol) {
             if (!IsInteger(split[i+1]) || atoi(split[i+1]) == 0) {
               fprintf(stderr, "\033[1;31m");
-              fprintf(stderr, "\nError: %s - 'resid' must be followed by a positive whole number\n", vsf_file);
+              fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'resid' must be followed by a positive whole number\n", vsf_file);
               fprintf(stderr, "\033[0m");
               ErrorPrintLine(split, words);
               exit(1);
@@ -320,7 +320,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
         } else if (strcmp("charge", split[i]) == 0 || strcmp("q", split[i]) == 0) { //{{{
           if (!IsDouble(split[i+1])) {
             fprintf(stderr, "\033[1;31m");
-            fprintf(stderr, "\nError: %s - atom charge must be a real number\n", vsf_file);
+            fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - atom charge must be a real number\n", vsf_file);
             fprintf(stderr, "\033[0m");
             ErrorPrintLine(split, words);
             exit(1);
@@ -330,7 +330,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
         } else if (strncmp("mass", split[i], 1) == 0) { //{{{
           if (!IsPosDouble(split[i+1])) {
             fprintf(stderr, "\033[1;31m");
-            fprintf(stderr, "\nError: %s - atom mass must be a non-negative real number\n", vsf_file);
+            fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - atom mass must be a non-negative real number\n", vsf_file);
             fprintf(stderr, "\033[0m");
             ErrorPrintLine(split, words);
             exit(1);
@@ -349,7 +349,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       // error - no 'name' //{{{
       if (!name) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - atom line must contain 'name'\n", vsf_file);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - atom line must contain 'name'\n", vsf_file);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -513,7 +513,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     } else if (split[0][0] != '\0' && // empty line
                split[0][0] != '#') { // comment
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError - %s: unrecognised line\n", vsf_file);
+      fprintf(stderr, "\nError - \033[1;33m%s\033[1;31m: unrecognised line\n", vsf_file);
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
@@ -681,12 +681,9 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
         // otherwise, error if 'i(ndexed)' or 'o(ordered)' not present
         } else if (split[1][0] != 'o' && split[1][0] != 'O' &&
             split[1][0] != 'i' && split[1][0] != 'I') {
-          // remove newline if present at the end of split[1]
-          if (split[1][strlen(split[1])-1] == '\n') {
-            split[1][strlen(split[1])-1] = '\0';
-          }
           fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "\nError: %s - unrecognised keywords '%s %s'", vsf_file, split[0], split[1]);
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", vsf_file);
+          fprintf(stderr, " - unrecognised keywords '\033[1;33m%s %s\033[1;31m'", split[0], split[1]);
           fprintf(stderr, "\033[0m");
           exit(1);
         // if no error, find if 'i(ndexed)' or 'o(rdered)' timestep
@@ -737,7 +734,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       // for lines containing only whitespace
       if (strlen(line) == 1) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - blank line instead of a first coordinate line\n\n", vcf_file);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - blank line instead of a first coordinate line\n\n", vcf_file);
         fprintf(stderr, "\033[0m");
         exit(1);
       }
@@ -780,7 +777,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     //}}}
     } else { // error //{{{
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - missing 'i(ndexed)' or 'o(rdered)' keyword\n\n", vcf_file);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing 'i(ndexed)' or 'o(rdered)' keyword\n\n", vcf_file);
       fprintf(stderr, "\033[0m");
       exit(1);
     } //}}}
@@ -1442,7 +1439,7 @@ void ReadFieldPbc(char *field, VECTOR *BoxLength) {
       !IsPosDouble(split[1]) || // 2) first <double>
       !IsPosDouble(split[2])) { // 2) first <double>
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: %s - first line must start with box size (i.e., three positive numbers)\n", field);
+    fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - first line must start with box size (i.e., three positive numbers)\n", field);
     fprintf(stderr, "\033[0m");
     ErrorPrintLine(split, words);
     exit(1);
@@ -1480,7 +1477,7 @@ void ReadFieldBeadType(char *field, COUNTS *Counts, BEADTYPE **BeadType, BEAD **
       if (words < 2 ||            // missing next string
           !IsInteger(split[1])) { // next string isn't a number
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - missing number of species\n", field);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing number of species\n", field);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -1491,7 +1488,7 @@ void ReadFieldBeadType(char *field, COUNTS *Counts, BEADTYPE **BeadType, BEAD **
   }
   if (missing) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: %s - missing 'species' keyword\n\n", field);
+    fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing 'species' keyword\n\n", field);
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
@@ -1513,7 +1510,7 @@ void ReadFieldBeadType(char *field, COUNTS *Counts, BEADTYPE **BeadType, BEAD **
     // 5) fifth string isn't an integer (unbonded beads)
     if (words == 1 && split[0][0] == '\0') { // 1)
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - no blank spaces permitted in the species section\n\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - no blank spaces permitted in the species section\n\n", field);
       fprintf(stderr, "\033[0m");
       exit(1);
     } else if (words < 4 ||                  // 2)
@@ -1521,7 +1518,7 @@ void ReadFieldBeadType(char *field, COUNTS *Counts, BEADTYPE **BeadType, BEAD **
                !IsDouble(split[2]) ||        // 4)
                !IsInteger(split[3])) {       // 5)
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - wrong species line\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - wrong species line\n", field);
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
@@ -1579,7 +1576,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
       // error - next string isn't a number
       if (!IsInteger(split[1])) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - missing number of molecule types\n", field);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing number of molecule types\n", field);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -1590,7 +1587,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
   }
   if (missing) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: %s - missing 'molecule' line\n\n", field);
+    fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing 'molecule' line\n\n", field);
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
@@ -1616,7 +1613,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
   }
   if (count < (*Counts).TypesOfMolecules) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: %s - missing 'finish' keyword\n\n", field);
+    fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing 'finish' keyword\n\n", field);
     fprintf(stderr, "\033[0m");
     exit(1);
   }
@@ -1635,7 +1632,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     SplitLine(split, line, delim);
     if (split[0][0] == '\0') {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - missing molecule name\n\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing molecule name\n\n", field);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -1645,14 +1642,14 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     int words = SplitLine(split, line, delim);
     if (strcasecmp(split[0], "nummols") != 0) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - missing 'nummols' keyword\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing 'nummols' keyword\n", field);
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
     }
     if (words < 2 || !IsInteger(split[1])) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - 'nummols' must be followed by a non-negative integer\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'nummols' must be followed by a non-negative integer\n", field);
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
@@ -1663,14 +1660,14 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     words = SplitLine(split, line, delim);
     if (strncasecmp(split[0], "beads", 4) != 0) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - missing 'beads' keyword\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing 'beads' keyword\n", field);
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
     }
     if (words < 2 || !IsInteger(split[1])) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - 'beads' must be followed by a non-negative integer\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'beads' must be followed by a non-negative integer\n", field);
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
@@ -1685,7 +1682,8 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
       if (words < 4 ||
           !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - wrong bead line in molecule %s\n", field, (*MoleculeType)[i].Name);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - wrong bead line in molecule ", field);
+        fprintf(stderr, "\033[1;33m%s\n", (*MoleculeType)[i].Name);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -1693,7 +1691,8 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
       int type = FindBeadType(split[0], *Counts, *BeadType);
       if (type == -1) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - non-existent bead name '%s' in molecule %s\n", field, split[0], (*MoleculeType)[i].Name);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - non-existent bead name \033[1;33m%s\033[1;31m ", field, split[0]);
+        fprintf(stderr, "in molecule \033[1;33m%s\n", (*MoleculeType)[i].Name);
         fprintf(stderr, "\033[0m");
         ErrorBeadType(*Counts, *BeadType);
         exit(1);
@@ -1705,14 +1704,14 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     words = SplitLine(split, line, delim);
     if (strncasecmp(split[0], "bonds", 4) != 0) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - missing 'bonds' keyword\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - missing 'bonds' keyword\n", field);
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
     }
     if (words < 2 || !IsInteger(split[1])) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - 'bonds' must be followed by a non-negative integer\n", field);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'bonds' must be followed by a non-negative integer\n", field);
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
@@ -1733,7 +1732,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
           !IsInteger(split[2]) || atoi(split[2]) == 0 ||
           !IsPosDouble(split[3]) || !IsPosDouble(split[4])) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - wrong bond line in molecule %s\n", field, (*MoleculeType)[i].Name);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - wrong bond line in molecule %s\n", field, (*MoleculeType)[i].Name);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -1763,7 +1762,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
       // get number of angles //{{{
       if (words < 2 || !IsInteger(split[1])) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: %s - 'angles' must be followed by a non-negative integer\n", field);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'angles' must be followed by a non-negative integer\n", field);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -1785,7 +1784,8 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
             !IsInteger(split[3]) || atoi(split[3]) == 0 ||
             !IsPosDouble(split[4]) || !IsPosDouble(split[5])) {
           fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "\nError: %s - wrong angle line in molecule %s\n", field, (*MoleculeType)[i].Name);
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", field);
+          fprintf(stderr, " - wrong angle line in molecule \033[1;33m%s\n", (*MoleculeType)[i].Name);
           fprintf(stderr, "\033[0m");
           ErrorPrintLine(split, words);
           exit(1);
@@ -1807,6 +1807,14 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
           (*angle_type)[(*Counts).TypesOfAngles-1].b = atof(split[5]);
         }
       }
+    // error - isn't there more bonds, by any chance?
+    } else if (strncasecmp(split[0], "harm", 5) == 0) {
+      fprintf(stderr, "\033[1;31m");
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m ", field);
+      fprintf(stderr, "- extra bond line in molecule \033[1;33m%s\n", (*MoleculeType)[i].Name);
+      fprintf(stderr, "\033[0m");
+      ErrorPrintLine(split, words);
+      exit(1);
     } //}}}
     (*Counts).Bonded += (*MoleculeType)[i].Number * (*MoleculeType)[i].nBeads;
     (*Counts).Molecules += (*MoleculeType)[i].Number;

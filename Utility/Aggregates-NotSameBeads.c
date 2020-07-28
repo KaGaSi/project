@@ -542,16 +542,15 @@ int main(int argc, char *argv[]) {
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - non-existent bead name \033[1;33m%s\033[1;31m\n", input_coor, argv[count]);
       fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType);
       exit(1);
     }
     if (BeadType[type].Use) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: bead type %s specified more than once\n\n", argv[count]);
+      fprintf(stderr, "\033[1;33m");
+      fprintf(stderr, "\nWarning: bead type \033[1;36m%s\033[1;33m specified more than once\n\n", argv[count]);
       fprintf(stderr, "\033[0m");
-      exit(1);
     }
     BeadType[type].Use = true;
   } //}}}
@@ -688,7 +687,7 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff);
       exit(1);
     } //}}}
 
@@ -737,7 +736,8 @@ int main(int argc, char *argv[]) {
     if (test_count != Counts.Molecules) {
       fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: not all molecules were assigned to aggregates\n");
-      fprintf(stderr, "       Counts.Molecules = %5d; Molecules in aggregates: %d\n\n", Counts.Molecules, test_count);
+      fprintf(stderr, "       Counts.Molecules = \033[1;33m%d\033[1;31m;", Counts.Molecules);
+      fprintf(stderr, " Molecules in aggregates: \033[1;33m%d\033[1;31m\n\n", test_count);
       fprintf(stderr, "\033[0m");
       exit(1);
     } //}}}

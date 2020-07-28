@@ -23,9 +23,8 @@
  * \param [in] bead       bead's line in its timestep in .vcf file where error occurred
  * \param [in] step       timestep when error occurred
  * \param [in] stuff      comment line of a timestep when error occurred
- * \param [in] input_vsf  .vsf structure file
  */
-void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff, char *input_vsf); //}}}
+void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff); //}}}
 
 // ErrorArgNumber() //{{{
 /**
@@ -92,6 +91,15 @@ void ErrorOption(char *option); //}}}
  * \param [in] BeadType    information about bead types
  */
 void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType); //}}}
+
+// ErrorMoleculeType() //{{{
+/**
+ * Error when non-existent bead is used.
+ *
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] MoleculeType  information about molecule types
+ */
+void ErrorMoleculeType(COUNTS Counts, MOLECULETYPE *MoleculeType); //}}}
 
 // ErrorPrintLine() //{{{
 /**

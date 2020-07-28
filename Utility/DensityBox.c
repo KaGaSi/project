@@ -176,7 +176,7 @@ int main(int argc, char *argv[]) {
 
     if (axis != 'x' && axis != 'y' && axis != 'z') {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: <axis> must be 'x', 'y', or 'z'\n\n");
+      fprintf(stderr, "\nError: \033[1;33m<axis>\033[1;31m must be 'x', 'y', or 'z'\n\n");
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "Error: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "Error: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff);
       exit(1);
     } //}}}
 

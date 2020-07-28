@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
   }
   if (test != 2) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: option '-n' requires two numeric arguments\n\n");
+    fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option requires two numeric arguments\n\n");
     fprintf(stderr, "\033[0m");
     exit(1);
   }
@@ -245,14 +245,14 @@ int main(int argc, char *argv[]) {
         types[1][0] = i;
       } else if (specific_moltype_for_size[i]) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: '-c' option - more than two molecule types for composition distribution\n\n");
+        fprintf(stderr, "\nError: \033[1;33m-c\033[1;31m option - more than two molecule types for composition distribution\n\n");
         fprintf(stderr, "\033[0m");
         exit(1);
       }
     }
     if (types[0][0] == -1 || types[1][0] == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "Error: '-c' option - less than two molecule types for composition distribution\n");
+      fprintf(stderr, "Error: \033[1;33m-c\033[1;31m option - less than two molecule types for composition distribution\n");
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -276,7 +276,7 @@ int main(int argc, char *argv[]) {
   // error if wrong number of names
   if (count != 0 && count != 2) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: '-nc' option - exactly two molecule names are required\n\n");
+    fprintf(stderr, "\nError: \033[1;33m-nc\033[1;31m option - exactly two molecule names are required\n\n");
     fprintf(stderr, "\033[0m");
     exit(1);
   }
