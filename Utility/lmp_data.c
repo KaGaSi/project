@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       pos = pos_old;
       count--;
@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
   // read coordinates //{{{
   if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
     // print newline to stdout if Step... doesn't end with one
-    ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+    ErrorCoorRead(input_coor, test, count, stuff);
     exit(1);
   } //}}}
 
@@ -344,6 +344,15 @@ int main(int argc, char *argv[]) {
       fprintf(out, "%7d", Bead[i].Molecule+1);
     }
     fprintf(out, "%4d   %lf  ", type+1, BeadType[type].Charge);
+    if (Bead[i].Position.x == BoxLength.x) {
+      Bead[i].Position.x -= 0.00001;
+    }
+    if (Bead[i].Position.y == BoxLength.y) {
+      Bead[i].Position.y -= 0.00001;
+    }
+    if (Bead[i].Position.z == BoxLength.z) {
+      Bead[i].Position.z -= 0.00001;
+    }
     fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
                                   Bead[i].Position.y,
                                   Bead[i].Position.z);

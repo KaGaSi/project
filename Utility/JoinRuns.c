@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
     int type = FindBeadType(argv[count], Counts, BeadType1);
     if (type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: non-existent bead name '%s'\n", argv[count]);
+      fprintf(stderr, "\nError: non-existent bead name \033[1;33m%s\033[1;31m\n", argv[count]);
       fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType1);
       fprintf(stderr, "\033[1;31m");
@@ -306,8 +306,8 @@ int main(int argc, char *argv[]) {
       BoxLength.z != BoxLength_2.z) {
     fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - different box sizes in provided coordinate files\n");
-    fprintf(stderr, "          %s: %lf %lf %lf\n", input_coor_1, BoxLength.x, BoxLength.y, BoxLength.z);
-    fprintf(stderr, "          %s: %lf %lf %lf\n\n", input_coor_1, BoxLength_2.x, BoxLength_2.y, BoxLength_2.z);
+    fprintf(stderr, "        %s: %lf %lf %lf\n", input_coor_1, BoxLength.x, BoxLength.y, BoxLength.z);
+    fprintf(stderr, "        %s: %lf %lf %lf\n\n", input_coor_1, BoxLength_2.x, BoxLength_2.y, BoxLength_2.z);
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
@@ -374,7 +374,7 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
-      ErrorCoorRead(input_coor_1, test, count, stuff, input_vsf_1);
+      ErrorCoorRead(input_coor_1, test, count, stuff);
       exit(1);
     } //}}}
 
@@ -415,7 +415,7 @@ int main(int argc, char *argv[]) {
 
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
-        ErrorCoorRead(input_coor_1, test, count_vcf, stuff, input_vsf_1);
+        ErrorCoorRead(input_coor_1, test, count_vcf, stuff);
         exit(1);
       } //}}}
     } //}}}
@@ -530,7 +530,7 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor_2, test, count_vcf, stuff, input_vsf_2);
+      ErrorCoorRead(input_coor_2, test, count_vcf, stuff);
       exit(1);
     } //}}}
 
@@ -578,7 +578,7 @@ int main(int argc, char *argv[]) {
 
       // read coordinates //{{{
       if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
-        ErrorCoorRead(input_coor_2, test, count_vcf, stuff, input_vsf_2);
+        ErrorCoorRead(input_coor_2, test, count_vcf, stuff);
         exit(1);
       } //}}}
     } //}}}

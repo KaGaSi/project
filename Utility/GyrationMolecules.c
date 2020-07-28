@@ -149,9 +149,6 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
-  // vsf file is not needed anymore
-  free(input_vsf);
-
   // <molecule names> - types of molecules for calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
 
@@ -169,8 +166,9 @@ int main(int argc, char *argv[]) {
     // wrong molecule name //{{{
     if (!test) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: non-existent molecule name: %s\n\n", argv[count]);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - non-existent molecule name %s\n\n", input_vsf, argv[count]);
       fprintf(stderr, "\033[0m");
+      ErrorMoleculeType(Counts, MoleculeType);
       exit(1);
     } //}}}
   } //}}}
@@ -249,7 +247,7 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count, stuff);
       exit(1);
     } //}}}
 
@@ -416,6 +414,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // free memory - to make valgrind happy //{{{
+  free(input_vsf);
   free(BeadType);
   free(Index);
   FreeMoleculeType(Counts, &MoleculeType);

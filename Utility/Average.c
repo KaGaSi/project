@@ -136,8 +136,9 @@ int main ( int argc, char** argv ) {
       // error - insufficient number of columns
       if (words < column) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: only %d columns in %s on line %d\n\n", words, input, all_lines);
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - too few columns", input);
         fprintf(stderr, "\033[0m");
+        ErrorPrintLine(split, words);
         exit(1);
       }
       // number of data lines
@@ -155,8 +156,7 @@ int main ( int argc, char** argv ) {
   // error - <discard> is too large //{{{
   if (discard >= lines) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: <discard> parameter is too large (%d) - ", discard);
-    fprintf(stderr, "there are only %d data lines in %s\n\n", lines, input);
+    fprintf(stderr, "\nError: \033[1;31m<discard>\033[1;31m - \033[1;33m%d\033[1;31m is too high\n\n", discard);
     fprintf(stderr, "\033[0m");
     Help(argv[0], true);
     exit(1);

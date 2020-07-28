@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       pos = pos_old;
       count--;
@@ -178,7 +178,7 @@ int main(int argc, char *argv[]) {
   // read coordinates //{{{
   if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
     // print newline to stdout if Step... doesn't end with one
-    ErrorCoorRead(input_coor, test, count, stuff, input_vsf);
+    ErrorCoorRead(input_coor, test, count, stuff);
     exit(1);
   } //}}}
 

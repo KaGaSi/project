@@ -27,8 +27,6 @@ well as according to molecule connectivity. Angles are disregarded.\n\n");
   fprintf(ptr, "      --version      print version number and exit\n");
 } //}}}
 
-// TODO: read angles
-
 // TODO: make data file reading into a separate function in Read.c
 
 int main(int argc, char *argv[]) {
@@ -146,7 +144,9 @@ int main(int argc, char *argv[]) {
     // number of atoms //{{{
     if (words > 1 && strcmp(split[1], "atoms") == 0) {
       if (!IsInteger(split[0])) {
-        fprintf(stderr, "\nError: %s - 'atoms' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[1;33m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'atoms' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -156,7 +156,9 @@ int main(int argc, char *argv[]) {
     // number of bonds //{{{
     if (words > 1 && strcmp(split[1], "bonds") == 0) {
       if (!IsInteger(split[0])) {
-        fprintf(stderr, "\nError: %s - 'bonds' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'bonds' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -165,7 +167,9 @@ int main(int argc, char *argv[]) {
     // number of angles //{{{
     if (words > 1 && strcmp(split[1], "angles") == 0) {
       if (!IsInteger(split[0])) {
-        fprintf(stderr, "\nError: %s - 'angles' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'angles' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -175,7 +179,9 @@ int main(int argc, char *argv[]) {
     // number of bead types //{{{
     if (words > 2 && strcmp(split[1], "atom") == 0 && strcmp(split[2], "types") == 0) {
       if (!IsInteger(split[0])) {
-        fprintf(stderr, "\nError: %s - 'atom types' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'atom types' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -184,7 +190,9 @@ int main(int argc, char *argv[]) {
     // number of bond types //{{{
     if (words > 2 && strcmp(split[1], "bond") == 0 && strcmp(split[2], "types") == 0) {
       if (!IsInteger(split[0])) {
-        fprintf(stderr, "\nError: %s - 'bond types' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'bond types' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -193,7 +201,9 @@ int main(int argc, char *argv[]) {
     // number of angle types //{{{
     if (words > 2 && strcmp(split[1], "angle") == 0 && strcmp(split[2], "types") == 0) {
       if (!IsInteger(split[0])) {
-        fprintf(stderr, "\nError: %s - 'angle types' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'angle types' keyword must be preceded by integer\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -202,7 +212,9 @@ int main(int argc, char *argv[]) {
     // box length in x //{{{
     if (words > 3 && strcmp(split[2], "xlo") == 0 && strcmp(split[3], "xhi") == 0) {
       if (!IsDouble(split[0]) || !IsDouble(split[1])) {
-        fprintf(stderr, "\nError: %s - 'xlo xhi' keyword must be preceded by two floats\n", input);
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'xlo xhi' keyword must be preceded by two floats\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -212,7 +224,9 @@ int main(int argc, char *argv[]) {
     // box length in y //{{{
     if (words > 3 && strcmp(split[2], "ylo") == 0 && strcmp(split[3], "yhi") == 0) {
       if (!IsDouble(split[0]) || !IsDouble(split[1])) {
-        fprintf(stderr, "\nError: %s - 'ylo yhi' keyword must be preceded by two floats\n", input);
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'ylo yhi' keyword must be preceded by two floats\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -222,7 +236,9 @@ int main(int argc, char *argv[]) {
     // box length in x //{{{
     if (words > 3 && strcmp(split[2], "zlo") == 0 && strcmp(split[3], "zhi") == 0) {
       if (!IsDouble(split[0]) || !IsDouble(split[1])) {
-        fprintf(stderr, "\nError: %s - 'zlo zhi' keyword must be preceded by two floats\n", input);
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'zlo zhi' keyword must be preceded by two floats\n", input);
+        fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
       }
@@ -237,31 +253,31 @@ int main(int argc, char *argv[]) {
   // some error checking //{{{
   if (Counts.TypesOfBeads == 0) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError - missing 'atom types' line (or is 0) in %s\n\n", input);
+    fprintf(stderr, "\nError \033[1;33m%s\033[1;31m - missing 'atom types' line (or is 0)\n\n", input);
     fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (Counts.BeadsInVsf == 0) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError - missing 'atoms' line (or is 0) in %s\n\n", input);
+    fprintf(stderr, "\nError \033[1;33m%s\033[1;31m - missing 'atoms' line (or is 0)\n\n", input);
     fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (BoxLength.x == 0) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError - missing 'xlo xhi' line (or is 0 0) in %s\n\n", input);
+    fprintf(stderr, "\nError \033[1;33m%s\033[1;31m - missing 'xlo xhi' line (or is 0 0)\n\n", input);
     fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (BoxLength.y == 0) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError - missing 'ylo yhi' line (or is 0 0) in %s\n\n", input);
+    fprintf(stderr, "\nError \033[1;33m%s\033[1;31m - missing 'ylo yhi' line (or is 0 0)\n\n", input);
     fprintf(stderr, "\033[0m");
     exit(1);
   }
   if (BoxLength.z == 0) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError - missing 'zlo zhi' line (or is 0 0) in %s\n\n", input);
+    fprintf(stderr, "\nError \033[1;33m%s\033[1;31m - missing 'zlo zhi' line (or is 0 0)\n\n", input);
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
@@ -300,7 +316,9 @@ int main(int argc, char *argv[]) {
         words = SplitLine(split, line, delim);
         // error if incorrect line //{{{
         if (words < 2 || !IsInteger(split[0]) || !IsPosDouble(split[1])) {
-          fprintf(stderr, "\nError: %s - each line in 'Masses' section must start with '<int> <float>'\n", input);
+          fprintf(stderr, "\033[1;31m");
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - each line in 'Masses' section must start with '<int> <float>'\n", input);
+          fprintf(stderr, "\033[0m");
           ErrorPrintLine(split, words);
           exit(1);
         } //}}}
@@ -328,7 +346,9 @@ int main(int argc, char *argv[]) {
         words = SplitLine(split, line, delim);
         // error if incorrect line //{{{
         if (words < 3 || !IsInteger(split[0]) || !IsPosDouble(split[1]) || !IsPosDouble(split[2])) {
-          fprintf(stderr, "\nError: %s - each line in 'Bond Coeffs' section must start with '<int> <float> <float>'\n", input);
+          fprintf(stderr, "\033[1;31m");
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - each line in 'Bond Coeffs' section must start with '<int> <float> <float>'\n", input);
+          fprintf(stderr, "\033[0m");
           ErrorPrintLine(split, words);
           exit(1);
         } //}}}
@@ -346,7 +366,9 @@ int main(int argc, char *argv[]) {
         words = SplitLine(split, line, delim);
         // error if incorrect line //{{{
         if (words < 3 || !IsInteger(split[0]) || !IsPosDouble(split[1]) || !IsPosDouble(split[2])) {
-          fprintf(stderr, "\nError: %s - each line in 'Angle Coeffs' section must start with '<int> <float> <float>'\n", input);
+          fprintf(stderr, "\033[1;31m");
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - each line in 'Angle Coeffs' section must start with '<int> <float> <float>'\n", input);
+          fprintf(stderr, "\033[0m");
           ErrorPrintLine(split, words);
           exit(1);
         } //}}}
@@ -377,7 +399,9 @@ int main(int argc, char *argv[]) {
         if (words < 7 ||
             !IsInteger(split[0]) || !IsInteger(split[1]) || !IsInteger(split[2]) ||
             !IsDouble(split[3]) || !IsDouble(split[4]) || !IsDouble(split[5]) || !IsDouble(split[6])) {
-          fprintf(stderr, "\nError: %s - each 'Atoms' line must be <id> <mol_id> <bead type> <charge> <x> <y> <z>\n", input);
+          fprintf(stderr, "\033[1;31m");
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - each 'Atoms' line must be <id> <mol_id> <bead type> <charge> <x> <y> <z>\n", input);
+          fprintf(stderr, "\033[0m");
           ErrorPrintLine(split, words);
           exit(1);
         } //}}}
@@ -479,7 +503,9 @@ int main(int argc, char *argv[]) {
         if (words < 4 ||
             !IsInteger(split[0]) || !IsInteger(split[1]) ||
             !IsInteger(split[2]) || !IsInteger(split[3])) {
-          fprintf(stderr, "\nError: %s - each 'Bonds' line must be <bond id> <bond type> <bead1d> <bead2>\n", input);
+          fprintf(stderr, "\033[1;31m");
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - each 'Bonds' line must be <bond id> <bond type> <bead1d> <bead2>\n", input);
+          fprintf(stderr, "\033[0m");
           ErrorPrintLine(split, words);
           exit(1);
         } //}}}
@@ -491,9 +517,8 @@ int main(int argc, char *argv[]) {
         // error when the second bead is in different molecule //{{{
         if (mol != Bead[bead2].Molecule) {
           fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "\nError in bond #%d in %s: ", atoi(split[0]), input);
-          fprintf(stderr, "atoms %d and %d are in different molecules ", bead1+1, bead2+1);
-          fprintf(stderr, "(%d and %d)\n\n", mol+1, Bead[bead2].Molecule+1);
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input);
+          fprintf(stderr, " - beads in \033[1;33mbond %d\033[1;31m are in different molecules\n\n", atoi(split[0]));
           fprintf(stderr, "\033[0m");
           exit(1);
         } //}}}
@@ -660,7 +685,9 @@ int main(int argc, char *argv[]) {
         if (words < 5 ||
             !IsInteger(split[0]) || !IsInteger(split[1]) ||
             !IsInteger(split[2]) || !IsInteger(split[3]) || !IsInteger(split[4])) {
-          fprintf(stderr, "\nError: %s - each 'Angles' line must be <angle id> <angle type> <bead1d> <bead2> <bead3>\n", input);
+          fprintf(stderr, "\033[1;31m");
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - each 'Angles' line must be <angle id> <angle type> <bead1d> <bead2> <bead3>\n", input);
+          fprintf(stderr, "\033[0m");
           ErrorPrintLine(split, words);
           exit(1);
         } //}}}
@@ -673,9 +700,8 @@ int main(int argc, char *argv[]) {
         // error when the second bead is in different molecule //{{{
         if (mol != Bead[bead2].Molecule || mol != Bead[bead3].Molecule) {
           fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "\nError in angle #%d in %s: ", atoi(split[0]), input);
-          fprintf(stderr, "atoms %d, %d, and %d are in different molecules ", bead1+1, bead2+1, bead3+1);
-          fprintf(stderr, "(%d, %d, and %d)\n\n", mol+1, Bead[bead2].Molecule+1, Bead[bead3].Molecule+1);
+          fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m ", input);
+          fprintf(stderr, " - atoms in \033[1;33mangle %d\033[1;31m are in different molecules\n\n", atoi(split[0]));
           fprintf(stderr, "\033[0m");
           exit(1);
         } //}}}

@@ -163,9 +163,6 @@ int main(int argc, char *argv[]) {
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
-  // vsf file is not needed anymore
-  free(input_vsf);
-
   // <molecule names> - types of molecules for calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
 
@@ -173,8 +170,10 @@ int main(int argc, char *argv[]) {
 
     if (mol_type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "Error: molecule '%s' does not exist in FIELD\n\n", argv[count]);
+      fprintf(stderr, "Error: \033[1;33m%s\033[1;31m", input_vsf);
+      fprintf(stderr, " - non-existent molecule %s", argv[count]);
       fprintf(stderr, "\033[0m");
+      ErrorMoleculeType(Counts, MoleculeType);
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -199,7 +198,7 @@ int main(int argc, char *argv[]) {
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: '-n' option - number of bead ids must be divisible by six.\n");
+    fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - number of bead ids must be divisible by six.\n");
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
@@ -211,7 +210,9 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && dihedral[i] >= MoleculeType[j].nBeads) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: '-n' option - %d is larger than the number of beads in molecule %s (%d beads)\n\n", dihedral[i]+1, MoleculeType[j].Name, MoleculeType[j].nBeads);
+        fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option");
+        fprintf(stderr, " - \033[1;33m%d\033[1;31m is larger ", dihedral[i]+1);
+        fprintf(stderr, "than the number of beads in molecule \033[1;33m%s\033[1;31m\n\n", MoleculeType[j].Name);
         fprintf(stderr, "\033[0m");
         Help(argv[0], true);
         exit(1);
@@ -224,7 +225,8 @@ int main(int argc, char *argv[]) {
         dihedral[i] == dihedral[i+2] ||
         dihedral[i+1] == dihedral[i+2]) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: '-n' option - a plane must be specified by three different beads (wrong trio: %d %d %d)\n", dihedral[i], dihedral[i+1], dihedral[i+2]);
+      fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - a plane must be specified by three different beads");
+      fprintf(stderr, "(wrong trio: \033[1;33m%d %d %d\033[1;31m)\n", dihedral[i], dihedral[i+1], dihedral[i+2]);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -319,7 +321,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -368,7 +370,7 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff);
       exit(1);
     } //}}}
 
@@ -563,6 +565,7 @@ int main(int argc, char *argv[]) {
   //}}}
 
   // free memory - to make valgrind happy //{{{
+  free(input_vsf);
   free(BeadType);
   free(Index);
   FreeMoleculeType(Counts, &MoleculeType);

@@ -135,6 +135,14 @@ int main(int argc, char *argv[]) {
   if (IntegerOption(argc, argv, "-e", &end)) {
     exit(1);
   } //}}}
+
+  // error if ending step is lower than starging step //{{{
+  if (end != -1 && start > end) {
+    fprintf(stderr, "\033[1;31m");
+    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
+    fprintf(stderr, "\033[0m");
+    exit(1);
+  } //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -165,13 +173,9 @@ int main(int argc, char *argv[]) {
 
     if (mol_type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: molecule '%s' is not included in %s\n", argv[count], input_coor);
-      fprintf(stderr, "   Present molecule types:\n");
-      for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-        fprintf(stderr, "     %s\n", MoleculeType[i].Name);
-      }
-      putc('\n', stderr);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m non-existent molecule \033[1;33m%s\033[1;31m\n", input_coor, argv[count]);
       fprintf(stderr, "\033[0m");
+      ErrorMoleculeType(Counts, MoleculeType);
       exit(1);
     } else {
       MoleculeType[mol_type].Use = true;
@@ -193,7 +197,7 @@ int main(int argc, char *argv[]) {
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: '-n' option - number of bead ids must be dividable by three\n\n");
+    fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - number of bead ids must be dividable by three\n\n");
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
@@ -205,7 +209,8 @@ int main(int argc, char *argv[]) {
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && bead[i] >= MoleculeType[j].nBeads) {
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: '-n' option - %d is larger than the number of beads in molecule %s\n\n", bead[i], MoleculeType[j].Name);
+        fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - \033[1;33m%d\033[1;31m is larger", bead[i]);
+        fprintf(stderr, " than the number of beads in molecule \033[1;33m%s\033[1;31m\n\n", MoleculeType[j].Name);
         fprintf(stderr, "\033[0m");
         Help(argv[0], true);
         exit(1);
@@ -306,7 +311,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -345,7 +350,7 @@ int main(int argc, char *argv[]) {
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
       // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff);
       exit(1);
     } //}}}
 

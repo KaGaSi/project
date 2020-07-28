@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
     // Error - specified bead type name not in vcf input file
     if (type == -1) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: %s - non-existent bead name '%s'\n", input_coor, argv[count]);
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - non-existent bead name \033[1;33m%s\033[1;31m\n", input_coor, argv[count]);
       fprintf(stderr, "\033[0m");
       ErrorBeadType(Counts, BeadType);
       exit(1);
@@ -253,7 +253,7 @@ int main(int argc, char *argv[]) {
 
     if (SkipCoor(vcf, Counts, &stuff)) {
       fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
       fprintf(stderr, "\033[0m");
       exit(1);
     }
@@ -261,7 +261,7 @@ int main(int argc, char *argv[]) {
   if (test == EOF) {
     fflush(stdout);
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: premature end of %s file - %d steps to discard, but %d steps in all\n\n", input_coor, start, count);
+    fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file - %d steps to discard, but %d steps in all\n\n", input_coor, start, count);
     fprintf(stderr, "\033[0m");
     exit(1);
   }
@@ -298,7 +298,7 @@ int main(int argc, char *argv[]) {
 
     // read coordinates //{{{
     if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count_vcf, stuff, input_vsf);
+      ErrorCoorRead(input_coor, test, count_vcf, stuff);
       exit(1);
     } //}}}
 
