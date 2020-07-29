@@ -72,10 +72,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // print command to stdout //{{{
-  for (int i = 0; i < argc; i++)
-    fprintf(stdout, " %s", argv[i]);
-  putchar('\n'); //}}}
+  // print command to stdout
+  PrintCommand(stdout, argc, argv);
 
   // options before reading system data //{{{
   // output verbosity //{{{
