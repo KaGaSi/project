@@ -5,13 +5,17 @@ This utility generates \texttt{vsf} and \texttt{vcf} files from a lammps
 \href{https://lammps.sandia.gov/doc/read_data.html}{lammps manual page} for
 details on its format). Note that while lammps uses the word
 \enquote{atom}, in this manual, \enquote{bead} is used instead.
+\texttt{lmp\_vtf} reads the \texttt{data} file header (it registers only
+keywords \texttt{atoms}, \texttt{bonds}, \texttt{angles}, \texttt{atom
+types}, \texttt{bond types}, \texttt{angle types}, \texttt{xlo xhi},
+\texttt{ylo yho}, and \texttt{zlo zhi}) and \texttt{Masses},
+\texttt{Atoms}, \texttt{Bonds}, and \texttt{Angles} section which must be
+in this order; everything else (e.g., dihedrals) is ignored.
 
-\texttt{lmp\_vtf} reads the \texttt{data} file header and \texttt{Masses},
-\texttt{Atoms}, \texttt{Bonds}, and \textit{Angles} sections; everything
-else is ignored (e.g., dihedrals). The utility requires lines in the
-\texttt{Atoms} section to have the following format: \texttt{<bead index>
-<molecule index> <bead type> <charge> <x> <y> <z>} (i.e.,
-\texttt{atom\_style full} in \texttt{lammps} terminology).
+The utility requires lines in the \texttt{Atoms} section to have the
+following format: \texttt{<bead index> <molecule index> <bead type>
+<charge> <x> <y> <z>} (i.e., \texttt{atom\_style full} in \texttt{lammps}
+terminology).
 
 If any line of the \texttt{Masses} section ends with a comment, its first
 string is taken as the name of the bead type. Otherwise, the bead types are
@@ -21,7 +25,15 @@ called \texttt{beadN}, where \texttt{N} is their type number in the
 Charge of every bead type is taken as the charge of the last bead of this
 type in the \texttt{Atoms} section.
 
-The utility assumes bonds and angles with simple harmonic potential.
+The utility assumes bonds and angles with simple harmonic potential,
+$u^{\text{b}}$ and $u^{\text{a}}$, respectively:
+\begin{equation}
+  u^{\text{b}} = k_{\text{b}}\left(r-r_0\right)^2 \text{ and }
+  u^{\text{b}} = k_{\text{a}}\left(\theta-\theta_0\right)^2,
+\end{equation}
+where $k_{text{b}}$ and $k_{\text{a}}$ are strengths of the potentials and
+$r_0$ and $\theta_0$ represent equilibrium distance and angle,
+respectively.
 
 Molecule types are determined according to three criteria: (i) the order of
 bead types in molecules, (ii) bead connectivity (and bond types), and (iii)
@@ -31,8 +43,8 @@ file. If \texttt{<molecule index>} in a bead line is 0, this bead is
 unbonded (i.e., not part of any molecule). If there's only one bead in a
 molecule, this bead is considered unbonded as well. The types of molecules
 differing in bead order are called \texttt{molI}, where \texttt{I} goes
-from 1 to the total number of molecule types with different order. If two
-molecules have the same bead order but differ in connectivity (or bond
+from 1 to the total number of molecule types with different bead order. If
+two molecules have the same bead order but differ in connectivity (or bond
 types), \texttt{-bJ} is appended to the name (\texttt{J} stands for the
 number of molecule types differing from the original, i.e., it goes from 1
 to the number of molecule types differing in connectivity). Similarly, if
@@ -42,8 +54,9 @@ the number of molecule types differing in the angles.
 Note that lines in both \texttt{Atoms} and \texttt{Bonds} sections do not
 have to be ordered in any way.
 
-A complex example of a \texttt{data} file and the resulting \texttt{vsf}
-and \texttt{vcf} files are in the \texttt{Examples/lmp\_vtf} directory.
+A relatively complex example of a \texttt{data} file and the resulting
+\texttt{vsf} and \texttt{vcf} files are in the \texttt{Examples/lmp\_vtf}
+directory.
 
 Usage (this utility does not use standard options):
 

@@ -1,4 +1,5 @@
-# Created by: lmp_vtf lmp.data out.vsf out.vcf -v (AnalysisTools version 3.2-2; https://github.com/KaGaSi/AnalysisTools/releases)
+# Created by:  home lmp.data out.vsf out.vcf -v
+# AnalysisTools version 3.2-2; https://github.com/KaGaSi/AnalysisTools/releases
 
 pbc 40.000000 40.000000 40.000000
 
