@@ -160,7 +160,7 @@ void ErrorMoleculeType(COUNTS Counts, MOLECULETYPE *MoleculeType) {
  */
 void ErrorPrintLine(char split[30][100], int words) {
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "       Wrong line:|");
+  fprintf(stderr, "       Wrong line: |");
   fprintf(stderr, "\033[1;33m");
   for (int i = 0; i < words; i++) {
     if (i != 0) {
