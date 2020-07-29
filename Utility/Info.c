@@ -118,16 +118,6 @@ int main(int argc, char *argv[]) {
   // read system information
   ReadStructure(input, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
-  // warn if not electroneutral
-  WarnElNeutrality(Counts, BeadType, input);
-
-  if (verbose) { //{{{
-    fprintf(stdout, "\nInformation about every bead:\n");
-    PrintBead(Counts, Index, BeadType, Bead);
-    fprintf(stdout, "\nInformation about every molecule:\n");
-    PrintMolecule(Counts, Index, MoleculeType, Molecule, BeadType, Bead);
-  } //}}}
-
   // get box dimensions if -c is used //{{{
   VECTOR BoxLength;
   BoxLength.x = -1;
@@ -147,6 +137,13 @@ int main(int argc, char *argv[]) {
 
   // print information /{{{
   VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule); //}}}
+
+  if (verbose) { //{{{
+    fprintf(stdout, "\nInformation about every bead:\n");
+    PrintBead(Counts, Index, BeadType, Bead);
+    fprintf(stdout, "\nInformation about every molecule:\n");
+    PrintMolecule(Counts, Index, MoleculeType, Molecule, BeadType, Bead);
+  } //}}}
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
