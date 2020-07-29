@@ -983,7 +983,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     free(name[i]);
   }
   // second, realloc name
-  int beadtype_alloced = (*Counts).TypesOfBeads;
+  int beadtype_alloced = (*Counts).TypesOfMolecules;
   name = realloc(name, beadtype_alloced*sizeof(char *));
   // third, calloc name[]
   for (int i = 0; i < beadtype_alloced; i++) {
