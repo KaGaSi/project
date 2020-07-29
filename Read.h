@@ -114,4 +114,28 @@ void ReadField(char *field, VECTOR *BoxLength, COUNTS *Counts,
                BEADTYPE **BeadType, BEAD **Bead, int **Index,
                MOLECULETYPE **MoleculeType, MOLECULE **Molecule,
                PARAMS **bond_types, PARAMS **angle_types); //}}}
+
+// ReadLmpData() //{{{
+/**
+ * \brief Function reading all information from lammps data file
+ *
+ * \param [in]  data_field    input data file file
+ * \param [out] bonds         number of bonds
+ * \param [out] bond_type     information about bond types
+ * \param [out] angles        number of angles
+ * \param [out] angle_type    information about angle types
+ * \param [out] BoxLength     simulation box size
+ * \param [out] box_lo        minimum box coordinates
+ * \param [out] Counts        numbers of beads, molecules, etc.
+ * \param [out] BeadType      information about bead types
+ * \param [out] Bead          informationn about individual beads
+ * \param [out] Index         bead indices between program and vsf (i.e., opposite of Bead[].Index)
+ * \param [out] MoleculeType  information about molecule types
+ * \param [out] Molecule      information about individual molecules
+ * */
+void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
+                 int *angles, PARAMS **angle_type,
+                 VECTOR *BoxLength, VECTOR *box_lo, COUNTS *Counts,
+                 BEADTYPE **BeadType, BEAD **Bead, int **Index,
+                 MOLECULETYPE **MoleculeType, MOLECULE **Molecule); //}}}
 #endif
