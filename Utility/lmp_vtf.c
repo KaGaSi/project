@@ -74,9 +74,7 @@ int main(int argc, char *argv[]) {
   // print command to stdout //{{{
   bool silent = false;
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   count = 0; // count mandatory arguments
@@ -874,11 +872,9 @@ int main(int argc, char *argv[]) {
   }
 
   // print command to output vcf file
-  fprintf(fw, "# Created by: lmp_vtf");
-  for (int i = 1; i < argc; i++) {
-    fprintf(fw, " %s", argv[i]);
-  }
-  fprintf(fw, " (AnalysisTools version %s; https://github.com/KaGaSi/AnalysisTools/releases)\n", VERSION);
+  fprintf(fw, "# Created by: ");
+  PrintCommand(fw, argc, argv);
+  fprintf(fw, "# AnalysisTools version %s; https://github.com/KaGaSi/AnalysisTools/releases\n", VERSION);
 
   fprintf(fw, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
 

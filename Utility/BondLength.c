@@ -138,9 +138,7 @@ int main(int argc, char *argv[]) {
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   // variables - structures //{{{
@@ -479,20 +477,16 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // print command to output file //{{{
+  // print command to output file
   putc('#', out);
-  for (int i = 0; i < argc; i++)
-    fprintf(out, " %s", argv[i]);
-  putc('\n', out); //}}}
+  PrintCommand(out, argc, argv);
 
   // print first line of output file - molecule names and beadtype pairs //{{{
   fprintf(out, "# (1) distance;");
-
   count = 1;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       fprintf(out, " %s molecule:", MoleculeType[i].Name);
-
       for (int j = 0; j < MoleculeType[i].nBTypes; j++) {
         for (int k = j; k < MoleculeType[i].nBTypes; k++) {
           if (bonds[i][MoleculeType[i].BType[j]][MoleculeType[i].BType[k]] > 0) {
@@ -590,11 +584,9 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    // print command to output file //{{{
+    // print command to output file
     putc('#', out);
-    for (int i = 0; i < argc; i++)
-      fprintf(out, " %s", argv[i]);
-    putc('\n', out); //}}}
+    PrintCommand(out, argc, argv);
 
     // print the first line of output file - molecule names with bead order //{{{
     fprintf(out, "# bead order in molecule(s) -");

@@ -170,4 +170,7 @@ int SplitLine(char out[30][100], char *line, char delim[8]); //}}}
  * \return trimmed string
  */
 char* TrimLine(char *line); //}}}
+
+void PrintCommand(FILE *ptr, int argc, char *argv[]);
+
 #endif
