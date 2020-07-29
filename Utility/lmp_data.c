@@ -118,14 +118,12 @@ int main(int argc, char *argv[]) {
   if (IntegerOption(argc, argv, "-st", &timestep)) {
     exit(1);
   } //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
-  //}}}
 
   // variables - structures for info from vsf //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
