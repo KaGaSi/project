@@ -301,8 +301,9 @@ char * TrimLine(char *line) {
  */
 void PrintCommand(FILE *ptr, int argc, char *argv[]) {
   // first argument can contain whole path - remove that
-  char *split[30];
-  split[0] = strtok(argv[0], "/"); // first word
+  char *split[30], str[LINE];
+  strcpy(str, argv[0]);
+  split[0] = strtok(str, "/"); // first word
   int words = 0;
   while (split[words] != NULL && words < 29) {
     words++; // start from 1, as the first split is already done
