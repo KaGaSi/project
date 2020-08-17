@@ -1121,133 +1121,81 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
 /**
  * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
  */
-int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
+void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
 
-  // initial stuff //{{{
+  // read initial stuff //{{{
   (*stuff)[0] = '\0'; // no comment line
-  char line[LINE];
-  fpos_t position;
+  char line[LINE], split[30][100];
+  int words;
   do {
-    fgetpos(vcf_file, &position); // save pointer position
     fgets(line, sizeof(line), vcf_file);
-
-    while (line[0] == '\t' || line[0] == ' ') {
-      int i;
-      for (i = 1; line[i] != '\n'; i++) {
-        line[i-1] = line[i];
-      }
-      line[i-1] = '\n';
-      line[i] = '\0';
+    words = SplitLine(split, line, " \t");
+    for (int i = 0; i < words; i++) {
+      strcat(*stuff, split[i]);
     }
+  } while (words == 0 || split[0][0] == '#'); //}}}
 
-    if (line[0] == '#') {
-      strcat(*stuff, line);
-    }
-  } while (line[0] < '0' || line[0] > '9');
+  if (indexed) { // indexed timestep //{{{
+    // error if after possible comment isn't (t(imestep)) i(rdered) //{{{
+    if (split[0][0] != 'i' && (words < 2 || split[0][0] != 't' || split[1][0] != 'i')) {
+      fprintf(stderr, "\033[1;31m");
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+      fprintf(stderr, " - unrecognised line at the beginning of a timestep\n");
+      fprintf(stderr, "\033[0m");
+      ErrorPrintLine(split, words);
+      exit(1);
+    } //}}}
 
-  // return file pointer to before the first coordinate line
-  fsetpos(vcf_file, &position); //}}}
-
-  if (indexed) { // indexed timestep
-    // read data //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       fgets(line, sizeof(line), vcf_file);
-
-      // split the line into array //{{{
-      char *split[5];
-      split[0] = strtok(line, " \t");
-      int j = 0;
-      while (split[j] != NULL && j < 4) {
-        split[++j] = strtok(NULL, " \t");
-      } //}}}
-
-      // error - less then four whitespace-separated strings //{{{
-      if (j < 4) {
-        return i+1;
-      } //}}}
-
-      // test if split[0] is integer //{{{
-      for (int j = 0; j < strlen(split[0]); j++) {
-        if (split[0][j] < '0' || split[0][j] > '9') {
-          return i+1;
-        }
-      } //}}}
+      words = SplitLine(split, line, " \t");
+      // error - coordinate line must be <int> <double> <double> <double>
+      if (words < 4 || !IsInteger(split[0]) || !IsDouble(split[1]) ||
+          !IsDouble(split[2]) || !IsDouble(split[3])) {
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+        fprintf(stderr, " - cannot read coordinates\n");
+        fprintf(stderr, "\033[0m");
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
       int index = atoi(split[0]);
-
-      // test if split[1-3] are doubles //{{{
-      // first two coordinates
-      for (int j = 1; j < 4; j++) {
-        // first character can be '-' (but must be longer) or a number
-        if ((split[j][0] < '0' || split[j][0] > '9') &&
-            split[j][0] != '-') {
-          return i+1;
-        } else if (split[j][0] == '-' && strlen(split[j]) == 1) {
-          return i+1;
-        }
-        // other characters can be numbers or decimal point or newline (last character of 4th split)
-        // they can also be 'e' or '-' in case of number format 1.0e-1
-        for (int k = 1; k < strlen(split[j]); k++) {
-          if ((split[j][k] < '0' || split[j][k] > '9') &&
-              split[j][k] != '.' &&
-              split[j][k] != '\n' &&
-              split[j][k] != 'e' &&
-              split[j][k] != '-' ) {
-            putc('\n', stderr);
-            return i+1;
-          }
-        }
-      } //}}}
-
       // bead coordinates
       (*Bead)[Index[index]].Position.x = atof(split[1]);
       (*Bead)[Index[index]].Position.y = atof(split[2]);
       (*Bead)[Index[index]].Position.z = atof(split[3]);
+    }
+  //}}}
+  } else { // ordered timestep //{{{
+    // error if after possible comment isn't (t(imestep)) o(rdered) //{{{
+    if (split[0][0] != 'o' && (words < 2 || split[0][0] != 't' || split[1][0] != 'i')) {
+      fprintf(stderr, "\033[1;31m");
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+      fprintf(stderr, " - unrecognised line at the beginning of a timestep\n");
+      fprintf(stderr, "\033[0m");
+      ErrorPrintLine(split, words);
+      exit(1);
     } //}}}
-  } else { // ordered timestep
-    // read data //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       fgets(line, sizeof(line), vcf_file);
-
-      // split the line into array //{{{
-      char *split[4];
-      split[0] = strtok(line, " \t");
-      int j = 0;
-      while (split[j] != NULL && j < 3) {
-        split[++j] = strtok(NULL, " \t");
-      } //}}}
-
-      // error - less than 3 whitespace-separated strings //{{{
-      if (j < 3) {
-        return i+1;
-      } //}}}
-
-      // test if split[0-2] are doubles //{{{
-      for (int j = 0; j < 3; j++) {
-        // first character can be '-' (but must be longer) or a number
-        if ((split[j][0] < '0' || split[j][0] > '9') &&
-            split[j][0] != '-') {
-          return i+1;
-        } else if (split[j][0] == '-' && strlen(split[j]) == 1) {
-          return i+1;
-        }
-        // other characters can be numbers or decimal point or newline (last character of 4th split)
-        for (int k = 1; k < strlen(split[j]); k++) {
-          if ((split[j][k] < '0' || split[j][k] > '9') &&
-              split[j][k] != '.' &&
-              split[j][k] != '\n') { // last split ends with newline
-            return i+1;
-          }
-        }
-      } //}}}
-
+      char split[30][100];
+      int words = SplitLine(split, line, " \t");
+      // error - coordinate line must be <double> <double> <double>
+      if (words < 3 || !IsDouble(split[0]) ||
+          !IsDouble(split[1]) || !IsDouble(split[2])) {
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+        fprintf(stderr, " - cannot read coordinates\n");
+        fprintf(stderr, "\033[0m");
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
       // bead coordinates
       (*Bead)[i].Position.x = atof(split[0]);
       (*Bead)[i].Position.y = atof(split[1]);
       (*Bead)[i].Position.z = atof(split[2]);
-    } //}}}
-  }
-
-  return 0;
+    }
+  } //}}}
 } //}}}
 
 // SkipCoor() //{{{
@@ -1258,7 +1206,6 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEA
 bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff) {
 
   bool error = false;
-
   // initial stuff //{{{
   (*stuff)[0] = '\0'; // no comment line
   char line[LINE];
@@ -1283,23 +1230,19 @@ bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff) {
 
   // return file pointer to before the first coordinate line
   fsetpos(vcf_file, &position); //}}}
-
   for (int i = 0; i < Counts.Beads; i++) {
     int test;
     while ((test = getc(vcf_file)) != '\n' && test != EOF)
       ;
-
     // premature end of file
     if (test == EOF) {
       error = true;
       break;
     }
   }
-
   if (!error) {
     getc(vcf_file);
   }
-
   return error;
 } //}}}
 
@@ -1307,56 +1250,78 @@ bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff) {
 /**
  * Function reading information about aggregates from `.agg` file (\ref AggregateFile) generated by Aggregates utility.
  */
-bool ReadAggregates(FILE *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
+bool ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
                     BEADTYPE *BeadType, BEAD **Bead,
                     MOLECULETYPE *MoleculeType, MOLECULE **Molecule, int *Index) {
 
   bool error = false;
 
+  char line[LINE], split[30][100], delim[8];
+
+  // read (Last) Step line
+  fgets(line, sizeof(line), fr);
+  strcpy(delim, " \t"); // delimiters for SplitLine()
+  int words = SplitLine(split, line, delim);
+
   // is there a Step? i.e., isn't this the line 'Last Step'?
-  if (getc(agg_file) == 'L') {
-    error = true;
+  if (split[0][0] == 'L') {
+    fprintf(stderr, "\033[1;31m");
+    fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file", agg_file);
+    fprintf(stderr, " (%s %d)\n\n", split[0], atoi(split[1]));
+    fprintf(stderr, "\033[0m");
+    exit(1);
+  // Step line must be 'Step: <int>'
+  } else if (words < 2 || !IsInteger(split[1])) {
+    fprintf(stderr, "\033[1;31m");
+    fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - wrong 'Step' line\n", agg_file);
+    ErrorPrintLine(split, words);
+    fprintf(stderr, "\033[0m");
+    exit(1);
   } else {
     // initialize array of number of aggregates per bead //{{{
     for (int i = 0; i < (*Counts).Beads; i++) {
       (*Bead)[i].nAggregates = 0;
     } //}}}
 
-    // skip 'Step: #' line //{{{
-    while (getc(agg_file) != '\n')
-      ; //}}}
+    // get number of aggregates //{{{
+    fgets(line, sizeof(line), fr);
+    words = SplitLine(split, line, delim);
+    // number of aggregates must be <int>
+    if (words != 0 && !IsInteger(split[0])) {
+      fprintf(stderr, "\033[1;31m");
+      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - number of aggregates must be a whole number\n", agg_file);
+      fprintf(stderr, "\033[0m");
+      ErrorPrintLine(split, words);
+      exit(1);
+    }
+    (*Counts).Aggregates = atoi(split[0]); //}}}
 
-    fscanf(agg_file, "%d", &(*Counts).Aggregates);
-
-    // skip rest of the line and blank line //{{{
-    while (getc(agg_file) != '\n')
-      ;
-    while (getc(agg_file) != '\n')
-      ; //}}}
+    // skip blank line
+    fgets(line, sizeof(line), fr);
 
     // go through all aggregates
     for (int i = 0; i < (*Counts).Aggregates; i++) {
       // read molecules in Aggregate 'i' //{{{
-      fscanf(agg_file, "%d :", &(*Aggregate)[i].nMolecules);
+      fscanf(fr, "%d :", &(*Aggregate)[i].nMolecules);
       for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
         int mol;
-        fscanf(agg_file, "%d", &mol);
+        fscanf(fr, "%d", &mol);
         mol--; // in agg file the numbers correspond to vmd
 
         (*Aggregate)[i].Molecule[j] = mol;
         (*Molecule)[mol].Aggregate = i;
       }
 
-      while (getc(agg_file) != '\n')
+      while (getc(fr) != '\n')
        ; //}}}
 
       // read monomeric beads in Aggregate 'i' //{{{
       int count;
-      fscanf(agg_file, "%d :", &count);
+      fscanf(fr, "%d :", &count);
       (*Aggregate)[i].nMonomers = 0; // their number will be counted according to which beads are in vcf
       for (int j = 0; j < count; j++) {
         int vsf_id;
-        fscanf(agg_file, "%d", &vsf_id); // monomer index in vsf file
+        fscanf(fr, "%d", &vsf_id); // monomer index in vsf file
         int id = Index[vsf_id]; // monomer index in Bead structure
         if (id > -1) {
           int beads = (*Aggregate)[i].nMonomers++;
@@ -1367,13 +1332,13 @@ bool ReadAggregates(FILE *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
         }
       }
 
-      while (getc(agg_file) != '\n')
+      while (getc(fr) != '\n')
        ; //}}}
     }
 
-    // skip blank line at the end of every entry //{{{
-    while (getc(agg_file) != '\n')
-      ; //}}}
+    // skip blank line at the end of every entry
+    while (getc(fr) != '\n')
+      ;
 
     // fill Aggregate[].Bead, Bead[].Aggregate, and Molecule[].Aggregate arrays //{{{
     for (int i = 0; i < (*Counts).Aggregates; i++) {
@@ -1409,6 +1374,7 @@ bool ReadAggregates(FILE *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
       }
     } //}}}
   }
+
   return error;
 } //}}}
 
@@ -2736,6 +2702,8 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
       (*MoleculeType)[i].Mass += (*BeadType)[(*MoleculeType)[i].Bead[j]].Mass;
     }
   } //}}}
+
+  WarnElNeutrality(*Counts, *BeadType, data_file);
 
   fclose(fr);
 } //}}}

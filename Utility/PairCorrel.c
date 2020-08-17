@@ -292,11 +292,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count_vcf, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     // calculate pair correlation function //{{{
     for (int j = 0; j < (Counts.Bonded+Counts.Unbonded); j++) {
