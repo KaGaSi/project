@@ -370,11 +370,7 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf_1)) != EOF) {
     ungetc(test, vcf_1);
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
-      ErrorCoorRead(input_coor_1, test, count, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor_1, vcf_1, Counts, Index1, &Bead1, &stuff);
 
     count++;
     count_vcf++;
@@ -411,11 +407,7 @@ int main(int argc, char *argv[]) {
       count++;
       count_vcf++;
 
-      // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf_1, Counts, Index1, &Bead1, &stuff)) != 0) {
-        ErrorCoorRead(input_coor_1, test, count_vcf, stuff);
-        exit(1);
-      } //}}}
+      ReadCoordinates(indexed, input_coor_1, vcf_1, Counts, Index1, &Bead1, &stuff);
     } //}}}
 
     if (end_1 == count_vcf)
@@ -525,12 +517,7 @@ int main(int argc, char *argv[]) {
   while ((test = getc(vcf_2)) != EOF) {
     ungetc(test, vcf_2);
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor_2, test, count_vcf, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor_2, vcf_2, Counts, Index2, &Bead2, &stuff);
 
     count++;
     count_vcf++;
@@ -574,11 +561,7 @@ int main(int argc, char *argv[]) {
       count++;
       count_vcf++;
 
-      // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf_2, Counts, Index2, &Bead2, &stuff)) != 0) {
-        ErrorCoorRead(input_coor_2, test, count_vcf, stuff);
-        exit(1);
-      } //}}}
+      ReadCoordinates(indexed, input_coor_2, vcf_2, Counts, Index2, &Bead2, &stuff);
     } //}}}
 
     if (end_2 == count_vcf)
