@@ -185,7 +185,7 @@ void WarnElNeutrality(COUNTS Counts, BEADTYPE *BeadType, char *file) {
   if (charge != 0) {
     fprintf(stderr, "\033[1;33m");
     fprintf(stderr, "\nWarning: system in \033[1;36m%s\033[1;33m", file);
-    fprintf(stderr, "has net electric charge (q = \033[1;36m%lf\033[1;33m)!\n\n", charge);
+    fprintf(stderr, " has net electric charge (q = \033[1;36m%lf\033[1;33m)!\n\n", charge);
     fprintf(stderr, "\033[0m");
   }
 } //}}}
