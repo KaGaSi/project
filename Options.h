@@ -13,8 +13,8 @@
 #include <stdbool.h>
 #include "AnalysisTools.h"
 
-#define VERSION "3.2-2"
-#define DATE "April 20, 2020"
+#define VERSION "3.3"
+#define DATE "August 18, 2020"
 
 // Help() //{{{
 /**
