@@ -256,7 +256,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rDiscarding step: %d", count);
     } //}}}
 
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
+    if (ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
@@ -267,7 +267,9 @@ int main(int argc, char *argv[]) {
       break;
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      ErrorCoorRead(input_coor, test, count, stuff);
+      fprintf(stderr, "\033[1;31m");
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -302,7 +304,7 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // read aggregates //{{{
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
+    if (ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
@@ -314,12 +316,7 @@ int main(int argc, char *argv[]) {
       break;
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
 //  PrintAggregate(Counts, Index, MoleculeType, Molecule, Bead, BeadType, Aggregate);
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
@@ -359,7 +356,7 @@ int main(int argc, char *argv[]) {
       }
 
       // read aggregates //{{{
-      if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
+      if (ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
         count--; // because last step isn't processed
         count_vcf--; // because last step isn't processed
         fprintf(stderr, "\033[1;31m");

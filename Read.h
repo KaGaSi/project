@@ -58,14 +58,14 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
  * \brief Function reading ordered coordinates from .vcf coordinate file.
  *
  * \param [in]  indexed    is the vcf indexed?
- * \param [in]  vcf_file   name of input .vcf coordinate file
+ * \param [in]  input_coor name of input coordinate file
+ * \param [in]  vcf_file   pointer to the open coordinate file
  * \param [in]  Counts     numbers of beads, molecules, etc.
- * \param [in]  Index         bead indices between program and vsf (i.e., opposite of Bead[].Index)
+ * \param [in]  Index      bead indices between program and vsf (i.e., opposite of Bead[].Index)
  * \param [out] Bead       coordinates of individual beads
  * \param [out] stuff      first line of a timestep
- * \return 0 for no errors or index number of bead (starting from 1) for which coordinates cannot be read
  */
-int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff); //}}}
+void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff); //}}}
 
 // SkipCoor() //{{{
 /**
@@ -82,7 +82,8 @@ bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff); //}}}
 /**
  * \brief Function reading information about aggregates from `.agg` file
  *
- * \param [in]  agg_file      name of input aggregate file
+ * \param [in]  fr            pointer to open aggregate file
+ * \param [in]  agg_file      name of aggregate file
  * \param [in]  Counts        numbers of beads, molecules, etc.
  * \param [in]  BeadType      information about bead types
  * \param [out] Bead          information about individual beads
@@ -91,7 +92,7 @@ bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff); //}}}
  * \param [out] Molecule      information about individual molecules
  * \return 1 if 'Last Step' detected or 0 for no error
  */
-bool ReadAggregates(FILE *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
+bool ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
                     BEADTYPE *BeadType, BEAD **Bead,
                     MOLECULETYPE *MoleculeType, MOLECULE **Molecule, int *Index); //}}}
 

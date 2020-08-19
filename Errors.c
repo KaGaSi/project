@@ -1,30 +1,5 @@
 #include "Errors.h"
 
-// ErrorCoorRead() //{{{
-/**
- * Error when reading vcf file
- */
-void ErrorCoorRead(char *input_vcf, int bead, int step, char *stuff) {
-  fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - cannot read coordinates ", input_vcf);
-  fprintf(stderr, "(bead \033[1;33m%d\033[1;31m; step \033[1;33m%d\033[1;31m", bead, step);
-  if (stuff[0] != '\0') {
-    char split[30][100];
-    fprintf(stderr, " beginning with |");
-    int words = SplitLine(split, stuff, " \t");
-    fprintf(stderr, "\033[1;33m");
-    for (int i = 0; i < words; i++) {
-      fprintf(stderr, "%s", split[i]);
-      if (i != (words-1)) {
-        fprintf(stderr, " ");
-      }
-    }
-    fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "|");
-  }
-  fprintf(stderr, ")\n\033[0m");
-} //}}}
-
 // ErrorArgNumber() //{{{
 /**
  * Error when insufficient number of arguments
