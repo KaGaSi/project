@@ -241,11 +241,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count);
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     // join molecules if un-joined coordinates provided //{{{
     if (!joined) {

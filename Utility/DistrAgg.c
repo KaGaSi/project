@@ -408,7 +408,7 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
+    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
 
     // go through all aggregates
     int aggs_step = 0; // number of eligible aggregates per step

@@ -477,12 +477,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "Using step %6d\n", count);
     }
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
   } else {
     fprintf(stderr, "\033[1;33m");
     fprintf(stderr, "\nWarning: using last step in \033[1;36m%s\033[1;33m (\033[1;36m%d\033[1;33m)\n", input_coor, count);
@@ -525,11 +520,7 @@ int main(int argc, char *argv[]) {
         BoxLength_new.z = BoxLength_add.z;
       }
     }
-    // read coordinates
-    if ((test = ReadCoordinates(indexed_add, vcf, Counts_add, Index_add, &Bead_add, &stuff)) != 0) {
-      ErrorCoorRead(input_coor_add, test, 0, stuff);
-      exit(1);
-    }
+    ReadCoordinates(indexed_add, input_coor_add, vcf, Counts_add, Index_add, &Bead_add, &stuff);
     fclose(vcf);
   } //}}}
 

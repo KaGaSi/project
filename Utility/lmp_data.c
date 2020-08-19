@@ -244,12 +244,7 @@ int main(int argc, char *argv[]) {
   // restore pointer position in vcf file
   fsetpos(vcf, &pos);
 
-  // read coordinates //{{{
-  if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-    // print newline to stdout if Step... doesn't end with one
-    ErrorCoorRead(input_coor, test, count, stuff);
-    exit(1);
-  } //}}}
+  ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
   if (!silent) {
     if (script) {

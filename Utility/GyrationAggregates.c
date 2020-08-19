@@ -363,7 +363,7 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // read aggregates //{{{
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
+    if (ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
@@ -374,12 +374,7 @@ int main(int argc, char *argv[]) {
       break;
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     // join agggregates if un-joined coordinates provided //{{{
     if (!joined) {
@@ -733,6 +728,7 @@ int main(int argc, char *argv[]) {
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
+  free(per_size_file);
   free(BeadType);
   free(Index);
   FreeAggregate(Counts, &Aggregate);
