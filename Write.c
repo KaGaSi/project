@@ -114,7 +114,7 @@ void WriteVsf(char *input_vsf, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
       fprintf(fw, "atom %7d ", i);
       if (mol != -1 && change) {
         int mtype = Molecule[mol].Type;
-        int n;
+        int n = -1;
         for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
           if (i == Molecule[mol].Bead[j]) {
             n = j;

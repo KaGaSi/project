@@ -398,8 +398,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     int words = SplitLine(split, line, delim);
 
     // go through the line
-    int bead_id = -1, bead_type = -1, mol_id = -1, mol_type = -1;
     if (split[0][0] == 'a' && strcmp("default", split[1]) != 0) { // non-default a(tom) line
+      int bead_id = -1, bead_type = -1, mol_id = -1, mol_type = -1;
       bead_id = atoi(split[1]);
       // by twos - first is always keyword, second is always value
       for (int i = 2; i < words; i += 2) {
@@ -466,10 +466,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
   for (int i = 0; i < mol_alloced; i++) {
     (*Molecule)[i].Bead = calloc(max, sizeof(int));
   } //}}}
-
-  // save pointer position in the vsf file //{{{
-  fpos_t pos;
-  fgetpos(vsf, &pos); // }}}
 
   // third, go through the bonds section of vsf to find the number of bonds in molecules //{{{
   int bonds[(*Counts).TypesOfMolecules]; // helper array //{{{
@@ -557,13 +553,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     int words = SplitLine(split, line, delim);
 
     // go through the line
-    int bead_id = -1, mol_id;
     if (strncmp(split[0], "atom", 1) == 0 && strcmp("default", split[1]) != 0) { // non-default a(tom) line
-      bead_id = atoi(split[1]);
+      int bead_id = atoi(split[1]);
       // by twos - first is always keyword, second is always value
       for (int i = 2; i < words; i += 2) {
         if (strcmp("resid", split[i]) == 0) { // molecule id
-          mol_id = atoi(split[i+1]) - 1; // mol ids start with 1 in vsf
+          int mol_id = atoi(split[i+1]) - 1; // mol ids start with 1 in vsf
           (*Molecule)[mol_id].Bead[beads[mol_id]++] = bead_id;
           break;
         }
@@ -664,7 +659,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
 
     // skip initial stuff //{{{
     // skip lines including 't(imestep)' line //{{{
-    char line[LINE], line2[LINE], *split[32], str[32];
+    char line2[LINE], *split[30], str[30];
     str[0] = '\0';
     do {
       fgets(line, sizeof(line), vcf);
@@ -740,11 +735,11 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       }
 
       // split the line into array //{{{
-      char *split[30];
       split[0] = strtok(line, " \t");
       int i = 0;
-      while (split[i] != NULL && i < 29) {
-        split[++i] = strtok(NULL, " \t");
+      while (i < 29 && split[i] != NULL) {
+        i++;
+        split[i] = strtok(NULL, " \t");
       } //}}}
 
       // first split is bead index; read data till there is <int> at the beginning of the line //{{{
@@ -761,15 +756,16 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
         strcpy(line, TrimLine(line)); // trim excess whitespace
         // split the line into array //{{{
         split[0] = strtok(line, " \t");
-        int i = 0;
-        while (split[i] != NULL && i < 29) {
-          split[++i] = strtok(NULL, " \t");
+        i = 0;
+        while (i < 29 && split[i] != NULL) {
+          i++;
+          split[i] = strtok(NULL, " \t");
         } //}}}
       } //}}}
 
       // count the number of beads in vcf //{{{
       (*Counts).Beads = 0;
-      for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+      for (i = 0; i < (*Counts).TypesOfBeads; i++) {
         if ((*BeadType)[i].Use) {
           (*Counts).Beads += (*BeadType)[i].Number;
         }
@@ -927,8 +923,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
   int beads_in_mols[(*Counts).TypesOfMolecules];
   for (int i = 0; i < (*Counts).Molecules; i++) {
     count = 0;
-    int mol_type = (*Molecule)[i].Type;
-    for (int j = 0; j < (*MoleculeType)[mol_type].nBeads; j++) {
+    int mtype = (*Molecule)[i].Type;
+    for (int j = 0; j < (*MoleculeType)[mtype].nBeads; j++) {
       int type = (*Bead)[(*Molecule)[i].Bead[j]].Type;
       if ((*BeadType)[type].Use) {
         (*Molecule)[i].Bead[count] = (*Molecule)[i].Bead[j];
@@ -936,7 +932,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
         count++;
       }
     }
-    beads_in_mols[mol_type] = count;
+    beads_in_mols[mtype] = count;
   }
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     (*MoleculeType)[i].nBeads = beads_in_mols[i];
@@ -966,7 +962,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       (*Index)[(*Bead)[i].Index] = count;
       int id = (*Bead)[count].Molecule;
       if (id != -1) {
-        int type = (*Molecule)[id].Type;
+        type = (*Molecule)[id].Type;
         for (int j = 0; j < (*MoleculeType)[type].nBeads; j++) {
           if ((*Molecule)[id].Bead[j] == (*Bead)[count].Index) {
             (*Molecule)[id].Bead[j] = count;
@@ -1157,8 +1153,9 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEA
       char *split[5];
       split[0] = strtok(line, " \t");
       int j = 0;
-      while (split[j] != NULL && j < 4) {
-        split[++j] = strtok(NULL, " \t");
+      while (j < 4 && split[j] != NULL) {
+        j++;
+        split[j] = strtok(NULL, " \t");
       } //}}}
 
       // error - less then four whitespace-separated strings //{{{
@@ -1167,7 +1164,7 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEA
       } //}}}
 
       // test if split[0] is integer //{{{
-      for (int j = 0; j < strlen(split[0]); j++) {
+      for (j = 0; j < strlen(split[0]); j++) {
         if (split[0][j] < '0' || split[0][j] > '9') {
           return i+1;
         }
@@ -1176,7 +1173,7 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEA
 
       // test if split[1-3] are doubles //{{{
       // first two coordinates
-      for (int j = 1; j < 4; j++) {
+      for (j = 1; j < 4; j++) {
         // first character can be '-' (but must be longer) or a number
         if ((split[j][0] < '0' || split[j][0] > '9') &&
             split[j][0] != '-') {
@@ -1212,8 +1209,9 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEA
       char *split[4];
       split[0] = strtok(line, " \t");
       int j = 0;
-      while (split[j] != NULL && j < 3) {
-        split[++j] = strtok(NULL, " \t");
+      while (j < 3 && split[j] != NULL) {
+        j++;
+        split[j] = strtok(NULL, " \t");
       } //}}}
 
       // error - less than 3 whitespace-separated strings //{{{
@@ -1222,7 +1220,7 @@ int ReadCoordinates(bool indexed, FILE *vcf_file, COUNTS Counts, int *Index, BEA
       } //}}}
 
       // test if split[0-2] are doubles //{{{
-      for (int j = 0; j < 3; j++) {
+      for (j = 0; j < 3; j++) {
         // first character can be '-' (but must be longer) or a number
         if ((split[j][0] < '0' || split[j][0] > '9') &&
             split[j][0] != '-') {
@@ -1937,10 +1935,10 @@ void ReadField(char *field, VECTOR *BoxLength, COUNTS *Counts,
 
   // read pbc only if required
   if (BoxLength != NULL) {
-    ReadFieldPbc(field, &(*BoxLength));
+    ReadFieldPbc(field, BoxLength);
   }
-  ReadFieldBeadType(field, &(*Counts), &(*BeadType), &(*Bead));
-  ReadFieldMolecules(field, &(*Counts), &(*BeadType), &(*Bead), &(*MoleculeType), &(*Molecule), &(*bond_type), &(*angle_type));
+  ReadFieldBeadType(field, Counts, BeadType, Bead);
+  ReadFieldMolecules(field, Counts, BeadType, Bead, MoleculeType, Molecule, bond_type, angle_type);
 
   // allocate Bead[].Aggregate array - needed only to free() //{{{
   for (int i = 0; i < (*Counts).Beads; i++) {

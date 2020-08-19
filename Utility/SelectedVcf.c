@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // save into xyz file? //{{{
-  char *output_xyz = calloc(LINE,sizeof(char *));
+  char *output_xyz = calloc(LINE,sizeof(char));
   if (FileOption(argc, argv, "-xyz", &output_xyz)) {
     exit(1);
   } //}}}
@@ -292,10 +292,6 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-  } //}}}
-
-  // print pbc if verbose output //{{{
-  if (verbose) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 

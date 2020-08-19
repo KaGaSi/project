@@ -264,7 +264,6 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_agg);
       fprintf(stderr, "\033[0m");
-      test = '\0';
       break;
     }
     if (SkipCoor(vcf, Counts, &stuff)) {

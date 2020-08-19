@@ -334,7 +334,6 @@ int main(int argc, char *argv[]) {
           bond.x = Bead[id1].Position.x - Bead[id2].Position.x;
           bond.y = Bead[id1].Position.y - Bead[id2].Position.y;
           bond.z = Bead[id1].Position.z - Bead[id2].Position.z;
-
           bond.x = Length(bond); //}}}
 
           // warn if bond is too long //{{{
@@ -405,7 +404,6 @@ int main(int argc, char *argv[]) {
             dist.x = Bead[id1].Position.x - Bead[id2].Position.x;
             dist.y = Bead[id1].Position.y - Bead[id2].Position.y;
             dist.z = Bead[id1].Position.z - Bead[id2].Position.z;
-
             dist.x = Length(dist); //}}}
 
             // mins & maxes //{{{
@@ -578,7 +576,6 @@ int main(int argc, char *argv[]) {
   // write distribution of distances from '-d' option //{{{
   if (output_d[0] != '\0') {
     // open output file for appending //{{{
-    FILE *out;
     if ((out = fopen(output_d, "w")) == NULL) {
       ErrorFileOpen(output_d, 'w');
       exit(1);

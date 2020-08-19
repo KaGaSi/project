@@ -185,8 +185,7 @@ int main(int argc, char *argv[]) {
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // '-m' option //{{{
-  int *specific_moltype_for_size;
-  specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int));
   // all are to be used without '-m' option
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
