@@ -147,9 +147,7 @@ int main(int argc, char *argv[]) {
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   // variables - structures //{{{
@@ -219,7 +217,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-a' option - write angles for all molecules //{{{
-  char *output = calloc(LINE,sizeof(char *));
+  char *output = calloc(LINE,sizeof(char));
   if (FileOption(argc, argv, "-a", &output)) {
     exit(1);
   }
@@ -347,12 +345,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     // join molecules if un-joined coordinates provided //{{{
     if (!joined) {
@@ -455,15 +448,15 @@ int main(int argc, char *argv[]) {
   }
   putc('\n', out);
   fprintf(out, "# columns: (1) angle [deg];");
-  int j = 2;
+  count = 2;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       if ((number_of_beads/beads_per_angle) == 1) {
-        fprintf(out, " (%d) %s molecules;", j, MoleculeType[i].Name);
+        fprintf(out, " (%d) %s molecules;", count, MoleculeType[i].Name);
       } else {
-        fprintf(out, " (%d) to (%d) %s molecules;", j, j+number_of_beads/beads_per_angle-1, MoleculeType[i].Name);
+        fprintf(out, " (%d) to (%d) %s molecules;", count, count+number_of_beads/beads_per_angle-1, MoleculeType[i].Name);
       }
-      j += number_of_beads / beads_per_angle;
+      count += number_of_beads / beads_per_angle;
     }
   }
   putc('\n', out); //}}}
@@ -485,15 +478,15 @@ int main(int argc, char *argv[]) {
 
   // write to output average angles //{{{
   fprintf(out, "# simple averages:");
-  j = 1;
+  count = 1;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       if ((number_of_beads/beads_per_angle) == 1) {
-        fprintf(out, " (%d) %s molecules;", j, MoleculeType[i].Name);
+        fprintf(out, " (%d) %s molecules;", count, MoleculeType[i].Name);
       } else {
-        fprintf(out, " (%d) to (%d) %s molecules;", j, j+number_of_beads/beads_per_angle-1, MoleculeType[i].Name);
+        fprintf(out, " (%d) to (%d) %s molecules;", count, count+number_of_beads/beads_per_angle-1, MoleculeType[i].Name);
       }
-      j += number_of_beads / beads_per_angle;
+      count += number_of_beads / beads_per_angle;
     }
   }
   fprintf(out, "\n#");

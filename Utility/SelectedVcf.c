@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // save into xyz file? //{{{
-  char *output_xyz = calloc(LINE,sizeof(char *));
+  char *output_xyz = calloc(LINE,sizeof(char));
   if (FileOption(argc, argv, "-xyz", &output_xyz)) {
     exit(1);
   } //}}}
@@ -184,9 +184,7 @@ int main(int argc, char *argv[]) {
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   // read system information
@@ -294,10 +292,6 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-  } //}}}
-
-  // print pbc if verbose output //{{{
-  if (verbose) {
     fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
   } //}}}
 
@@ -368,23 +362,14 @@ int main(int argc, char *argv[]) {
     // if --last is used, just read coordinates and move on //{{{
     if (last) {
       // read coordinates
-      if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_coor, test, count_vcf, stuff);
-        exit(1);
-      }
+      ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
       continue;
     } //}}}
 
     if (number_of_steps != 0) {
       if (count_n_opt < number_of_steps) {
         if (save_step[count_n_opt] == count_vcf) {
-          // read coordinates //{{{
-          if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-            // print newline to stdout if Step... doesn't end with one
-            ErrorCoorRead(input_coor, test, count_vcf, stuff);
-            exit(1);
-          } //}}}
+          ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
           // wrap coordinates? //{{{
           if (wrap) {
@@ -433,12 +418,7 @@ int main(int argc, char *argv[]) {
         break;
       }
     } else {
-      // read coordinates //{{{
-      if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-        // print newline to stdout if Step... doesn't end with one
-        ErrorCoorRead(input_coor, test, count_vcf, stuff);
-        exit(1);
-      } //}}}
+      ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
       // wrap coordinates? //{{{
       if (wrap) {

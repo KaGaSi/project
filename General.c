@@ -238,7 +238,7 @@ int SplitLine(char out[30][100], char *line, char delim[8]) {
   char *split[30];
   split[0] = strtok(line, delim); // first word
   int words = 0;
-  while (split[words] != NULL && words < 29) {
+  while (words < 29 && split[words] != NULL) {
     words++; // start from 1, as the first split is already done
     split[words] = strtok(NULL, " \t:");
   }
@@ -260,7 +260,7 @@ int SplitLine(char out[30][100], char *line, char delim[8]) {
   return words;
 } //}}}
 
-// TrimLine //{{{
+// TrimLine() //{{{
 /**
  * Function to trim whitespace from the
  * beginning and end of a string.
@@ -293,4 +293,26 @@ char * TrimLine(char *line) {
   }
 
   return trimmed;
+} //}}}
+
+// PrintCommand() //{{{
+/**
+ * Function to print full command.
+ */
+void PrintCommand(FILE *ptr, int argc, char *argv[]) {
+  // first argument can contain whole path - remove that
+  char *split[30], str[LINE];
+  strcpy(str, argv[0]);
+  split[0] = strtok(str, "/"); // first word
+  int words = 0;
+  while (words < 29 && split[words] != NULL) {
+    words++; // start from 1, as the first split is already done
+    split[words] = strtok(NULL, "/");
+  }
+  // print last split of argv[0], i.e., pathless command name
+  fprintf(ptr, " %s", split[words-1]);
+  // print the rest of the command
+  for (int i = 1; i < argc; i++)
+    fprintf(ptr, " %s", argv[i]);
+  fprintf(ptr, "\n");
 } //}}}

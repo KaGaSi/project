@@ -143,9 +143,7 @@ int main(int argc, char *argv[]) {
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   // variables - structures //{{{
@@ -192,11 +190,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  // print command to output file //{{{
+  // print command to output file
   putc('#', out);
-  for (int i = 0; i < argc; i++)
-    fprintf(out, " %s", argv[i]);
-  putc('\n', out); //}}}
+  PrintCommand(out, argc, argv);
 
   // print bead type names to output file //{{{
   fprintf(out, "# (1) distance;");
@@ -223,7 +219,7 @@ int main(int argc, char *argv[]) {
   char *stuff = calloc(LINE, sizeof(char));
 
   // allocate memory for pcf arrays //{{{
-  int *counter = calloc(Counts.TypesOfBeads,sizeof(int *)); // to count number of pairs
+  int *counter = calloc(Counts.TypesOfBeads,sizeof(int)); // to count number of pairs
   double ***pcf = malloc(Counts.TypesOfBeads*sizeof(double **));
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     pcf[i] = malloc(Counts.TypesOfBeads*sizeof(double *));
@@ -296,11 +292,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count_vcf, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     // calculate pair correlation function //{{{
     for (int j = 0; j < (Counts.Bonded+Counts.Unbonded); j++) {
