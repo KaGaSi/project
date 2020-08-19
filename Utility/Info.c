@@ -26,12 +26,12 @@ int main(int argc, char *argv[]) {
 
   // -h/--version options - print stuff and exit //{{{
   if (VersionOption(argc, argv)) {
-    exit(0);
+    exit(EXIT_SUCCESS);
   }
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "-h") == 0) {
       Help(argv[0], false);
-      exit(0);
+      exit(EXIT_SUCCESS);
     }
   }
   int req_args = 1; //}}}
@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
-    exit(1);
+    exit(EXIT_FAILURE);
   } //}}}
 
   // test if options are given correctly //{{{
@@ -58,20 +58,18 @@ int main(int argc, char *argv[]) {
 
       ErrorOption(argv[i]);
       Help(argv[0], true);
-      exit(1);
+      exit(EXIT_FAILURE);
     }
   } //}}}
 
-  // print command to stdout //{{{
-  for (int i = 0; i < argc; i++)
-    fprintf(stdout, " %s", argv[i]);
-  putchar('\n'); //}}}
+  // print command to stdout
+  PrintCommand(stdout, argc, argv);
 
   // options before reading system data //{{{
   // -c option - use a coordinate file //{{{
-  char *input_coor = calloc(LINE,sizeof(char *));
+  char *input_coor = calloc(LINE,sizeof(char));
   if (FileOption(argc, argv, "-c", &input_coor)) {
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   // test if coordante file ends with '.vcf' or '.vtf'
@@ -83,7 +81,7 @@ int main(int argc, char *argv[]) {
     strcpy(extension[1], ".vtf");
     if (ErrorExtension(input_coor, ext, extension)) {
       Help(argv[0], true);
-      exit(1);
+      exit(EXIT_FAILURE);
     }
   } //}}}
 
@@ -104,7 +102,7 @@ int main(int argc, char *argv[]) {
   strcpy(extension[1], ".vtf");
   if (ErrorExtension(input, ext, extension)) {
     Help(argv[0], true);
-    exit(1);
+    exit(EXIT_FAILURE);
   } //}}}
 
   // variables - structures //{{{
@@ -119,14 +117,13 @@ int main(int argc, char *argv[]) {
   ReadStructure(input, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // get box dimensions if -c is used //{{{
-  VECTOR BoxLength;
-  BoxLength.x = -1;
+  VECTOR BoxLength = {-1, -1, -1};
   if (input_coor[0] != '\0') {
     // open input coordinate file
     FILE *vcf;
     if ((vcf = fopen(input_coor, "r")) == NULL) {
       ErrorFileOpen(input_coor, 'r');
-      exit(1);
+      exit(EXIT_FAILURE);
     }
 
     BoxLength = GetPBC(vcf, input_coor);

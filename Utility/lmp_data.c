@@ -118,14 +118,12 @@ int main(int argc, char *argv[]) {
   if (IntegerOption(argc, argv, "-st", &timestep)) {
     exit(1);
   } //}}}
+  //}}}
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
-  //}}}
 
   // variables - structures for info from vsf //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
@@ -218,7 +216,7 @@ int main(int argc, char *argv[]) {
   char *stuff = calloc(LINE, sizeof(char));
 
   // main loop //{{{
-  fpos_t pos, pos_old; // for saving pointer position in vcf file
+  fpos_t pos; // for saving pointer position in vcf file
   int test;
   count = 0;
   while ((test = getc(vcf)) != EOF && count != timestep) {
@@ -231,7 +229,7 @@ int main(int argc, char *argv[]) {
     }
 
     // save pointer position in file
-    pos_old = pos;
+    fpos_t pos_old = pos;
     fgetpos(vcf, &pos);
 
     if (SkipCoor(vcf, Counts, &stuff)) {
@@ -246,12 +244,7 @@ int main(int argc, char *argv[]) {
   // restore pointer position in vcf file
   fsetpos(vcf, &pos);
 
-  // read coordinates //{{{
-  if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-    // print newline to stdout if Step... doesn't end with one
-    ErrorCoorRead(input_coor, test, count, stuff);
-    exit(1);
-  } //}}}
+  ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
   if (!silent) {
     if (script) {

@@ -148,9 +148,7 @@ int main(int argc, char *argv[]) {
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   // variables - structures //{{{
@@ -192,7 +190,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // -m <name(s)> - specify what molecule types to use //{{{
-  int *use = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *use = malloc(Counts.TypesOfMolecules*sizeof(int));
   // if -m not present, use all
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     use[i] = 1;
@@ -320,12 +318,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     RestorePBC(Counts, BoxLength, &Bead);
 
@@ -402,7 +395,7 @@ int main(int argc, char *argv[]) {
           if (coor[2] <= temp[bin[0]][bin[1]][1] && coor[2] >= ((range[0]+range[1])/2) && coor[2] <= range[1]) {
             temp[bin[0]][bin[1]][1] = coor[2];
           }
-        } else if (in && coor[2] >= range[0] && coor[2] <= range[1]) { // go from box edges to centre
+        } else if (coor[2] >= range[0] && coor[2] <= range[1]) { // go from box edges to centre
           if (coor[2] <= temp[bin[0]][bin[1]][0]) {
             temp[bin[0]][bin[1]][0] = coor[2];
           }
@@ -512,9 +505,7 @@ int main(int argc, char *argv[]) {
 
   // print command to output file //{{{
   putc('#', out);
-  for (int i = 0; i < argc; i++)
-    fprintf(out, " %s", argv[i]);
-  putc('\n', out); //}}}
+  PrintCommand(out, argc, argv);
 
   // print legend
   switch(axis) {
