@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
   bool verbose = BoolOption(argc, argv, "-v");
 
   // FIELD-like file //{{{
-  char *input = calloc(LINE, sizeof(char *));
+  char *input = calloc(LINE, sizeof(char));
   if (FileOption(argc, argv, "-f", &input)) {
     exit(1);
   }

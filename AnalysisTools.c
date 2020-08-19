@@ -768,7 +768,7 @@ void EvaluateContacts(COUNTS *Counts, AGGREGATE **Aggregate,
           (*Counts).Aggregates--;
         } //}}}
       } else if (agg_j == -1) { // or 'i' and 'j' aren't in contact and 'j' isn't in any aggregate =>  new aggregate for 'j' */ //{{{
-        int agg_j = (*Counts).Aggregates;
+        agg_j = (*Counts).Aggregates;
         (*Molecule)[j].Aggregate = agg_j;
 
         (*Aggregate)[agg_j].nMolecules = 1;

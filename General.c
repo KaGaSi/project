@@ -238,7 +238,7 @@ int SplitLine(char out[30][100], char *line, char delim[8]) {
   char *split[30];
   split[0] = strtok(line, delim); // first word
   int words = 0;
-  while (split[words] != NULL && words < 29) {
+  while (words < 29 && split[words] != NULL) {
     words++; // start from 1, as the first split is already done
     split[words] = strtok(NULL, " \t:");
   }
@@ -305,7 +305,7 @@ void PrintCommand(FILE *ptr, int argc, char *argv[]) {
   strcpy(str, argv[0]);
   split[0] = strtok(str, "/"); // first word
   int words = 0;
-  while (split[words] != NULL && words < 29) {
+  while (words < 29 && split[words] != NULL) {
     words++; // start from 1, as the first split is already done
     split[words] = strtok(NULL, "/");
   }
@@ -315,4 +315,4 @@ void PrintCommand(FILE *ptr, int argc, char *argv[]) {
   for (int i = 1; i < argc; i++)
     fprintf(ptr, " %s", argv[i]);
   fprintf(ptr, "\n");
-}
+} //}}}

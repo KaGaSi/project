@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
   char *stuff = calloc(LINE, sizeof(char));
 
   // allocate memory for pcf arrays //{{{
-  int *counter = calloc(Counts.TypesOfBeads,sizeof(int *)); // to count number of pairs
+  int *counter = calloc(Counts.TypesOfBeads,sizeof(int)); // to count number of pairs
   double ***pcf = malloc(Counts.TypesOfBeads*sizeof(double **));
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     pcf[i] = malloc(Counts.TypesOfBeads*sizeof(double *));

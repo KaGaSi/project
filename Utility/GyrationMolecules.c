@@ -253,7 +253,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // allocate arrays for the timestep //{{{
-    int *agg_counts_step = calloc(Counts.TypesOfMolecules,sizeof(int));
     double *Rg_step = calloc(Counts.TypesOfMolecules, sizeof(double));
     double *sqrRg_step = calloc(Counts.TypesOfMolecules, sizeof(double));
     double *Anis_step = calloc(Counts.TypesOfMolecules,sizeof(double));
@@ -347,7 +346,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // free memory //{{{
-    free(agg_counts_step);
     free(Rg_step);
     free(sqrRg_step);
     free(Anis_step);

@@ -474,8 +474,8 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       // set all moltypes not to be used
-      for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-        (*moltype)[i] = 0;
+      for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+        (*moltype)[j] = 0;
       }
       // Error - missing or wrong argument //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {

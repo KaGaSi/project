@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
   char *stuff = calloc(LINE, sizeof(char));
 
   // main loop //{{{
-  fpos_t pos, pos_old; // for saving pointer position in vcf file
+  fpos_t pos; // for saving pointer position in vcf file
   int test;
   count = 0;
   while ((test = getc(vcf)) != EOF && count != timestep) {
@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     }
 
     // save pointer position in file
-    pos_old = pos;
+    fpos_t pos_old = pos;
     fgetpos(vcf, &pos);
 
     if (SkipCoor(vcf, Counts, &stuff)) {
