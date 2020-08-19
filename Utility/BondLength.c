@@ -138,9 +138,7 @@ int main(int argc, char *argv[]) {
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   // variables - structures //{{{
@@ -309,11 +307,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count_vcf, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     // join all molecules
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
@@ -336,7 +330,6 @@ int main(int argc, char *argv[]) {
           bond.x = Bead[id1].Position.x - Bead[id2].Position.x;
           bond.y = Bead[id1].Position.y - Bead[id2].Position.y;
           bond.z = Bead[id1].Position.z - Bead[id2].Position.z;
-
           bond.x = Length(bond); //}}}
 
           // warn if bond is too long //{{{
@@ -407,7 +400,6 @@ int main(int argc, char *argv[]) {
             dist.x = Bead[id1].Position.x - Bead[id2].Position.x;
             dist.y = Bead[id1].Position.y - Bead[id2].Position.y;
             dist.z = Bead[id1].Position.z - Bead[id2].Position.z;
-
             dist.x = Length(dist); //}}}
 
             // mins & maxes //{{{
@@ -479,20 +471,16 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // print command to output file //{{{
+  // print command to output file
   putc('#', out);
-  for (int i = 0; i < argc; i++)
-    fprintf(out, " %s", argv[i]);
-  putc('\n', out); //}}}
+  PrintCommand(out, argc, argv);
 
   // print first line of output file - molecule names and beadtype pairs //{{{
   fprintf(out, "# (1) distance;");
-
   count = 1;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       fprintf(out, " %s molecule:", MoleculeType[i].Name);
-
       for (int j = 0; j < MoleculeType[i].nBTypes; j++) {
         for (int k = j; k < MoleculeType[i].nBTypes; k++) {
           if (bonds[i][MoleculeType[i].BType[j]][MoleculeType[i].BType[k]] > 0) {
@@ -584,17 +572,14 @@ int main(int argc, char *argv[]) {
   // write distribution of distances from '-d' option //{{{
   if (output_d[0] != '\0') {
     // open output file for appending //{{{
-    FILE *out;
     if ((out = fopen(output_d, "w")) == NULL) {
       ErrorFileOpen(output_d, 'w');
       exit(1);
     } //}}}
 
-    // print command to output file //{{{
+    // print command to output file
     putc('#', out);
-    for (int i = 0; i < argc; i++)
-      fprintf(out, " %s", argv[i]);
-    putc('\n', out); //}}}
+    PrintCommand(out, argc, argv);
 
     // print the first line of output file - molecule names with bead order //{{{
     fprintf(out, "# bead order in molecule(s) -");

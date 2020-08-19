@@ -133,9 +133,7 @@ int main(int argc, char *argv[]) {
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   // variables - structures //{{{
@@ -190,11 +188,9 @@ int main(int argc, char *argv[]) {
         exit(1);
       }
 
-      // print command to output file //{{{
+      // print command to output file
       putc('#', out);
-      for (int i = 0; i < argc; i++)
-        fprintf(out, " %s", argv[i]);
-      putc('\n', out); //}}}
+      PrintCommand(out, argc, argv);
 
       fprintf(out, "# %s\n", MoleculeType[i].Name);
       fprintf(out, "# (1) dt, (2) <Rg>, (3) <Rg^2>, ");
@@ -245,11 +241,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count);
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      ErrorCoorRead(input_coor, test, count, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     // join molecules if un-joined coordinates provided //{{{
     if (!joined) {
@@ -257,7 +249,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // allocate arrays for the timestep //{{{
-    int *agg_counts_step = calloc(Counts.TypesOfMolecules,sizeof(int));
     double *Rg_step = calloc(Counts.TypesOfMolecules, sizeof(double));
     double *sqrRg_step = calloc(Counts.TypesOfMolecules, sizeof(double));
     double *Anis_step = calloc(Counts.TypesOfMolecules,sizeof(double));
@@ -351,7 +342,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // free memory //{{{
-    free(agg_counts_step);
     free(Rg_step);
     free(sqrRg_step);
     free(Anis_step);

@@ -170,9 +170,7 @@ int main(int argc, char *argv[]) {
 
   // print command to stdout //{{{
   if (!silent) {
-    for (int i = 0; i < argc; i++)
-      fprintf(stdout, " %s", argv[i]);
-    fprintf(stdout, "\n\n");
+    PrintCommand(stdout, argc, argv);
   } //}}}
 
   // variables - structures //{{{
@@ -187,8 +185,7 @@ int main(int argc, char *argv[]) {
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
   // '-m' option //{{{
-  int *specific_moltype_for_size;
-  specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int));
   // all are to be used without '-m' option
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
@@ -235,11 +232,9 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
 
-    // print command to output file //{{{
+    // print command to output file
     putc('#', out);
-    for (int i = 0; i < argc; i++)
-      fprintf(out, " %s", argv[i]);
-    putc('\n', out); //}}}
+    PrintCommand(out, argc, argv);
 
     // print bead type names to output file //{{{
     fprintf(out, "# for each bead type: (1) rdp; (2) stderr; (3) rnp; (4) stderr\n");
@@ -334,16 +329,20 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rDiscarding step: %d", count);
     } //}}}
 
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
+    if (ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
       count--; // because last step isn't processed
-      ErrorCoorRead(input_coor, test, count, stuff);
+      fprintf(stderr, "\033[1;31m");
+      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_agg);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
     if (SkipCoor(vcf, Counts, &stuff)) {
-      ErrorCoorRead(input_coor, test, count, stuff);
+      fprintf(stderr, "\033[1;31m");
+      fprintf(stderr, "\nError: premature end of %s file\n\n", input_coor);
+      fprintf(stderr, "\033[0m");
       exit(1);
     }
   }
@@ -379,7 +378,7 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // read aggregates //{{{
-    if (ReadAggregates(agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
+    if (ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index)) {
       if (!silent && !script) { // end of line if \r is used for printing step number
         putchar('\n');
       }
@@ -391,12 +390,7 @@ int main(int argc, char *argv[]) {
       break;
     } //}}}
 
-    // read coordinates //{{{
-    if ((test = ReadCoordinates(indexed, vcf, Counts, Index, &Bead, &stuff)) != 0) {
-      // print newline to stdout if Step... doesn't end with one
-      ErrorCoorRead(input_coor, test, count_vcf, stuff);
-      exit(1);
-    } //}}}
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     // join agggregates if un-joined coordinates provided //{{{
     if (!joined) {
