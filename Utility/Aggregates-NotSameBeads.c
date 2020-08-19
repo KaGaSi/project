@@ -230,7 +230,7 @@ void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, double sqdist,
     }
   } //}}}
 
-  EvaluateContacts(&(*Counts), &(*Aggregate), &(*Molecule), contacts, contact);
+  EvaluateContacts(Counts, Aggregate, Molecule, contacts, contact);
 
   // sort molecules in aggregates according to ascending ids //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
@@ -253,7 +253,7 @@ void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, double sqdist,
   } //}}}
 
   // sort aggregates according to ascending ids of first molecules
-  SortAggStruct(&(*Aggregate), *Counts, *Molecule, MoleculeType, &(*Bead), BeadType);
+  SortAggStruct(Aggregate, *Counts, *Molecule, MoleculeType, Bead, BeadType);
 
   // assign aggregate id to every bonded bead in the aggregate //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
@@ -318,8 +318,8 @@ void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, double sqdist,
 
                 // test if 'i' is already in 'j''s aggregate //{{{
                 bool in_agg = false;
-                for (int k = 0; k < (*Bead)[i].nAggregates; k++) {
-                  if ((*Bead)[i].Aggregate[k] == agg_j) {
+                for (int l = 0; l < (*Bead)[i].nAggregates; l++) {
+                  if ((*Bead)[i].Aggregate[l] == agg_j) {
                     in_agg = true;
                     break;
                   }
@@ -348,8 +348,8 @@ void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, double sqdist,
 
                 // test if 'j' is already in 'i''s aggregate //{{{
                 bool in_agg = false;
-                for (int k = 0; k < (*Bead)[j].nAggregates; k++) {
-                  if ((*Bead)[j].Aggregate[k] == agg_i) {
+                for (int l = 0; l < (*Bead)[j].nAggregates; l++) {
+                  if ((*Bead)[j].Aggregate[l] == agg_i) {
                     in_agg = true;
                     break;
                   }
@@ -564,7 +564,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-xm' option //{{{
-  int *xm_mols = calloc(Counts.TypesOfMolecules,sizeof(int *));
+  int *xm_mols = calloc(Counts.TypesOfMolecules,sizeof(int));
   if (MoleculeTypeOption2(argc, argv, "-xm", &xm_mols, Counts, &MoleculeType)) {
     exit(1);
   }

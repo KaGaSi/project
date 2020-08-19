@@ -200,8 +200,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // '-m' option //{{{
-  int *specific_moltype_for_size;
-  specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int));
   // all are to be used without '-m' option
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
@@ -326,7 +325,7 @@ int main(int argc, char *argv[]) {
 
   // allocate memory for sum of various things //{{{
   // numbers of aggregates of all possibe sizes
-  int *agg_counts_sum = calloc(Counts.Molecules,sizeof(int *));
+  int *agg_counts_sum = calloc(Counts.Molecules,sizeof(int));
   // total radius of gyration: [size][0] normal sum, [size][1] sum of Rg*mass, [size][2] Rg*mass^2
   double **Rg_sum = malloc(Counts.Molecules*sizeof(double *));
   // total square of radius of gyration: [size][0] normal sum, [size][1] sum of Rg^2*mass, [size][2] Rg^2*mass^2
@@ -549,7 +548,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     // print data to output file //{{{
-    FILE *out;
     if ((out = fopen(output, "a")) == NULL) { // out file opened fine? //{{{
       ErrorFileOpen(output, 'a');
       exit(1);
@@ -619,14 +617,11 @@ int main(int argc, char *argv[]) {
 
   // calculate per-size averages? //{{{
   if (per_size_file[0] != '\0') {
-
     // open file //{{{
-    FILE *out;
     if ((out = fopen(per_size_file, "w")) == NULL) {
       ErrorFileOpen(per_size_file, 'w');
       exit(1);
     } //}}}
-
     // print command to output file
     putc('#', out);
     PrintCommand(out, argc, argv);

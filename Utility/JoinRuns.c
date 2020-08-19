@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // <2nd input.vsf> - second structure file //{{{
-  char *input_vsf_2 = calloc(LINE,sizeof(char *));
+  char *input_vsf_2 = calloc(LINE,sizeof(char));
   strcpy(input_vsf_2, argv[++count]);
 
   // test if <2nd input.vsf> ends with '.vsf' (required by VMD)
@@ -310,13 +310,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // print pbc if verbose output //{{{
-  if (verbose) {
-    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
-  } //}}}
-
   // print information - verbose output //{{{
   if (verbose) {
+    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
     VerboseOutput(input_coor_1, Counts, BoxLength, BeadType1, Bead1, MoleculeType1, Molecule1);
     fprintf(stdout, "\n   Starting from %d. (%d.) timestep\n", start_1, start_2);
     fprintf(stdout, "   Every %d. (%d.) timestep used\n", skip_1+1, skip_2+1);
@@ -449,7 +445,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.Beads; i++) {
     if (Bead1[i].Molecule == -1) { // monomer bead
       for (int j = 0; j < Counts.Beads; j++) {
-        if (Bead1[i].Molecule == -1 && Bead2[i].Molecule == -1 &&
+        if (Bead2[i].Molecule == -1 &&
             strcmp(BeadType2[Bead2[j].Type].Name, BeadType1[Bead1[i].Type].Name) == 0 &&
             !used[j]) {
           Index1[Bead1[i].Index] = Index2[Bead2[j].Index];

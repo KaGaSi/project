@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // -f <add> - FIELD-like file with molecules to add //{{{
-  char *input_add = calloc(LINE, sizeof(char *));
+  char *input_add = calloc(LINE, sizeof(char));
   if (FileOption(argc, argv, "-f", &input_add)) {
     exit(1);
   }
@@ -180,8 +180,8 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // -vtf <vsf> <vcf> - FIELD-like file with molecules to add //{{{
-  char *add_vsf = calloc(LINE, sizeof(char *)),
-       *input_coor_add = calloc(LINE, sizeof(char *));
+  char *add_vsf = calloc(LINE, sizeof(char)),
+       *input_coor_add = calloc(LINE, sizeof(char));
   // 1) vsf file
   if (FileOption(argc, argv, "-vtf", &add_vsf)) {
     exit(1);
@@ -237,7 +237,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // save into xyz file? //{{{
-  char *output_xyz = calloc(LINE, sizeof(char *));
+  char *output_xyz = calloc(LINE, sizeof(char));
   if (FileOption(argc, argv, "-xyz", &output_xyz)) {
     exit(1);
   } //}}}
@@ -568,27 +568,26 @@ int main(int argc, char *argv[]) {
   if (com) {
     for (int i = 0; i < Counts_add.Molecules; i++) {
       int mtype = Molecule_add[i].Type;
-      // geometric centre
-      VECTOR centre;
-      centre.x = 0;
-      centre.y = 0;
-      centre.z = 0;
+      VECTOR geom_centre;
+      geom_centre.x = 0;
+      geom_centre.y = 0;
+      geom_centre.z = 0;
 
       for (int j = 0; j < MoleculeType_add[mtype].nBeads; j++) {
         int id = Molecule_add[i].Bead[j];
-        centre.x += Bead_add[id].Position.x;
-        centre.y += Bead_add[id].Position.y;
-        centre.z += Bead_add[id].Position.z;
+        geom_centre.x += Bead_add[id].Position.x;
+        geom_centre.y += Bead_add[id].Position.y;
+        geom_centre.z += Bead_add[id].Position.z;
       }
-      centre.x /= MoleculeType_add[mtype].nBeads;
-      centre.y /= MoleculeType_add[mtype].nBeads;
-      centre.z /= MoleculeType_add[mtype].nBeads;
+      geom_centre.x /= MoleculeType_add[mtype].nBeads;
+      geom_centre.y /= MoleculeType_add[mtype].nBeads;
+      geom_centre.z /= MoleculeType_add[mtype].nBeads;
 
       for (int j = 0; j < MoleculeType_add[mtype].nBeads; j++) {
         int id = Molecule_add[i].Bead[j];
-        Bead_add[id].Position.x -= centre.x;
-        Bead_add[id].Position.y -= centre.y;
-        Bead_add[id].Position.z -= centre.z;
+        Bead_add[id].Position.x -= geom_centre.x;
+        Bead_add[id].Position.y -= geom_centre.y;
+        Bead_add[id].Position.z -= geom_centre.z;
       }
     }
   } //}}}
@@ -1002,7 +1001,6 @@ int main(int argc, char *argv[]) {
       Index_new[i] = i;
     } //}}}
     // copy the original bonded beads //{{{
-    count = Counts_new.Unbonded;
     for (int i = Counts.Unbonded; i < Counts.Beads; i++) {
       int id = Counts_new.Unbonded + i - Counts.Unbonded; // goes from Counts_new.Unbonded to (Counts_new.Unbonded+Counts.Bonded)
       Bead_new[id].Type = Bead[i].Type;
@@ -1073,15 +1071,14 @@ int main(int argc, char *argv[]) {
   // seed random number generator
   srand(time(0));
 
-  // add monomeric beads //{{{
+  // add beads randomly if FIELD-like file is used //{{{
   count = 0;
-  if (add_vsf[0] == '\0') { // randomly place monomers if FIELD-like file is used
-//  for (int i = 0; i < Counts_new.Unbonded; i++) {
-//    if (Bead_new[i].Flag) { // is this an original bead to be exchanged?
+  if (add_vsf[0] == '\0') {
+    // add monomeric beads //{{{
     for (int i = 0; i < Counts_add.Unbonded; i++) {
       VECTOR random;
-      double min_dist;
       if (lowest_dist != -1 || highest_dist != -1) {
+        double min_dist;
         do {
           random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
           random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
@@ -1132,7 +1129,7 @@ int main(int argc, char *argv[]) {
         fflush(stdout);
         fprintf(stdout, "\rMonomers placed: %d", i+1);
       } //}}}
-    }
+    } //}}}
     // print total number of placed beads? //{{{
     if (!silent) {
       if (script) {
@@ -1143,12 +1140,9 @@ int main(int argc, char *argv[]) {
         fprintf(stdout, "\rMonomer placed: %d\n", Counts_add.Unbonded);
       }
     } //}}}
-  } //}}}
-
-  // randomly place the molecules if FIELD is used //{{{
-  // doesn't depend on --switch option as it's determined by the Molecule_new
-  // array established earlier
-  if (add_vsf[0] == '\0') {
+    // add molecules //{{{
+    // doesn't depend on --switch option as it's determined by the Molecule_new
+    // array established earlier
     count = 0;
     for (int i = Counts.Molecules; i < Counts_new.Molecules; i++) {
       int mtype = Molecule_new[i].Type;
@@ -1198,8 +1192,8 @@ int main(int argc, char *argv[]) {
 
       // first bead's distance from specified bead typtes is checked //{{{
       // first bead can have coordinates [0,0,0] or such that the molecule's geometric centre is [0,0,0] (if -gc is used)
-      double min_dist;
       if (lowest_dist != -1 || highest_dist != -1) {
+        double min_dist;
         do {
           random.x = (double)rand() / ((double)RAND_MAX + 1) * new_box.x + constraint[0].x;
           random.y = (double)rand() / ((double)RAND_MAX + 1) * new_box.y + constraint[0].y;
@@ -1210,11 +1204,9 @@ int main(int argc, char *argv[]) {
             int btype_j = Bead[j].Type;
             // j can be added monomeric bead, so it's type can be higher than the number of types
             if (btype_j < Counts.TypesOfBeads && BeadType[btype_j].Use) {
-              VECTOR dist;
-              dist = Distance(Bead[j].Position, random, BoxLength);
-              dist.x = SQR(dist.x) + SQR(dist.y) + SQR(dist.z);
-              if (dist.x < min_dist) {
-                min_dist = dist.x;
+              dist = Length(Distance(Bead[j].Position, random, BoxLength));
+              if (dist < min_dist) {
+                min_dist = dist;
               }
             }
           }
@@ -1239,8 +1231,7 @@ int main(int argc, char *argv[]) {
         fflush(stdout);
         fprintf(stdout, "\rMolecules placed: %d", i-Counts.Molecules+1);
       } //}}}
-    }
-
+    } //}}}
     // print total number of placed molecules? //{{{
     if (!silent) {
       if (script) {

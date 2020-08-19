@@ -145,7 +145,7 @@ int main ( int argc, char** argv ) {
       lines++;
       // save the value
       if (discard < lines) {
-        int count = lines - discard - 1;
+        count = lines - discard - 1;
         data = realloc(data, (count+1)*sizeof(double));
         data[count] = atof(split[column-1]);
       }

@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
   // options before reading system data //{{{
   // use .vsf file other than traject.vsf? //{{{
-  char *input_vsf = calloc(LINE,sizeof(char *));
+  char *input_vsf = calloc(LINE,sizeof(char));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
   }

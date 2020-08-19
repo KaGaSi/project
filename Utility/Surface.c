@@ -190,7 +190,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // -m <name(s)> - specify what molecule types to use //{{{
-  int *use = malloc(Counts.TypesOfMolecules*sizeof(int *));
+  int *use = malloc(Counts.TypesOfMolecules*sizeof(int));
   // if -m not present, use all
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     use[i] = 1;
@@ -400,7 +400,7 @@ int main(int argc, char *argv[]) {
           if (coor[2] <= temp[bin[0]][bin[1]][1] && coor[2] >= ((range[0]+range[1])/2) && coor[2] <= range[1]) {
             temp[bin[0]][bin[1]][1] = coor[2];
           }
-        } else if (in && coor[2] >= range[0] && coor[2] <= range[1]) { // go from box edges to centre
+        } else if (coor[2] >= range[0] && coor[2] <= range[1]) { // go from box edges to centre
           if (coor[2] <= temp[bin[0]][bin[1]][0]) {
             temp[bin[0]][bin[1]][0] = coor[2];
           }
