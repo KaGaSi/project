@@ -1,4 +1,4 @@
-# Created by AnalysisTools version 3.2-2 (https://github.com/KaGaSi/AnalysisTools/releases)
+# Created by AnalysisTools version 3.3 (https://github.com/KaGaSi/AnalysisTools/releases)
 atom default name        W mass   1.00000 charge   0.00000
 atom     100 name        A mass   0.41670 charge   0.00000 resname       mol1 resid     1
 atom     101 name        A mass   0.41670 charge   0.00000 resname       mol1 resid     1
