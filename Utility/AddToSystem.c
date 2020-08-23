@@ -485,7 +485,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(vcf); //}}}
 
-  // create structures for new stuff //{{{
+  // create structures for added stuff //{{{
   COUNTS Counts_add = InitCounts;
   MOLECULE *Molecule_add;
   MOLECULETYPE *MoleculeType_add;
@@ -498,7 +498,7 @@ int main(int argc, char *argv[]) {
   //}}}
 
   if (add_vsf[0] == '\0') { // read stuff to be added from FIELD
-    ReadField(input_add, NULL, &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add, &bond_type, &angle_type);
+    ReadField(input_add, '\0', &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add, &bond_type, &angle_type);
   } else { // read stuff to add from vtf file(s) ('-vtf' option) //{{{
     bool indexed_add = ReadStructure(add_vsf, input_coor_add, &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add);
     // open input coordinate file
@@ -598,9 +598,8 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts_add.Beads; i++) {
     for (; count < Counts.Beads; count++) {
       int type = Bead[count].Type;
-      if (BeadType[type].Write &&
-          Bead[count].Molecule == -1) {
-        Bead[count].Flag = true;
+      if (BeadType[type].Write && Bead[count].Molecule == -1) {
+        Bead[count].Flag = true; // exchange bead 'count'
         break;
       }
     }
@@ -1046,7 +1045,7 @@ int main(int argc, char *argv[]) {
   // print new system //{{{
   if (verbose) {
     fprintf(stdout, "\nNEW SYSTEM\n");
-    VerboseOutput(input_coor, Counts_new, BoxLength, BeadType_new, Bead_new, MoleculeType_new, Molecule_new);
+    VerboseOutput(input_coor, Counts_new, BoxLength_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new);
   } //}}}
   // create & fill output vsf file
   WriteVsf(output_vsf, Counts_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new, false);
@@ -1063,8 +1062,8 @@ int main(int argc, char *argv[]) {
   srand(time(0));
 
   // add beads randomly if FIELD-like file is used //{{{
-  count = 0;
   if (add_vsf[0] == '\0') {
+    count = 0;
     // add monomeric beads //{{{
     for (int i = 0; i < Counts_add.Unbonded; i++) {
       VECTOR random;
@@ -1106,6 +1105,7 @@ int main(int argc, char *argv[]) {
             id = j;
             Bead_new[j].Flag = false; // just exchanged (only pro forma)
             count = j + 1;
+            break;
           }
         }
       }
