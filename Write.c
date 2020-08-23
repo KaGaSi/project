@@ -11,10 +11,8 @@ void WriteCoorIndexed(FILE *vcf_file, COUNTS Counts,
                       MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
                       char *stuff) {
 
-  // print blank line
-  putc('\n', vcf_file);
   // print comment at the beginning of a timestep if present in initial vcf file
-  fprintf(vcf_file, "%s", stuff);
+  fprintf(vcf_file, "%s\n", stuff);
   // print 'indexed' on the next
   fprintf(vcf_file, "indexed\n");
 

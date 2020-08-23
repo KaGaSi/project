@@ -1123,25 +1123,37 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
   (*stuff)[0] = '\0'; // no comment line
   char line[LINE], split[30][100];
   int words;
+  fpos_t position;
+  fgetpos(vcf_file, &position); // save pointer position
+  int count_lines = 0;
   do {
     fgets(line, sizeof(line), vcf_file);
     words = SplitLine(split, line, " \t");
-    for (int i = 0; i < words; i++) {
-      strcat(*stuff, split[i]);
-    }
-  } while (words == 0 || split[0][0] == '#'); //}}}
-
-  if (indexed) { // indexed timestep //{{{
-    // error if after possible comment isn't (t(imestep)) i(rdered) //{{{
-    if (split[0][0] != 'i' && (words < 2 || split[0][0] != 't' || split[1][0] != 'i')) {
+    if (split[0][0] == '#') { // comment line - copy to stuff array
+      sprintf(*stuff, "%s\n", *stuff);
+      for (int i = 0; i < words; i++) {
+        sprintf(*stuff, "%s %s", *stuff, split[i]);
+      }
+    } else if (split[0][0] != 't' && split[0][0] != 'i' && split[0][0] != 'o' &&
+               words != 0 && strcasecmp(split[0], "pbc") != 0 && !IsDouble(split[0])) {
       fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
-      fprintf(stderr, " - unrecognised line at the beginning of a timestep\n");
+      fprintf(stderr, " - unrecognised line in timestep preamble\n");
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
-    } //}}}
+    }
+    count_lines++;
+  } while (words == 0 || !IsDouble(split[0])); //}}}
 
+  // skip the preamble lines //{{{
+  fsetpos(vcf_file, &position); // restore pointer position
+  for (int i = 0; i < (count_lines-1); i++) {
+    fgets(line, sizeof(line), vcf_file);
+  }
+  //}}}
+
+  if (indexed) { // indexed timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       fgets(line, sizeof(line), vcf_file);
       words = SplitLine(split, line, " \t");
@@ -1163,15 +1175,6 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
     }
   //}}}
   } else { // ordered timestep //{{{
-    // error if after possible comment isn't (t(imestep)) o(rdered) //{{{
-    if (split[0][0] != 'o' && (words < 2 || split[0][0] != 't' || split[1][0] != 'i')) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
-      fprintf(stderr, " - unrecognised line at the beginning of a timestep\n");
-      fprintf(stderr, "\033[0m");
-      ErrorPrintLine(split, words);
-      exit(1);
-    } //}}}
     for (int i = 0; i < Counts.Beads; i++) {
       fgets(line, sizeof(line), vcf_file);
       words = SplitLine(split, line, " \t");
