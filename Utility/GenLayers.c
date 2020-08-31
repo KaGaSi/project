@@ -260,8 +260,10 @@ int main(int argc, char *argv[]) {
   // increase number of beads if too small (-n option or default number) //{{{
   if (Counts.Bonded > Counts.Beads) {
     Counts.Beads = Counts.BeadsInVsf = Counts.Bonded;
+    fprintf(stderr, "\033[1;33m");
     fprintf(stderr, "\nWARNING: too few beads to fit the required number of molecules!\n");
-    fprintf(stderr, "   Number of beads increased to %d\n", Counts.Beads);
+    fprintf(stderr, "         Number of beads increased to %d\n", Counts.Beads);
+    fprintf(stderr, "\033[0m");
   } //}}}
 
   // count unbonded beads

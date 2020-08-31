@@ -56,6 +56,12 @@ set(UTILS AddToSystem
   target_link_libraries(${utility} ${LIBRARIES} m)
 endforeach(utility)
 
+set(TESTING Coordinates)
+          foreach(utility ${TESTING})
+  add_executable(${utility} Testing/${utility}.c)
+  target_link_libraries(${utility} m ${LIBRARIES})
+endforeach(utility)
+
 # this somehow specifies fortran compiler
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
 set(F_UTILS traject-v2_5
