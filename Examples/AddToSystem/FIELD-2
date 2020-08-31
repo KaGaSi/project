@@ -1,0 +1,28 @@
+100 D4 molecules
+
+species 2
+D  1  0  0
+E  1  0  0
+
+molecule 2
+D4
+nummols 100
+beads 4
+D  0  0.0  0.0
+D  0  0.0  0.5
+D  0  0.5  0.5
+D  0  0.5  0.0
+bonds 4
+harm  1  2  100  0.5
+harm  2  3  100  0.5
+harm  3  4  100  0.5
+harm  4  1  100  0.5
+finish
+E2
+nummols 100
+beads 2
+E  0  0.0  0.0
+E  0  0.0  0.5
+bonds 1
+harm  1  2  100  0.5
+finish

@@ -43,6 +43,8 @@
 \usepackage{enumitem}
 % easy quotation marks
 \usepackage[style=british]{csquotes}
+% multi-line comments
+\usepackage{verbatim}
 % clickable links -- hyperref should be the last package listed
 \usepackage{hyperref} %}}}
 
@@ -133,6 +135,15 @@
 \renewcommand{\textfraction}{0.07}
 \renewcommand{\floatpagefraction}{0.7}
 
+\let\tt\useless
+\newcommand{\tt}{\texttt}
+\newcommand{\vcf}{\texttt{vcf} }
+\newcommand{\vsf}{\texttt{vsf} }
+\newcommand{\vscf}{\texttt{vsf/vcf} }
+\newcommand{\vtf}{\texttt{vtf} }
+\newcommand{\field}{\texttt{FIELD} }
+\newcommand{\data}{\texttt{data} }
+
 \begin{document}
 
 % some better(?) word splitting settings %{{{
@@ -147,13 +158,13 @@
 \vfill
 {\Huge\bf AnalysisTools user manual}
 \vfill
-{\Large Karel Šindelka}
+{\Large RNDR. Karel Šindelka, Ph.D.}
 
 {\small k.sindelka@gmail.com}
 \vspace{10pt}
 
-\today
 \vfill
+Version 3.3 (Released August 18, 2020)
 \vfill
 \vfill
 \vfill
