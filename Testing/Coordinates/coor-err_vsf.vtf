@@ -6,7 +6,7 @@ atom     703 name        A mass   1.00000 charge   0.00000 resname       A5B5 re
 atom     704 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     705 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 # comment
-atom     706 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     7.06 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     707 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     708 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     709 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1

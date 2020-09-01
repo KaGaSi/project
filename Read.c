@@ -158,7 +158,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
 
   int max_bead = 0, // highest bead id detected
       max_mol = 0, // highes mol id detected
-      atom_lines = 0, // number of atom lines in vsf (including comments and blanks)
+      total_atom_lines = 0, // number of atom lines in vsf (including comments and blanks)
+      atom_lines = 0, // number of atom lines in vsf (excluding comments and blanks)
       type_default = -1; // default bead type
   char line[LINE];
   while(fgets(line, sizeof(line), vsf)) {
@@ -166,6 +167,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     int words = SplitLine(split, line, delim);
 
     if (strncmp(split[0], "atom", 1) == 0) {
+      total_atom_lines++;
       atom_lines++;
 
       // error - odd number of values: a(tom) lines are composed of 'keyword <value>' pairs //{{{
@@ -356,12 +358,18 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       } //}}}
     } else if (split[0][0] == '#' || split[0][0] == '\0') {
       // count the line if comment or blank
-      atom_lines++;
+      total_atom_lines++;
     } else {
       break;
     }
   }
   fclose(vsf); //}}}
+  if (type_default == -1 && atom_lines != (max_bead+1)) {
+    fprintf(stderr, "\033[1;31m");
+    fprintf(stderr, "\nError - \033[1;33m%s\033[1;31m: too few atom lines (or 'default' atom missing)\n", vsf_file);
+    fprintf(stderr, "\033[0m");
+    exit(1);
+  }
 
   (*Counts).Molecules = max_mol; // mol ids start from 1 in vsf
   (*Counts).BeadsInVsf = max_bead + 1; // bead ids start from 0 in vsf
@@ -391,7 +399,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
 
   // go through atom lines - no error checking,
   // because it's been done in the first read-through
-  for (int count = 0; count < atom_lines; count++) {
+  for (int count = 0; count < total_atom_lines; count++) {
     // read line
     fgets(line, sizeof(line), vsf);
     char split[30][100];
@@ -547,7 +555,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
   // because it's been done in the first read-through
   int *beads; // helper array
   beads = calloc((*Counts).BeadsInVsf, sizeof(int));
-  for (int count = 0; count < atom_lines; count++) {
+  for (int count = 0; count < total_atom_lines; count++) {
     fgets(line, sizeof(line), vsf);
     char split[30][100];
     int words = SplitLine(split, line, delim);
