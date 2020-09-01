@@ -12,11 +12,12 @@ Test reading/writing coordinates and structure.\n\n");
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> ", cmd);
-  fprintf(ptr, "<output> <type names> <options>\n\n");
+  fprintf(ptr, "<output.vcf> <output.vsf> <output.xyz> <options>\n\n");
 
   fprintf(ptr, "   <input>           input filename (vcf or vtf format)\n");
-  fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
-  fprintf(ptr, "   <output.xyz>      output filename (xyz format)\n");
+  fprintf(ptr, "   <output.vcf>      output coordinate file (vcf format)\n");
+  fprintf(ptr, "   <output.vsf>      output structure file (vsf format)\n");
+  fprintf(ptr, "   <output.xyz>      output coordinate file (xyz format)\n");
   CommonHelp(error);
 } //}}}
 
@@ -32,7 +33,7 @@ int main(int argc, char *argv[]) {
       exit(0);
     }
   }
-  int req_args = 3; //}}}
+  int req_args = 4; //}}}
 
   // check if correct number of arguments //{{{
   int count = 0;
@@ -97,6 +98,18 @@ int main(int argc, char *argv[]) {
   ext = 1;
   strcpy(extension[0], ".vcf");
   if (ErrorExtension(output_vcf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <output.vsf> - filename of output vsf file //{{{
+  char output_vsf[LINE];
+  strcpy(output_vsf, argv[++count]);
+
+  // test if <output.vsf> filename ends with '.vsf'
+  ext = 1;
+  strcpy(extension[0], ".vsf");
+  if (ErrorExtension(output_vsf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -203,6 +216,8 @@ int main(int argc, char *argv[]) {
     WriteCoorXYZ(out, Counts, BeadType, Bead);
   }
   fclose(vcf); //}}}
+
+  WriteVsf(output_vsf, Counts, BeadType, Bead, MoleculeType, Molecule, false);
 
   // free memory - to make valgrind happy //{{{
   free(BeadType);
