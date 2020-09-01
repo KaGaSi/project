@@ -1,0 +1,23 @@
+# Created by AnalysisTools version 3.3 (https://github.com/KaGaSi/AnalysisTools/releases)
+atom default name        C mass   1.00000 charge   0.00000
+atom     700 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     701 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     702 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     703 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     704 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     705 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     706 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     707 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     708 name        B mass   1.00000 charge   0.00000 resname       resid     1
+atom     709 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+
+# resid 1
+bond    700:    701
+bond    701:    702
+bond    702:    703
+bond    703:    704
+bond    704:    705
+bond    705:    706
+bond    706:    707
+bond    707:    708
+bond    708:    709
