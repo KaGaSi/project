@@ -8,21 +8,15 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stdout;
 
     fprintf(ptr, "\
-TODO: Rewrite after --switch; when --switch option is used \
-the behaviour is the same as before, otherwise beads are added \
-instead of switched for old ones.\n\n\
-AddToSystem takes existing coordinates and adds unbonded beads and/or \
-molecules to the system. The data for added components is read either \
-from a FIELD-like file that has to contain species and molecule sections \
-(the same as for DL_MESO simulation program) or from a vsf/vcf files \
+AddToSystem takes an existing system and adds unbonded beads and/or \
+molecules to that system. The data for added components is read either \
+from a FIELD-like file that has to contain the species and molecule sections \
+(the same as for the DL_MESO simulation program) or from a vsf/vcf files \
 (-vtf option). In the first case, new molecules and beads are added \
-randomly, while in the second case, the provided coordinates are used. \
-The new beads replace either neutral unbonded beads with the lowest \
-indices (as written in the vsf file) or option-specified unbonded beads. \
-Constraints can be placed on x, y, or z coordinates, as well as on \
-distance of the added beads from other specified beads. The constraints \
-are ignored for -vtf option. Options -ld and/or -hd must be used in \
-accompanied by -bt option.\n\n");
+randomly (with several possible constraints), while in the second case, \
+the provided coordinates are used. The new beads are either added to the \
+original system, increasing the total number of beads, or they replace \
+unbonded beads from the original system (--switch option).\n\n");
   }
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input.vcf> ", cmd);
@@ -32,9 +26,13 @@ accompanied by -bt option.\n\n");
   fprintf(ptr, "   <out.vsf>           output structure file (vsf format)\n");
   fprintf(ptr, "   <out.vcf>           output coordinate file (vcf format)\n");
   fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "      -st <int>        timestep to add new beads to (default: 1)\n");
+  fprintf(ptr, "      -xyz <name>      also save coordinates to an xyz file\n");
+  fprintf(ptr, "      --switch         replace original beads instead of increasing the total number of beads\n");
+  fprintf(ptr, "      -b <x> <y> <z>   side lengths of the new simulation box\n");
+  fprintf(ptr, "      --centre         place the original simulation box in the middle of the new one\n");
+  fprintf(ptr, "   <options for random placement>\n");
   fprintf(ptr, "      -f <name>        FIELD-like file with molecules to add (default: FIELD)\n");
-  fprintf(ptr, "      -st <int>        timestep to add new beads to\n");
-  fprintf(ptr, "      -xyz <name>      output xyz file\n");
   fprintf(ptr, "      -ld <float>      specify lowest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -hd <float>      specify highest distance from chosen bead types (default: none)\n");
   fprintf(ptr, "      -bt <name(s)>    specify bead types new beads should be far from/near to (default: none)\n");
@@ -42,11 +40,8 @@ accompanied by -bt option.\n\n");
   fprintf(ptr, "      -cy <num> <num2> constrain y coordinate of randomly added beads to interaval (int,int2)\n");
   fprintf(ptr, "      -cz <num> <num2> constrain z coordinate of randomly added beads to interaval (int,int2)\n");
   fprintf(ptr, "      -gc              use molecule's geometric centre for the distance check instead of its first bead\n");
+  fprintf(ptr, "   <options for provided coordinates>\n");
   fprintf(ptr, "      -vtf <vsf> <vcf> use vtf file format instead of FIELD (divided to vsf and vcf files)\n");
-  fprintf(ptr, "      -b <x> <y> <z>   new box size (default: box size from input)\n");
-  fprintf(ptr, "      --centre         place the old system in the centre of the new box\n");
-  fprintf(ptr, "      --switch         beads should be switched for original ones, not added\n");
-  fprintf(ptr, "      -xb <name(s)>    specify bead types to exchange new beads for (must be unbonded beads)\n");
   CommonHelp(error);
 } //}}}
 
@@ -485,7 +480,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(vcf); //}}}
 
-  // create structures for new stuff //{{{
+  // create structures for added stuff //{{{
   COUNTS Counts_add = InitCounts;
   MOLECULE *Molecule_add;
   MOLECULETYPE *MoleculeType_add;
@@ -498,7 +493,7 @@ int main(int argc, char *argv[]) {
   //}}}
 
   if (add_vsf[0] == '\0') { // read stuff to be added from FIELD
-    ReadField(input_add, NULL, &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add, &bond_type, &angle_type);
+    ReadField(input_add, '\0', &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add, &bond_type, &angle_type);
   } else { // read stuff to add from vtf file(s) ('-vtf' option) //{{{
     bool indexed_add = ReadStructure(add_vsf, input_coor_add, &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add);
     // open input coordinate file
@@ -598,9 +593,8 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts_add.Beads; i++) {
     for (; count < Counts.Beads; count++) {
       int type = Bead[count].Type;
-      if (BeadType[type].Write &&
-          Bead[count].Molecule == -1) {
-        Bead[count].Flag = true;
+      if (BeadType[type].Write && Bead[count].Molecule == -1) {
+        Bead[count].Flag = true; // exchange bead 'count'
         break;
       }
     }
@@ -1046,7 +1040,7 @@ int main(int argc, char *argv[]) {
   // print new system //{{{
   if (verbose) {
     fprintf(stdout, "\nNEW SYSTEM\n");
-    VerboseOutput(input_coor, Counts_new, BoxLength, BeadType_new, Bead_new, MoleculeType_new, Molecule_new);
+    VerboseOutput(input_coor, Counts_new, BoxLength_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new);
   } //}}}
   // create & fill output vsf file
   WriteVsf(output_vsf, Counts_new, BeadType_new, Bead_new, MoleculeType_new, Molecule_new, false);
@@ -1063,8 +1057,8 @@ int main(int argc, char *argv[]) {
   srand(time(0));
 
   // add beads randomly if FIELD-like file is used //{{{
-  count = 0;
   if (add_vsf[0] == '\0') {
+    count = 0;
     // add monomeric beads //{{{
     for (int i = 0; i < Counts_add.Unbonded; i++) {
       VECTOR random;
@@ -1106,6 +1100,7 @@ int main(int argc, char *argv[]) {
             id = j;
             Bead_new[j].Flag = false; // just exchanged (only pro forma)
             count = j + 1;
+            break;
           }
         }
       }

@@ -312,7 +312,6 @@ void RemovePBCMolecules(COUNTS Counts, VECTOR BoxLength,
         // move id1, if id2 is moved already
         if (!(*Bead)[id1].Flag && (*Bead)[id2].Flag) {
           VECTOR dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
-
           (*Bead)[id1].Position.x = (*Bead)[id2].Position.x - dist.x;
           (*Bead)[id1].Position.y = (*Bead)[id2].Position.y - dist.y;
           (*Bead)[id1].Position.z = (*Bead)[id2].Position.z - dist.z;
@@ -328,7 +327,7 @@ void RemovePBCMolecules(COUNTS Counts, VECTOR BoxLength,
         }
       }
 
-      // exit if all beads have moved
+      // break while loop if all beads have moved
       done = true;
       for (int j = 1; j < MoleculeType[type].nBeads; j++) {
         if (!(*Bead)[Molecule[i].Bead[j]].Flag) {
