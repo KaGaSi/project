@@ -4,6 +4,7 @@ doc
 cscope*
 OneTime
 Testing/*/wrong*
+Testing/*/out*
 tags
 *aux
 *latexmk
