@@ -3,6 +3,7 @@ build
 doc
 cscope*
 OneTime
+Testing/*/wrong*
 tags
 *aux
 *latexmk
