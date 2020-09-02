@@ -363,13 +363,14 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       break;
     }
   }
-  fclose(vsf); //}}}
+  fclose(vsf);
+  // test whether there's enough atom lines if there's no 'default' line
   if (type_default == -1 && atom_lines != (max_bead+1)) {
     fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - \033[1;33m%s\033[1;31m: too few atom lines (or 'default' atom missing)\n", vsf_file);
     fprintf(stderr, "\033[0m");
     exit(1);
-  }
+  } //}}}
 
   (*Counts).Molecules = max_mol; // mol ids start from 1 in vsf
   (*Counts).BeadsInVsf = max_bead + 1; // bead ids start from 0 in vsf
