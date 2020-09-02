@@ -1,7 +1,7 @@
 atom default name        C mass   1.00000 charge   0.00000
-atom     700 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
-atom     701 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     600 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     702 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     701 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     703 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     704 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     705 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
@@ -13,7 +13,7 @@ atom     708 name        B mass   1.00000 charge   0.00000 resname       A5B5 re
 atom     709 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 
 # resid 1
-bond    700:    701
+bond    600:    701
 bond    701:    702
 bond    702:    703
 bond    703:    704
