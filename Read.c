@@ -1137,7 +1137,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
  * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
  */
 void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
-
   // read initial stuff //{{{
   (*stuff)[0] = '\0'; // no comment line
   char line[LINE], split[30][100];
@@ -1145,6 +1144,7 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
   fpos_t position;
   fgetpos(vcf_file, &position); // save pointer position
   int count_lines = 0;
+  bool timestep = false;
   do {
     fgets(line, sizeof(line), vcf_file);
     words = SplitLine(split, line, " \t");
@@ -1157,24 +1157,59 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
                words != 0 && strcasecmp(split[0], "pbc") != 0 && !IsDouble(split[0])) {
       fprintf(stderr, "\033[1;31m");
       fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
-      fprintf(stderr, " - unrecognised line in timestep preamble\n");
+      fprintf(stderr, " - unrecognised line in the timestep preamble\n");
       fprintf(stderr, "\033[0m");
       ErrorPrintLine(split, words);
       exit(1);
     }
+    // test for a t(imestep) i(ndexed)/o(rdered) line - error if different than the first timestep //{{{
+    if ((words > 1 && split[0][0] == 't' && (split[1][0] == 'o' || split[1][0] == 'i')) ||
+        (split[0][0] == 'o' || split[0][0] == 'i')) {
+      timestep = true;
+      if ((split[0][0] == 'o' || split[1][0] == 'o') && indexed) {
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+        fprintf(stderr, " - ordered timestep instead of an indexed one\n");
+        fprintf(stderr, "\033[0m");
+        exit(1);
+      } else if ((split[0][0] == 'i' || split[1][0] == 'i') && !indexed) {
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+        fprintf(stderr, " - indexed timestep instead of an ordered one\n");
+        fprintf(stderr, "\033[0m");
+        exit(1);
+      }
+    } //}}}
     count_lines++;
-  } while (words == 0 || !IsDouble(split[0])); //}}}
-
+  } while (words == 0 || !IsDouble(split[0]));
+  // error - missing timestep line //{{{
+  if (!timestep) {
+    fprintf(stderr, "\033[1;31m");
+    fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+    fprintf(stderr, " - missing [t(imestep)] o(rdered)/i(indexed) line\n");
+    if (indexed) {
+      fprintf(stderr, "       possibly more coordinate lines than in the first timestep\n");
+    }
+    fprintf(stderr, "\033[0m");
+    exit(1);
+  } //}}}
+  //}}}
   // skip the preamble lines //{{{
   fsetpos(vcf_file, &position); // restore pointer position
   for (int i = 0; i < (count_lines-1); i++) {
     fgets(line, sizeof(line), vcf_file);
-  }
-  //}}}
-
+  } //}}}
   if (indexed) { // indexed timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       fgets(line, sizeof(line), vcf_file);
+      // error - end of file
+      if (feof(vcf_file)) {
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
+        fprintf(stderr, " - unexpected end of file (possibly fewer beads in a timestep than in the first timestep)\n");
+        fprintf(stderr, "\033[0m");
+        exit(1);
+      }
       words = SplitLine(split, line, " \t");
       // error - coordinate line must be <int> <double> <double> <double>
       if (words < 4 || !IsInteger(split[0]) || !IsDouble(split[1]) ||
@@ -1191,8 +1226,7 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
       (*Bead)[Index[index]].Position.x = atof(split[1]);
       (*Bead)[Index[index]].Position.y = atof(split[2]);
       (*Bead)[Index[index]].Position.z = atof(split[3]);
-    }
-  //}}}
+    } //}}}
   } else { // ordered timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       fgets(line, sizeof(line), vcf_file);
