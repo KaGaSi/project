@@ -134,17 +134,23 @@ void ErrorMoleculeType(COUNTS Counts, MOLECULETYPE *MoleculeType) {
  * SplitLine()) to error output.
  */
 void ErrorPrintLine(char split[30][100], int words) {
-  fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "       Wrong line: |");
-  fprintf(stderr, "\033[1;33m");
-  for (int i = 0; i < words; i++) {
-    if (i != 0) {
-      putc(' ', stderr);
+  if (words == 0) {
+    fprintf(stderr, "\033[1;31m");
+    fprintf(stderr, "       Blank line encountered");
+    fprintf(stderr, "\033[0m");
+  } else {
+    fprintf(stderr, "\033[1;31m");
+    fprintf(stderr, "       Wrong line: ");
+    fprintf(stderr, "\033[1;33m");
+    for (int i = 0; i < words; i++) {
+      if (i != 0) {
+        putc(' ', stderr);
+      }
+      fprintf(stderr, "%s", split[i]);
     }
-    fprintf(stderr, "%s", split[i]);
   }
   fprintf(stderr, "\033[1;31m");
-  fprintf(stderr, "|\n\n");
+  fprintf(stderr, "\n\n");
   fprintf(stderr, "\033[0m");
 } //}}}
 

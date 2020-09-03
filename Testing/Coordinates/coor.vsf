@@ -1,4 +1,14 @@
 atom default name        C mass   1.00000 charge   0.00000
+atom      10 name        D mass   1.00000 charge   0.00000
+atom      11 name        D mass   1.00000 charge   0.00000
+atom      12 name        D mass   1.00000 charge   0.00000
+atom      13 name        D mass   1.00000 charge   0.00000
+atom      14 name        D mass   1.00000 charge   0.00000
+atom      15 name        D mass   1.00000 charge   0.00000
+atom      16 name        D mass   1.00000 charge   0.00000
+atom      17 name        D mass   1.00000 charge   0.00000
+atom      18 name        D mass   1.00000 charge   0.00000
+atom      19 name        D mass   1.00000 charge   0.00000
 atom     500 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     503 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     504 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
@@ -6,6 +16,13 @@ atom     501 name        A mass   1.00000 charge   0.00000 resname       A5B5 re
 atom     502 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     505 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
 atom     506 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     511 name        D mass   1.00000 charge   0.00000
+atom     513 name        D mass   1.00000 charge   0.00000
+atom     514 name        D mass   1.00000 charge   0.00000
+atom     515 name        D mass   1.00000 charge   0.00000
+atom     516 name        D mass   1.00000 charge   0.00000
+atom     519 name        D mass   1.00000 charge   0.00000
+atom     520 name        D mass   1.00000 charge   0.00000
 
 atom     600 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     2
 atom     702 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     2
@@ -14,6 +31,8 @@ atom     508 name        B mass   1.00000 charge   0.00000 resname       A5B5 re
 atom     701 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     2
 atom     703 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     2
 atom     705 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     2
+atom     517 name        D mass   1.00000 charge   0.00000
+atom     518 name        D mass   1.00000 charge   0.00000
 atom     704 name        A mass   1.00000 charge   0.00000 resname       A5B5 resid     2
 # comment
 atom     706 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     2
@@ -22,6 +41,7 @@ atom     706 name        B mass   1.00000 charge   0.00000 resname       A5B5 re
 atom     709 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     2
 atom     708 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     2
 atom     509 name        B mass   1.00000 charge   0.00000 resname       A5B5 resid     1
+atom     512 name        D mass   1.00000 charge   0.00000
 
 # resid 1
 bond    500:    501
