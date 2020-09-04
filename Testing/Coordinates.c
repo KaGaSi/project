@@ -178,6 +178,8 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    PrintBead(Counts, Index, BeadType, Bead);
+    PrintMolecule(Counts, Index, MoleculeType, Molecule, BeadType, Bead);
   } //}}}
 
   // print pbc to output .vcf file //{{{
@@ -214,6 +216,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
     WriteCoorXYZ(out, Counts, BeadType, Bead);
+    fclose(out);
   }
   fclose(vcf); //}}}
 
