@@ -177,17 +177,17 @@ int main(int argc, char *argv[]) {
   }
   VECTOR normal;
   switch(test) {
-    case 120: // x
+    case 'x': // x
       normal.x = 1;
       normal.y = 0;
       normal.z = 0;
       break;
-    case 121: // y
+    case 'y': // y
       normal.x = 0;
       normal.y = 1;
       normal.z = 0;
       break;
-    case 122: // z
+    case 'z': // z
       normal.x = 0;
       normal.y = 0;
       normal.z = 1;
@@ -236,7 +236,7 @@ int main(int argc, char *argv[]) {
 
   // '-n' option - specify bead ids //{{{
   int bead[100] = {0}, // specified bead indices
-      number_of_angles, // total number of angles to calculate
+      number_of_angles, // total number of angles to calculate TODO: why is it called this?
       number_of_beads = 2, // number of parameters to -n
       beads_per_angle = 2; // the numbers must come in pairs
   test = 0;
@@ -366,8 +366,6 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
-    // join all molecules
     RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
 
     // calculate orientation parameter //{{{
@@ -461,7 +459,7 @@ int main(int argc, char *argv[]) {
   putc('#', out);
   PrintCommand(out, argc, argv);
 
-  // print first line of output file - molecule names and beadtype pairs //{{{
+  // print first lines of output file - molecule names and beadtype pairs //{{{
   fprintf(out, "# columns: (1) Orientation order parameter");
   count = 1;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
