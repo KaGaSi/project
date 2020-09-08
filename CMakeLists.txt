@@ -45,6 +45,7 @@ set(UTILS AddToSystem
           lmp_data
           lmp_vtf
           Orientation
+          OrientationAggregates
           PairCorrel
           PotentialAggregates
           SelectedVcf
