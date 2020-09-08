@@ -53,6 +53,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
                    BEADTYPE **BeadType, BEAD **Bead, int **Index,
                    MOLECULETYPE **MoleculeType, MOLECULE **Molecule); //}}}
 
+int ReadTimestepPreamble(bool indexed, char *input_coor, FILE *vcf_file, char **stuff);
+
 // ReadCoordinates() //{{{
 /**
  * \brief Function reading ordered coordinates from .vcf coordinate file.

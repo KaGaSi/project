@@ -347,8 +347,9 @@ int main(int argc, char *argv[]) {
   int count_n_opt = 0; // count saved steps if -n option is used
   count = 0; // count timesteps in the main loop
   int count_vcf = start - 1; // count timesteps from the beginning
-  while ((test = getc(vcf)) != EOF) {
-    ungetc(test, vcf);
+//while ((test = getc(vcf)) != EOF) {
+//  ungetc(test, vcf);
+  while (true) {
 
     count++;
     count_vcf++;
@@ -502,8 +503,13 @@ int main(int argc, char *argv[]) {
       } //}}}
     }
 
-    if (end == count_vcf)
+    if (end == count_vcf) {
       break;
+    }
+    // if there's no additional timestep, exit the while loop
+    if (ReadTimestepPreamble(indexed, input_coor, vcf, &stuff) == -1) {
+      break;
+    }
   }
 
   if (!silent) {
