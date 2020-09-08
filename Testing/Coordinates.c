@@ -196,9 +196,7 @@ int main(int argc, char *argv[]) {
   char *stuff = calloc(LINE, sizeof(char));
 
   // main loop //{{{
-  int test;
-  while ((test = getc(vcf)) != EOF) {
-    ungetc(test, vcf);
+  while (true) {
 
     ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
@@ -217,6 +215,11 @@ int main(int argc, char *argv[]) {
     }
     WriteCoorXYZ(out, Counts, BeadType, Bead);
     fclose(out);
+
+    // if there's no additional timestep, exit the while loop
+    if (ReadTimestepPreamble(indexed, input_coor, vcf, &stuff) == -1) {
+      break;
+    }
   }
   fclose(vcf); //}}}
 

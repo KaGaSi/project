@@ -465,6 +465,12 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
     int words = SplitLine(split, line, bond_delim);
 
     if (strncmp(split[0], "bond", 1) == 0) {
+      if (!IsInteger(split[1]) || !IsInteger(split[2])) {
+        fprintf(stderr, "\033[1;31m");
+        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'bond' must be followed by two colon-separated numbers\n", vsf_file);
+        fprintf(stderr, "\033[0m");
+        exit(1);
+      }
       int mol_id = (*Bead)[atoi(split[1])].Molecule;
       int mol_type = (*Molecule)[mol_id].Type;
       // is this mol_type already in use in bond numbers calculation?
@@ -1132,27 +1138,34 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
   return indexed;
 } //}}}
 
-// ReadCoordinates() //{{{
-/**
- * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
- */
-void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
-  // read initial stuff //{{{
-  (*stuff)[0] = '\0'; // no comment line
-  char line[LINE], split[30][100];
-  int words;
+// ReadTimestepPreamble() //{{{
+int ReadTimestepPreamble(bool indexed, char *input_coor, FILE *vcf_file, char **stuff) {
+  // save pointer position in vcf_file
   fpos_t position;
-  fgetpos(vcf_file, &position); // save pointer position
-  int count_lines = 0;
+  fgetpos(vcf_file, &position);
+
+  (*stuff)[0] = '\0'; // empty the array
+  int words, count_lines = 0;
+  char split[30][100];
   bool timestep = false;
   do {
+    char line[LINE];
     fgets(line, sizeof(line), vcf_file);
+    if (feof(vcf_file)) {
+      return -1;
+    }
     words = SplitLine(split, line, " \t");
-    if (split[0][0] == '#') { // comment line - copy to stuff array
-      sprintf(*stuff, "%s\n", *stuff);
+    // comment line - copy to stuff array
+    if (split[0][0] == '#') {
+      char temp[LINE];
+      strcpy(temp, *stuff);
+      sprintf(temp, "%s\n", *stuff);
+      strcpy(*stuff, temp);
       for (int i = 0; i < words; i++) {
-        sprintf(*stuff, "%s %s", *stuff, split[i]);
+        sprintf(temp, "%s %s", *stuff, split[i]);
+        strcpy(*stuff, temp);
       }
+    // error if not timestep or pbc line, blank line, or a double (i.e., start of the coordinate lines)
     } else if (split[0][0] != 't' && split[0][0] != 'i' && split[0][0] != 'o' &&
                words != 0 && strcasecmp(split[0], "pbc") != 0 && !IsDouble(split[0])) {
       fprintf(stderr, "\033[1;31m");
@@ -1182,6 +1195,7 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
     } //}}}
     count_lines++;
   } while (words == 0 || !IsDouble(split[0]));
+  count_lines--; // the last counted line contained the first coordinate line
   // error - missing timestep line //{{{
   if (!timestep) {
     fprintf(stderr, "\033[1;31m");
@@ -1193,14 +1207,24 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
     fprintf(stderr, "\033[0m");
     exit(1);
   } //}}}
-  //}}}
-  // skip the preamble lines //{{{
   fsetpos(vcf_file, &position); // restore pointer position
-  for (int i = 0; i < (count_lines-1); i++) {
+  return count_lines;
+} //}}}
+
+// ReadCoordinates() //{{{
+/**
+ * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
+ */
+void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
+  int count_lines = ReadTimestepPreamble(indexed, input_coor, vcf_file, stuff);
+  // skip the preamble lines //{{{
+  for (int i = 0; i < count_lines; i++) {
+    char line[LINE];
     fgets(line, sizeof(line), vcf_file);
   } //}}}
   if (indexed) { // indexed timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
+      char line[LINE], split[30][100];
       fgets(line, sizeof(line), vcf_file);
       // error - end of file
       if (feof(vcf_file)) {
@@ -1210,7 +1234,7 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
         fprintf(stderr, "\033[0m");
         exit(1);
       }
-      words = SplitLine(split, line, " \t");
+      int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <int> <double> <double> <double>
       if (words < 4 || !IsInteger(split[0]) || !IsDouble(split[1]) ||
           !IsDouble(split[2]) || !IsDouble(split[3])) {
@@ -1229,8 +1253,9 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
     } //}}}
   } else { // ordered timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
+      char line[LINE], split[30][100];
       fgets(line, sizeof(line), vcf_file);
-      words = SplitLine(split, line, " \t");
+      int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <double> <double> <double>
       if (words < 3 || !IsDouble(split[0]) ||
           !IsDouble(split[1]) || !IsDouble(split[2])) {
