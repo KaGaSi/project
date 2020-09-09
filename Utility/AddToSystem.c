@@ -466,12 +466,10 @@ int main(int argc, char *argv[]) {
   // read the coordinate timestep to add stuff to //{{{
   if ((test = getc(vcf)) != EOF) {
     ungetc(test, vcf);
-
     count++;
     if (!silent) {
       fprintf(stdout, "Using step %6d\n", count);
     }
-
     ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
   } else {
     fprintf(stderr, "\033[1;33m");
