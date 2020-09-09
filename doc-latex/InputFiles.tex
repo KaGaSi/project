@@ -110,14 +110,13 @@ ordered \vcf file.
 
 The coordinate blocks in an indexed \vcf file contain not only Cartesian
 coordinates but also bead indices -- every line has the following format:
-\begin{verbatim}<index> <x> <y> <z>\end{verbatim}
-An indexed timestep does not have to contain all beads
-defined in the \vsf structure file; however, \tt{AnalysisTools} utilities
-work with whole sets of beads, that is, when one bead of a specific type is
-missing, all beads of that type (or with the same name) must be omitted as
-well. Moreover, the same number of beads must be present in each indexed
-coordinate block. However, the beads do not have to be ordered according to
-their ascending indices.
+\begin{verbatim}<index> <x> <y> <z>\end{verbatim} An indexed timestep does
+not have to contain all beads defined in the \vsf structure file; however,
+\tt{AnalysisTools} utilities work with whole sets of beads, that is, when
+one bead of a specific type is missing, all beads of that type (or with the
+same name) must be omitted as well. Moreover, the same number of beads must
+be present in each indexed coordinate block. However, the beads do not have
+to be ordered according to their ascending indices.
 
 The \tt{Examples} directory contains several example \vtf files. %}}}
 
