@@ -719,7 +719,6 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
         break;
       }
     } while (true); //}}}
-
     // skip the rest until first coordinates //{{{
     fpos_t pos;
     do {
@@ -741,6 +740,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
       (*Counts).Beads = (*Counts).BeadsInVsf;
       //}}}
     } else if (str[0] == 'i' || str[0] == 'I') { // indexed timesteps //{{{
+      // TODO: check that if one beads with given name is there, all with the same name are
       indexed = true;
       // set all bead types to 'do not use' //{{{
       for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
@@ -1179,13 +1179,13 @@ int ReadTimestepPreamble(bool indexed, char *input_coor, FILE *vcf_file, char **
     if ((words > 1 && split[0][0] == 't' && (split[1][0] == 'o' || split[1][0] == 'i')) ||
         (split[0][0] == 'o' || split[0][0] == 'i')) {
       timestep = true;
-      if ((split[0][0] == 'o' || split[1][0] == 'o') && indexed) {
+      if (indexed && (split[0][0] == 'o' || (words > 1 && split[1][0] == 'o'))) {
         fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
         fprintf(stderr, " - ordered timestep instead of an indexed one\n");
         fprintf(stderr, "\033[0m");
         exit(1);
-      } else if ((split[0][0] == 'i' || split[1][0] == 'i') && !indexed) {
+      } else if (!indexed && (split[0][0] == 'i' || (words > 1 && split[1][0] == 'i'))) {
         fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
         fprintf(stderr, " - indexed timestep instead of an ordered one\n");
@@ -1230,7 +1230,8 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
       if (feof(vcf_file)) {
         fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_coor);
-        fprintf(stderr, " - unexpected end of file (possibly fewer beads in a timestep than in the first timestep)\n");
+        fprintf(stderr, " - unexpected end of file\n");
+        fprintf(stderr, "       possibly fewer beads in a timestep than in the first timestep\n");
         fprintf(stderr, "\033[0m");
         exit(1);
       }
