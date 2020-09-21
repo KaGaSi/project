@@ -1118,6 +1118,7 @@ int main(int argc, char *argv[]) {
             id = j;
             Bead_new[j].Flag = false; // just exchanged (only pro forma)
             count = j + 1;
+            break;
           }
         }
       }
