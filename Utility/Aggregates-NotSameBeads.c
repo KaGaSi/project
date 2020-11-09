@@ -445,22 +445,12 @@ int main(int argc, char *argv[]) {
   // <input> - filename of input coordinate file //{{{
   char input_coor[LINE];
   strcpy(input_coor, argv[++count]);
-
-  // test if <input> ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
+  char *input_vsf = calloc(LINE,sizeof(char));
+  // test that <input> filename ends with '.vcf' or '.vtf'
+  bool vtf;
+  if (!InputCoor(&vtf, input_coor, input_vsf)) {
     Help(argv[0], true);
     exit(1);
-  }
-  // if vtf, copy to input_vsf
-  char *input_vsf = calloc(LINE,sizeof(char));
-  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
-    strcpy(input_vsf, input_coor);
-  } else {
-    strcpy(input_vsf, "traject.vsf");
   } //}}}
 
   // <distance> - number of starting timestep //{{{
@@ -483,10 +473,11 @@ int main(int argc, char *argv[]) {
 
   // <output.agg> - filename of output agg file (must end with .agg) //{{{
   char output_agg[LINE];
+  char extension[2][5];
   strcpy(output_agg, argv[++count]);
 
   // test if <output.agg> ends with '.agg'
-  ext = 1;
+  int ext = 1;
   strcpy(extension[0], ".agg");
   if (ErrorExtension(output_agg, ext, extension)) {
     Help(argv[0], true);
@@ -596,8 +587,17 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
-
   VECTOR BoxLength = GetPBC(vcf, input_coor);
+  fclose(vcf);
+
+  // open input coordinate file //{{{
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
+    exit(1);
+  } //}}}
+  if (vtf) {
+    SkipStructVtf(vcf, input_coor);
+  }
 
   // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {
@@ -661,9 +661,7 @@ int main(int argc, char *argv[]) {
 
   // main loop //{{{
   count = 0; // count timesteps
-  int test;
-  while ((test = getc(vcf)) != EOF) {
-    ungetc(test, vcf);
+  while (true) {
 
     count++;
 
@@ -731,6 +729,12 @@ int main(int argc, char *argv[]) {
     } //}}}
 
     WriteAggregates(count, output_agg, Counts, MoleculeType, Bead, Aggregate);
+
+    // if there's no additional timestep, exit the while loop
+    bool test; // not used
+    if (ReadTimestepPreamble(&test, input_coor, vcf, &stuff) == -1) {
+      break;
+    }
   }
 
   fclose(vcf);

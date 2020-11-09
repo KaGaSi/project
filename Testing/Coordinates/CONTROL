@@ -1,0 +1,24 @@
+whatever...
+
+volume 10 10 10
+temperature 1.0
+
+ensemble nvt mdvv
+
+steps 1010
+equilibrations steps 10
+scale temperature 2
+stats every 10
+stack size  10
+print every 10
+
+global bonds
+
+timestep 0.05
+cutoff 1.0
+
+trajectory 0 100 0
+job time 1e9
+close time 200
+
+finish

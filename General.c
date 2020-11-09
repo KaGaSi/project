@@ -240,7 +240,7 @@ int SplitLine(char out[30][100], char *line, char delim[8]) {
   int words = 0;
   while (words < 29 && split[words] != NULL) {
     words++; // start from 1, as the first split is already done
-    split[words] = strtok(NULL, " \t:");
+    split[words] = strtok(NULL, delim);
   }
   // if the last word ends with newline, make it into '\0'
   if (split[words-1][strlen(split[words-1])-1] == '\n') {
@@ -315,4 +315,40 @@ void PrintCommand(FILE *ptr, int argc, char *argv[]) {
   for (int i = 1; i < argc; i++)
     fprintf(ptr, " %s", argv[i]);
   fprintf(ptr, "\n");
+} //}}}
+
+// RedText() //{{{
+void RedText(int a) {
+  if (isatty(a) && a == STDOUT_FILENO) {
+    fprintf(stdout, "\033[1;31m");
+  } else if (isatty(a) && a == STDERR_FILENO) {
+    fprintf(stderr, "\033[1;31m");
+  }
+} //}}}
+
+// YellowText() //{{{
+void YellowText(int a) {
+  if (isatty(a) && a == STDOUT_FILENO) {
+    fprintf(stdout, "\033[1;33m");
+  } else if (isatty(a) && a == STDERR_FILENO) {
+    fprintf(stderr, "\033[1;33m");
+  }
+} //}}}
+
+// CyanText() //{{{
+void CyanText(int a) {
+  if (isatty(a) && a == STDOUT_FILENO) {
+    fprintf(stdout, "\033[1;36m");
+  } else if (isatty(a) && a == STDERR_FILENO) {
+    fprintf(stderr, "\033[1;36m");
+  }
+} //}}}
+
+// ResetColour() //{{{
+void ResetColour(int a) {
+  if (isatty(a) && a == STDOUT_FILENO) {
+    fprintf(stdout, "\033[0m");
+  } else if (isatty(a) && a == STDERR_FILENO) {
+    fprintf(stderr, "\033[0m");
+  }
 } //}}}

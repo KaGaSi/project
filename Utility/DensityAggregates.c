@@ -7,6 +7,7 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(ptr, "\
+        TODO: -m_id option!!!\n\n\
 DensityAggregates utility calculates radial bead density for aggregates \
 of given size(s) from their centre of mass. For beads in molecules, \
 it takes into account only beads from the current aggregate, not from \
@@ -33,6 +34,7 @@ only one column for 'A' bead type).\n\n");
   fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
+  fprintf(ptr, "      -m_id <int>    calculate only for aggregate containing specific molecule\n");
   CommonHelp(error);
 } //}}}
 
@@ -76,7 +78,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
-        strcmp(argv[i], "-x") != 0 ) {
+        strcmp(argv[i], "-x") != 0 &&
+        strcmp(argv[i], "-m_id") != 0 ) {
 
       ErrorOption(argv[i]);
       Help(argv[0], true);
@@ -183,6 +186,12 @@ int main(int argc, char *argv[]) {
 
   // read system information
   bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+
+  // '-m_id' option (TODO: consider what it should override) //{{{
+  int m_id = -1; // no -m_id option
+  if (IntegerOption(argc, argv, "-m_id", &m_id)) {
+    exit(1);
+  } //}}}
 
   // '-m' option //{{{
   int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int));
@@ -426,6 +435,17 @@ int main(int argc, char *argv[]) {
           correct_size = j;
         }
       } //}}}
+
+      // if '-m_id' is used, check if specified resid from vsf is in aggregate
+      if (m_id != -1) {
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          int id = Aggregate[i].Molecule[j];
+          if (m_id == (id+1)) { // resname in vsf start from 1
+            correct_size = 0;
+            break;
+          }
+        }
+      }
 
       if (correct_size != -1) {
         VECTOR com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);

@@ -13,6 +13,7 @@
 #include <math.h>
 #include <time.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #define PI 3.141593 ///< value of pi
 #define LINE 1024 ///< maximum length of an array (for strings)
@@ -173,4 +174,8 @@ char* TrimLine(char *line); //}}}
 
 void PrintCommand(FILE *ptr, int argc, char *argv[]);
 
+void RedText(int a);
+void YellowText(int a);
+void CyanText(int a);
+void ResetColour(int a);
 #endif

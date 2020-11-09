@@ -73,31 +73,21 @@ int main(int argc, char *argv[]) {
   char input_coor[LINE];
   char *input_vsf = calloc(LINE,sizeof(char));
   strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
+  // test that <input> filename ends with '.vcf' or '.vtf'
+  bool vtf;
+  if (!InputCoor(&vtf, input_coor, input_vsf)) {
     Help(argv[0], true);
     exit(1);
-  }
-  // if vtf, copy to input_vsf
-  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
-    strcpy(input_vsf, input_coor);
-  } else {
-    strcpy(input_vsf, "traject.vsf");
   } //}}}
 
   // <output.vcf> - filename of output vcf file //{{{
   char output_vcf[LINE];
   strcpy(output_vcf, argv[++count]);
-
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
-  ext = 1;
+  int ext = 1;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -109,7 +99,7 @@ int main(int argc, char *argv[]) {
   // test if <output.vsf> filename ends with '.vsf'
   ext = 1;
   strcpy(extension[0], ".vsf");
-  if (ErrorExtension(output_vsf, ext, extension)) {
+  if (ErrorExtension(output_vsf, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -121,7 +111,7 @@ int main(int argc, char *argv[]) {
   // test if <output.xyz> filename ends with '.xyz'
   ext = 1;
   strcpy(extension[0], ".xyz");
-  if (ErrorExtension(output_xyz, ext, extension)) {
+  if (ErrorExtension(output_xyz, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   }
@@ -154,9 +144,28 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-  free(input_vsf);
+  // read structure & first timestep  //{{{
+  // get box size
+  FILE *vcf;
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
+    exit(1);
+  }
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
+  fclose(vcf);
+  // read the whole structure section
+  ReadVtfStructure(input_vsf, true, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  // count structure lines if vtf as the coordinate file (-1 otherwise)
+  int struct_lines = CountVtfStructLines(vtf, input_coor);
+  // determine timestep type & what coordinate file contains from the first timestep
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
+    exit(1);
+  }
+  SkipVtfStructure(vtf, vcf, struct_lines);
+  bool indexed = CheckVtfTimestep(vcf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  fclose(vcf);
+  free(input_vsf); //}}}
 
   // write all bead & molecule types
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
@@ -167,19 +176,18 @@ int main(int argc, char *argv[]) {
   }
 
   // open input coordinate file //{{{
-  FILE *vcf;
   if ((vcf = fopen(input_coor, "r")) == NULL) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
 
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
+  SkipVtfStructure(vtf, vcf, struct_lines);
 
   // print information - verbose output //{{{
+  VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-    PrintBead(Counts, Index, BeadType, Bead);
-    PrintMolecule(Counts, Index, MoleculeType, Molecule, BeadType, Bead);
+    PrintBead2(Counts.Beads, Index, BeadType, Bead);
+    PrintMolecule(Counts.Molecules, MoleculeType, Molecule, BeadType, Bead);
   } //}}}
 
   // print pbc to output .vcf file //{{{
@@ -217,7 +225,8 @@ int main(int argc, char *argv[]) {
     fclose(out);
 
     // if there's no additional timestep, exit the while loop
-    if (ReadTimestepPreamble(indexed, input_coor, vcf, &stuff) == -1) {
+    bool test; // not used
+    if (ReadTimestepPreamble(&test, input_coor, vcf, &stuff) == -1) {
       break;
     }
   }
@@ -230,7 +239,7 @@ int main(int argc, char *argv[]) {
   free(Index);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
+  FreeBead2(Counts.Beads, &Bead);
   free(stuff);
   //}}}
 
