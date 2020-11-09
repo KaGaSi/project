@@ -54,9 +54,9 @@ bool ErrorDiscard(int start, int step, char *file, FILE *coor); //}}}
  * \param [in] file       filename
  * \param [in] number     number of correct extension(s)
  * \param [in] extension  correct extension(s)
- * \return 'true' if wrong extension, 'false' otherwise
+ * \return <int> of the extension (according to the input array) or -1 if missing a correct one
  */
-bool ErrorExtension(char *file, int number, char extension[][5]); //}}}
+int ErrorExtension(char *file, int number, char extension[][5]); //}}}
 
 // ErrorFileOpen() //{{{
 /**

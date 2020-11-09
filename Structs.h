@@ -6,6 +6,10 @@
 #ifndef _STRUCTS_H_
 #define _STRUCTS_H_
 
+#define CHARGE 10000 // 'impossible' charge to define a given bead type has charge specified in an input file
+#define MASS 0 // 'impossible' mass to define a given bead type has charge specified in an input file
+#define RADIUS 0 // 'impossible' radius to define a given bead type has charge specified in an input file
+
 // struct Counts //{{{
 /**
  * \brief Total numbers of various things.
@@ -50,7 +54,7 @@ typedef struct Params {
  * \brief Information about bead types.
  */
 typedef struct BeadType {
-  char Name[16]; ///< name of given bead type
+  char Name[17]; ///< name of given bead type
 
   int Number; ///< number of beads of given type
 
@@ -58,7 +62,8 @@ typedef struct BeadType {
        Write; ///< should bead type in .vcf file be written to output .vcf?
 
   double Charge, ///< charge of every bead of given type
-         Mass; ///< mass of every bead of given type
+         Mass, ///< mass of every bead of given type
+         Radius; ///< radius of every bead of the given type
 } BEADTYPE; //}}}
 
 // struct Bead //{{{
@@ -82,7 +87,7 @@ typedef struct Bead {
  * \brief Information about molecule types.
  */
 typedef struct MoleculeType {
-  char Name[16]; ///< name of given molecule type
+  char Name[17]; ///< name of given molecule type
 
   int Number, ///< number of molecules of given type
       nBeads, ///< number of beads in every molecule of given type
@@ -96,7 +101,8 @@ typedef struct MoleculeType {
       nBTypes, ///< number of bead types in every molecule of given type
       *BType; ///< ids of bead types in every molecule of given type (corresponds to indices in BeadType struct)
 
-  double Mass; ///< total mass of every molecule of given type
+  double Mass, ///< total mass of every molecule of given type
+         Charge; ///< total charge of every molecule of given type
 
   bool InVcf, ///< is molecule type in vcf file?
        Use, ///< should molecule type be used for calculation?

@@ -1,5 +1,31 @@
 #include "AnalysisTools.h"
 
+// InputCoor() //{{{
+/**
+ * Function to test whether input coordinate file is vtf or vcf and assign
+ * default structure file name as either the vtf or traject.vsf
+ */
+bool InputCoor(bool *vtf, char *file_coor, char *file_struct) {
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
+  ext = ErrorExtension(file_coor, ext, extension);
+  *vtf = false; // file_coor is vcf by default
+  if (ext == -1) {
+    return false; // wrong extension to file_coor
+  } else if (ext == 1) {
+    *vtf = true; // file_coor is vtf
+  }
+  // if vtf, copy to input_vsf
+  if (*vtf) {
+    strcpy(file_struct, file_coor);
+  } else {
+    strcpy(file_struct, "traject.vsf");
+  }
+  return true;
+} //}}}
+
 // VerboseOutput() //{{{
 /**
  * Function providing standard verbose output (for cases when verbose
@@ -16,8 +42,8 @@ void VerboseOutput(char *input_vcf, COUNTS Counts, VECTOR BoxLength,
     fprintf(stdout, "Unknown box size because no coordinate file is provided.\n\n");
   }
   PrintCounts(Counts);
-  PrintBeadType(Counts, BeadType);
-  PrintMoleculeType(Counts, BeadType, MoleculeType);
+  PrintBeadType2(Counts.TypesOfBeads, BeadType);
+  PrintMoleculeType2(Counts.TypesOfMolecules, BeadType, MoleculeType);
   putchar('\n');
 } //}}}
 
@@ -56,6 +82,37 @@ void PrintBeadType(COUNTS Counts, BEADTYPE *BeadType) {
     fprintf(stdout, ".Number =%7d, ", BeadType[i].Number);
     fprintf(stdout, ".Charge =%9.5f, ", BeadType[i].Charge);
     fprintf(stdout, ".Mass = %.5f}\n", BeadType[i].Mass);
+//  fprintf(stdout, "Use = %3s, ", BeadType[i].Use? "Yes":"No");
+//  fprintf(stdout, "Write = %3s}\n", BeadType[i].Write? "Yes":"No");
+  }
+  putchar('\n');
+} //}}}
+
+// PrintBeadType2()  //{{{
+/**
+ * Function printing BeadType structure.
+ */
+void PrintBeadType2(int number, BEADTYPE *BeadType) {
+  for (int i = 0; i < number; i++) {
+    fprintf(stdout, "BeadType[%2d] = {", i);
+    fprintf(stdout, ".Name =%10s, ", BeadType[i].Name);
+    fprintf(stdout, ".Number =%7d, ", BeadType[i].Number);
+    if (BeadType[i].Radius != RADIUS) {
+      fprintf(stdout, ".Radius =%9.5f, ", BeadType[i].Radius);
+    } else {
+      fprintf(stdout, ".Radius = N/A     , ");
+    }
+    if (BeadType[i].Charge != CHARGE) {
+      fprintf(stdout, ".Charge =%9.5f, ", BeadType[i].Charge);
+    } else {
+      fprintf(stdout, ".Charge = N/A     , ");
+    }
+    if (BeadType[i].Mass != MASS) {
+      fprintf(stdout, ".Mass = %.5f", BeadType[i].Mass);
+    } else {
+      fprintf(stdout, ".Mass = N/A    ");
+    }
+    fprintf(stdout, "}\n");
 //  fprintf(stdout, "Use = %3s, ", BeadType[i].Use? "Yes":"No");
 //  fprintf(stdout, "Write = %3s}\n", BeadType[i].Write? "Yes":"No");
   }
@@ -118,7 +175,87 @@ void PrintMoleculeType(COUNTS Counts, BEADTYPE *BeadType, MOLECULETYPE *Molecule
       }
       fprintf(stdout, "%s", BeadType[MoleculeType[i].BType[j]].Name);
     } //}}}
-    fprintf(stdout, "},\n  .Mass    = %.5f,\n}\n", MoleculeType[i].Mass);
+    if (MoleculeType[i].Mass != MASS) {
+      fprintf(stdout, "},\n  .Mass    = %.5f,\n", MoleculeType[i].Mass);
+    } else {
+      fprintf(stdout, "},\n  .Mass    = N/A,\n");
+    }
+    if (MoleculeType[i].Charge != CHARGE) {
+      fprintf(stdout, "  .Charge  = %.5f\n}\n", MoleculeType[i].Charge);
+    } else {
+      fprintf(stdout, "  .Charge  = N/A\n}\n");
+    }
+  }
+} //}}}
+
+// PrintMoleculeType2()  //{{{
+/**
+ * Function printing MoleculeType structure.
+ */
+void PrintMoleculeType2(int number_of_types, BEADTYPE *BeadType, MOLECULETYPE *MoleculeType) {
+  for (int i = 0; i < number_of_types; i++) {
+    fprintf(stdout, "MoleculeType[%2d] = {\n", i);
+    fprintf(stdout, "  .Name    = %s,\n", MoleculeType[i].Name);
+    fprintf(stdout, "  .Number  = %d,\n", MoleculeType[i].Number);
+    // print bead types (list all beads) //{{{
+    fprintf(stdout, "  .nBeads  = %d,\n", MoleculeType[i].nBeads);
+    fprintf(stdout, "  .Bead    = {");
+    for (int j = 0; j < MoleculeType[i].nBeads; j++) {
+      if (j != 0) {
+        fprintf(stdout, ", ");
+      }
+      fprintf(stdout, "%s", BeadType[MoleculeType[i].Bead[j]].Name);
+    }
+    fprintf(stdout, "},\n"); //}}}
+    // print bonds if there are any //{{{
+    if (MoleculeType[i].nBonds > 0) {
+      fprintf(stdout, "  .nBonds  = %d,\n", MoleculeType[i].nBonds);
+      fprintf(stdout, "  .Bond    = {");
+      for (int j = 0; j < MoleculeType[i].nBonds; j++) {
+        if (j != 0) {
+          fprintf(stdout, ", ");
+        }
+        fprintf(stdout, "%d-%d", MoleculeType[i].Bond[j][0]+1, MoleculeType[i].Bond[j][1]+1);
+        if (MoleculeType[i].Bond[j][2] != -1) {
+          fprintf(stdout, "(%d)", MoleculeType[i].Bond[j][2]+1);
+        }
+      }
+      fprintf(stdout, "},\n");
+    } //}}}
+    // print angles if there are any //{{{
+    if (MoleculeType[i].nAngles > 0) {
+      fprintf(stdout, "  .nAngles = %d,\n  .Angle   = {", MoleculeType[i].nAngles);
+      for (int j = 0; j < MoleculeType[i].nAngles; j++) {
+        if (j != 0) {
+          fprintf(stdout, ", ");
+        }
+        fprintf(stdout, "%d-%d-%d", MoleculeType[i].Angle[j][0]+1,
+                                    MoleculeType[i].Angle[j][1]+1,
+                                    MoleculeType[i].Angle[j][2]+1);
+        if (MoleculeType[i].Angle[j][3] != -1) {
+          fprintf(stdout, "(%d)", MoleculeType[i].Angle[j][3]+1);
+        }
+      }
+      fprintf(stdout, "},\n");
+    } //}}}
+    // print bead types (just the which are present) //{{{
+    fprintf(stdout, "  .nBTypes = %d,\n  .BType   = {", MoleculeType[i].nBTypes);
+    for (int j = 0; j < MoleculeType[i].nBTypes; j++) {
+      if (j != 0) {
+        fprintf(stdout, ", ");
+      }
+      fprintf(stdout, "%s", BeadType[MoleculeType[i].BType[j]].Name);
+    } //}}}
+    if (MoleculeType[i].Mass != MASS) {
+      fprintf(stdout, "},\n  .Mass    = %.5f,\n", MoleculeType[i].Mass);
+    } else {
+      fprintf(stdout, "},\n  .Mass    = N/A,\n");
+    }
+    if (MoleculeType[i].Charge != CHARGE) {
+      fprintf(stdout, "  .Charge  = %.5f\n}\n", MoleculeType[i].Charge);
+    } else {
+      fprintf(stdout, "  .Charge  = N/A\n}\n");
+    }
   }
 } //}}}
 
@@ -139,28 +276,59 @@ void PrintBead(COUNTS Counts, int *Index, BEADTYPE *BeadType, BEAD *Bead) {
   }
 } //}}}
 
+// PrintBead2() //{{{
+/**
+ * Function printing Bead structure.
+ */
+void PrintBead2(int number_of_beads, int *Index, BEADTYPE *BeadType, BEAD *Bead) {
+  fprintf(stdout, "Beads - <struct id> (<internal id>)\n");
+  for (int i = 0; i < number_of_beads; i++) {
+    int type = Bead[i].Type;
+    fprintf(stdout, "   %6d (%6d), type %d (%8s, ", Bead[i].Index, i, type, BeadType[type].Name);
+    if (BeadType[type].Charge != CHARGE) {
+      fprintf(stdout, "q=%.2f, ", BeadType[type].Charge);
+    } else {
+      fprintf(stdout, "q=N/A, ");
+    }
+    if (BeadType[type].Mass != MASS) {
+      fprintf(stdout, "m=%.2f, ", BeadType[type].Mass);
+    } else {
+      fprintf(stdout, "m=N/A, ");
+    }
+    if (BeadType[type].Radius != RADIUS) {
+      fprintf(stdout, "r=%.2f)", BeadType[type].Radius);
+    } else {
+      fprintf(stdout, "r=N/A)");
+    }
+    fprintf(stdout, " molecule: ");
+    if (Bead[i].Molecule == -1) {
+      fprintf(stdout, "None\n");
+    } else {
+      fprintf(stdout, "%6d\n", Bead[i].Molecule+1);
+    }
+  }
+} //}}}
+
 // PrintMolecule() //{{{
 /**
  * Function printing Molecule structure.
  */
-void PrintMolecule(COUNTS Counts, int *Index,
+void PrintMolecule(int number_of_molecules,
                    MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
                    BEADTYPE *BeadType, BEAD *Bead) {
   fprintf(stdout, "Molecules\n");
-  for (int i = 0; i < Counts.Molecules; i++) {
+  for (int i = 0; i < number_of_molecules; i++) {
     int type = Molecule[i].Type;
     fprintf(stdout, "Molecule %3d (%s):\n", i+1, MoleculeType[type].Name);
-    fprintf(stdout, " BEAD INDICES (%d): internal (in vsf)\n", MoleculeType[type].nBeads);
+    fprintf(stdout, " BEAD INDICES (%d): intramolecular; internal; input file\n", MoleculeType[type].nBeads);
     for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      fprintf(stdout, "   %d (%d)\n", Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
+      fprintf(stdout, "   %3d; %5d; %5d\n", j+1, Molecule[i].Bead[j], Bead[Molecule[i].Bead[j]].Index);
     }
-    fprintf(stdout, " BONDS (%d): internal (in vsf)\n", MoleculeType[type].nBonds);
+    fprintf(stdout, " BONDS (%d): intramolecular bead indices\n", MoleculeType[type].nBonds);
     for (int j = 0; j < MoleculeType[type].nBonds; j++) {
       int bead1 = MoleculeType[type].Bond[j][0];
-      int bead1_1 = Molecule[i].Bead[bead1];
       int bead2 = MoleculeType[type].Bond[j][1];
-      int bead2_1 = Molecule[i].Bead[bead2];
-      fprintf(stdout, "   %d-%d (%d-%d)\n", bead1_1, bead2_1, Bead[bead1_1].Index, Bead[bead2_1].Index);
+      fprintf(stdout, "   %3d %3d\n", bead1+1, bead2+1);
     }
   }
   fprintf(stdout, "\n");
@@ -244,10 +412,39 @@ int FindBeadType(char *name, COUNTS Counts, BEADTYPE *BeadType) {
   return -1;
 } //}}}
 
+// FindBeadType2() //{{{
+/* Function to identify type of bead from its name; returns -1 on non-existent
+ * bead name.
+ */
+int FindBeadType2(char *name, int types_of_beads, BEADTYPE *BeadType) {
+  int type;
+  for (int i = 0; i < types_of_beads; i++) {
+    if (strcmp(name, BeadType[i].Name) == 0) {
+      type = i;
+      return type;
+    }
+  }
+  // name isn't in BeadType struct
+  return -1;
+} //}}}
+
 // FindMoleculeType() //{{{
 int FindMoleculeType(char *name, COUNTS Counts, MOLECULETYPE *MoleculeType) {
   int type;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (strcmp(name, MoleculeType[i].Name) == 0) {
+      type = i;
+      return type;
+    }
+  }
+  // name isn't in MoleculeType struct
+  return(-1);
+} //}}}
+
+// FindMoleculeType2() //{{{
+int FindMoleculeType2(char *name, int number_of_types, MOLECULETYPE *MoleculeType) {
+  int type;
+  for (int i = 0; i < number_of_types; i++) {
     if (strcmp(name, MoleculeType[i].Name) == 0) {
       type = i;
       return type;
@@ -906,17 +1103,17 @@ void LinkedList(VECTOR BoxLength, COUNTS Counts, BEAD *Bead,
  * check that first bead id is lower than the second. Then sort the bonds
  * according to the index of the first bead in each bond.
  */
-void SortBonds(int **bond, int length) {
+void SortBonds(int **bond, int number_of_bonds) {
   // first, check order in every bond
-  for (int j = 0; j < length; j++) {
+  for (int j = 0; j < number_of_bonds; j++) {
     if (bond[j][0] > bond[j][1]) {
       SwapInt(&bond[j][0], &bond[j][1]);
     }
   }
   // second, bubble sort bonds
-  for (int j = 0; j < (length-1); j++) {
+  for (int j = 0; j < (number_of_bonds-1); j++) {
     bool swap = false;
-    for (int k = 0; k < (length-j-1); k++) {
+    for (int k = 0; k < (number_of_bonds-j-1); k++) {
       if ((bond[k][0] > bond[k+1][0]) || // swap if first beads are in wrong order
           (bond[k][0] == bond[k+1][0] && // or if they're the same, but second ones are in wrong order
           bond[k][1] > bond[k+1][1])) {
@@ -980,6 +1177,20 @@ void FreeBead(COUNTS Counts, BEAD **Bead) {
   free(*Bead);
 } //}}}
 
+// FreeBead2() //{{{
+/**
+ * Free memory allocated for Bead struct array. This function makes it
+ * easier to add other arrays to the Bead struct in the future
+ */
+void FreeBead2(int number_of_beads, BEAD **Bead) {
+  for (int i = 0; i < number_of_beads; i++) {
+    if ((*Bead)[i].nAggregates > 0) {
+      free((*Bead)[i].Aggregate);
+    }
+  }
+  free(*Bead);
+} //}}}
+
 // FreeMolecule() //{{{
 /**
  * Free memory allocated for Molecule struct array. This function makes it
@@ -987,6 +1198,18 @@ void FreeBead(COUNTS Counts, BEAD **Bead) {
  */
 void FreeMolecule(COUNTS Counts, MOLECULE **Molecule) {
   for (int i = 0; i < Counts.Molecules; i++) {
+    free((*Molecule)[i].Bead);
+  }
+  free(*Molecule);
+} //}}}
+
+// FreeMolecule2() //{{{
+/**
+ * Free memory allocated for Molecule struct array. This function makes it
+ * easier other arrays to the Molecule struct in the future
+ */
+void FreeMolecule2(int number_of_molecules, MOLECULE **Molecule) {
+  for (int i = 0; i < number_of_molecules; i++) {
     free((*Molecule)[i].Bead);
   }
   free(*Molecule);
@@ -1002,12 +1225,34 @@ void FreeMoleculeType(COUNTS Counts, MOLECULETYPE **MoleculeType) {
     for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
       free((*MoleculeType)[i].Bond[j]);
     }
-    for (int j = 0; j < (*MoleculeType)[i].nAngles; j++) {
-      free((*MoleculeType)[i].Angle[j]);
-    }
     free((*MoleculeType)[i].Bead);
     free((*MoleculeType)[i].Bond);
     free((*MoleculeType)[i].Angle);
+    free((*MoleculeType)[i].BType);
+  }
+  free(*MoleculeType);
+} //}}}
+
+// FreeMoleculeType2() //{{{
+/**
+ * Free memory allocated for MoleculeType struct array. This function makes
+ * it easier other arrays to the MoleculeType struct in the future
+ */
+void FreeMoleculeType2(int number_of_types, MOLECULETYPE **MoleculeType) {
+  for (int i = 0; i < number_of_types; i++) {
+    free((*MoleculeType)[i].Bead);
+    if ((*MoleculeType)[i].nBonds > 0) {
+      for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
+        free((*MoleculeType)[i].Bond[j]);
+      }
+      free((*MoleculeType)[i].Bond);
+    }
+    if ((*MoleculeType)[i].nAngles > 0) {
+      for (int j = 0; j < (*MoleculeType)[i].nAngles; j++) {
+        free((*MoleculeType)[i].Angle[j]);
+      }
+      free((*MoleculeType)[i].Angle);
+    }
     free((*MoleculeType)[i].BType);
   }
   free(*MoleculeType);

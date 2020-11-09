@@ -1,0 +1,115 @@
+
+# resid 1
+# resid 2
+b   2905:2906
+bond   2906:   2907
+bond   2907:   2908
+bond   2908:   2909
+# resid 3
+bond   2910:   2911
+bond   2911:   2912
+bond   2912:   2913
+bond   2913:   2914
+# resid 4
+bond   2915:   2916
+bond   2916:   2917
+bond   2917:   2918
+bond   2920:   2921
+# resid 6
+bond   2918:   2919
+# resid 5
+bond   2922:   2923
+# resid 7
+bond   2924:   2925
+# resid 8
+bond   2926:   2927
+bond   2926:   2929
+bond   2926:   2931
+bond   2926:   2938
+bond   2927:   2928
+bond   2929:   2930
+bond   2931:   2932
+bond   2932:   2936
+bond   2933:   2934
+bond   2936:   2937
+bond   2938:   2939
+# resid 9
+bond   2940:   2943
+bond   2940:   2941
+bond   2940:   2945
+bond   2940:   2952
+bond   2941:   2942
+bond   2945:   2946
+bond   2943:   2944
+bond   2946:   2950
+bond   2946:   2947
+bond   2946:   2949
+bond   2952:   2953
+# Created by AnalysisTools version 3.3 (https://github.com/KaGaSi/AnalysisTools/releases)
+atom    2901 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     1
+bond   2947:   2948
+bond   2950:   2951
+atom    2903 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     1
+atom    2904 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     1
+atom    2900 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     1
+atom    2905 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     2
+atom    2906 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     2
+atom    2902 name        B mass   1.00000 charge   0.00000 resname      A2BA2 resid     1
+atom    2907 name        B mass   1.00000 charge   0.00000 resname      A2BA2 resid     2
+atom    2908 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     2
+atom    2909 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     2
+bond   2933:2932
+bond   2932:   2935
+atom    2911 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     3
+atom    2910 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     3
+# comment
+atom    2912 name        B mass   1.00000 charge   0.00000 resname      A2BA2 resid     3
+atom    2915 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     4
+atom    2916 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     4
+atom    2917 name        B mass   1.00000 charge   0.00000 resname      A2BA2 resid     4
+atom    2913 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     3
+atom    2914 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     3
+atom    2919 name        A mass   1.00000 charge   0.00000 resname      A2BA2 resid     4
+atom    2920 name        C mass   1.00000 charge   0.00000 resname         C2 resid     5
+atom    2921 name        C mass   1.00000 charge   0.00000 resname         C2 resid     5
+atom    2918 name        A mass   1.00000 charge   1.00000 resname      A2BA2 resid     4
+atom    2922 name        C mass   1.00000 charge   0.00000 resname         C2 resid     6
+atom    2925 name        C mass   1.00000 charge   0.00000 resname         C2 resid     7
+atom    2926 name        C mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2927 name        A mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2924 name        C mass   1.00000 charge   0.00000 resname         C2 resid     7
+atom    2928 name        A mass   1.00000 charge   0.00000 resname   branched resid     8
+a    2929 name        B mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2923 name        C mass   1.00000 charge   0.00000 resname         C2 resid     6
+atom    2930 name        B mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2931 name        A mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2932 name        C mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2933 name        D mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2934 name        D mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2935 name        C mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2936 name        D mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2937 name        D mass   1.00000 charge   0.00000 resname   branched resid     8
+
+atom    2938 name        B mass   1.00000 charge   0.00000 resname   branched resid     8
+
+atom    2939 name        B mass   1.00000 charge   0.00000 resname   branched resid     8
+atom    2940 name        C mass   1.00000 charge   0.00000 resname   branched resid     9
+atom    2941 name        A mass   1.00000 charge   0.00000 resname   branched resid     9
+atom    2942 name        A mass   1.00000 charge   0.00000 resname   branched resid     9
+atom    2943 name        B mass   1.00000 charge   0.00000 resname   branched resid     9
+atom    2944 name        B mass   1.00000 charge   0.00000 resname   branched resid     9
+bond   2901:   2902
+bond   2902:   2903
+bond   2900:   2901
+bond   2903:   2904
+atom    2945 resname   branched resid     9 name        A mass   1.00000 charge   0.00000
+atom    2946 resname   branched resid     9 name        C mass   1.00000 charge   0.00000
+atom    2947 resname   branched resid     9 name        D mass   1.00000 charge   0.00000
+atom    2948 resname   branched resid     9 name        D mass   1.00000 charge   0.00000
+atom    2949 resname   branched resid     9 name        C mass   1.00000 charge   0.00000
+atom    2950 resname   branched resid     9 name        D mass   1.00000 charge   0.00000
+
+atom    2951 name        D mass   1.00000 charge   0.00000 resname   branched resid     9
+atom    2952 name        B mass   1.00000 charge   0.00000 resname   branched resid     9
+atom    2953 name        B mass   1.00000 charge   0.00000 resname   branched resid     9
+atom default name        E mass   1.00000 charge   0.00000
