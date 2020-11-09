@@ -8,6 +8,8 @@
 
 #include "AnalysisTools.h"
 
+void SkipStructVtf(FILE *vtf, char *name_vtf);
+
 // GetPBC() //{{{
 /*
  * \brief Function to get box dimensions.
@@ -33,6 +35,16 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
                     char *input_coor, char *input_agg,
                     double *distance, int *contacts); //}}}
 
+void SkipVtfStructure(bool vtf, FILE *vcf, int struct_lines);
+int CountVtfStructLines(bool vtf, char *input);
+bool CheckVtfTimestepLine(int words, char split[30][100]);
+bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
+                      BEADTYPE **BeadType, BEAD **Bead, int **Index,
+                      MOLECULETYPE **MoleculeType, MOLECULE **Molecule);
+void ReadVtfStructure(char *vsf_file, bool detailed, COUNTS *Counts,
+                      BEADTYPE **BeadType, BEAD **Bead, int **Index,
+                      MOLECULETYPE **MoleculeType, MOLECULE **Molecule);
+
 // ReadStructure() //{{{
 /**
  * \brief Function reading information from dl_meso FIELD and vsf
@@ -53,7 +65,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
                    BEADTYPE **BeadType, BEAD **Bead, int **Index,
                    MOLECULETYPE **MoleculeType, MOLECULE **Molecule); //}}}
 
-int ReadTimestepPreamble(bool indexed, char *input_coor, FILE *vcf_file, char **stuff);
+int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char **stuff);
 
 // ReadCoordinates() //{{{
 /**

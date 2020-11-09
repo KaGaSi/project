@@ -99,31 +99,21 @@ int main(int argc, char *argv[]) {
   char input_coor[LINE];
   char *input_vsf = calloc(LINE,sizeof(char));
   strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
+  // test that <input> filename ends with '.vcf' or '.vtf'
+  bool vtf;
+  if (!InputCoor(&vtf, input_coor, input_vsf)) {
     Help(argv[0], true);
     exit(1);
-  }
-  // if vtf, copy to input_vsf
-  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
-    strcpy(input_vsf, input_coor);
-  } else {
-    strcpy(input_vsf, "traject.vsf");
   } //}}}
 
   // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
   char output_vcf[LINE];
   strcpy(output_vcf, argv[++count]);
-
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
-  ext = 1;
+  int ext = 1;
+  char extension[2][5];
   strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -268,8 +258,17 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
-
   VECTOR BoxLength = GetPBC(vcf, input_coor);
+  fclose(vcf);
+
+  // open input coordinate file //{{{
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
+    exit(1);
+  } //}}}
+  if (vtf) {
+    SkipStructVtf(vcf, input_coor);
+  }
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -507,7 +506,8 @@ int main(int argc, char *argv[]) {
       break;
     }
     // if there's no additional timestep, exit the while loop
-    if (ReadTimestepPreamble(indexed, input_coor, vcf, &stuff) == -1) {
+    bool rubbish; // not used
+    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff) == -1) {
       break;
     }
   }

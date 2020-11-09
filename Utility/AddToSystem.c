@@ -103,34 +103,25 @@ int main(int argc, char *argv[]) {
 
   count = 0; // count mandatory arguments
 
-  // <input.vcf> - input coordinate file //{{{
+  // <input> - input coordinate file //{{{
   char input_coor[LINE];
   char *input_vsf = calloc(LINE,sizeof(char));
   strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
+  // test that <input> filename ends with '.vcf' or '.vtf'
+  bool vtf;
+  if (!InputCoor(&vtf, input_coor, input_vsf)) {
     Help(argv[0], true);
     exit(1);
-  }
-  // if vtf, copy to input_vsf
-  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
-    strcpy(input_vsf, input_coor);
-  } else {
-    strcpy(input_vsf, "traject.vsf");
   } //}}}
 
   // <out.vsf> - filename of output vsf file (must end with .vsf) //{{{
   char output_vsf[LINE];
   strcpy(output_vsf, argv[++count]);
   // test if <out.vsf> filename ends with '.vsf' (required by VMD)
-  ext = 1;
+  int ext = 1;
+  char extension[2][5];
   strcpy(extension[0], ".vsf");
-  if (ErrorExtension(output_vsf, ext, extension)) {
+  if (ErrorExtension(output_vsf, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -141,7 +132,7 @@ int main(int argc, char *argv[]) {
   // test if <output.vcf> filename ends with '.vcf' (required by VMD)
   ext = 1;
   strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -174,7 +165,7 @@ int main(int argc, char *argv[]) {
     strcpy(input_add, "FIELD");
   } //}}}
 
-  // -vtf <vsf> <vcf> - FIELD-like file with molecules to add //{{{
+  // -vtf <vsf> <vcf> - vtf file(s) to add to system to use instead of FIELD //{{{
   char *add_vsf = calloc(LINE, sizeof(char)),
        *input_coor_add = calloc(LINE, sizeof(char));
   // 1) vsf file
@@ -182,11 +173,12 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   // 2) if vsf file exists, look for vcf
+  bool vtf_add; // if -vtf is present present, is the file a vtf format?
   if (add_vsf[0] != '\0') {
     ext = 2;
     strcpy(extension[0], ".vsf");
     strcpy(extension[1], ".vtf");
-    if (ErrorExtension(add_vsf, ext, extension)) {
+    if (ErrorExtension(add_vsf, ext, extension) == -1) {
       Help(argv[0], true);
       exit(1);
     }
@@ -199,23 +191,27 @@ int main(int argc, char *argv[]) {
             char temp[LINE];
             strcpy(temp, argv[i+1]); // save vsf filename
             strcpy(argv[i+1], argv[i+2]); // copy vcf filename to vsf - required by FileOption()
-            ext = 1;
-            strcpy(extension[0], ".vcf");
+            // read vcf file name
             if (FileOption(argc, argv, "-vtf", &input_coor_add)) {
               exit(1);
             }
-            if (ErrorExtension(input_coor_add, ext, extension)) {
-              fprintf(stderr, "\033[1;31m");
-              fprintf(stderr, "       Wrong second filename!\n");
-              fprintf(stderr, "\033[0m");
+            // test that the filename ends with '.vcf' or '.vtf'
+            ext = 2;
+            strcpy(extension[0], ".vcf");
+            strcpy(extension[1], ".vtf");
+            ext = ErrorExtension(input_coor_add, ext, extension);
+            vtf_add = false; // input_coor_add is a vcf file by default
+            if (ext == -1) {
               Help(argv[0], true);
               exit(1);
+            } else if (ext == 1) {
+              vtf_add = true; // input_coor_add is a vtf file
             }
             strcpy(argv[i+1], temp); // restore vsf filename
             break;
           } else { // there's no more cli arguments
             fprintf(stderr, "\033[1;31m");
-            fprintf(stderr, "\nError: option -vtf is missing second filename!\n");
+            fprintf(stderr, "\nError: option -vtf is missing second filename (vcf file)!\n");
             fprintf(stderr, "\033[0m");
             Help(argv[0], true);
             exit(1);
@@ -387,9 +383,19 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   } //}}}
+  VECTOR BoxLength = GetPBC(vcf, input_coor);
+  fclose(vcf);
+  // reopen input coordinate file //{{{
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
+    exit(1);
+  } //}}}
+
+  if (vtf) {
+    SkipStructVtf(vcf, input_coor);
+  }
 
   // read original box length and assign new one if -b is used //{{{
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
   VECTOR BoxLength_new = BoxLength;
   if (box_option[0] != -1) {
     BoxLength_new.x = box_option[0];
@@ -500,6 +506,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
     VECTOR BoxLength_add = GetPBC(vcf, input_coor_add);
+    fclose(vcf);
     // determine new box size if -b isn't used as the larger of the dimensions
     // from original and to be added systems
     if (box_option[0] != -1) {
@@ -512,6 +519,15 @@ int main(int argc, char *argv[]) {
       if (BoxLength_add.z > BoxLength_new.z) {
         BoxLength_new.z = BoxLength_add.z;
       }
+    }
+
+    // reopen input coordinate file
+    if ((vcf = fopen(input_coor_add, "r")) == NULL) {
+      ErrorFileOpen(input_coor_add, 'r');
+      exit(1);
+    }
+    if (vtf_add) {
+      SkipStructVtf(vcf, input_coor_add);
     }
     ReadCoordinates(indexed_add, input_coor_add, vcf, Counts_add, Index_add, &Bead_add, &stuff);
     fclose(vcf);

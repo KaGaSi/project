@@ -13,12 +13,24 @@
 #include <math.h>
 #include <time.h>
 #include <stdbool.h>
+#include <unistd.h>
 #include "General.h"
 #include "Errors.h"
 #include "Structs.h"
 #include "Options.h"
 #include "Read.h"
 #include "Write.h"
+
+// InputCoor() //{{{
+/**
+ * \brief Function test input coordinate file is correct
+ *
+ * \param [out] vtf          is the coordinate file vtf or vcf?
+ * \param [in]  file_coor    name of coordinate file
+ * \param [in]  file_struct  name of structure file
+ * \return false if file_coor has wrong extension, true otherwise
+ */
+bool InputCoor(bool *vtf, char *file_coor, char *file_struct); //}}}
 
 // VerboseOutput() //{{{
 /**
@@ -54,6 +66,7 @@ void PrintCounts(COUNTS Counts);
  * \param [in] BeadType   information about bead types
  */
 void PrintBeadType(COUNTS Counts, BEADTYPE *BeadType); //}}}
+void PrintBeadType2(int number, BEADTYPE *BeadType);
 
 // PrintMoleculeTypeType()  //{{{
 /**
@@ -64,18 +77,20 @@ void PrintBeadType(COUNTS Counts, BEADTYPE *BeadType); //}}}
  * \param [in] MoleculeType  information about molecule types
  */
 void PrintMoleculeType(COUNTS Counts, BEADTYPE *BeadType, MOLECULETYPE *MoleculeType); //}}}
+void PrintMoleculeType2(int number_of_types, BEADTYPE *BeadType, MOLECULETYPE *MoleculeType);
 
 // PrintBead() //{{{
 /**
  * Function printing Bead structure.
  */
 void PrintBead(COUNTS Counts, int *Index, BEADTYPE *BeadType, BEAD *Bead); //}}}
+void PrintBead2(int number_of_beads, int *Index, BEADTYPE *BeadType, BEAD *Bead);
 
 // PrintMolecule() //{{{
 /**
  * Function printing Molecule structure.
  */
-void PrintMolecule(COUNTS Counts, int *Index,
+void PrintMolecule(int number_of_molecules,
                    MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
                    BEADTYPE *BeadType, BEAD *Bead); //}}}
 
@@ -102,6 +117,7 @@ void PrintAngleTypes(COUNTS Counts, PARAMS *angle_type);  //}}}
  * \return bead type id corresponding to index in BeadType struct (or -1 if non-existent bead name)
  */
 int FindBeadType(char *name, COUNTS Counts, BEADTYPE *BeadType); //}}}
+int FindBeadType2(char *name, int types_of_beads, BEADTYPE *BeadType);
 
 // FindMoleculeType() //{{{
 /** \brief Function to identify type of molecule from its name
@@ -112,6 +128,7 @@ int FindBeadType(char *name, COUNTS Counts, BEADTYPE *BeadType); //}}}
  * \return molecule type      id corresponding to index in BeadType struct (or -1 for non-existent molecule)
  */
 int FindMoleculeType(char *name, COUNTS Counts, MOLECULETYPE *MoleculeType); //}}}
+int FindMoleculeType2(char *name, int number_of_types, MOLECULETYPE *MoleculeType);
 
 // Distancet() //{{{
 /**
@@ -261,6 +278,7 @@ void SortAngles(int **angle, int length); //}}}
  * \param [out] Bead        information about individual beads
  */
 void FreeBead(COUNTS Counts, BEAD **Bead); //}}}
+void FreeBead2(int number_of_beads, BEAD **Bead);
 
 // FreeMolecule() //{{{
 /**
@@ -270,6 +288,7 @@ void FreeBead(COUNTS Counts, BEAD **Bead); //}}}
  * \param [out] Molecule    information about individual molecules
  */
 void FreeMolecule(COUNTS Counts, MOLECULE **Molecule); //}}}
+void FreeMolecule2(int number_of_molecules, MOLECULE **Molecule);
 
 // FreeMoleculeType() //{{{
 /**
@@ -279,6 +298,7 @@ void FreeMolecule(COUNTS Counts, MOLECULE **Molecule); //}}}
  * \param [out] MoleculeType   information about individual molecules
  */
 void FreeMoleculeType(COUNTS Counts, MOLECULETYPE **MoleculeType); //}}}
+void FreeMoleculeType2(int number_of_types, MOLECULETYPE **MoleculeType);
 
 // FreeAggregate() //{{{
 /**

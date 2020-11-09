@@ -118,11 +118,13 @@ int main(int argc, char *argv[]) {
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information
-  ReadStructure(input_vsf, "\0", &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  ReadVtfStructure(input_vsf, true, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
 
-  // vsf file is not needed anymore
-  free(input_vsf);
+//// read system information
+//ReadStructure(input_vsf, "\0", &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+
+//// vsf file is not needed anymore
+//free(input_vsf);
 
   // print information - verbose option //{{{
   if (verbose) {
@@ -135,6 +137,7 @@ int main(int argc, char *argv[]) {
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, change);
 
   // free memory - to make valgrind happy //{{{
+  free(input_vsf);
   free(BeadType);
   free(Index);
   FreeMoleculeType(Counts, &MoleculeType);

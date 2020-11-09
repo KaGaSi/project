@@ -10,7 +10,6 @@ void WriteCoorIndexed(FILE *vcf_file, COUNTS Counts,
                       BEADTYPE *BeadType, BEAD *Bead,
                       MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
                       char *stuff) {
-
   // print comment at the beginning of a timestep if present in initial vcf file
   fprintf(vcf_file, "%s\n", stuff);
   // print 'indexed' on the next
@@ -64,7 +63,9 @@ void WriteCoorXYZ(FILE *xyz_file, COUNTS Counts,
 // WriteVsf() //{{{
 /*
  * Function creating `.vsf` structure file for use in conjunction with
- * `.vcf` coordinate file for better visualisation via VMD program.
+ * `.vcf` coordinate file for better visualisation via VMD program. Note that
+ * if not all bead types from the original system are not present in the
+ * structures, the system may significantly differ from the original one.
  */
 void WriteVsf(char *input_vsf, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
               MOLECULETYPE *MoleculeType, MOLECULE *Molecule, bool change) {
@@ -104,12 +105,12 @@ void WriteVsf(char *input_vsf, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
   } //}}}
 
   // print beads //{{{
-  for (int i = 0; i < Counts.BeadsInVsf; i++) {
-    // don't print beads with type 'type_def'
+  for (int i = 0; i < Counts.Beads; i++) {
     int btype = Bead[i].Type;
     int mol = Bead[i].Molecule;
+    // don't print beads with type 'type_def'
     if (btype != type_def || mol != -1) {
-      fprintf(fw, "atom %7d ", i);
+      fprintf(fw, "atom %7d ", Bead[i].Index);
       if (mol != -1 && change) {
         int mtype = Molecule[mol].Type;
         int n = -1;
