@@ -1,36 +1,202 @@
 \section{Read system data} \label{sec:ReadSystemData}
 
-\texttt{ReadStructure()} function reads all system information from
-\texttt{vsf} and \texttt{vcf} files. \texttt{FIELD} file is used only to
-get mass and charge of beads if the information is not in \texttt{vsf}
-file. Provided \texttt{vsf} file is used
-to get all information about beads and molecules -- names and numbers of
-bead and molecules, bonds in molecules.  The first timestep of the
-\texttt{vcf} file is used to determine numbers and ids of beads in that
-\texttt{vcf} file which means that all timesteps must contain the same
-beads.
+In general, information about a system can be read from a \vtf file(s),
+\tt{DL_MESO} \tt{FIELD} file, \tt{LAMMPS} \tt{data} file, or from a
+combination of those (such as most of the data from a \vsf file
+supplemented by angles and angle parameters and/or bond parameters from a
+\tt{FIELD} and/or \tt{data} file(s)). Cartesian coordinates can then be
+read from a \vcf, \tt{xyz}, or \tt{DL_MESO} \tt{CONFIG} file.
 
-The procedure in \texttt{ReadStructure()} is as follows:
+In principle, not all beads present in the structure file have to be
+present in the coordinate file.
+
+Subsection~\ref{ssec:ReadVtfStructure} describes reading system data from
+\vtf file(s).
+
+\subsection{Structure from a \vsf file} \label{ssec:ReadVtfStructure}
+\noindent
+First, box size is read from a \vcf file (if a \vcf is included in the
+calculation), then structure of the complete system is read from a \vsf file, and
+lastly, the system can be reduced only to beads present in an associated \vcf
+file.
+
+% read pbc from vcf - GetPBC %{{{
+\subsubsection{Getting simulation box size}
+\ttb{VECTOR GetPBC(char *vcf_file)}\\[-2em]
+\begin{longtable}{lcp{85mm}}
+  \toprule
+  variable           & input/output? & explanation \\
+  \midrule
+  \ttb{vcf_file}     & in  & name of the \vcf file \\
+  \multicolumn{3}{l}{\ttb{GetPBC} returns a \ttb{struct Vector} containing x,
+    y, and z side length of the cuboid simulation box}\\
+  \bottomrule
+\end{longtable}
+\noindent
+This function simply reads the \vcf file until it encounter the \tt{pbc
+<double> <double> <double>} line. %}}}
+
+% read vsf file - ReadVtfStructure() %{{{
+\subsubsection{Getting complete system information}
+\ttb{void ReadVtfStructure(char *vsf_file, bool detailed, COUNTS *Counts,\\
+BEADTYPE **BeadType, BEAD **Bead, int **Index,\\
+MOLECULETYPE **MoleculeType, MOLECULE **Molecule)}\\[-2em]
+\begin{longtable}{lcp{85mm}}
+  \toprule
+  variable           & input/output? & explanation \\
+  \midrule
+  \ttb{vsf_file}     & in  & name of the \tt{vsf} file \\
+  \ttb{detailed}     & in  & mode for differentiating bead and molecule types \\
+  \ttb{Counts}       & out & broad system information \\
+  \ttb{BeadType}     & out & information about bead types \\
+  \ttb{Bead}         & out & information about individual beads \\
+  \ttb{Index}        & out & connection between in-code bead indices and \vsf indices \\
+  \ttb{MoleculeType} & out & information about molecule types \\
+  \ttb{Molecule}     & out & information about individual molecules \\
+  \bottomrule
+\end{longtable}
+\noindent
+The procedure to get all information is as follows:
 \begin{enumerate}
-  \item Go through \texttt{atom} section of the \texttt{vsf} file to
-    identify default bead type (if \texttt{atom default} line is present),
-    to find highest bead and molecule ids, and to find bead type names (and
-    charges and masses if present).
-  \item Go again through the \texttt{atom} section to read names and ids of
-    beads and molecules as well as numbers of all beads and molecules for
-    each type.
-  \item Go through \texttt{bond} section of the \texttt{vsf} file to
-    calculate number of bonds in each molecule type.
-  \item Go again through the \texttt{bond} section to read bonds for each
-    molecule type.
-  \item Go through the \texttt{atom} section (for the third time) to assign
-    bead ids to molecules.
-  \item Go through the first timestep of \texttt{vcf} file to find which
-    beads are in that \texttt{vcf} file (if no \texttt{vcf} file is
-    provided -- e.g., for \texttt{DistrAgg} utility -- assume all beads are
-    used).
-  \item Modify all arrays to accommodate only the beads that are present in
-    the \texttt{vcf} file.
-  \item Read charge and mass from the \texttt{FIELD} file, if not already
-    known from \texttt{vsf} file.
+  \item Go through the \vsf to get:
+    \begin{itemize}
+      \item number of \tt{a[tom]} lines (\ttb{(int)count_atom_lines})
+      \item number of \tt{b[ond]} lines (\ttb{(int)count_bond_lines})
+      \item if present, the line number of the first \tt{a[tom] default}
+        line\\(\ttb{(int)default_atom_line})
+      \item bead names into \ttb{(char **)atom_name} 2D array (size
+        \tt{<number of unique names>}$\times$\tt{17} to save at most 16
+        characters of each unique name)
+      \item molecule names into \ttb{(char **)res_name} 2D array (size
+        \tt{<number of unique names>}$\times$\tt{9} to save at most 8
+        characters of each unique name)
+    \end{itemize}
+  \item go through the \vsf again to count molecules and save all
+    \tt{a[tom]} and \tt{b[ond]} lines into:
+    \begin{itemize}
+      \item \ttb{(struct)atom[i]} for $i$-th \tt{a[tom]} line,
+        i.e., an array of structures (a \tt{default} line,
+        if present, is the last element of the array), containing members:
+    \end{itemize}
+        \begin{longtable}{lp{100mm}}
+          \toprule
+          \ttb{(int)index}     & \tt{a[tom] <int>} keyword \\
+          \ttb{(int)name}      & \tt{n[ame] <char(16)>} keyword; corresponds
+            to an element in the \ttb{atom\_name} array holding the actual names \\
+          \ttb{(int)resid}     & \tt{resid <int>} keyword \\
+          \ttb{(int)resname}   & \tt{res[name] <char(8)>} keyword;
+            corresponds to an element in the \ttb{res\_name} array holding
+            the actual names \\
+          \ttb{(double)charge} & \tt{charge|q <double>} keyword \\
+          \ttb{(double)mass}   & \tt{m[ass] <double>} keyword \\
+          \ttb{(double)radius} & \tt{r[adius] <double>} keyword \\
+          \bottomrule
+        \end{longtable}
+    \begin{itemize}
+      \item \ttb{(int)atom_id} array connecting \ttb{atom[i]} elements with \vsf
+        bead indices; i.e., \ttb{atom\_id[<vsf id>]=i} (so that
+        \ttb{atom[atom_id[<vsf id>]]} structure contains data from $i$-th
+        \tt{a[tom]} line)
+      \item \ttb{(struct)bond[j]} for the two connected beads in $j$-th
+        bond (members \ttb{(int)index1} and \ttb{(int)index2} contain \vsf
+        bead indices); i.e., an array of structures, so that the two
+        \ttb{atom[atom_id[bond[j].<member>]]} structures contain data from
+        the two connected beads' \tt{a[tom]} lines
+    \end{itemize}
+  \item go through the \ttb{atom} array to identify bead types and populate
+    \ttb{(struct BeadType)bt} -- two modes
+    \begin{itemize}
+      \item \ttb{detailed=true}: bead types are distinguished based on
+        their name, mass, charge, and radius -- if there's only one value
+        of charge/mass/radius, even beads from \tt{a[tom]} lines missing
+        that keyword are of the same type; conversely, if there are two
+        values of charge/mass/radius and some \tt{a[tom]} lines are missing
+        that keyword, three bead types are created with one bead type that
+        has the charge/mass/radius undefined
+      \item \ttb{detailed=false}: bead types are distinguished only
+        according to their names and their charge/mass/radius is set
+        according to the first \tt{a[tom]} line with that name that's not
+        missing the appropriate keyword
+    \end{itemize}
+  \item go through the \ttb{atom} array to populate the \ttb{(struct
+    Bead)bead_all} and construct \ttb{(int)index_all} array connecting
+    in-code bead indices and \vsf indices, i.e., \ttb{index_all[<vsf
+    id>]=<in-code id>} and thus \ttb{bead_all[index_all[<vsf
+    id>]].Index=<vsf id>}
+    \begin{itemize}
+      \item internally, unbonded beads are placed before bonded beads,
+        i.e., in all utilities, first \ttb{Counts.Unbonded} beads in a
+        \ttb{(struct Bead)} array are unbonded and beads in molecules are
+        behind those
+      \item \tt{default} beads are assigned \vsf indices according to
+        left-out numbers in the \vsf file
+    \end{itemize}
+  \item go through the \ttb{atom} and \ttb{bond} arrays to identify different
+    molecule types and populate the \ttb{(struct MoleculeType)mt} -- two modes
+    \begin{itemize}
+      \item \ttb{detailed=true}: molecule types are distinguished based on
+        their name, connectivity, numbers and order of beads in the molecule
+      \item \ttb{detailed=false}: molecule types are distinguished only
+        according to their names and their connectivity and bead order are
+        determined according to the first molecule with that name
+        encountered in the \vsf, i.e., if multiple molecules share a name,
+        only the first molecule must have specified bonds
+    \end{itemize}
+  \item copy all in-function arrays and structure to output arrays and structures
+\end{enumerate} %}}}
+
+% reduce system based on vcf file - CheckVtfTimestep() %{{{
+\subsubsection{Reducing the system}
+\ttb{bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,\\
+BEADTYPE **BeadType, BEAD **Bead, int **Index,\\
+MOLECULETYPE **MoleculeType, MOLECULE **Molecule)}\\[-2em]
+\begin{longtable}{lcp{85mm}}
+  \toprule
+  variable           & input/output? & explanation \\
+  \midrule
+  \ttb{vcf}          & in  & pointer to a \vcf file open at the beginning
+                       of a timestep \\
+  \ttb{vcf_file}     & in  & name of the open \vcf file \\
+  \ttb{Counts}       & out & broad system information \\
+  \ttb{BeadType}     & out & information about bead types \\
+  \ttb{Bead}         & out & information about individual beads \\
+  \ttb{Index}        & out & connection between in-code bead indices and \vsf indices \\
+  \ttb{MoleculeType} & out & information about molecule types \\
+  \ttb{Molecule}     & out & information about individual molecules \\
+  \multicolumn{3}{l}{\ttb{CheckVtfTimestep} returns a \tt{true}/\tt{false}
+    value whether the \vcf contains indexed timesteps}\\
+  \bottomrule
+\end{longtable}
+\noindent
+The procedure to get all information is as follows:
+\begin{enumerate}
+  \item skip timestep preamble (i.e., anything up to the first coordinate
+    line) and determing the timestep type (ordered or indexed)
+  \item count coordinate lines and save the bead indices in
+    the timestep as \ttb{Bead[i].Flag=true}
+    \begin{itemize}
+      \item for an ordered timestep, \ttb{i} equals line number; for
+        indexed timestep, \ttb{i=Index[<\vsf index>]} (\tt{<vsf index>} is
+        the first number of the coordinate line)
+    \end{itemize}
+  \item for an ordered timestep and for an indexed timestep with all beads
+    from the \vsf file present, do nothing more; otherwise, use the
+    \ttb{Bead[i].Flag} values to reduce the system, copying the information
+    about the new system into new structure arrays
+    \begin{itemize}
+      \item for \ttb{struct Counts}, all members except for
+        \ttb{BeadsInVsf} are adjusted to contain only numbers relevant to
+        the beads present in the \vcf file
+      \item for \ttb{struct BeadType}, \ttb{struct Bead}, \ttb{struct
+        MoleculeType}, and \ttb{struct Molecule}, only the entities present
+        in the \vcf file are copied to the new system
+      \item for molecule types, it is possible to remove only part(s) of the
+        molecules (based on the in-molecule bead types); the numbers of
+        bonds and angles are adjusted so that all those containing beads
+        not in the \vcf file are removed, possibly creating disjointed
+        molecules (or even molecules with no bonds)
+    \end{itemize}
+  \item copy the new structure arrays back into the original ones, reducing
+    the sizes of those accordingly
 \end{enumerate}
+ %}}}

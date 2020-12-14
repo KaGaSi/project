@@ -54,7 +54,7 @@ void SkipStructVtf(FILE *vtf, char *name_vtf) { //{{{
 /*
  * Function to get box dimensions from the provided coordinate file.
  */
-VECTOR GetPBC(FILE *vcf, char *input_coor) {
+VECTOR GetPBC(FILE *vcf, char *vcf_file) {
 
   VECTOR BoxLength;
 
@@ -87,19 +87,74 @@ VECTOR GetPBC(FILE *vcf, char *input_coor) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", input_coor);
+      fprintf(stderr, "%s", vcf_file);
       RedText(STDERR_FILENO);
       fprintf(stderr, " - unrecognised line\n");
       ErrorPrintLine(split, words);
       RedText(STDERR_FILENO);
-      if (IsInteger(split[0]) && words > 2) {
-        fprintf(stderr, "       Possibly missing pbc line\n");
-      }
       putc('\n', stderr);
       ResetColour(STDERR_FILENO);
       exit(1);
     }
   };
+  return BoxLength;
+} //}}}
+
+// GetPBC2() //{{{
+/*
+ * Function to get box dimensions from the provided coordinate file.
+ */
+VECTOR GetPBC2(char *vcf_file) {
+
+  VECTOR BoxLength;
+
+  FILE *vcf;
+  if ((vcf = fopen(vcf_file, "r")) == NULL) {
+    ErrorFileOpen(vcf_file, 'r');
+    exit(1);
+  }
+  char line[LINE];
+  while (fgets(line, sizeof(line), vcf)) {
+    char split[30][100], delim[8];
+    strcpy(delim, " \t");
+    int words = SplitLine(split, line, delim);
+
+    if (strcasecmp(split[0], "pbc") == 0) {
+      BoxLength.x = atof(split[1]);
+      BoxLength.y = atof(split[2]);
+      BoxLength.z = atof(split[3]);
+      break;
+    // only certain keywords besides pbc can be present before the first coordinate block
+    // 1) t(imestep) ... starting the coordinate block
+    // 2) t(imestep) i(ndexed)/o(ordered) ... starting the coordinate block
+    // 3) i(ndexed)/o(ordered) ... starting the coordinate block
+    // 4) a(tom) ... in case of vtf file
+    // 5) b(ond) ... in case of vtf file
+    // 6) empty line
+    // 7) comment
+    } else if (!(split[0][0] == 't' && words == 1) && // 1)
+               !(split[0][0] == 't' && words > 1 && (split[1][0] == 'o' || split[1][0] =='i')) && // 2)
+               !(split[0][0] == 'o' || split[0][0] == 'i') && // 3)
+               split[0][0] != 'a' && // 4)
+               split[0][0] != 'b' && // 5)
+               split[0][0] != '\0' && // 6)
+               split[0][0] != '#') { // 7)
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", vcf_file);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - unrecognised line\n");
+      ErrorPrintLine(split, words);
+      RedText(STDERR_FILENO);
+      putc('\n', stderr);
+      ResetColour(STDERR_FILENO);
+      exit(1);
+    }
+  };
+
+  fclose(vcf);
+
   return BoxLength;
 } //}}}
 
@@ -934,8 +989,6 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
 } //}}}
 
 // ReadVtfStructure() //{{{
-// TODO: ...in the end, bead types should be determined only by name,
-// because many utilities ask for bead type names, shouldn't they?
 void ReadVtfStructure(char *vsf_file, bool detailed, COUNTS *Counts,
                       BEADTYPE **BeadType, BEAD **Bead, int **Index,
                       MOLECULETYPE **MoleculeType, MOLECULE **Molecule) {
@@ -961,18 +1014,17 @@ void ReadVtfStructure(char *vsf_file, bool detailed, COUNTS *Counts,
    * ii) find number of beads
    * iii) save bead and molecule names
    */
-  int count_atom_lines = 0, // number of atom lines (not counting comments and blank lines)
-      default_atom_line = -1, // if there is a default atom line, what line is it?
-      count_bond_lines = 0, // number of bond lines (not counting comments and blank lines)
+  int count_atom_lines = 0, // number of atom lines
+      default_atom_line = -1, // if there is a default atom line, what line is it (the first one, if multiple are present)?
+      count_bond_lines = 0, // number of bond lines
       count_comment_lines = 0, // number of comments (#) or blank lines
-      atom_names = 0, res_names = 0, // number of bead and molecule names
+      atom_names = 0, res_names = 0, // number of different bead and molecule names
       last_struct = 0; // number of the last structure line (i.e., bond or atom); used in case of vtf
-  char **atom_name = calloc(1, sizeof(char *));
-  atom_name[0] = calloc(16, sizeof(char));
-  char **res_name = calloc(1, sizeof(char *));
-  res_name[0] = calloc(8, sizeof(char));
+  char **atom_name = calloc(1, sizeof(char *)); // names of different atoms
+  atom_name[0] = calloc(17, sizeof(char));
+  char **res_name = calloc(1, sizeof(char *)); // names of different molecules
+  res_name[0] = calloc(9, sizeof(char));
   while(true) {
-    // TODO: test bool vtf and if so, check for timestep line; make last bond/atom line as the last line of the structure stuff
     char error[LINE] = {'\0'}, // error message; if (strlen(error) == 0), then no error
          split[30][100], line[LINE];
     fgets(line, sizeof line, vsf);
@@ -1049,7 +1101,7 @@ void ReadVtfStructure(char *vsf_file, bool detailed, COUNTS *Counts,
             if (in == -1) {
               if (res_names > 0) {
                 res_name = realloc(res_name, (res_names+1)*sizeof(char *));
-                res_name[res_names] = calloc(16, sizeof(char));
+                res_name[res_names] = calloc(9, sizeof(char));
               }
               strcpy(res_name[res_names], split[i+1]);
               res_names++;
@@ -1161,14 +1213,14 @@ void ReadVtfStructure(char *vsf_file, bool detailed, COUNTS *Counts,
               atom[id].resid = atoi(split[i+1]) - 1; // resid in vsf starts with 1
             } else if (split[i][0] == 'n') {
               for (int j = 0; j < atom_names; j++) {
-                if (strncmp(split[i+1], atom_name[j], 15) == 0) {
+                if (strncmp(split[i+1], atom_name[j], 16) == 0) {
                   atom[id].name = j;
                   break;
                 }
               }
             } else if (strcmp(split[i], "resname") == 0) {
               for (int j = 0; j < res_names; j++) {
-                if (strncmp(split[i+1], res_name[j], 7) == 0) {
+                if (strncmp(split[i+1], res_name[j], 8) == 0) {
                   atom[id].resname = j;
                   break;
                 }
@@ -1572,7 +1624,7 @@ PrintBeadType2((*Counts).TypesOfBeads, bt);
         bead_all[id].Type = FindBeadType2(atom_name[atom[internal_id].name], (*Counts).TypesOfBeads, bt);
       } //}}}
       if (internal_id == (count_atom_lines-1)) { // default bead
-        bead_all[id].Index = -1;
+        bead_all[id].Index = -1; // to be filled later
       } else {
         bead_all[id].Index = atom[internal_id].index;
       }
@@ -1629,14 +1681,14 @@ PrintBeadType2((*Counts).TypesOfBeads, bt);
     }
   }
   // fill BEAD[].Index array for default beads //{{{
-  // i) identify already filled indices
+  // i) identify already used indices (i.e., indices specifically written in the vsf file)
   bool *filled = calloc((*Counts).BeadsInVsf, sizeof(bool));
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     if (bead_all[i].Index != -1) {
       filled[bead_all[i].Index] = true;
     }
   }
-  // ii) fill the unfilled indices
+  // ii) assign unused indices to beads of default type
   int count = 0;
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     if (bead_all[i].Index == -1) {
@@ -1659,7 +1711,6 @@ PrintBeadType2((*Counts).TypesOfBeads, bt);
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     index_all[bead_all[i].Index] = i;
   } //}}}
-  //}}}
   // rename the bead types with the same name (does nothing if !detailed) //{{{
   // ...must be after 4) as that uses the original, possibly duplicate names
   for (int i = 0; i < ((*Counts).TypesOfBeads-1); i++) {
@@ -1681,11 +1732,12 @@ PrintBeadType2((*Counts).TypesOfBeads, bt);
       }
     }
   } //}}}
+  //}}}
   // 5) identify molecule types base on all data //{{{
   /*
    * Molecules of one type must share:
    * i) molecule name
-   * ii) number of beads bonds
+   * ii) number of beads and bonds
    * iii) order of bead types
    * iv) connectivity
    */
@@ -1824,15 +1876,15 @@ for (int i = 0; i < (*Counts).Molecules; i++) {
 putchar('\n');
 */ //}}}
   // count molecule types based on i) through to iv) //{{{
-  // ...or just on i) if !detailed
+  // ...or just on i) if !detailed (and exit if a molecule contains too few/too many beads)
   MOLECULETYPE *mt = calloc(1, sizeof(MOLECULETYPE));
   for (int i = 0; i < (*Counts).Molecules; i++) {
     bool add = false;
-    int first_bead = mol[i].Bead[0];
+    int first_bead = bead_all[mol[i].Bead[0]].Index;
     int name = atom[atom_id[first_bead]].resname;
+//  printf("%5d %5d %5d %s\n", first_bead, atom_id[first_bead], name, res_name[name]);
     // go through all molecule types to find a match for molecule i //{{{
     for (int j = 0; j < (*Counts).TypesOfMolecules; j++) {
-//    printf("%d: %s %s\n", i, res_name[name], mt[j].Name);
       if (detailed) { // check name, numbers of beads & bonds, and connectivity
         if (strcmp(res_name[name], mt[j].Name) == 0 &&
             atoms_per_mol[i] == mt[j].nBeads &&
@@ -1859,6 +1911,27 @@ putchar('\n');
       } else { // check name only
         if (strcmp(res_name[name], mt[j].Name) == 0) {
           add = true;
+          // error - too few/too many beads in a molecule
+          if (atoms_per_mol[i] != mt[j].nBeads) {
+            RedText(STDERR_FILENO);
+            fprintf(stderr, "\nError: ");
+            YellowText(STDERR_FILENO);
+            fprintf(stderr, "%s", vsf_file);
+            RedText(STDERR_FILENO);
+            fprintf(stderr, " - molecule ");
+            YellowText(STDERR_FILENO);
+            fprintf(stderr, "resid %d", i);
+            RedText(STDERR_FILENO);
+            fprintf(stderr, " contains too ");
+            if (atoms_per_mol[i] > mt[j].nBeads) {
+              fprintf(stderr, "many");
+            } else {
+              fprintf(stderr, "few");
+            }
+            fprintf(stderr, "beads (%d instead of %d)\n", atoms_per_mol[i], mt[j].nBeads);
+            ResetColour(STDERR_FILENO);
+            exit(1);
+          }
         }
       }
       if (add) { // found matching molecule type
@@ -2011,6 +2084,27 @@ putchar('\n');
 //PrintMolecule((*Counts).Molecules, *MoleculeType, *Molecule, *BeadType, *Bead);
 //PrintBead2((*Counts).Beads, *Index, *BeadType, *Bead);
 } //}}}
+
+void FullVtfRead(char *vsf_file, char *vcf_file, bool detailed, bool vtf, bool *indexed, int *struct_lines,
+                 VECTOR *BoxLength, COUNTS *Counts,
+                 BEADTYPE **BeadType, BEAD **Bead, int **Index,
+                 MOLECULETYPE **MoleculeType, MOLECULE **Molecule) {
+  // get box size
+  *BoxLength = GetPBC2(vcf_file);
+  // read the whole structure section
+  ReadVtfStructure(vsf_file, true, Counts, BeadType, Bead, Index, MoleculeType, Molecule);
+  // count structure lines if vtf as the coordinate file (-1 otherwise)
+  *struct_lines = CountVtfStructLines(vtf, vcf_file);
+  // determine timestep type & what coordinate file contains from the first timestep
+  FILE *vcf;
+  if ((vcf = fopen(vcf_file, "r")) == NULL) {
+    ErrorFileOpen(vcf_file, 'r');
+    exit(1);
+  }
+  SkipVtfStructure(vtf, vcf, *struct_lines);
+  *indexed = CheckVtfTimestep(vcf, vcf_file, Counts, BeadType, Bead, Index, MoleculeType, Molecule);
+  fclose(vcf);
+}
 
 // ReadStructure() //{{{
 /** Function reading information about beads and molecules from DL_MESO

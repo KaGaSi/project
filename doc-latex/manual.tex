@@ -31,6 +31,8 @@
 \usepackage{etoolbox}
 % used language -- last one is the main language
 \usepackage[czech,english]{babel}
+% commands (such as \textcolor) in verbatim
+\usepackage[strings]{underscore}
 % custom colours
 \usepackage{xcolor}
 % custom headers and footers -- replaces fancyhdr
@@ -143,6 +145,10 @@
 \newcommand{\vtf}{\texttt{vtf} }
 \newcommand{\field}{\texttt{FIELD} }
 \newcommand{\data}{\texttt{data} }
+\newcommand{\ttb}[1]{\textcolor{blue}{\texttt{#1}}}
+
+\newcommand{\note}[1]{\vspace{-1em}\noindent\footnotesize{#1}}
+\newcommand{\TODO}{\colorbox{yellow}{TODO:}}
 
 \begin{document}
 
@@ -183,25 +189,4 @@ Version 3.3 (Released August 18, 2020)
 \include{InputFiles}
 \include{Utilities}
 \include{ReadData}
-
-%textwidth in cm: \printinunitsof{cm}\prntlen{\textwidth}
-
-%\sethead{List of Tables}% even-left
-%        {}% even-center
-%        {}% even-right
-%\listoftables
-%\addcontentsline{toc}{chapter}{List of Tables}
-%
-%\sethead{List of Figures}% even-left
-%        {}% even-center
-%        {}% even-right
-%
-%\begingroup
-%  \renewcommand{\clearpage}{}
-%  \listoffigures
-%
-%  \addcontentsline{toc}{chapter}{List of Figures}
-%\endgroup
-%
-%  \input{abbreviations}
 \end{document}

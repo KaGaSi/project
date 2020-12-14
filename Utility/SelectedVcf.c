@@ -177,9 +177,16 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-  free(input_vsf);
+//// read system information
+//bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+//free(input_vsf);
+
+  VECTOR BoxLength;
+  bool indexed;
+  int struct_lines;
+  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
 
   // <type names> - names of bead types to save //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -254,14 +261,6 @@ int main(int argc, char *argv[]) {
 
   // open input coordinate file //{{{
   FILE *vcf;
-  if ((vcf = fopen(input_coor, "r")) == NULL) {
-    ErrorFileOpen(input_coor, 'r');
-    exit(1);
-  } //}}}
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
-  fclose(vcf);
-
-  // open input coordinate file //{{{
   if ((vcf = fopen(input_coor, "r")) == NULL) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
