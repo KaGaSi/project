@@ -19,6 +19,14 @@ void SkipStructVtf(FILE *vtf, char *name_vtf);
  * \return vector with box dimensions
  */
 VECTOR GetPBC(FILE *vcf, char *input_coor); //}}}
+// GetPBC2() //{{{
+/*
+ * \brief Function to get box dimensions.
+ *
+ * \param [in] input_coor  name of the coordinate file
+ * \return vector with box dimensions
+ */
+VECTOR GetPBC2(char *input_coor); //}}}
 
 // ReadAggCommand() //{{{
 /**
@@ -44,6 +52,10 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
 void ReadVtfStructure(char *vsf_file, bool detailed, COUNTS *Counts,
                       BEADTYPE **BeadType, BEAD **Bead, int **Index,
                       MOLECULETYPE **MoleculeType, MOLECULE **Molecule);
+void FullVtfRead(char *vsf_file, char *vcf_file, bool detailed, bool vtf, bool *indexed, int *struct_lines,
+                 VECTOR *BoxLength, COUNTS *Counts,
+                 BEADTYPE **BeadType, BEAD **Bead, int **Index,
+                 MOLECULETYPE **MoleculeType, MOLECULE **Molecule);
 
 // ReadStructure() //{{{
 /**
