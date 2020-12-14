@@ -17,7 +17,7 @@ The system information can either be split into a \vsf structure file
 (Section~\ref{ssec:StructureVsf}) and a \vcf coordinate file
 (Section~\ref{ssec:CoordinateVcf}), or presented in a single \vtf file
 containing both the structure and coordinate sections; note that when
-individual \vscf files are mentioned in the manual, they can be
+individual \vscf files are mentioned in the manual, they can usually be
 viewed as \vscf sections of the combined \vtf file. The advantage of
 using separate structure and coordinate files is that the same coordinate
 file can be used with different structure files to get different results.
@@ -37,91 +37,128 @@ Chapter~\ref{chap:ReadData} briefly describes how the data are read.
 \subsection{\vsf structure file} \label{ssec:StructureVsf} %{{{
 
 The structure file contains all information about all beads and bonds
-except for their Cartesian coordinates. The first part of a \vsf
-file contains bead definitions. Each line contains the description of a
-single bead and follows these rules:
+except for their Cartesian coordinates in two types of entries. The first
+type of entry, an atom line, contains a bead definition. Each atom line is
+the description of a single bead following these rules:
 
 \begin{itemize}[topsep=0pt,itemsep=0pt]
-  \item the line starts with \tt{atom} (or just \tt{a})
-  \item the second string is a bead index number that starts from 0 and
-    increases with every subsequent line (the last bead definition line
-    therefore shows the total number of beads in the simulation)
-  \item the line contains bead name as \tt{name <char(8)>}
-  \item the first bead definition line may contain the \tt{default} keyword instead
-    of the index number; every bead that is not explicitly written in the
-    bead definition lines is of the default type
-  \item if the bead is in a molecule, the line contains molecule name
-    (\tt{resname <char(8)>}) and molecule id (\tt{resid <int>})
-    that starts from 1
-  \item \tt{mass} and \tt{charge} keywords are read if present;
-    otherwise, bead mass is 1 and bead charge is 0 unless a \tt{FIELD}
-    or \data file is provided
+  \item the line starts with \tt{a[tom]} (i.e., \tt{atom} or just \tt{a})
+  \item the second string is a either a bead index (starting at 0) or the
+    \tt{default} keyword; every bead that is not explicitly written in the
+    bead definition lines is of the \tt{default} type
+  \item the line contains bead name as \tt{n[ame] <char(16)>}
+  \item if the bead is in a molecule, the line contains both molecule name
+    (\tt{res[name] <char(8)>}) and molecule id (\tt{resid <int>}) starting
+    at 1
+  \item \tt{m[ass]}, \tt{charge|q} (i.e., \tt{charge} or \tt{q}), and
+    \tt{r[adius]} keywords are read if present
   \item other keywords are ignored
 \end{itemize}
 
-The types of beads are identified solely by their different name, i.e.,
-should two beads share a name but differ in other characteristics, they
-will be considered as belonging to the same type. The mass and charge of
-each bead type is equal to the value for the corresponding keyword for the
-bead with the highest index.
+The types of beads are generally identified solely by their name, i.e.,
+should two beads share a name but differ in other characteristics (i.e.,
+mass, charge, or radius), they will be considered as belonging to the same
+type. The mass, charge, and radius of each bead type is equal to that for
+the topmost bead with that name in the \vsf file that contains the
+corresponding keyword (if the keyword is not present in any line of the
+given bead type, that characteristic is undefined). However in some cases,
+beads that share a name but differ in their characteristics, are treated as
+different bead types (with \tt{\_<int>} attached to its name); notably,
+\tt{TransformVsf} does this to produce a new \vsf file with these names.
+For example, the lines
+\begin{verbatim}
+atom default name A mass 1 q 0
+a 0 name B mass 2 r 1
+a 2 name B m 1 charge -1
+atom 4 name B
+\end{verbatim}
+would ordinarilly lead to two \tt{A} type beads (both with mass 1, charge
+0, and undefined radius) and three \tt{B} type beads (all with mass 2,
+charge -1 and radius 1). However, \tt{TransformVsf} would split the \tt{B}
+type beads into three distinct types one \tt{B\_1} bead (with mass 2,
+undefined charge, and radius 1), one \tt{B\_2} bead (with mass 1, charge
+-1, and undefined radius), and one \tt{B\_3} bead (with all three
+characteristics undefined).  Note that if the \tt{a 0...} line weren't
+there, the \tt{B} beads would be the same even for \tt{TransformVsf}; i.e.,
+if there's only one value for any characteristic, all beads sharing the
+same name will have that value even if it is not specified on every atom
+line.
 
-The second part of a \vsf file contains bond definitions.  Each
-bond definition line follows these rules:
+The second type of entry is a bond line defining connectivity between
+beads. Each bond line starts with \tt{b[ond]} followed by two bead indexes
+(corresponding to an atom line) separated by a colon. Note that the colon
+must be right after the first index, i.e., no white space between the
+number and the colon is allowed. The double colon or comma separated
+bond entries are not allowed in \tt{AnalysisTools}.
 
-\begin{itemize}[topsep=0pt,itemsep=0pt]
-  \item the line starts with \tt{bond} (or just \tt{b})
-  \item bond between two beads is specified by their indices separated by a
-    colon
-\end{itemize}
+In general, \tt{AnalysistTools} recognizes types of molecules only by their
+names (taking the connectivity and bead order of the first molecule of
+every type); if two molecules share the same \tt{res[name]}, but differ in
+connectivity or number of beads, the utilities will exit with an error.
+Again, the \tt{TransformVsf} utility goes to more detail, distinguishing
+molecule types by all its characteristics. For example, the lines
+\begin{verbatim}
+a 0 A m 1 res Mol resid 1
+a 1 B m 1 res Mol resid 1
+a 2 B res Mol resid 1
+a 3 A res Mol resid 2
+a 4 B res Mol resid 2
+a 5 B m 2 res Mol resid 2
+b 0:1
+b 1:2
+b 3:4
+b 4:5
+b 3:5
+\end{verbatim}
+would ordinarilly lead to two linear \tt{Mol} type molecules, each
+containing one \tt{A} and two \tt{B} beads and connected \tt{A-B-B}.
+However, \tt{TransformVsf} would split the molecules to one linear
+\tt{Mol\_1} type molecule (with one \tt{A} and two \tt{B\_1} beads,
+connected \tt{A-B\_1-B\_1}) and one ring \tt{Mol\_2} type molecule (with
+one \tt{A}, one \tt{B\_1}, and one \tt{B\_2} beads, connected in a
+triangle); \tt{B\_1} bead has mass 1 and \tt{B\_2} bead mass 2.
 
-Blank lines and comments (lines beginning with \tt{\#}) are allowed in
-both parts of the \vsf file.
+The \vsf file can contain any number of blank lines and comments (lines
+beginning with \tt{\#}).
 
-See examples of the \vsf file in the \tt{Examples} directory.
+See complete examples of the \vsf file in the \tt{Examples} directory.
 
 \subsection{\vcf coordinate file} \label{ssec:CoordinateVcf}
 
 The coordinate file contains Cartesian coordinates of the beads and the
-size of the cuboid simulation box.
-Coordinates are read from a \vcf file
-containing either ordered timesteps or
-indexed timesteps.
+size of the cuboid simulation box. Coordinates are read from a \vcf file
+containing either ordered timesteps or indexed timesteps; all timesteps
+must be of the same type and contain the same beads.
 
 An ordered \vcf file must contain all beads defined in the \vsf file, while
 an indexed \vcf file can contain only a subset of defined beads. Both
 indexed and ordered \vcf files contain a line before every timestep
-specifying the file type:
-\begin{verbatim}timestep ordered/indexed\end{verbatim}
-The keyword \tt{timestep} can be omitted.  In
-both ordered and indexed \vcf files, the size of the simulation box is
-given by a line: appearing before the first timestep:
-\begin{verbatim}pbc <float> <float> <float>\end{verbatim}
+specifying the file type, \tt{timestep o[rdered]/i[ndexed]}; the
+\tt{timestep} keyword can be omitted. In both ordered and indexed \vcf
+files, the size of the simulation box is given by a line appearing before
+the first timestep \tt{pbc <float> <float> <float>}.
 
 The \vcf file may contain comment lines (beginning with
 \tt{\#}) and blank lines between timesteps, but the coordinate block
 must be continuous.
 
 The coordinate blocks in an ordered \vcf file contain only Cartesian
-coordinates -- every line has the following format:
-\begin{verbatim}<x> <y> <z>\end{verbatim}
-The beads are written in ascending order of their indices as defined in the
-\vsf file. All beads defined in the \vsf file must be present in the
-ordered \vcf file.
+coordinates -- every line has the \tt{<x> <y> <z>} format The beads are
+written in an ascending order of their indices as defined in the \vsf file.
+All beads defined in the \vsf file must be present in the ordered \vcf
+file.
 
 The coordinate blocks in an indexed \vcf file contain not only Cartesian
-coordinates but also bead indices -- every line has the following format:
-\begin{verbatim}<index> <x> <y> <z>\end{verbatim} An indexed timestep does
-not have to contain all beads defined in the \vsf structure file; however,
-\tt{AnalysisTools} utilities work with whole sets of beads, that is, when
-one bead of a specific type is missing, all beads of that type (or with the
-same name) must be omitted as well. Moreover, the same number of beads must
-be present in each indexed coordinate block. However, the beads do not have
-to be ordered according to their ascending indices.
+coordinates but also bead indices -- every line has the \tt{<index> <x> <y>
+<z>} format. An indexed timestep does not have to contain all beads defined
+in the \vsf structure file; however, \tt{AnalysisTools} utilities work with
+whole sets of beads, that is, when one bead of a specific type is missing,
+all beads of that type (or with the same name) must be omitted as well.
+The beads do not have to be ordered in any specific way. %}}}
 
-The \tt{Examples} directory contains several example \vtf files. %}}}
+\subsection{DL\_MESO \field file} %{{{
 
-\subsection{Complementary \field file} %{{{
-
+\begin{comment}
 This file can be used to get mass and/or charge of bead types (only if
 missing from the \vsf file) as well as bond parameters and angle and angle
 parameters for molecules (these informations are not stored in the \vsf
@@ -196,16 +233,18 @@ strength and equilibrium angle, respectively, of a harmonic oscillator
 Anything between the last angle line and the \tt{finish} keyword is ignored.
 
 Several examples of a \field file can be found in the \tt{Examples}
-directory, e.g., in \tt{Examples/AddToSystem}. %}}}
+directory, e.g., in \tt{Examples/AddToSystem}.
+\end{comment}
+ %}}}
 
-\subsection{Complementary \data file} %{{{
+\subsection{LAMMPS \data file} %{{{
  %}}}
- %}}}
+  %}}}
 
 \section{Aggregate file (\tt{agg})} \label{ssec:AggFile} %{{{
 
-The aggregate file with \tt{agg} extension is generated using
-\tt{Aggregates} (or \tt{Aggregates -NotSameBeads}) utility. The
+A \tt{file.agg} is generated using
+\tt{Aggregates} (or \tt{Aggregates-NotSameBeads}) utility. The
 file contains information about the number of aggregates in each timestep
 and which molecules and monomeric (i.e., unbonded) beads belong to which
 aggregate. It serves as an additional input file for utilities that
