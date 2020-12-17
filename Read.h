@@ -77,7 +77,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
                    BEADTYPE **BeadType, BEAD **Bead, int **Index,
                    MOLECULETYPE **MoleculeType, MOLECULE **Molecule); //}}}
 
-int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char **stuff);
+int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char **stuff, bool quit);
 
 // ReadCoordinates() //{{{
 /**
@@ -93,6 +93,20 @@ int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char *
  */
 void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff); //}}}
 
+// ReadVcfCoordinates() //{{{
+/**
+ * \brief Function reading ordered coordinates from .vcf coordinate file.
+ *
+ * \param [in]  indexed    is the vcf indexed?
+ * \param [in]  input_coor name of input coordinate file
+ * \param [in]  vcf_file   pointer to the open coordinate file
+ * \param [in]  Counts     numbers of beads, molecules, etc.
+ * \param [in]  Index      bead indices between program and vsf (i.e., opposite of Bead[].Index)
+ * \param [out] Bead       coordinates of individual beads
+ * \param [out] stuff      first line of a timestep
+ */
+void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff); //}}}
+
 // SkipCoor() //{{{
 /**
  * \brief Function to skip one timestep in coordinates file.
@@ -103,6 +117,18 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
  * \return 1 if premature end of file or 0 for no error
  */
 bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff); //}}}
+
+// SkipVcfCoor() //{{{
+/**
+ * \brief Function to skip one timestep in coordinates file.
+ *
+ * \param [in]  vcf_file   file with vcf coordinates
+ * \param [in]  input_coor name  of vcf_file
+ * \param [in]  Counts     number of beads in vcf file
+ * \param [out] stuff      first line of a timestep
+ * \return 1 if premature end of file or 0 for no error
+ */
+bool SkipVcfCoor(FILE *vcf_file, char *input_coor, COUNTS Counts, char **stuff); //}}}
 
 // ReadAggregates() //{{{
 /**

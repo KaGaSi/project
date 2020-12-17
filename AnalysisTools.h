@@ -182,6 +182,15 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
  * \param [out] Bead           information about individual beads (coordinates)
  */
 void RestorePBC(COUNTS Counts, VECTOR BoxLength, BEAD **Bead); //}}}
+// RestorePBC2() //{{{
+/**
+ * \brief Function to restore pbc.
+ *
+ * \param [in]  number_of_beads   number of beads in the system
+ * \param [in]  BoxLength         dimension of the simulation box
+ * \param [out] Bead              information about individual beads (coordinates)
+ */
+void RestorePBC2(int number_of_beads, VECTOR BoxLength, BEAD **Bead); //}}}
 
 // CentreOfMass() //{{{
 /**

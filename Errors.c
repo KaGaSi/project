@@ -207,7 +207,11 @@ void WarnElNeutrality(COUNTS Counts, BEADTYPE *BeadType, char *file) {
     CyanText(STDERR_FILENO);
     fprintf(stderr, "%s", file);
     YellowText(STDERR_FILENO);
-    fprintf(stderr, " has net electric charge (q = %lf)!\n\n", charge);
+    fprintf(stderr, " has net electric charge (");
+    CyanText(STDERR_FILENO);
+    fprintf(stderr, "q = %lf", charge);
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, ")!\n\n");
     ResetColour(STDERR_FILENO);
   }
 } //}}}

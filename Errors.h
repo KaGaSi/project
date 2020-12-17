@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include "General.h"
 #include "Structs.h"
+#include "AnalysisTools.h"
 
 // ErrorCoorRead() //{{{
 /**
