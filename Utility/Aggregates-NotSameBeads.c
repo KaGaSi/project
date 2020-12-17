@@ -252,9 +252,6 @@ void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, double sqdist,
     }
   } //}}}
 
-  // sort aggregates according to ascending ids of first molecules
-  SortAggStruct(Aggregate, *Counts, *Molecule, MoleculeType, Bead, BeadType);
-
   // assign aggregate id to every bonded bead in the aggregate //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
     for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
@@ -386,6 +383,9 @@ void CalculateAggregates(AGGREGATE **Aggregate, COUNTS *Counts, double sqdist,
     SortArray(&(*Aggregate)[i].Monomer, (*Aggregate)[i].nMonomers, 0);
   } //}}}
 
+  // sort aggregates according to ascending ids of first molecules
+  SortAggStruct(Aggregate, *Counts, *Molecule, MoleculeType, Bead, BeadType);
+
   // free memory //{{{
   free(Head);
   free(Link);
@@ -428,7 +428,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
         strcmp(argv[i], "-xm") != 0 &&
@@ -442,10 +441,10 @@ int main(int argc, char *argv[]) {
 
   count = 0; // count mandatory arguments
 
-  // <input> - filename of input coordinate file //{{{
+  // <input> - input coordinate file //{{{
   char input_coor[LINE];
-  strcpy(input_coor, argv[++count]);
   char *input_vsf = calloc(LINE,sizeof(char));
+  strcpy(input_coor, argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -473,11 +472,11 @@ int main(int argc, char *argv[]) {
 
   // <output.agg> - filename of output agg file (must end with .agg) //{{{
   char output_agg[LINE];
-  char extension[2][5];
   strcpy(output_agg, argv[++count]);
 
   // test if <output.agg> ends with '.agg'
   int ext = 1;
+  char extension[2][5];
   strcpy(extension[0], ".agg");
   if (ErrorExtension(output_agg, ext, extension)) {
     Help(argv[0], true);
@@ -519,11 +518,14 @@ int main(int argc, char *argv[]) {
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-  // vsf file is not needed anymore
-  free(input_vsf);
+  // read information from vtf file(s) //{{{
+  VECTOR BoxLength;
+  bool indexed;
+  int struct_lines;
+  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
+  free(input_vsf); //}}}
 
   // <type names> - names of bead types to use for closeness calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -586,18 +588,11 @@ int main(int argc, char *argv[]) {
   if ((vcf = fopen(input_coor, "r")) == NULL) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
-  } //}}}
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
-  fclose(vcf);
-
-  // open input coordinate file //{{{
-  if ((vcf = fopen(input_coor, "r")) == NULL) {
-    ErrorFileOpen(input_coor, 'r');
-    exit(1);
-  } //}}}
+  }
+  // skip structure part of a vtf
   if (vtf) {
     SkipStructVtf(vcf, input_coor);
-  }
+  } //}}}
 
   // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {
@@ -646,7 +641,7 @@ int main(int argc, char *argv[]) {
   if (verbose) {
     VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
 
-    fprintf(stdout, "\n   Distance for closeness check: %lf\n", distance);
+    fprintf(stdout, "   Distance for closeness check: %lf\n", distance);
     fprintf(stdout, "   Number of needed contacts for aggregate check: %d\n", contacts);
     if (xm) {
       fprintf(stdout, "   Ignore molecules close to:");
@@ -662,11 +657,9 @@ int main(int argc, char *argv[]) {
   // main loop //{{{
   count = 0; // count timesteps
   while (true) {
-
     count++;
-
     // print step? //{{{
-    if (!silent && !script) {
+    if (!silent && isatty(STDOUT_FILENO)) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count);
     } //}}}
@@ -675,9 +668,9 @@ int main(int argc, char *argv[]) {
       xm_use_mol[i] = true;
     }
 
-    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
-    RestorePBC(Counts, BoxLength, &Bead);
+    RestorePBC2(Counts.Beads, BoxLength, &Bead);
 
     CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, xm_mols, &xm_use_mol, BoxLength, BeadType, &Bead, MoleculeType, &Molecule);
 
@@ -731,22 +724,19 @@ int main(int argc, char *argv[]) {
     WriteAggregates(count, output_agg, Counts, MoleculeType, Bead, Aggregate);
 
     // if there's no additional timestep, exit the while loop
-    bool test; // not used
-    if (ReadTimestepPreamble(&test, input_coor, vcf, &stuff) == -1) {
+    bool rubbish; // not used
+    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
       break;
     }
   }
-
   fclose(vcf);
 
   if (!silent) {
-    if (script) {
-      fprintf(stdout, "Last Step: %d\n", count);
-    } else {
+    if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
-      fprintf(stdout, "\r                       ");
-      fprintf(stdout, "\rLast Step: %d\n", count);
+      fprintf(stdout, "\r                       \r");
     }
+    fprintf(stdout, "Last Step: %d\n", count);
   } //}}}
 
   // print last step number to <output.agg> //{{{
@@ -768,7 +758,7 @@ int main(int argc, char *argv[]) {
   FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
+  FreeBead2(Counts.Beads, &Bead);
   free(stuff);
   //}}}
 

@@ -741,7 +741,39 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
  */
 void RestorePBC(COUNTS Counts, VECTOR BoxLength, BEAD **Bead) {
 
-  for (int i = 0; i < (Counts.Unbonded+Counts.Bonded); i++) {
+  for (int i = 0; i < Counts.Beads; i++) {
+    // x direction
+    while ((*Bead)[i].Position.x >= BoxLength.x) {
+      (*Bead)[i].Position.x -= BoxLength.x;
+    }
+    while ((*Bead)[i].Position.x < 0) {
+      (*Bead)[i].Position.x += BoxLength.x;
+    }
+    // y direction
+    while ((*Bead)[i].Position.y >= BoxLength.y) {
+      (*Bead)[i].Position.y -= BoxLength.y;
+    }
+    while ((*Bead)[i].Position.y < 0) {
+      (*Bead)[i].Position.y += BoxLength.y;
+    }
+    // z direction
+    while ((*Bead)[i].Position.z >= BoxLength.z) {
+      (*Bead)[i].Position.z -= BoxLength.z;
+    }
+    while ((*Bead)[i].Position.z < 0) {
+      (*Bead)[i].Position.z += BoxLength.z;
+    }
+  }
+} //}}}
+
+// RestorePBC2() //{{{
+/**
+ * Function to restore removed periodic boundary conditions. Used also in case
+ * of cell linked lists, because they need coordinates <0, BoxLength>.
+ */
+void RestorePBC2(int number_of_beads, VECTOR BoxLength, BEAD **Bead) {
+
+  for (int i = 0; i < number_of_beads; i++) {
     // x direction
     while ((*Bead)[i].Position.x >= BoxLength.x) {
       (*Bead)[i].Position.x -= BoxLength.x;
@@ -1184,9 +1216,7 @@ void FreeBead(COUNTS Counts, BEAD **Bead) {
  */
 void FreeBead2(int number_of_beads, BEAD **Bead) {
   for (int i = 0; i < number_of_beads; i++) {
-    if ((*Bead)[i].nAggregates > 0) {
-      free((*Bead)[i].Aggregate);
-    }
+    free((*Bead)[i].Aggregate);
   }
   free(*Bead);
 } //}}}

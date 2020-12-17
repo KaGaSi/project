@@ -682,7 +682,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
   bool indexed; // is the timestep indexed? ...returned by this function
   // skip timestep preamble, determining if timesteps are ordered/indexed //{{{
   char *stuff = calloc(LINE, sizeof(char));
-  int lines = ReadTimestepPreamble(&indexed, vcf_file, vcf, &stuff); // number of preamble lines
+  int lines = ReadTimestepPreamble(&indexed, vcf_file, vcf, &stuff, true); // number of preamble lines
   for (int i = 0; i < lines; i++) {
     char line[100];
     fgets(line, sizeof line, vcf);
@@ -2092,7 +2092,7 @@ void FullVtfRead(char *vsf_file, char *vcf_file, bool detailed, bool vtf, bool *
   // get box size
   *BoxLength = GetPBC2(vcf_file);
   // read the whole structure section
-  ReadVtfStructure(vsf_file, true, Counts, BeadType, Bead, Index, MoleculeType, Molecule);
+  ReadVtfStructure(vsf_file, detailed, Counts, BeadType, Bead, Index, MoleculeType, Molecule);
   // count structure lines if vtf as the coordinate file (-1 otherwise)
   *struct_lines = CountVtfStructLines(vtf, vcf_file);
   // determine timestep type & what coordinate file contains from the first timestep
@@ -2104,6 +2104,14 @@ void FullVtfRead(char *vsf_file, char *vcf_file, bool detailed, bool vtf, bool *
   SkipVtfStructure(vtf, vcf, *struct_lines);
   *indexed = CheckVtfTimestep(vcf, vcf_file, Counts, BeadType, Bead, Index, MoleculeType, Molecule);
   fclose(vcf);
+
+  // check electroneutrality
+  WarnElNeutrality(*Counts, *BeadType, vsf_file);
+
+  // allocate memory for aggregates
+  for (int i = 0; i < (*Counts).Beads; i++) {
+    (*Bead)[i].Aggregate = calloc(1, sizeof(int));
+  }
 }
 
 // ReadStructure() //{{{
@@ -3102,7 +3110,7 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
 
 // ReadTimestepPreamble() //{{{
 // TODO: add proper checking for the first coor line via CheckVtfCoordinateLine()
-int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char **stuff) {
+int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char **stuff, bool quit) {
   // save pointer position in vcf_file
   fpos_t position;
   fgetpos(vcf_file, &position);
@@ -3126,8 +3134,8 @@ int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char *
       sprintf(temp, "%s%s", *stuff, line2);
       strcpy(*stuff, temp);
     // error if not timestep or pbc line, blank line, or a double (i.e., start of the coordinate lines)
-    } else if (split[0][0] != 't' && split[0][0] != 'i' && split[0][0] != 'o' &&
-               words != 0 && strcasecmp(split[0], "pbc") != 0 && !IsDouble(split[0])) {
+    } else if (quit && (split[0][0] != 't' && split[0][0] != 'i' && split[0][0] != 'o' &&
+               words != 0 && strcasecmp(split[0], "pbc") != 0 && !IsDouble(split[0]))) {
       fprintf(stderr, "\033[1;31m");
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
@@ -3153,8 +3161,7 @@ int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char *
   } while (words == 0 || !IsDouble(split[0]));
   count_lines--; // the last counted line contained the first coordinate line
   // error - missing timestep line //{{{
-  if (!timestep) {
-    fprintf(stderr, "\033[1;31m");
+  if (quit && !timestep) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
     YellowText(STDERR_FILENO);
@@ -3177,7 +3184,96 @@ int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char *
  */
 void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
   bool test_indexed; // to test if the present timestep type is the same as detected by ReadStructure()
-  int count_lines = ReadTimestepPreamble(&test_indexed, input_coor, vcf_file, stuff);
+  int count_lines = ReadTimestepPreamble(&test_indexed, input_coor, vcf_file, stuff, true);
+  // error - wrong type of step (indexed vs. ordered) //{{{
+  if (test_indexed != indexed) {
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nError: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%s", input_coor);
+    RedText(STDERR_FILENO);
+    if (test_indexed) {
+      fprintf(stderr, " - indexed timestep instead of an ordered one\n");
+    } else {
+      fprintf(stderr, " - ordered timestep instead of an indexed one\n");
+    }
+    ResetColour(STDERR_FILENO);
+    exit(1);
+  } //}}}
+  // skip the preamble lines //{{{
+  for (int i = 0; i < count_lines; i++) {
+    char line[LINE];
+    fgets(line, sizeof(line), vcf_file);
+  } //}}}
+  if (indexed) { // indexed timestep //{{{
+    for (int i = 0; i < Counts.Beads; i++) {
+      char line[LINE], split[30][100];
+      fgets(line, sizeof(line), vcf_file);
+      // error - end of file
+      if (feof(vcf_file)) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", input_coor);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - unexpected end of file\n");
+        fprintf(stderr, "       possibly fewer beads in a timestep than in the first timestep\n");
+        ResetColour(STDERR_FILENO);
+        exit(1);
+      }
+      int words = SplitLine(split, line, " \t");
+      // error - coordinate line must be <int> <double> <double> <double>
+      if (words < 4 || !IsInteger(split[0]) || !IsDouble(split[1]) ||
+          !IsDouble(split[2]) || !IsDouble(split[3])) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", input_coor);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - cannot read a coordinate line\n");
+        ResetColour(STDERR_FILENO);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      int index = atoi(split[0]);
+      // bead coordinates
+      (*Bead)[Index[index]].Position.x = atof(split[1]);
+      (*Bead)[Index[index]].Position.y = atof(split[2]);
+      (*Bead)[Index[index]].Position.z = atof(split[3]);
+    } //}}}
+  } else { // ordered timestep //{{{
+    for (int i = 0; i < Counts.Beads; i++) {
+      char line[LINE], split[30][100];
+      fgets(line, sizeof(line), vcf_file);
+      int words = SplitLine(split, line, " \t");
+      // error - coordinate line must be <double> <double> <double>
+      if (words < 3 || !IsDouble(split[0]) ||
+          !IsDouble(split[1]) || !IsDouble(split[2])) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", input_coor);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - cannot read coordinates\n");
+        ResetColour(STDERR_FILENO);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+      // bead coordinates
+      (*Bead)[i].Position.x = atof(split[0]);
+      (*Bead)[i].Position.y = atof(split[1]);
+      (*Bead)[i].Position.z = atof(split[2]);
+    }
+  } //}}}
+} //}}}
+
+// ReadVcfCoordinates() //{{{
+/**
+ * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
+ */
+void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
+  bool test_indexed; // to test if the present timestep type is the same as detected by ReadStructure()
+  int count_lines = ReadTimestepPreamble(&test_indexed, input_coor, vcf_file, stuff, true);
   // error - wrong type of step (indexed vs. ordered) //{{{
   if (test_indexed != indexed) {
     RedText(STDERR_FILENO);
@@ -3292,6 +3388,61 @@ bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff) {
 
   // return file pointer to before the first coordinate line
   fsetpos(vcf_file, &position); //}}}
+  for (int i = 0; i < Counts.Beads; i++) {
+    int test;
+    while ((test = getc(vcf_file)) != '\n' && test != EOF)
+      ;
+    // premature end of file
+    if (test == EOF) {
+      error = true;
+      break;
+    }
+  }
+  if (!error) {
+    getc(vcf_file);
+  }
+  return error;
+} //}}}
+
+// SkipVcfCoor() //{{{
+/**
+ * Function to skip one timestep in coordinates file. It works with both
+ * indexed and ordered vcf files.
+ */
+bool SkipVcfCoor(FILE *vcf_file, char *input_coor, COUNTS Counts, char **stuff) {
+
+  bool error = false;
+//// initial stuff //{{{
+//(*stuff)[0] = '\0'; // no comment line
+//char line[LINE];
+//fpos_t position;
+//do {
+//  fgetpos(vcf_file, &position); // save pointer position
+//  fgets(line, sizeof(line), vcf_file);
+
+//  while (line[0] == '\t' || line[0] == ' ') {
+//    int i;
+//    for (i = 1; line[i] != '\n'; i++) {
+//      line[i-1] = line[i];
+//    }
+//    line[i-1] = '\n';
+//    line[i] = '\0';
+//  }
+
+//  if (line[0] == '#') {
+//    strcat(*stuff, line);
+//  }
+//} while (line[0] < '0' || line[0] > '9');
+
+//// return file pointer to before the first coordinate line
+//fsetpos(vcf_file, &position); //}}}
+  bool rubbish; // testing timestep type - not used here
+  int count_lines = ReadTimestepPreamble(&rubbish, input_coor, vcf_file, stuff, false);
+  // skip the preamble lines //{{{
+  for (int i = 0; i < count_lines; i++) {
+    char line[LINE];
+    fgets(line, sizeof(line), vcf_file);
+  } //}}}
   for (int i = 0; i < Counts.Beads; i++) {
     int test;
     while ((test = getc(vcf_file)) != '\n' && test != EOF)

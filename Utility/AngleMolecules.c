@@ -40,7 +40,6 @@ int main(int argc, char *argv[]) {
       exit(0);
     }
   }
-
   int req_args = 2; //}}}
 
   // check if correct number of arguments //{{{
@@ -78,25 +77,15 @@ int main(int argc, char *argv[]) {
 
   count = 0; // count mandatory arguments
 
-  // <input> - filename of input vcf file (must end with .vcf) //{{{
+  // <input> - input coordinate file //{{{
   char input_coor[LINE];
+  char *input_vsf = calloc(LINE,sizeof(char));
   strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
+  // test that <input> filename ends with '.vcf' or '.vtf'
+  bool vtf;
+  if (!InputCoor(&vtf, input_coor, input_vsf)) {
     Help(argv[0], true);
     exit(1);
-  }
-  // if vtf, copy to input_vsf
-  char *input_vsf = calloc(LINE,sizeof(char));
-  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
-    strcpy(input_vsf, input_coor);
-  } else {
-    strcpy(input_vsf, "traject.vsf");
   } //}}}
 
   // <width> - number of starting timestep //{{{
@@ -138,9 +127,25 @@ int main(int argc, char *argv[]) {
 
   // error if ending step is lower than starging step //{{{
   if (end != -1 && start > end) {
-    fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
-    fprintf(stderr, "\033[0m");
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nErorr: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "-st");
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " and ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "-e");
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " - starting step (");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%d", start);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, ") is higher than ending step (");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%d", end);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, ")\n");
+    ResetColour(STDERR_FILENO);
     exit(1);
   } //}}}
   //}}}
@@ -158,11 +163,14 @@ int main(int argc, char *argv[]) {
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
-  // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-  // vsf file is not needed anymore
-  free(input_vsf);
+  // read information from vtf file(s) //{{{
+  VECTOR BoxLength;
+  bool indexed;
+  int struct_lines;
+  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
+  free(input_vsf); //}}}
 
   // <molecule names> - types of molecules for calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
@@ -231,11 +239,9 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    // print command to output file //{{{
+    // print command to output file
     putc('#', out);
-    for (int i = 0; i < argc; i++)
-      fprintf(out, " %s", argv[i]);
-    putc('\n', out); //}}}
+    PrintCommand(out, argc, argv);
 
     // print molecule names & bead ids //{{{
     fprintf(out, "# angles between beads:");
@@ -265,9 +271,11 @@ int main(int argc, char *argv[]) {
   if ((vcf = fopen(input_coor, "r")) == NULL) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
+  }
+  // skip structure part of a vtf
+  if (vtf) {
+    SkipStructVtf(vcf, input_coor);
   } //}}}
-
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));
@@ -298,56 +306,51 @@ int main(int argc, char *argv[]) {
   count = 0;
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
-
     count++;
-
     // print step? //{{{
-    if (!silent && !script) {
+    if (!silent && isatty(STDOUT_FILENO)) {
       fflush(stdout);
       fprintf(stdout, "\rDiscarding step: %d", count);
     } //}}}
-
-    if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
-      fprintf(stderr, "\033[0m");
+    if (SkipVcfCoor(vcf, input_coor, Counts, &stuff)) {
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: premature end of ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", input_coor);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " file\n\n");
+      ResetColour(STDERR_FILENO);
       exit(1);
     }
   }
   // print starting step? //{{{
   if (!silent) {
-    if (script) {
-      fprintf(stdout, "Starting step: %d\n", start);
-    } else {
+    if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
-      fprintf(stdout, "\r                          ");
-      fprintf(stdout, "\rStarting step: %d\n", start);
+      fprintf(stdout, "\r                          \r");
     }
+    fprintf(stdout, "Starting step: %d\n", start);
   } //}}}
   // is the vcf file continuing?
   if (ErrorDiscard(start, count, input_coor, vcf)) {
     exit(1);
-  }
-  //}}}
+  } //}}}
 
   // main loop //{{{
-  count = 0; // count calculated timesteps
-  int count_vcf = start - 1;
-  while ((test = getc(vcf)) != EOF) {
-    ungetc(test, vcf);
-
-    count++;
+  int count_step = 0; // count calculated timesteps
+  int count_vcf = start - 1; // count timesteps from the beginning
+  while (true) {
+    count_step++;
     count_vcf++;
-
     // print step? //{{{
-    if (!silent && !script) {
+    if (!silent && isatty(STDOUT_FILENO)) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
-    // join molecules if un-joined coordinates provided //{{{
+    // read coordinates & join molecules //{{{
+    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+    // join molecules if un-joined coordinates provided
     if (!joined) {
       RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
@@ -412,19 +415,24 @@ int main(int argc, char *argv[]) {
       fclose(out);
     } //}}}
 
-    if (end == count_vcf)
+    // -e option - exit main loop if last step is done
+    if (end == count_vcf) {
       break;
+    }
+    // if there's no additional timestep, exit the while loop
+    bool rubbish; // not used
+    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+      break;
+    }
   }
   fclose(vcf);
 
   if (!silent) {
-    if (script) {
-      fprintf(stdout, "Last Step: %d\n", count_vcf);
-    } else {
+    if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
-      fprintf(stdout, "\r                          ");
-      fprintf(stdout, "\rLast Step: %d\n", count_vcf);
+      fprintf(stdout, "\r                          \r");
     }
+    fprintf(stdout, "Last Step: %d\n", count_vcf);
   } //}}}
 
   // write distribution of angles //{{{
@@ -435,11 +443,9 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // print command to output file //{{{
+  // print command to output file
   putc('#', out);
-  for (int i = 0; i < argc; i++)
-    fprintf(out, " %s", argv[i]);
-  putc('\n', out); //}}}
+  PrintCommand(out, argc, argv);
 
   // print molecule names & bead ids //{{{
   fprintf(out, "# angles between beads:");
@@ -448,15 +454,15 @@ int main(int argc, char *argv[]) {
   }
   putc('\n', out);
   fprintf(out, "# columns: (1) angle [deg];");
-  count = 2;
+  int j = 2;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       if ((number_of_beads/beads_per_angle) == 1) {
-        fprintf(out, " (%d) %s molecules;", count, MoleculeType[i].Name);
+        fprintf(out, " (%d) %s molecules;", j, MoleculeType[i].Name);
       } else {
-        fprintf(out, " (%d) to (%d) %s molecules;", count, count+number_of_beads/beads_per_angle-1, MoleculeType[i].Name);
+        fprintf(out, " (%d) to (%d) %s molecules;", j, j+number_of_beads/beads_per_angle-1, MoleculeType[i].Name);
       }
-      count += number_of_beads / beads_per_angle;
+      j += number_of_beads / beads_per_angle;
     }
   }
   putc('\n', out); //}}}
@@ -469,7 +475,7 @@ int main(int argc, char *argv[]) {
       if (MoleculeType[j].Use) {
 
         for (int k = 0; k < (number_of_beads/beads_per_angle); k++) {
-          fprintf(out, "%10f", (double)(distr[j][k][i])/(count*MoleculeType[j].Number));
+          fprintf(out, "%10f", (double)(distr[j][k][i])/(count_step*MoleculeType[j].Number));
         }
       }
     }
@@ -478,22 +484,22 @@ int main(int argc, char *argv[]) {
 
   // write to output average angles //{{{
   fprintf(out, "# simple averages:");
-  count = 1;
+  j = 1;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       if ((number_of_beads/beads_per_angle) == 1) {
-        fprintf(out, " (%d) %s molecules;", count, MoleculeType[i].Name);
+        fprintf(out, " (%d) %s molecules;", j, MoleculeType[i].Name);
       } else {
-        fprintf(out, " (%d) to (%d) %s molecules;", count, count+number_of_beads/beads_per_angle-1, MoleculeType[i].Name);
+        fprintf(out, " (%d) to (%d) %s molecules;", j, j+number_of_beads/beads_per_angle-1, MoleculeType[i].Name);
       }
-      count += number_of_beads / beads_per_angle;
+      j += number_of_beads / beads_per_angle;
     }
   }
   fprintf(out, "\n#");
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       for (int j = 0; j < (number_of_beads/beads_per_angle); j++) {
-        fprintf(out, " %7.3f", avg_angle[i][j]/(count*MoleculeType[i].Number));
+        fprintf(out, " %7.3f", avg_angle[i][j]/(count_step*MoleculeType[i].Number));
       }
     }
   }
@@ -507,7 +513,7 @@ int main(int argc, char *argv[]) {
   free(Index);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
+  FreeBead2(Counts.Beads, &Bead);
   free(stuff);
   free(output);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
