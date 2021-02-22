@@ -245,4 +245,15 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
  */
 bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
                          COUNTS Counts, MOLECULETYPE **MoleculeType); //}}}
+
+// StartEndTime() //{{{
+/**
+ * \brief Options for starting and ending timesteps.
+ *
+ * \param [in]  argc   number of program's arguments
+ * \param [in]  argv   program's arguments
+ * \param [in]  start  starting timestep
+ * \param [in]  end    ending timestep
+ */
+void StartEndTime(int argc, char **argv, int *start, int *end); //}}}
 #endif

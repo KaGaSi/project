@@ -120,4 +120,13 @@ void ErrorPrintLine(char split[30][100], int words); //}}}
  * \param [in] file      file name containing the system data
  */
 void WarnElNeutrality(COUNTS Counts, BEADTYPE *BeadType, char *file); //}}}
+
+// ErrorStartEnd() //{{{
+/**
+ * \brief Error when ending timestep is higher than the starting one
+ *
+ * \param [in] start   starting timestep
+ * \param [in] end     ending timestep
+ */
+void ErrorStartEnd(int start, int end); //}}}
 #endif

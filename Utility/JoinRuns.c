@@ -343,7 +343,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rDiscarded from 1st run: %d", count);
     }
 
-    SkipCoor(vcf_1, Counts, &stuff);
+    SkipVcfCoor(vcf_1, input_coor_1, Counts, &stuff);
   }
 
   if (!silent) {
@@ -490,7 +490,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rDiscarded from 2nd run: %d", count);
     }
 
-    SkipCoor(vcf_2, Counts, &stuff);
+    SkipVcfCoor(vcf_2, input_coor_2, Counts, &stuff);
   }
 
   if (!silent) {
@@ -578,16 +578,8 @@ int main(int argc, char *argv[]) {
   //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType1);
-  free(BeadType2);
-  free(Index1);
-  free(Index2);
-  FreeMoleculeType(Counts, &MoleculeType1);
-  FreeMoleculeType(Counts, &MoleculeType2);
-  FreeMolecule(Counts, &Molecule1);
-  FreeMolecule(Counts, &Molecule2);
-  FreeBead(Counts, &Bead1);
-  FreeBead(Counts, &Bead2);
+  FreeSystemInfo(Counts, &MoleculeType1, &Molecule1, &BeadType1, &Bead1, &Index1);
+  FreeSystemInfo(Counts, &MoleculeType2, &Molecule2, &BeadType2, &Bead2, &Index2);
   free(stuff);
   //}}}
 

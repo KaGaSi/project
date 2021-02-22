@@ -62,6 +62,21 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count arguments
+
+  // <input> - input structure file (must end with .vsf or .vtf) //{{{
+  char *input_vsf = calloc(LINE,sizeof(char));
+  strcpy(input_vsf, argv[++count]);
+  // test if <input> filename ends with '.vsf' or '.vtf' (required by VMD)
+  int ext = 2;
+  char extension[2][5];
+  strcpy(extension[0], ".vsf");
+  strcpy(extension[1], ".vtf");
+  if (ErrorExtension(input_vsf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
   // print command to stdout
   PrintCommand(stdout, argc, argv);
 
@@ -69,68 +84,38 @@ int main(int argc, char *argv[]) {
   // -c option - use a coordinate file //{{{
   char *input_coor = calloc(LINE,sizeof(char));
   if (FileOption(argc, argv, "-c", &input_coor)) {
-    exit(EXIT_FAILURE);
+    exit(1);
   }
-
-  // test if coordante file ends with '.vcf' or '.vtf'
-  int ext;
-  char extension[2][5];
+  bool vtf = false;
+  strcpy(extension[0], ".vcf");
+  strcpy(extension[1], ".vtf");
   if (input_coor[0] != '\0') {
-    ext = 2;
-    strcpy(extension[0], ".vcf");
-    strcpy(extension[1], ".vtf");
-    if (ErrorExtension(input_coor, ext, extension)) {
+    int test;
+    if ((test=ErrorExtension(input_coor, ext, extension)) == -1) {
       Help(argv[0], true);
-      exit(EXIT_FAILURE);
+      exit(1);
+    } else if (test == 1) {
+      test = true;
     }
   } //}}}
 
-  // output verbosity //{{{
-  bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  // }}}
+  bool verbose = BoolOption(argc, argv, "-v"); // verbose output?
   //}}}
 
-  count = 0; // count arguments
-
-  // <input> - input structure file (must end with .vsf or .vtf) //{{{
-  char input[LINE];
-  strcpy(input, argv[++count]);
-
-  // test if <input> filename ends with '.vsf' or '.vtf' (required by VMD)
-  ext = 2;
-  strcpy(extension[0], ".vsf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input, ext, extension)) {
-    Help(argv[0], true);
-    exit(EXIT_FAILURE);
-  } //}}}
-
-  // variables - structures //{{{
+  // read information from vtf file(s) //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
-
-  // read system information
-  ReadStructure(input, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-  // get box dimensions if -c is used //{{{
-  VECTOR BoxLength = {-1, -1, -1};
-  if (input_coor[0] != '\0') {
-    // open input coordinate file
-    FILE *vcf;
-    if ((vcf = fopen(input_coor, "r")) == NULL) {
-      ErrorFileOpen(input_coor, 'r');
-      exit(EXIT_FAILURE);
-    }
-
-    BoxLength = GetPBC(vcf, input_coor);
-
-    fclose(vcf);
-  }
-  free(input_coor); //}}}
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength = {-1, -1, -1}; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
+  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
+  free(input_vsf); //}}}
 
   // print information /{{{
   VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule); //}}}
@@ -143,11 +128,8 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  free(Index);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead); //}}}
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
+  free(input_coor); //}}}
 
   return 0;
 }

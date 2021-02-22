@@ -100,17 +100,17 @@ void PrintBeadType2(int number, BEADTYPE *BeadType) {
     if (BeadType[i].Radius != RADIUS) {
       fprintf(stdout, ".Radius =%9.5f, ", BeadType[i].Radius);
     } else {
-      fprintf(stdout, ".Radius = N/A     , ");
+      fprintf(stdout, ".Radius =      N/A, ");
     }
     if (BeadType[i].Charge != CHARGE) {
       fprintf(stdout, ".Charge =%9.5f, ", BeadType[i].Charge);
     } else {
-      fprintf(stdout, ".Charge = N/A     , ");
+      fprintf(stdout, ".Charge =      N/A, ");
     }
     if (BeadType[i].Mass != MASS) {
       fprintf(stdout, ".Mass = %.5f", BeadType[i].Mass);
     } else {
-      fprintf(stdout, ".Mass = N/A    ");
+      fprintf(stdout, ".Mass =     N/A");
     }
     fprintf(stdout, "}\n");
 //  fprintf(stdout, "Use = %3s, ", BeadType[i].Use? "Yes":"No");
@@ -388,10 +388,32 @@ void PrintBondTypes(COUNTS Counts, PARAMS *bond_type) {
   putc('\n', stdout);
 } //}}}
 
+// PrintBondTypes2() //{{{
+void PrintBondTypes2(int number_of_bonds, PARAMS *bond_type) {
+  for (int i = 0; i < number_of_bonds; i++) {
+    fprintf(stdout, "BondType[%d] = {", i);
+    fprintf(stdout, ".k = %9.5f, ", bond_type[i].a);
+    fprintf(stdout, ".r_0 = %9.5f", bond_type[i].b);
+    fprintf(stdout, "}\n");
+  }
+  putc('\n', stdout);
+} //}}}
+
 // PrintAngleTypes() //{{{
 void PrintAngleTypes(COUNTS Counts, PARAMS *angle_type) {
   for (int i = 0; i < Counts.TypesOfAngles; i++) {
     fprintf(stdout, "angle %2d: k = %lf, r_0 = %lf\n", i+1, angle_type[i].a, angle_type[i].b);
+  }
+  putc('\n', stdout);
+} //}}}
+
+// PrintAngleTypes2() //{{{
+void PrintAngleTypes2(int number_of_angles, PARAMS *angle_type) {
+  for (int i = 0; i < number_of_angles; i++) {
+    fprintf(stdout, "AngleType[%d] = {", i);
+    fprintf(stdout, ".k = %9.5f, ", angle_type[i].a);
+    fprintf(stdout, ".theta_0 = %9.5f", angle_type[i].b);
+    fprintf(stdout, "}\n");
   }
   putc('\n', stdout);
 } //}}}
@@ -452,6 +474,31 @@ int FindMoleculeType2(char *name, int number_of_types, MOLECULETYPE *MoleculeTyp
   }
   // name isn't in MoleculeType struct
   return(-1);
+} //}}}
+
+// FillMolBTypes //{{{
+/*
+ * Function to fill MoleculeType[].BType array based on MoleculeType[].Bead array.
+ */
+void FillMolBTypes(int number_of_types, MOLECULETYPE **MoleculeType) {
+  for (int i = 0; i < number_of_types; i++) {
+    (*MoleculeType)[i].nBTypes = 0;
+    (*MoleculeType)[i].BType = calloc(1, sizeof(int));
+    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
+      bool new = true;
+      for (int k = 0; k < (*MoleculeType)[i].nBTypes; k++) {
+        if ((*MoleculeType)[i].Bead[j] == (*MoleculeType)[i].BType[k]) {
+          new = false;
+          break;
+        }
+      }
+      if (new) {
+        int type = (*MoleculeType)[i].nBTypes++;
+        (*MoleculeType)[i].BType = realloc((*MoleculeType)[i].BType, (*MoleculeType)[i].nBTypes*sizeof(int));
+        (*MoleculeType)[i].BType[type] = (*MoleculeType)[i].Bead[j];
+      }
+    }
+  }
 } //}}}
 
 // Distance() //{{{
@@ -1202,19 +1249,7 @@ void SortAngles(int **angle, int length) {
  * Free memory allocated for Bead struct array. This function makes it
  * easier to add other arrays to the Bead struct in the future
  */
-void FreeBead(COUNTS Counts, BEAD **Bead) {
-  for (int i = 0; i < Counts.BeadsInVsf; i++) {
-    free((*Bead)[i].Aggregate);
-  }
-  free(*Bead);
-} //}}}
-
-// FreeBead2() //{{{
-/**
- * Free memory allocated for Bead struct array. This function makes it
- * easier to add other arrays to the Bead struct in the future
- */
-void FreeBead2(int number_of_beads, BEAD **Bead) {
+void FreeBead(int number_of_beads, BEAD **Bead) {
   for (int i = 0; i < number_of_beads; i++) {
     free((*Bead)[i].Aggregate);
   }
@@ -1226,19 +1261,7 @@ void FreeBead2(int number_of_beads, BEAD **Bead) {
  * Free memory allocated for Molecule struct array. This function makes it
  * easier other arrays to the Molecule struct in the future
  */
-void FreeMolecule(COUNTS Counts, MOLECULE **Molecule) {
-  for (int i = 0; i < Counts.Molecules; i++) {
-    free((*Molecule)[i].Bead);
-  }
-  free(*Molecule);
-} //}}}
-
-// FreeMolecule2() //{{{
-/**
- * Free memory allocated for Molecule struct array. This function makes it
- * easier other arrays to the Molecule struct in the future
- */
-void FreeMolecule2(int number_of_molecules, MOLECULE **Molecule) {
+void FreeMolecule(int number_of_molecules, MOLECULE **Molecule) {
   for (int i = 0; i < number_of_molecules; i++) {
     free((*Molecule)[i].Bead);
   }
@@ -1250,25 +1273,7 @@ void FreeMolecule2(int number_of_molecules, MOLECULE **Molecule) {
  * Free memory allocated for MoleculeType struct array. This function makes
  * it easier other arrays to the MoleculeType struct in the future
  */
-void FreeMoleculeType(COUNTS Counts, MOLECULETYPE **MoleculeType) {
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
-      free((*MoleculeType)[i].Bond[j]);
-    }
-    free((*MoleculeType)[i].Bead);
-    free((*MoleculeType)[i].Bond);
-    free((*MoleculeType)[i].Angle);
-    free((*MoleculeType)[i].BType);
-  }
-  free(*MoleculeType);
-} //}}}
-
-// FreeMoleculeType2() //{{{
-/**
- * Free memory allocated for MoleculeType struct array. This function makes
- * it easier other arrays to the MoleculeType struct in the future
- */
-void FreeMoleculeType2(int number_of_types, MOLECULETYPE **MoleculeType) {
+void FreeMoleculeType(int number_of_types, MOLECULETYPE **MoleculeType) {
   for (int i = 0; i < number_of_types; i++) {
     free((*MoleculeType)[i].Bead);
     if ((*MoleculeType)[i].nBonds > 0) {
@@ -1300,4 +1305,17 @@ void FreeAggregate(COUNTS Counts, AGGREGATE **Aggregate) {
     free((*Aggregate)[i].Monomer);
   }
   free(*Aggregate);
+} //}}}
+
+// FreeSystemInfo() //{{{
+/**
+ * Free memory for all standard arrays and structures of arrays.
+ */
+void FreeSystemInfo(COUNTS Counts, MOLECULETYPE **MoleculeType, MOLECULE **Molecule,
+                    BEADTYPE **BeadType, BEAD **Bead, int **Index) {
+  free(*Index);
+  FreeBead(Counts.Beads, Bead);
+  free(*BeadType);
+  FreeMolecule(Counts.Molecules, Molecule);
+  FreeMoleculeType(Counts.TypesOfMolecules, MoleculeType);
 } //}}}
