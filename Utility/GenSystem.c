@@ -130,7 +130,10 @@ int main(int argc, char *argv[]) {
   PARAMS *bond_type; // information about bond types
   PARAMS *angle_type; // information about angle types //}}}
 
-  ReadField(input, &BoxLength, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule, &bond_type, &angle_type);
+  PARAMS *dihedral_type;
+  ReadField(input, &BoxLength, &Counts, &BeadType, &Bead,
+            &Index, &MoleculeType, &Molecule,
+            &bond_type, &angle_type, &dihedral_type);
 
   // set all molecules & beads to 'write' //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -409,10 +412,7 @@ int main(int argc, char *argv[]) {
   fclose(out);
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     free(prototype_z[i]);
   }

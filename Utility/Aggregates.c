@@ -514,18 +514,16 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // variables - structures //{{{
+  // read information from vtf file(s) //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
   int *Index; // reverse of Bead[].Index
   MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
-
-  // read information from vtf file(s) //{{{
-  VECTOR BoxLength;
-  bool indexed;
-  int struct_lines;
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
               &BoxLength, &Counts, &BeadType, &Bead, &Index,
               &MoleculeType, &Molecule);
@@ -757,12 +755,8 @@ int main(int argc, char *argv[]) {
   // free memory - to make valgrind happy //{{{
   free(xm_use_mol);
   free(xm_mols);
-  free(BeadType);
-  free(Index);
   FreeAggregate(Counts, &Aggregate);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead2(Counts.Beads, &Bead);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(stuff);
   //}}}
 

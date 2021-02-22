@@ -129,41 +129,16 @@ int main(int argc, char *argv[]) {
   // should output coordinates be wrapped?
   bool wrap = BoolOption(argc, argv, "-w");
 
-  // starting timestep //{{{
+  // starting & ending timesteps //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
     exit(1);
-  } //}}}
-
-  // ending timestep //{{{
+  }
   int end = -1;
   if (IntegerOption(argc, argv, "-e", &end)) {
     exit(1);
-  } //}}}
-
-  // error if ending step is lower than starging step //{{{
-  if (end != -1 && start > end) {
-    RedText(STDERR_FILENO);
-    fprintf(stderr, "\nErorr: ");
-    YellowText(STDERR_FILENO);
-    fprintf(stderr, "-st");
-    RedText(STDERR_FILENO);
-    fprintf(stderr, " and ");
-    YellowText(STDERR_FILENO);
-    fprintf(stderr, "-e");
-    RedText(STDERR_FILENO);
-    fprintf(stderr, " - starting step (");
-    YellowText(STDERR_FILENO);
-    fprintf(stderr, "%d", start);
-    RedText(STDERR_FILENO);
-    fprintf(stderr, ") is higher than ending step (");
-    YellowText(STDERR_FILENO);
-    fprintf(stderr, "%d", end);
-    RedText(STDERR_FILENO);
-    fprintf(stderr, ")\n");
-    ResetColour(STDERR_FILENO);
-    exit(1);
-  } //}}}
+  }
+  ErrorStartEnd(start, end); //}}}
 
   // number of steps to skip per one used //{{{
   int skip = 0;
@@ -186,18 +161,16 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // variables - structures //{{{
+  // read information from vtf file(s) //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
-
-  // read information from vtf file(s) //{{{
-  VECTOR BoxLength;
-  bool indexed;
-  int struct_lines;
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
               &BoxLength, &Counts, &BeadType, &Bead, &Index,
               &MoleculeType, &Molecule);
@@ -241,8 +214,7 @@ int main(int argc, char *argv[]) {
   // copy Use flag to Write (for '-x' option)
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = MoleculeType[i].Use;
-  }
-  //}}}
+  } //}}}
 
   // '-n' option - specify bead ids //{{{
   int save_step[100] = {0}, number_of_steps = 0, test = 0;
@@ -286,10 +258,7 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  // skip structure part of a vtf
-  if (vtf) {
-    SkipStructVtf(vcf, input_coor);
-  } //}}}
+  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -325,42 +294,10 @@ int main(int argc, char *argv[]) {
 
   fclose(out); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>')
+  // create array for the timestep preamble
   char *stuff = calloc(LINE, sizeof(char));
 
-  // skip first start-1 steps //{{{
-  count = 0;
-  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
-    ungetc(test, vcf);
-    count++;
-    // print step? //{{{
-    if (!silent && isatty(STDOUT_FILENO)) {
-      fflush(stdout);
-      fprintf(stdout, "\rDiscarding step: %d", count);
-    } //}}}
-    if (SkipVcfCoor(vcf, input_coor, Counts, &stuff)) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: premature end of ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", input_coor);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " file\n\n");
-      ResetColour(STDERR_FILENO);
-      exit(1);
-    }
-  }
-  // print starting step? //{{{
-  if (!silent) {
-    if (isatty(STDOUT_FILENO)) {
-      fflush(stdout);
-      fprintf(stdout, "\r                          \r");
-    }
-    fprintf(stdout, "Starting step: %d\n", start);
-  } //}}}
-  // is the vcf file continuing?
-  if (ErrorDiscard(start, count, input_coor, vcf)) {
-    exit(1);
-  } //}}}
+  count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
   // main loop //{{{
   int count_n_opt = 0; // count saved steps if -n option is used
@@ -489,11 +426,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  free(Index);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead2(Counts.Beads, &Bead);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(stuff);
   free(output_xyz);
   //}}}

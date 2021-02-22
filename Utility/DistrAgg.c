@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
@@ -131,46 +130,29 @@ int main(int argc, char *argv[]) {
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
-  // starting timestep //{{{
-  int start = 1;
-  if (IntegerOption(argc, argv, "-st", &start)) {
-    exit(1);
-  } //}}}
-
-  // ending timestep //{{{
-  int end = -1;
-  if (IntegerOption(argc, argv, "-e", &end)) {
-    exit(1);
-  } //}}}
-
-  // error if ending step is lower than starging step //{{{
-  if (end != -1 && start > end) {
-    fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
-    fprintf(stderr, "\033[0m");
-    exit(1);
-  } //}}}
-  //}}}
+  int start, end;
+  StartEndTime(argc, argv, &start, &end); //}}}
 
   // print command to stdout //{{{
   if (!silent) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // variables - structures //{{{
+  // read information from vtf file(s) //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // revers of Bead[].Index
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
-
-  // read system information
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
   char null[1] = {'\0'}; // because ReadStructure & VerboseOutput check the first value in the array
-  ReadStructure(input_vsf, null, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-  // vsf file is not needed anymore
-  free(input_vsf);
+  FullVtfRead(input_vsf, null, false, false, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
+  free(input_vsf); //}}}
 
   // '-m_id' option (TODO: consider what it should override) //{{{
   int m_id = -1; // no -m_id option
@@ -331,8 +313,7 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    fprintf(stdout, "Since no coordinates are used, no structure information is available and therefore the data is for the whole simulated system!\n\n");
-    VECTOR BoxLength = {-1};
+    BoxLength.x = -1;
     VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
@@ -391,13 +372,11 @@ int main(int argc, char *argv[]) {
     fprintf(out, "(%d) <M>_z, ", count++);
     count++;
     fprintf(out, "(%d) <As>_n, ", count++);
+    count++;
     fprintf(out, "(%d) <As>_w, ", count++);
     count++;
     fprintf(out, "(%d) <As>_z, ", count++);
     count++;
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      fprintf(out, "(%d) <%s>_n, ", count++, MoleculeType[i].Name);
-    }
   } else {
     fprintf(out, "(%d) <M>_n, ", count++);
     fprintf(out, "(%d) <M>_w, ", count++);
@@ -405,9 +384,9 @@ int main(int argc, char *argv[]) {
     fprintf(out, "(%d) <As>_n, ", count++);
     fprintf(out, "(%d) <As>_w, ", count++);
     fprintf(out, "(%d) <As>_z, ", count++);
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      fprintf(out, "(%d) <%s>_n, ", count++, MoleculeType[i].Name);
-    }
+  }
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    fprintf(out, "(%d) <%s>_n, ", count++, MoleculeType[i].Name);
   }
   fprintf(out, "(%d) number of aggregates", count++);
   putc('\n', out);
@@ -422,25 +401,22 @@ int main(int argc, char *argv[]) {
     ungetc(test, agg);
 
     count_step++;
-
     // print step? //{{{
     if (count_step < start) {
-      if (!silent && !script) {
+      if (!silent && isatty(STDOUT_FILENO)) {
         fflush(stdout);
         fprintf(stdout, "\rDiscarding Step: %d", count_step);
       }
     } else if (count_step == start) {
       if (!silent) {
-        if (script) {
-          fprintf(stdout, "Starting step: %d\n", start);
-        } else {
+        if (isatty(STDOUT_FILENO)) {
           fflush(stdout);
-          fprintf(stdout, "\r                          ");
-          fprintf(stdout, "\rStarting step: %d\n", start);
+          fprintf(stdout, "\r                          \r");
         }
+        fprintf(stdout, "Starting step: %d\n", start);
       }
     } else {
-      if (!silent && !script) {
+      if (!silent && isatty(STDOUT_FILENO)) {
         fflush(stdout);
         fprintf(stdout, "\rStep: %d", count_step);
       }
@@ -508,16 +484,18 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       // if '-m_id' is used, check if specified resid from vsf is in aggregate
-      test = false;
-      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-        int id = Aggregate[i].Molecule[j];
-        if (m_id == (id+1)) { // resname in vsf start from 1
-          test = true;
-          break;
+      if (m_id != -1) {
+        test = false;
+        for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+          int id = Aggregate[i].Molecule[j];
+          if (m_id == (id+1)) { // resname in vsf start from 1
+            test = true;
+            break;
+          }
         }
-      }
-      if (!test) {
-        continue;
+        if (!test) {
+          continue;
+        }
       }
 
       // if '-c' is used, calculate composition distribution //{{{
@@ -692,13 +670,11 @@ int main(int argc, char *argv[]) {
 
   // print last step //{{{
   if (!silent) {
-    if (script) {
-      fprintf(stdout, "Last Step: %d\n", count_step);
-    } else {
+    if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
-      fprintf(stdout, "\r                           ");
-      fprintf(stdout, "\rLast Step: %d\n", count_step);
+      fprintf(stdout, "\r                          \r");
     }
+    fprintf(stdout, "Last Step: %d\n", count_step);
   } //}}}
   //}}}
 
@@ -786,7 +762,11 @@ int main(int argc, char *argv[]) {
       fprintf(out, " %6d", count_agg[i]); // number of aggregates
       // print average number of molecule types in aggregates
       for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-        fprintf(out, " %10.5f", (double)(molecules_sum[i][j])/count_agg[i]);
+        if (count_agg[i] == 0) {
+          fprintf(out, "%8s", "?");
+        } else {
+          fprintf(out, " %10.5f", (double)(molecules_sum[i][j])/count_agg[i]);
+        }
       }
       putc('\n', out);
     }
@@ -953,6 +933,7 @@ int main(int argc, char *argv[]) {
 
     // print header line //{{{
     fprintf(out, "# column: (1) ");
+    count = 0;
     // molecule names
     fprintf(out, "%s/%s; agg sizes - ", MoleculeType[types[0][0]].Name, MoleculeType[types[1][0]].Name);
     // aggregate sizes
@@ -999,12 +980,8 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  free(Index);
   FreeAggregate(Counts, &Aggregate);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(specific_moltype_for_size);
   free(only_specific_moltype_aggregates);
   for (int i = 0; i < Counts.Molecules; i++) {

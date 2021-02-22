@@ -78,7 +78,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-vtf") != 0 &&
@@ -137,14 +136,6 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // variables - structures //{{{
-  BEADTYPE *BeadType; // structure with info about all bead types
-  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
-  BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
-
   // options before reading system data //{{{
   bool silent;
   bool verbose;
@@ -173,7 +164,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   // 2) if vsf file exists, look for vcf
-  bool vtf_add; // if -vtf is present present, is the file a vtf format?
+  bool vtf_add = false; // if -vtf is present present, is the file a vtf format?
   if (add_vsf[0] != '\0') {
     ext = 2;
     strcpy(extension[0], ".vsf");
@@ -210,10 +201,13 @@ int main(int argc, char *argv[]) {
             strcpy(argv[i+1], temp); // restore vsf filename
             break;
           } else { // there's no more cli arguments
-            fprintf(stderr, "\033[1;31m");
-            fprintf(stderr, "\nError: option -vtf is missing second filename (vcf file)!\n");
-            fprintf(stderr, "\033[0m");
-            Help(argv[0], true);
+            RedText(STDERR_FILENO);
+            fprintf(stderr, "\nError: ");
+            YellowText(STDERR_FILENO);
+            fprintf(stderr, "-vtf");
+            RedText(STDERR_FILENO);
+            fprintf(stderr, " - missing second file (vcf format)\n\n");
+            ResetColour(STDERR_FILENO);
             exit(1);
           }
         }
@@ -341,11 +335,20 @@ int main(int argc, char *argv[]) {
   bool centre = BoolOption(argc, argv, "--centre");
   //}}}
 
-  // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-  // vsf file is not needed anymore
-  free(input_vsf);
+  // read information from vtf file(s) //{{{
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
+  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
+  free(input_vsf); //}}}
 
   // -xb <name(s)> - specify what bead types to exchange //{{{
   if (BeadTypeOption(argc, argv, "-xb", false, Counts, &BeadType)) {
@@ -377,25 +380,7 @@ int main(int argc, char *argv[]) {
     exit(0);
   } //}}}
 
-  // open input coordinate file //{{{
-  FILE *vcf;
-  if ((vcf = fopen(input_coor, "r")) == NULL) {
-    ErrorFileOpen(input_coor, 'r');
-    exit(1);
-  } //}}}
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
-  fclose(vcf);
-  // reopen input coordinate file //{{{
-  if ((vcf = fopen(input_coor, "r")) == NULL) {
-    ErrorFileOpen(input_coor, 'r');
-    exit(1);
-  } //}}}
-
-  if (vtf) {
-    SkipStructVtf(vcf, input_coor);
-  }
-
-  // read original box length and assign new one if -b is used //{{{
+  // assign new box lengh if -b is used //{{{
   VECTOR BoxLength_new = BoxLength;
   if (box_option[0] != -1) {
     BoxLength_new.x = box_option[0];
@@ -433,56 +418,19 @@ int main(int argc, char *argv[]) {
   // create array for the first line of a timestep ('# <number and/or other comment>') //{{{
   char *stuff = calloc(LINE, sizeof(char)); //}}}
 
-  // skip first start-1 steps //{{{
-  count = 0;
-  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
-    ungetc(test, vcf);
-
-    count++;
-
-    // print step? //{{{
-    if (!silent && !script) {
-      fflush(stdout);
-      fprintf(stdout, "\rDiscarding step: %d", count);
-    } //}}}
-
-    if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
-      fprintf(stderr, "\033[0m");
-      exit(1);
-    }
-  }
-  // print number of discarded steps? //{{{
-  if (!silent && start > 1) {
-    if (script) {
-      fprintf(stdout, "Starting step: %d\n", start);
-    } else {
-      fflush(stdout);
-      fprintf(stdout, "\r                             ");
-      fprintf(stdout, "\rStarting step: %d   \n", start);
-    }
-  } //}}}
-  // is the vcf file continuing?
-  if (ErrorDiscard(start, count, input_coor, vcf)) {
+  // open input coordinate file //{{{
+  FILE *vcf;
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  //}}}
-
-  // read the coordinate timestep to add stuff to //{{{
-  if ((test = getc(vcf)) != EOF) {
-    ungetc(test, vcf);
-    count++;
-    if (!silent) {
-      fprintf(stdout, "Using step %6d\n", count);
-    }
-    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-  } else {
-    fprintf(stderr, "\033[1;33m");
-    fprintf(stderr, "\nWarning: using last step in \033[1;36m%s\033[1;33m (\033[1;36m%d\033[1;33m)\n", input_coor, count);
-    fprintf(stderr, "\033[0m");
+  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
+  if (!silent) {
+    fprintf(stdout, "Using step %6d\n", ++count);
   }
-  fclose(vcf); //}}}
+  ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+  fclose(vcf);
 
   // create structures for added stuff //{{{
   COUNTS Counts_add = InitCounts;
@@ -494,21 +442,21 @@ int main(int argc, char *argv[]) {
   int *Index_add;
   PARAMS *bond_type; // information about bond types
   PARAMS *angle_type; // information about angle types
+  VECTOR BoxLength_add;
   //}}}
 
   if (add_vsf[0] == '\0') { // read stuff to be added from FIELD
-    ReadField(input_add, '\0', &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add, &bond_type, &angle_type);
+    PARAMS *dihedral_type;
+    ReadField(input_add, '\0', &Counts_add, &BeadType_add, &Bead_add,
+              &Index_add, &MoleculeType_add, &Molecule_add,
+              &bond_type, &angle_type, &dihedral_type);
   } else { // read stuff to add from vtf file(s) ('-vtf' option) //{{{
-    bool indexed_add = ReadStructure(add_vsf, input_coor_add, &Counts_add, &BeadType_add, &Bead_add, &Index_add, &MoleculeType_add, &Molecule_add);
-    // open input coordinate file
-    if ((vcf = fopen(input_coor_add, "r")) == NULL) {
-      ErrorFileOpen(input_coor_add, 'r');
-      exit(1);
-    }
-    VECTOR BoxLength_add = GetPBC(vcf, input_coor_add);
-    fclose(vcf);
-    // determine new box size if -b isn't used as the larger of the dimensions
-    // from original and to be added systems
+    bool indexed_add;
+    int struct_lines_add;
+    FullVtfRead(add_vsf, input_coor_add, false, vtf_add, &indexed_add, &struct_lines_add,
+                &BoxLength_add, &Counts_add, &BeadType_add, &Bead_add, &Index_add,
+                &MoleculeType_add, &Molecule_add);
+    // determine new box size if -b isn't used as the larger of the dimensions from original and to-be-added systems
     if (box_option[0] != -1) {
       if (BoxLength_add.x > BoxLength_new.x) {
         BoxLength_new.x = BoxLength_add.x;
@@ -521,15 +469,13 @@ int main(int argc, char *argv[]) {
       }
     }
 
-    // reopen input coordinate file
+    // read coordinates
     if ((vcf = fopen(input_coor_add, "r")) == NULL) {
       ErrorFileOpen(input_coor_add, 'r');
       exit(1);
     }
-    if (vtf_add) {
-      SkipStructVtf(vcf, input_coor_add);
-    }
-    ReadCoordinates(indexed_add, input_coor_add, vcf, Counts_add, Index_add, &Bead_add, &stuff);
+    SkipVtfStructure(vtf_add, vcf, struct_lines_add);
+    ReadVcfCoordinates(indexed_add, input_coor_add, vcf, Counts_add, Index_add, &Bead_add, &stuff);
     fclose(vcf);
   } //}}}
 
@@ -728,13 +674,15 @@ int main(int argc, char *argv[]) {
           MoleculeType_new[type].Bond[j][2] = MoleculeType_add[i].Bond[j][2];
         }
         MoleculeType_new[type].nAngles = MoleculeType_add[i].nAngles;
-        MoleculeType_new[type].Angle = calloc(MoleculeType_new[type].nAngles, sizeof(int *));
-        for (int j = 0; j < MoleculeType_new[type].nAngles; j++) {
-          MoleculeType_new[type].Angle[j] = calloc(4, sizeof(int));
-          MoleculeType_new[type].Angle[j][0] = MoleculeType_add[i].Angle[j][0];
-          MoleculeType_new[type].Angle[j][1] = MoleculeType_add[i].Angle[j][1];
-          MoleculeType_new[type].Angle[j][2] = MoleculeType_add[i].Angle[j][2];
-          MoleculeType_new[type].Angle[j][3] = MoleculeType_add[i].Angle[j][3];
+        if (MoleculeType_add[i].nAngles > 0) {
+          MoleculeType_new[type].Angle = calloc(MoleculeType_new[type].nAngles, sizeof(int *));
+          for (int j = 0; j < MoleculeType_new[type].nAngles; j++) {
+            MoleculeType_new[type].Angle[j] = calloc(4, sizeof(int));
+            MoleculeType_new[type].Angle[j][0] = MoleculeType_add[i].Angle[j][0];
+            MoleculeType_new[type].Angle[j][1] = MoleculeType_add[i].Angle[j][1];
+            MoleculeType_new[type].Angle[j][2] = MoleculeType_add[i].Angle[j][2];
+            MoleculeType_new[type].Angle[j][3] = MoleculeType_add[i].Angle[j][3];
+          }
         }
         MoleculeType_new[type].nBTypes = MoleculeType_add[i].nBTypes;
         MoleculeType_new[type].BType = calloc(MoleculeType_new[type].nBTypes, sizeof(int));
@@ -939,21 +887,25 @@ int main(int argc, char *argv[]) {
           MoleculeType_new[type].Bead[j] = btype;
         }
         MoleculeType_new[type].nBonds = MoleculeType_add[i].nBonds;
-        MoleculeType_new[type].Bond = calloc(MoleculeType_new[type].nBonds, sizeof(int *));
-        for (int j = 0; j < MoleculeType_new[type].nBonds; j++) {
-          MoleculeType_new[type].Bond[j] = calloc(3, sizeof(int));
-          MoleculeType_new[type].Bond[j][0] = MoleculeType_add[i].Bond[j][0];
-          MoleculeType_new[type].Bond[j][1] = MoleculeType_add[i].Bond[j][1];
-          MoleculeType_new[type].Bond[j][2] = MoleculeType_add[i].Bond[j][2];
+        if (MoleculeType_new[type].nBonds > 0) {
+          MoleculeType_new[type].Bond = calloc(MoleculeType_new[type].nBonds, sizeof(int *));
+          for (int j = 0; j < MoleculeType_new[type].nBonds; j++) {
+            MoleculeType_new[type].Bond[j] = calloc(3, sizeof(int));
+            MoleculeType_new[type].Bond[j][0] = MoleculeType_add[i].Bond[j][0];
+            MoleculeType_new[type].Bond[j][1] = MoleculeType_add[i].Bond[j][1];
+            MoleculeType_new[type].Bond[j][2] = MoleculeType_add[i].Bond[j][2];
+          }
         }
         MoleculeType_new[type].nAngles = MoleculeType_add[i].nAngles;
-        MoleculeType_new[type].Angle = calloc(MoleculeType_new[type].nAngles, sizeof(int *));
-        for (int j = 0; j < MoleculeType_new[type].nAngles; j++) {
-          MoleculeType_new[type].Angle[j] = calloc(4, sizeof(int));
-          MoleculeType_new[type].Angle[j][0] = MoleculeType_add[i].Angle[j][0];
-          MoleculeType_new[type].Angle[j][1] = MoleculeType_add[i].Angle[j][1];
-          MoleculeType_new[type].Angle[j][2] = MoleculeType_add[i].Angle[j][2];
-          MoleculeType_new[type].Angle[j][3] = MoleculeType_add[i].Angle[j][3];
+        if (MoleculeType_new[type].nAngles > 0) {
+          MoleculeType_new[type].Angle = calloc(MoleculeType_new[type].nAngles, sizeof(int *));
+          for (int j = 0; j < MoleculeType_new[type].nAngles; j++) {
+            MoleculeType_new[type].Angle[j] = calloc(4, sizeof(int));
+            MoleculeType_new[type].Angle[j][0] = MoleculeType_add[i].Angle[j][0];
+            MoleculeType_new[type].Angle[j][1] = MoleculeType_add[i].Angle[j][1];
+            MoleculeType_new[type].Angle[j][2] = MoleculeType_add[i].Angle[j][2];
+            MoleculeType_new[type].Angle[j][3] = MoleculeType_add[i].Angle[j][3];
+          }
         }
         MoleculeType_new[type].nBTypes = MoleculeType_add[i].nBTypes;
         MoleculeType_new[type].BType = calloc(MoleculeType_new[type].nBTypes, sizeof(int));
@@ -1105,7 +1057,7 @@ int main(int argc, char *argv[]) {
       }
 
       // determine index of the added bead
-      int id;
+      int id = -1;
       if (!sw) { // added beads (no --switch option)
         id = Counts.Unbonded + i;
       } else { // switched beds (--switch option)
@@ -1118,6 +1070,10 @@ int main(int argc, char *argv[]) {
           }
         }
       }
+      if (id == -1) {
+        fprintf(stderr, "!!!SOME ERROR!!!");
+        exit(1);
+      }
 
       // add the new coordinate
       Bead_new[id].Position.x = random.x;
@@ -1125,20 +1081,18 @@ int main(int argc, char *argv[]) {
       Bead_new[id].Position.z = random.z;
 
       // print number of placed beads? //{{{
-      if (!silent && !script) {
+      if (!silent && isatty(STDOUT_FILENO)) {
         fflush(stdout);
         fprintf(stdout, "\rMonomers placed: %d", i+1);
       } //}}}
     } //}}}
     // print total number of placed beads? //{{{
     if (!silent) {
-      if (script) {
-        fprintf(stdout, "Monomer placed: %d\n", Counts_add.Unbonded);
-      } else {
+      if (isatty(STDOUT_FILENO)) {
         fflush(stdout);
-        fprintf(stdout, "\r                           ");
-        fprintf(stdout, "\rMonomer placed: %d\n", Counts_add.Unbonded);
+        fprintf(stdout, "\r                           \r");
       }
+      fprintf(stdout, "\rMonomer placed: %d\n", Counts_add.Unbonded);
     } //}}}
     // add molecules //{{{
     // doesn't depend on --switch option as it's determined by the Molecule_new
@@ -1227,20 +1181,18 @@ int main(int argc, char *argv[]) {
       } //}}}
 
       // print number of placed molecules? //{{{
-      if (!silent && !script) {
+      if (!silent && isatty(STDOUT_FILENO)) {
         fflush(stdout);
         fprintf(stdout, "\rMolecules placed: %d", i-Counts.Molecules+1);
       } //}}}
     } //}}}
     // print total number of placed molecules? //{{{
     if (!silent) {
-      if (script) {
-        fprintf(stdout, "Molecules placed: %3d\n", Counts_add.Molecules);
-      } else {
+      if (isatty(STDOUT_FILENO)) {
         fflush(stdout);
-        fprintf(stdout, "\r                                             ");
-        fprintf(stdout, "\rMolecules placed: %3d\n", Counts_add.Molecules);
+        fprintf(stdout, "\r                                             \r");
       }
+      fprintf(stdout, "Molecules placed: %3d\n", Counts_add.Molecules);
     } //}}}
   } //}}}
 
@@ -1288,21 +1240,9 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  free(BeadType_add);
-  free(BeadType_new);
-  free(Index);
-  free(Index_add);
-  free(Index_new);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMoleculeType(Counts_new, &MoleculeType_new);
-  FreeMoleculeType(Counts_add, &MoleculeType_add);
-  FreeMolecule(Counts, &Molecule);
-  FreeMolecule(Counts_new, &Molecule_new);
-  FreeMolecule(Counts_add, &Molecule_add);
-  FreeBead(Counts, &Bead);
-  FreeBead(Counts_new, &Bead_new);
-  FreeBead(Counts_add, &Bead_add);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
+  FreeSystemInfo(Counts_add, &MoleculeType_add, &Molecule_add, &BeadType_add, &Bead_add, &Index_add);
+  FreeSystemInfo(Counts_new, &MoleculeType_new, &Molecule_new, &BeadType_new, &Bead_new, &Index_new);
   free(stuff);
   free(output_xyz);
   free(input_add);

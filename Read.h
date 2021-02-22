@@ -10,6 +10,7 @@
 
 void SkipStructVtf(FILE *vtf, char *name_vtf);
 
+// TODO: remove
 // GetPBC() //{{{
 /*
  * \brief Function to get box dimensions.
@@ -52,7 +53,8 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
 void ReadVtfStructure(char *vsf_file, bool detailed, COUNTS *Counts,
                       BEADTYPE **BeadType, BEAD **Bead, int **Index,
                       MOLECULETYPE **MoleculeType, MOLECULE **Molecule);
-void FullVtfRead(char *vsf_file, char *vcf_file, bool detailed, bool vtf, bool *indexed, int *struct_lines,
+void FullVtfRead(char *vsf_file, char *vcf_file, bool detailed, bool vtf,
+                 bool *indexed, int *struct_lines,
                  VECTOR *BoxLength, COUNTS *Counts,
                  BEADTYPE **BeadType, BEAD **Bead, int **Index,
                  MOLECULETYPE **MoleculeType, MOLECULE **Molecule);
@@ -77,7 +79,8 @@ bool ReadStructure(char *vsf_file, char *vcf_file, COUNTS *Counts,
                    BEADTYPE **BeadType, BEAD **Bead, int **Index,
                    MOLECULETYPE **MoleculeType, MOLECULE **Molecule); //}}}
 
-int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char **stuff, bool quit);
+int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file,
+                         char **stuff, bool quit);
 
 // ReadCoordinates() //{{{
 /**
@@ -87,7 +90,7 @@ int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char *
  * \param [in]  input_coor name of input coordinate file
  * \param [in]  vcf_file   pointer to the open coordinate file
  * \param [in]  Counts     numbers of beads, molecules, etc.
- * \param [in]  Index      bead indices between program and vsf (i.e., opposite of Bead[].Index)
+ * \param [in]  Index      bead indices between program and vsf
  * \param [out] Bead       coordinates of individual beads
  * \param [out] stuff      first line of a timestep
  */
@@ -101,7 +104,7 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
  * \param [in]  input_coor name of input coordinate file
  * \param [in]  vcf_file   pointer to the open coordinate file
  * \param [in]  Counts     numbers of beads, molecules, etc.
- * \param [in]  Index      bead indices between program and vsf (i.e., opposite of Bead[].Index)
+ * \param [in]  Index      bead indices between program and vsf
  * \param [out] Bead       coordinates of individual beads
  * \param [out] stuff      first line of a timestep
  */
@@ -118,6 +121,15 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS C
  */
 bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff); //}}}
 
+// SkipAgg() //{{{
+/**
+ * \brief Function to skip one timestep in coordinates file.
+ *
+ * \param [in] agg        pointer to the open agg file
+ * \param [in] agg_file   agg file name
+ */
+void SkipAgg(FILE *agg, char *agg_file); //}}}
+
 // SkipVcfCoor() //{{{
 /**
  * \brief Function to skip one timestep in coordinates file.
@@ -126,9 +138,8 @@ bool SkipCoor(FILE *vcf_file, COUNTS Counts, char **stuff); //}}}
  * \param [in]  input_coor name  of vcf_file
  * \param [in]  Counts     number of beads in vcf file
  * \param [out] stuff      first line of a timestep
- * \return 1 if premature end of file or 0 for no error
  */
-bool SkipVcfCoor(FILE *vcf_file, char *input_coor, COUNTS Counts, char **stuff); //}}}
+void SkipVcfCoor(FILE *vcf_file, char *input_coor, COUNTS Counts, char **stuff); //}}}
 
 // ReadAggregates() //{{{
 /**
@@ -142,9 +153,8 @@ bool SkipVcfCoor(FILE *vcf_file, char *input_coor, COUNTS Counts, char **stuff);
  * \param [out] Aggregate     information about aggregates
  * \param [in]  MoleculeType  information about molecule types
  * \param [out] Molecule      information about individual molecules
- * \return 1 if 'Last Step' detected or 0 for no error
  */
-bool ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
+void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
                     BEADTYPE *BeadType, BEAD **Bead,
                     MOLECULETYPE *MoleculeType, MOLECULE **Molecule, int *Index); //}}}
 
@@ -166,7 +176,8 @@ bool ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggreg
 void ReadField(char *field, VECTOR *BoxLength, COUNTS *Counts,
                BEADTYPE **BeadType, BEAD **Bead, int **Index,
                MOLECULETYPE **MoleculeType, MOLECULE **Molecule,
-               PARAMS **bond_types, PARAMS **angle_types); //}}}
+               PARAMS **bond_type, PARAMS **angle_type,
+               PARAMS **dihedral_type); //}}}
 
 // ReadLmpData() //{{{
 /**
@@ -191,4 +202,10 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
                  VECTOR *BoxLength, VECTOR *box_lo, COUNTS *Counts,
                  BEADTYPE **BeadType, BEAD **Bead, int **Index,
                  MOLECULETYPE **MoleculeType, MOLECULE **Molecule); //}}}
+
+// SkipCoorSteps() { //{{{
+int SkipCoorSteps(FILE *vcf, char *input_coor, COUNTS Counts, int start, bool silent); //}}}
+
+// SkipCoorAggSteps() { //{{{
+int SkipCoorAggSteps(FILE *vcf, char *input_coor, FILE *agg, char *input_agg, COUNTS Counts, int start, bool silent); //}}}
 #endif

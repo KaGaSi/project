@@ -18,13 +18,16 @@ layer).\n\n");
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <out.vsf> <out.vcf> <options>\n\n", cmd);
-  fprintf(ptr, "   <out.vsf>              output structure file (vsf format)\n");
-  fprintf(ptr, "   <out.vcf>              output coordinate file (vcf format)\n");
+  fprintf(ptr, "   <out.vsf>              output structure file");
+  fprintf(ptr, "(vsf format)\n");
+  fprintf(ptr, "   <out.vcf>              output coordinate file");
+  fprintf(ptr, "(vcf format)\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -s <float> <float>  spacing in x and y directions (default: 1 1)\n");
-  fprintf(ptr, "      -n <int>            total number of beads (default: 3*volume_box)\n");
-  fprintf(ptr, "      -nm <int>           total number molecules per side (rewrites spacing to fit)\n");
-  fprintf(ptr, "      -g <float>          gap between walls and the molecules\n");
+  fprintf(ptr, "      -s <float> <float>  spacing in x and y directions");
+  fprintf(ptr, "(default: 1 1)\n");
+  fprintf(ptr, "      -nm <int>           total number molecules per side");
+  fprintf(ptr, "(rewrites spacing to fit)\n");
+  fprintf(ptr, "      -g <float>          gap between walls and the layers\n");
   fprintf(ptr, "      -f <name>           FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      -v                  verbose output\n");
   fprintf(ptr, "      -h                  print this help and exit\n");
@@ -61,7 +64,6 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-s") != 0 &&
-        strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-nm") != 0 &&
         strcmp(argv[i], "-g") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
@@ -88,15 +90,13 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (test != 2) {
-    fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: option '-s' requires two numeric arguments\n\n");
-    fprintf(stderr, "\033[0m");
-    exit(1);
-  } //}}}
-
-  // '-n' option - custom total number of beads //{{{
-  int number_of_beads = 0;
-  if (IntegerOption(argc, argv, "-n", &number_of_beads)) {
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nError: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "-s");
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " - two numeric arguments required\n");
+    ResetColour(STDERR_FILENO);
     exit(1);
   } //}}}
 
@@ -127,11 +127,11 @@ int main(int argc, char *argv[]) {
 
   count = 0; // count arguments
 
-  // <out.vsf> - output structure file (must end with .vsf) //{{{
+  // <out.vsf> - output structure file //{{{
   char output[LINE];
   strcpy(output, argv[++count]);
 
-  // test if <output.vsf> filename ends with '.vsf' or '.vtf' (required by VMD)
+  // test if <output.vsf> filename ends with '.vsf'
   int ext = 1;
   char extension[2][5];
   strcpy(extension[0], ".vsf");
@@ -145,7 +145,7 @@ int main(int argc, char *argv[]) {
   char stuff[LINE];
   strcpy(output_vcf, argv[++count]);
 
-  // test if outpuf_vcf has '.vcf' extension - required by vmd //{{{
+  // test if outpuf_vcf has '.vcf' extension //{{{
   ext = 1;
   strcpy(extension[0], ".vcf");
   if (ErrorExtension(output_vcf, ext, extension)) {
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
 
-  // structures for info from field //{{{
+  // read info from the FIELD file //{{{
   BEADTYPE *BeadType_field;
   MOLECULETYPE *MoleculeType_field;
   MOLECULE *Molecule_field;
@@ -162,73 +162,117 @@ int main(int argc, char *argv[]) {
   COUNTS Counts_field = InitCounts;
   VECTOR BoxLength;
   int *Index_field;
-  PARAMS *bond_type;
-  PARAMS *angle_type; //}}}
+  PARAMS *bond_type_field;
+  PARAMS *angle_type_field;
+  PARAMS *dihedral_type_field;
 
-  ReadField(input, &BoxLength, &Counts_field, &BeadType_field, &Bead_field, &Index_field, &MoleculeType_field, &Molecule_field, &bond_type, &angle_type);
+  ReadField(input, &BoxLength, &Counts_field, &BeadType_field, &Bead_field,
+            &Index_field, &MoleculeType_field, &Molecule_field,
+            &bond_type_field, &angle_type_field, &dihedral_type_field); //}}}
+
+  // set all bead types to not use to later determine which are used //{{{
+  for (int i = 0; i < Counts_field.TypesOfBeads; i++) {
+    BeadType_field[i].Use = false;
+  } //}}}
 
   // structures for info for final system //{{{
   BEADTYPE *BeadType;
   MOLECULETYPE *MoleculeType;
   MOLECULE *Molecule;
   BEAD *Bead;
-  COUNTS Counts = InitCounts; //}}}
+  COUNTS Counts = InitCounts;
+  PARAMS *bond_type;
+  PARAMS *angle_type;
+  int *Index; //}}}
 
-  // TODO: for now, only one molecule type is used
-  Counts.TypesOfMolecules = 1;
-  MoleculeType = calloc(Counts.TypesOfMolecules, sizeof(struct MoleculeType));
-
-  // set all bead types to not use; to be decided based on what bead types are in molecules
-  for (int i = 0; i < Counts_field.TypesOfBeads; i++) {
-    BeadType_field[i].Use = false;
+  // find bead types to be used & copy them //{{{
+  /*
+   * 1) signal which are to be used via Use=true & count them
+   * 2) copy the bead types to a new array
+   */
+  // 1)
+  Counts.TypesOfBeads = 0;
+  for (int j = 0; j < MoleculeType_field[0].nBeads; j++) {
+    int btype = MoleculeType_field[0].Bead[j];
+    if (!BeadType_field[btype].Use) {
+      Counts.TypesOfBeads++;
+    }
+    BeadType_field[btype].Use = true;
   }
-
-  // copy the molecule type to a new struct - only the one for now //{{{
-  // for now, only one molecule type is used
-  Counts.TypesOfBeads = 0; // count only types in a molecule
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    strcpy(MoleculeType[i].Name, MoleculeType_field[i].Name);
-    MoleculeType[i].nBeads = MoleculeType_field[i].nBeads;
-    MoleculeType[i].Bead = calloc(MoleculeType[i].nBeads, sizeof(int));
-    for (int j = 0; j < MoleculeType[i].nBeads; j++) {
-      int btype = MoleculeType_field[i].Bead[j];
-      MoleculeType[i].Bead[j] = btype;
-      // increment number of bead types if btype wasn't yet used
-      if (!BeadType_field[btype].Use) {
-        Counts.TypesOfBeads++;
-      }
-      BeadType_field[btype].Use = true; // will be copied later to a new struct
-    }
-    MoleculeType[i].nBonds = MoleculeType_field[i].nBonds;
-    MoleculeType[i].Bond = calloc(MoleculeType[i].nBonds, sizeof(int *));
-    for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-      MoleculeType[i].Bond[j] = calloc(2, sizeof(int));
-      MoleculeType[i].Bond[j][0] = MoleculeType_field[i].Bond[j][0];
-      MoleculeType[i].Bond[j][1] = MoleculeType_field[i].Bond[j][1];
-    }
-    MoleculeType[i].nBTypes = MoleculeType_field[i].nBTypes;
-    MoleculeType[i].BType = calloc(MoleculeType[i].nBTypes, sizeof(int));
-    for (int j = 0; j < MoleculeType[i].nBTypes; j++) {
-      MoleculeType[i].BType[j] = MoleculeType_field[i].BType[j];
-    }
-    MoleculeType[i].Mass = MoleculeType_field[i].Mass;
-  } //}}}
-
-  // copy bead types to be used //{{{
-  BeadType = calloc(Counts.TypesOfBeads, sizeof(struct BeadType));
+  // 2)
+  BeadType = calloc(Counts.TypesOfBeads, sizeof(BEADTYPE));
   count = 0;
   for (int i = 0; i < Counts_field.TypesOfBeads; i++) {
     if (BeadType_field[i].Use) {
       strcpy(BeadType[count].Name, BeadType_field[i].Name);
       BeadType[count].Charge = BeadType_field[i].Charge;
       BeadType[count].Mass = BeadType_field[i].Mass;
+      BeadType[count].Number = 0; // will be counted later
       count++;
     }
   } //}}}
 
+  // only one molecule type is used - copy it to a new struct //{{{
+  Counts.TypesOfMolecules = 1;
+  MoleculeType = calloc(Counts.TypesOfMolecules, sizeof(MOLECULETYPE));
+  strcpy(MoleculeType[0].Name, MoleculeType_field[0].Name);
+  // copy beads (using the new bead type indicies)
+  MoleculeType[0].nBeads = MoleculeType_field[0].nBeads;
+  MoleculeType[0].Bead = calloc(MoleculeType[0].nBeads, sizeof(int));
+  for (int j = 0; j < MoleculeType[0].nBeads; j++) {
+    int bt_field = MoleculeType_field[0].Bead[j];
+    MoleculeType[0].Bead[j] = FindBeadType2(BeadType_field[bt_field].Name,
+                                            Counts.TypesOfBeads, BeadType);
+  }
+  // copy bonds & count bond types
+  Counts.TypesOfBonds = 0;
+  MoleculeType[0].nBonds = MoleculeType_field[0].nBonds;
+  MoleculeType[0].Bond = calloc(MoleculeType[0].nBonds, sizeof(int *));
+  for (int j = 0; j < MoleculeType[0].nBonds; j++) {
+    MoleculeType[0].Bond[j] = calloc(3, sizeof(int));
+    MoleculeType[0].Bond[j][0] = MoleculeType_field[0].Bond[j][0];
+    MoleculeType[0].Bond[j][1] = MoleculeType_field[0].Bond[j][1];
+    MoleculeType[0].Bond[j][2] = MoleculeType_field[0].Bond[j][2];
+    // number of bond types must be the highest bond type id in the molecule
+    if (MoleculeType[0].Bond[j][2] >= Counts.TypesOfBonds) {
+      Counts.TypesOfBonds = MoleculeType[0].Bond[j][2] + 1;
+    }
+  }
+  // copy angles & count angles types
+  Counts.TypesOfAngles = 0;
+  MoleculeType[0].nAngles = MoleculeType_field[0].nAngles;
+  MoleculeType[0].Angle = calloc(MoleculeType[0].nAngles, sizeof(int *));
+  for (int j = 0; j < MoleculeType[0].nAngles; j++) {
+    MoleculeType[0].Angle[j] = calloc(4, sizeof(int));
+    MoleculeType[0].Angle[j][0] = MoleculeType_field[0].Angle[j][0];
+    MoleculeType[0].Angle[j][1] = MoleculeType_field[0].Angle[j][1];
+    MoleculeType[0].Angle[j][2] = MoleculeType_field[0].Angle[j][2];
+    MoleculeType[0].Angle[j][3] = MoleculeType_field[0].Angle[j][3];
+    // number of angle types must be the highest angle type id in the molecule
+    if (MoleculeType[0].Angle[j][3] >= Counts.TypesOfAngles) {
+      Counts.TypesOfAngles = MoleculeType[0].Angle[j][3] + 1;
+    }
+  }
+  // copy mass & charge & fill the BType array
+  MoleculeType[0].Mass = MoleculeType_field[0].Mass;
+  MoleculeType[0].Charge = MoleculeType_field[0].Charge;
+  FillMolBTypes(Counts.TypesOfMolecules, &MoleculeType); //}}}
+
+  // copy bond & angle types to be used //{{{
+  bond_type = calloc(Counts.TypesOfBonds, sizeof(PARAMS));
+  for (int i = 0; i < Counts.TypesOfBonds; i++) {
+    bond_type[i].a = bond_type_field[i].a;
+    bond_type[i].b = bond_type_field[i].b;
+  }
+  angle_type = calloc(Counts.TypesOfAngles, sizeof(PARAMS));
+  for (int i = 0; i < Counts.TypesOfAngles; i++) {
+    angle_type[i].a = angle_type_field[i].a;
+    angle_type[i].b = angle_type_field[i].b;
+  } //}}}
+
   // number of molecules in x and y directions //{{{
-  int mols[2]; // maximum number of molecules in x and y directions (per one wall)
-  if (number_of_mols == 0) { // if not specified via -nm option
+  int mols[2]; // maximum number of molecules in x and y directions per one wall
+  if (number_of_mols == 0) { // if -nm option is not used
     mols[0] = round(BoxLength.x / spacing[0]);
     mols[1] = round(BoxLength.y / spacing[1]);
     Counts.Molecules = mols[0] * mols[1] * 2;
@@ -242,77 +286,46 @@ int main(int argc, char *argv[]) {
     spacing[0] = BoxLength.x / mols[0];
     spacing[1] = BoxLength.y / mols[1];
     Counts.Molecules = 2 * number_of_mols;
-  } //}}}
-
-  // assumes number bead density equal to 3 for number of beads (if '-n' isn't used) //{{{
-  if (number_of_beads > 0) {
-    Counts.BeadsInVsf = number_of_beads;
-  } else {
-    Counts.BeadsInVsf = 3 * BoxLength.x * BoxLength.y * BoxLength.z;
   }
-  Counts.Beads = Counts.BeadsInVsf; //}}}
+  MoleculeType[0].Number = Counts.Molecules; //}}}
 
-  // number of molecules of the one possible molecule type (for now)
-  MoleculeType[0].Number = Counts.Molecules;
-  // count bonded beads - for now, just one molecule type
+  // determine number of beads of each type //{{{
+  for (int i = 0; i < MoleculeType[0].nBeads; i++) {
+    int btype = MoleculeType[0].Bead[i];
+    BeadType[btype].Number += MoleculeType[0].Number;
+  } //}}}
+
+  // total number of beads //{{{
   Counts.Bonded = MoleculeType[0].Number * MoleculeType[0].nBeads;
-
-  // increase number of beads if too small (-n option or default number) //{{{
-  if (Counts.Bonded > Counts.Beads) {
-    Counts.Beads = Counts.BeadsInVsf = Counts.Bonded;
-    fprintf(stderr, "\033[1;33m");
-    fprintf(stderr, "\nWARNING: too few beads to fit the required number of molecules!\n");
-    fprintf(stderr, "         Number of beads increased to %d\n", Counts.Beads);
-    fprintf(stderr, "\033[0m");
-  } //}}}
-
-  // count unbonded beads
-  Counts.Unbonded = Counts.Beads - Counts.Bonded;
-
-  // if there are unbonded beads, make them 'None' type //{{{
-  if (Counts.Unbonded > 0) {
-    int btype = Counts.TypesOfBeads;
-    Counts.TypesOfBeads++;
-    BeadType = realloc(BeadType, Counts.TypesOfBeads*sizeof(struct BeadType));
-    strcpy(BeadType[btype].Name, "None");
-    BeadType[btype].Number = Counts.Unbonded;
-    BeadType[btype].Charge = 0;
-    BeadType[btype].Mass = 1;
-  } //}}}
+  Counts.BeadsInVsf = Counts.Bonded;
+  Counts.Beads = Counts.Bonded;
+  Counts.Unbonded = 0; //}}}
 
   // allocate arrays
-  Molecule = calloc(Counts.Molecules, sizeof(struct Molecule));
-  Bead = calloc(Counts.Beads, sizeof(struct Bead));
+  Molecule = calloc(Counts.Molecules, sizeof(MOLECULE));
+  Bead = calloc(Counts.Beads, sizeof(BEAD));
+  Index = calloc(Counts.Beads, sizeof(int));
 
-  // put the possible unbonded beads in the middle of the box - they have to be somewhere //{{{
-  for (int i = 0; i < Counts.Unbonded; i++) {
-    Bead[i].Position.x = BoxLength.x / 2;
-    Bead[i].Position.y = BoxLength.y / 2;
-    Bead[i].Position.z = BoxLength.z / 2;
-    Bead[i].Type = Counts.TypesOfBeads - 1;
-    Bead[i].Molecule = -1;
-    Bead[i].Index = i;
-  } //}}}
-
-  // fill molecule struct //{{{
-  count = Counts.Unbonded;
+  // fill MOLECULE struct //{{{
   for (int i = 0; i < Counts.Molecules; i++) {
-    Molecule[i].Type = 0; // for now, there's only one molecule type
-    Molecule[i].Bead = calloc(MoleculeType[0].nBeads, sizeof(int));
+    Molecule[i].Type = 0;
+    Molecule[i].Bead = malloc(MoleculeType[0].nBeads*sizeof(int));
     for (int j = 0; j < MoleculeType[0].nBeads; j++) {
+      Molecule[i].Bead[j] = 0;
+    }
+    for (int j = 0; j < MoleculeType[0].nBeads; j++) {
+      count = i * MoleculeType[0].nBeads + j;
       Molecule[i].Bead[j] = count;
-      Bead[count].Type = MoleculeType_field[0].Bead[j];
+      Bead[count].Type = MoleculeType[0].Bead[j];
       Bead[count].Molecule = i;
       Bead[count].Index = count;
       Bead[count].Aggregate = calloc(1, sizeof(int)); // just to free later
-      count++;
+      Index[Bead[count].Index] = count;
     }
   } //}}}
 
   // set all molecules & beads to write //{{{
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    MoleculeType[i].Write = true;
-  }
+  MoleculeType[0].Write = true;
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Write = true;
   } //}}}
@@ -324,57 +337,45 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // generate brush on the grid & fill remaining Bead[] array //{{{
-  count = Counts.Unbonded;
-  int count_mols = 0;
-  // z=0
-  for (int i = 0; i < mols[0]; i++) {
-    for (int j = 0; j < mols[1]; j++) {
-      Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
-      Bead[count].Position.y = spacing[1] / 2 + spacing[1] * j;
-      Bead[count].Position.z = 0;
-      Bead[count].Index = count;
-      Bead[count].Type = MoleculeType[0].Bead[0];
-      for (int k = 1; k < MoleculeType[0].nBeads; k++) {
-        int id_field = Molecule_field[0].Bead[k];
-        Bead[count+k].Position.x = Bead[count].Position.x + Bead_field[id_field].Position.x;
-        Bead[count+k].Position.y = Bead[count].Position.y + Bead_field[id_field].Position.y;
-        Bead[count+k].Position.z = Bead[count].Position.z + Bead_field[id_field].Position.z;
-        Bead[count+k].Index = count + k;
-        Bead[count+k].Type = MoleculeType[0].Bead[k];
+  count = 0;
+  for (int layer = 0; layer < 2; layer++) { // 0 for z=0; 1 for z=BoxLength.z
+    int count_mols = 0; // per layer
+    for (int i = 0; i < mols[0]; i++) {
+      for (int j = 0; j < mols[1]; j++) {
+        Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
+        Bead[count].Position.y = spacing[1] / 2 + spacing[1] * j;
+        if (layer == 0) {
+          Bead[count].Position.z = 0;
+        } else {
+          Bead[count].Position.z = BoxLength.z;
+        }
+        Bead[count].Index = count;
+        Bead[count].Type = MoleculeType[0].Bead[0];
+        for (int k = 1; k < MoleculeType[0].nBeads; k++) {
+          int id_field = Molecule_field[0].Bead[k];
+          Bead[count+k].Position.x = Bead[count].Position.x +
+                                     Bead_field[id_field].Position.x;
+          Bead[count+k].Position.y = Bead[count].Position.y +
+                                     Bead_field[id_field].Position.y;
+          if(layer == 0) {
+            Bead[count+k].Position.z = Bead[count].Position.z +
+                                       Bead_field[id_field].Position.z;
+          } else {
+            Bead[count+k].Position.z = Bead[count].Position.z -
+                                       Bead_field[id_field].Position.z;
+          }
+          Bead[count+k].Index = count + k;
+          Bead[count+k].Type = MoleculeType[0].Bead[k];
+        }
+        count += MoleculeType[0].nBeads;
+        // stop placing molecules (-nm option)
+        if (++count_mols == number_of_mols) {
+          break;
+        }
       }
-      count += MoleculeType[0].nBeads;
-      if (++count_mols == number_of_mols) {
+      if (count_mols == number_of_mols) {
         break;
       }
-    }
-    if (count_mols == number_of_mols) {
-      break;
-    }
-  }
-  // z=BoxLength
-  count_mols = 0;
-  for (int i = 0; i < mols[0]; i++) {
-    for (int j = 0; j < mols[1]; j++) {
-      Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
-      Bead[count].Position.y = spacing[1] / 2 + spacing[1] * j;
-      Bead[count].Position.z = BoxLength.z;
-      Bead[count].Index = count;
-      Bead[count].Type = MoleculeType[0].Bead[0];
-      for (int k = 1; k < MoleculeType[0].nBeads; k++) {
-        int id_field = Molecule_field[0].Bead[k];
-        Bead[count+k].Position.x = Bead[count].Position.x + Bead_field[id_field].Position.x;
-        Bead[count+k].Position.y = Bead[count].Position.y + Bead_field[id_field].Position.y;
-        Bead[count+k].Position.z = Bead[count].Position.z - Bead_field[id_field].Position.z;
-        Bead[count+k].Index = count + k;
-        Bead[count+k].Type = MoleculeType[0].Bead[k];
-      }
-      count += MoleculeType[0].nBeads;
-      if (++count_mols == number_of_mols) {
-        break;
-      }
-    }
-    if (count_mols == number_of_mols) {
-      break;
     }
   } //}}}
 
@@ -392,15 +393,6 @@ int main(int argc, char *argv[]) {
     strcat(stuff, " ");
   }
   strcat(stuff, "\n"); //}}}
-
-  // count number of beads of each bead type //{{{
-  BeadType[0].Number = Counts.Unbonded; // None beads
-  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < MoleculeType[i].nBeads; j++) {
-      int btype = MoleculeType[i].Bead[j];
-      BeadType[btype].Number += MoleculeType[i].Number;
-    }
-  } //}}}
 
   // write output vsf file
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, false);
@@ -427,28 +419,27 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose option //{{{
   if (verbose) {
+    fprintf(stdout, "\nNote that only the first molecule in the ");
+    fprintf(stdout, "%s file and associated beads, ", input);
+    fprintf(stdout, "bonds, and angle are used.\n");
     fprintf(stdout, "\nGrid of %d x %d ", mols[0], mols[1]);
     if (number_of_mols != 0) {
       fprintf(stdout, "(%d molecules) ", number_of_mols);
     }
-    fprintf(stdout, "molecules on each wall");
-    char null[1] = {'\0'};
-    putchar('\n');
-    putchar('\n');
-    VerboseOutput(null, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    fprintf(stdout, "molecules on each wall\n");
+    VerboseOutput("\0", Counts, BoxLength, BeadType, Bead,
+                  MoleculeType, Molecule);
+    PrintBondTypes2(Counts.TypesOfBonds, bond_type);
+    PrintAngleTypes2(Counts.TypesOfAngles, angle_type);
   } //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
-
-  free(BeadType_field);
-  FreeMoleculeType(Counts_field, &MoleculeType_field);
-  FreeMolecule(Counts_field, &Molecule_field);
-  FreeBead(Counts_field, &Bead_field);
-  free(Index_field);
+  FreeSystemInfo(Counts_field, &MoleculeType_field, &Molecule_field,
+                 &BeadType_field, &Bead_field, &Index_field);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule,
+                 &BeadType, &Bead, &Index);
+  free(bond_type_field);
+  free(angle_type_field);
   free(bond_type);
   free(angle_type);
   free(output_vcf);

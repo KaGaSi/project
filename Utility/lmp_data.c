@@ -72,23 +72,13 @@ int main(int argc, char *argv[]) {
 
   // <input> - input coordinate file //{{{
   char input_coor[LINE];
+  char *input_vsf = calloc(LINE,sizeof(char));
   strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
+  // test that <input> filename ends with '.vcf' or '.vtf'
+  bool vtf;
+  if (!InputCoor(&vtf, input_coor, input_vsf)) {
     Help(argv[0], true);
     exit(1);
-  }
-  // if vtf, copy to input_vsf
-  char *input_vsf = calloc(LINE,sizeof(char));
-  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
-    strcpy(input_vsf, input_coor);
-  } else {
-    strcpy(input_vsf, "traject.vsf");
   } //}}}
 
   // <out.data> - output lammps data file //{{{
@@ -125,16 +115,20 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // variables - structures for info from vsf //{{{
+  // read information from vtf file(s) //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
-
-  // read system information from vsf
-  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
+  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
+  free(input_vsf); //}}}
 
   // variables - structures for info from FIELD //{{{
   BEADTYPE *BeadType_new; // structure with info about all bead types
@@ -144,10 +138,12 @@ int main(int argc, char *argv[]) {
   MOLECULE *Molecule_new; // structure with info about every molecule
   COUNTS Counts_new = InitCounts; // structure with number of beads, molecules, etc.
   PARAMS *bond_type; // information about bond types
-  PARAMS *angle_type; // information about angle types //}}}
+  PARAMS *angle_type; // information about angle types
+  PARAMS *dihedral_type; // information about dihedral types //}}}
 
   // read system information from FIELD (mainly bond & angle types)
-  ReadField(input, NULL, &Counts_new, &BeadType_new, &Bead_new, &Index_new, &MoleculeType_new, &Molecule_new, &bond_type, &angle_type);
+  ReadField(input, NULL, &Counts_new, &BeadType_new, &Bead_new, &Index_new,
+            &MoleculeType_new, &Molecule_new, &bond_type, &angle_type, &dihedral_type);
 
   // add bond types & angles from field to all molecules from vsf //{{{
   Counts.TypesOfBonds = Counts_new.TypesOfBonds;
@@ -186,15 +182,6 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // open input coordinate file //{{{
-  FILE *vcf;
-  if ((vcf = fopen(input_coor, "r")) == NULL) {
-    ErrorFileOpen(input_coor, 'r');
-    exit(1);
-  } //}}}
-
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
-
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
@@ -215,44 +202,36 @@ int main(int argc, char *argv[]) {
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));
 
-  // main loop //{{{
-  fpos_t pos; // for saving pointer position in vcf file
-  int test;
-  count = 0;
-  while ((test = getc(vcf)) != EOF && count != timestep) {
-    ungetc(test, vcf);
+  // open input coordinate file //{{{
+  FILE *vcf;
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
+    exit(1);
+  } //}}}
 
+  // main loop //{{{
+  count = 0;
+  while (true) {
     count++;
-    if (!silent && !script) {
+    if (!silent && isatty(STDOUT_FILENO)) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count);
     }
 
-    // save pointer position in file
-    fpos_t pos_old = pos;
-    fgetpos(vcf, &pos);
-
-    if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
-      fprintf(stderr, "\033[0m");
-      pos = pos_old;
-      count--;
+    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+    // if there's no additional timestep, exit the while loop
+    bool rubbish; // not used
+    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+      break;
     }
   }
 
-  // restore pointer position in vcf file
-  fsetpos(vcf, &pos);
-
-  ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
   if (!silent) {
-    if (script) {
-      fprintf(stdout, "Config Step: %6d\n", count);
-    } else {
+    if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
-      fprintf(stdout, "\nConfig Step: %6d\n", count);
+      fprintf(stdout, "\r                          \r");
     }
+    fprintf(stdout, "Last Step: %d\n", count);
   }
 
   fclose(vcf); //}}}
@@ -390,18 +369,8 @@ int main(int argc, char *argv[]) {
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  free(Index);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
-
-  free(BeadType_new);
-  free(Index_new);
-  FreeMoleculeType(Counts_new, &MoleculeType_new);
-  FreeMolecule(Counts_new, &Molecule_new);
-  FreeBead(Counts_new, &Bead_new);
-
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
+  FreeSystemInfo(Counts_new, &MoleculeType_new, &Molecule_new, &BeadType_new, &Bead_new, &Index_new);
   free(stuff);
   free(input);
   free(angle_type);
