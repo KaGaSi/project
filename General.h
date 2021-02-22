@@ -16,7 +16,7 @@
 #include <unistd.h>
 
 #define PI 3.141593 ///< value of pi
-#define LINE 1024 ///< maximum length of an array (for strings)
+#define LINE 1024 ///< maximum length of an array for strings
 #define SQR(x) ((x)*(x)) ///< macro for algebraic square
 #define CUBE(x) ((x)*(x)*(x)) ///< macro for algebraic cube
 
@@ -178,4 +178,6 @@ void RedText(int a);
 void YellowText(int a);
 void CyanText(int a);
 void ResetColour(int a);
+
+void SafeStrcat(char **out, char *in, int initial_size);
 #endif

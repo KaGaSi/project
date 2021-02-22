@@ -61,7 +61,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
@@ -110,44 +109,19 @@ int main(int argc, char *argv[]) {
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
-  // are provided coordinates joined? //{{{
-  bool joined = BoolOption(argc, argv, "--joined"); //}}}
-
-  // starting timestep //{{{
+  // starting & ending timesteps //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
     exit(1);
-  } //}}}
-
-  // ending timestep //{{{
+  }
   int end = -1;
   if (IntegerOption(argc, argv, "-e", &end)) {
     exit(1);
-  } //}}}
+  }
+  ErrorStartEnd(start, end); //}}}
 
-  // error if ending step is lower than starging step //{{{
-  if (end != -1 && start > end) {
-    RedText(STDERR_FILENO);
-    fprintf(stderr, "\nErorr: ");
-    YellowText(STDERR_FILENO);
-    fprintf(stderr, "-st");
-    RedText(STDERR_FILENO);
-    fprintf(stderr, " and ");
-    YellowText(STDERR_FILENO);
-    fprintf(stderr, "-e");
-    RedText(STDERR_FILENO);
-    fprintf(stderr, " - starting step (");
-    YellowText(STDERR_FILENO);
-    fprintf(stderr, "%d", start);
-    RedText(STDERR_FILENO);
-    fprintf(stderr, ") is higher than ending step (");
-    YellowText(STDERR_FILENO);
-    fprintf(stderr, "%d", end);
-    RedText(STDERR_FILENO);
-    fprintf(stderr, ")\n");
-    ResetColour(STDERR_FILENO);
-    exit(1);
-  } //}}}
+  // are provided coordinates joined? //{{{
+  bool joined = BoolOption(argc, argv, "--joined"); //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -155,18 +129,16 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // variables - structures //{{{
+  // read information from vtf file(s) //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
-
-  // read information from vtf file(s) //{{{
-  VECTOR BoxLength;
-  bool indexed;
-  int struct_lines;
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
               &BoxLength, &Counts, &BeadType, &Bead, &Index,
               &MoleculeType, &Molecule);
@@ -174,13 +146,19 @@ int main(int argc, char *argv[]) {
 
   // <molecule names> - types of molecules for calculation //{{{
   while (++count < argc && argv[count][0] != '-') {
-
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
-
     if (mol_type == -1) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m non-existent molecule \033[1;33m%s\033[1;31m\n", input_coor, argv[count]);
-      fprintf(stderr, "\033[0m");
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", input_coor);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - non-existent molecule");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", argv[count]);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\n");
+      ResetColour(STDERR_FILENO);
       ErrorMoleculeType(Counts, MoleculeType);
       exit(1);
     } else {
@@ -202,26 +180,38 @@ int main(int argc, char *argv[]) {
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
-    fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - number of bead ids must be dividable by three\n\n");
-    fprintf(stderr, "\033[0m");
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nError: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "-n");
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " - number of bead ids must be divisible by three\n\n");
+    ResetColour(STDERR_FILENO);
     exit(1);
   } //}}}
 
   for (int i = 0; i < number_of_beads; i++) {
-    bead[i]--; // ids should start with zero
-
     // Error - too high id for specific molecule //{{{
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
       if (MoleculeType[j].Use && bead[i] >= MoleculeType[j].nBeads) {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - \033[1;33m%d\033[1;31m is larger", bead[i]);
-        fprintf(stderr, " than the number of beads in molecule \033[1;33m%s\033[1;31m\n\n", MoleculeType[j].Name);
-        fprintf(stderr, "\033[0m");
-        Help(argv[0], true);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "-n");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - index ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%d", bead[i]);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " is larger than the number of beads in molecule ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", MoleculeType[j].Name);
+        fprintf(stderr, "\n\n");
+        ResetColour(STDERR_FILENO);
         exit(1);
       }
     } //}}}
+    bead[i]--; // ids should start with zero
   } //}}}
 
   // '-a' option - write angles for all molecules //{{{
@@ -302,39 +292,7 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // skip first start-1 steps //{{{
-  count = 0;
-  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
-    ungetc(test, vcf);
-    count++;
-    // print step? //{{{
-    if (!silent && isatty(STDOUT_FILENO)) {
-      fflush(stdout);
-      fprintf(stdout, "\rDiscarding step: %d", count);
-    } //}}}
-    if (SkipVcfCoor(vcf, input_coor, Counts, &stuff)) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: premature end of ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", input_coor);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " file\n\n");
-      ResetColour(STDERR_FILENO);
-      exit(1);
-    }
-  }
-  // print starting step? //{{{
-  if (!silent) {
-    if (isatty(STDOUT_FILENO)) {
-      fflush(stdout);
-      fprintf(stdout, "\r                          \r");
-    }
-    fprintf(stdout, "Starting step: %d\n", start);
-  } //}}}
-  // is the vcf file continuing?
-  if (ErrorDiscard(start, count, input_coor, vcf)) {
-    exit(1);
-  } //}}}
+  count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
   // main loop //{{{
   int count_step = 0; // count calculated timesteps
@@ -385,9 +343,13 @@ int main(int argc, char *argv[]) {
           if (k < bins) {
             distr[mol_type_i][j/beads_per_angle][k]++;
           } else {
-            fprintf(stderr, "\033[1;33m");
-            fprintf(stdout, "\nWarning: weird angle: %lf degrees\n", angle[i][j/beads_per_angle]);
-            fprintf(stderr, "\033[0m");
+            YellowText(STDERR_FILENO);
+            fprintf(stdout, "\nWarning: ");
+            CyanText(STDERR_FILENO);
+            fprintf(stdout, "weird angle");
+            YellowText(STDERR_FILENO);
+            fprintf(stdout, "(%lf degrees)\n", angle[i][j/beads_per_angle]);
+            ResetColour(STDERR_FILENO);
           }
         }
       }
@@ -509,11 +471,7 @@ int main(int argc, char *argv[]) {
   //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  free(Index);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead2(Counts.Beads, &Bead);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(stuff);
   free(output);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {

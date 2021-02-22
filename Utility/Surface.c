@@ -66,7 +66,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-in") != 0 &&
         strcmp(argv[i], "-bt") != 0 &&
@@ -84,23 +83,13 @@ int main(int argc, char *argv[]) {
 
   // <input> - input coordinate file //{{{
   char input_coor[LINE];
+  char *input_vsf = calloc(LINE,sizeof(char));
   strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
+  // test that <input> filename ends with '.vcf' or '.vtf'
+  bool vtf;
+  if (!InputCoor(&vtf, input_coor, input_vsf)) {
     Help(argv[0], true);
     exit(1);
-  }
-  // if vtf, copy to input_vsf
-  char *input_vsf = calloc(LINE,sizeof(char));
-  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
-    strcpy(input_vsf, input_coor);
-  } else {
-    strcpy(input_vsf, "traject.vsf");
   } //}}}
 
   // <width> - number of starting timestep //{{{
@@ -122,25 +111,16 @@ int main(int argc, char *argv[]) {
   bool script;
   CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
 
-  // starting timestep //{{{
+  // starting & ending timesteps //{{{
   int start = 1;
   if (IntegerOption(argc, argv, "-st", &start)) {
     exit(1);
-  } //}}}
-
-  // ending timestep //{{{
+  }
   int end = -1;
   if (IntegerOption(argc, argv, "-e", &end)) {
     exit(1);
-  } //}}}
-
-  // error if ending step is lower than starging step //{{{
-  if (end != -1 && start > end) {
-    fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: Starting step (%d) is higher than ending step (%d)\n", start, end);
-    fprintf(stderr, "\033[0m");
-    exit(1);
-  } //}}}
+  }
+  ErrorStartEnd(start, end); //}}}
 
   // go from box edges to the box centre instead of from centre to edges //{{{
   bool in = BoolOption(argc, argv, "-in"); //}}}
@@ -151,19 +131,20 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // variables - structures //{{{
+  // read information from vtf file(s) //{{{
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts; // structure with number of beads, molecules, etc. //}}}
-
-  // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-  // vsf file is not needed anymore
-  free(input_vsf);
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
+  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
+  free(input_vsf); //}}}
 
   // '-x' option //{{{
   if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
@@ -177,9 +158,13 @@ int main(int argc, char *argv[]) {
     axis = argv[count][0];
 
     if (axis != 'x' && axis != 'y' && axis != 'z') {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: \033[1;33m<axis>\033[1;31m must be 'x', 'y', or 'z'\n\n");
-      fprintf(stderr, "\033[0m");
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "<axis>");
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - use 'x', 'y', or 'z'\n\n");
+      ResetColour(STDERR_FILENO);
       exit(1);
     }
   } //}}}
@@ -201,15 +186,6 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Use = use[i];
   } //}}}
-
-  // open input coordinate file //{{{
-  FILE *vcf;
-  if ((vcf = fopen(input_coor, "r")) == NULL) {
-    ErrorFileOpen(input_coor, 'r');
-    exit(1);
-  } //}}}
-
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
 
   // set maximum/minimum as half a box length in the given direction //{{{
   double range[2];
@@ -266,59 +242,28 @@ int main(int argc, char *argv[]) {
     VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
   } //}}}
 
-  // skip first start-1 steps //{{{
-  count = 0;
-  int test;
-  for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
-    ungetc(test, vcf);
-
-    count++;
-
-    // print step? //{{{
-    if (!silent && !script) {
-      fflush(stdout);
-      fprintf(stdout, "\rDiscarding step: %d", count);
-    } //}}}
-
-    if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "Error: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
-      fprintf(stderr, "\033[0m");
-      exit(1);
-    }
-  }
-  // print number of discarded steps? //{{{
-  if (!silent) {
-    if (script) {
-      fprintf(stdout, "Starting step: %d\n", start);
-    } else {
-      fflush(stdout);
-      fprintf(stdout, "\r                          ");
-      fprintf(stdout, "\rStarting step: %d\n", start);
-    }
-  } //}}}
-  // is the vcf file continuing?
-  if (ErrorDiscard(start, count, input_coor, vcf)) {
+  // open input coordinate file //{{{
+  FILE *vcf;
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
     exit(1);
-  }
-  //}}}
+  } //}}}
+
+  count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
   // main loop //{{{
-  count = 0; // count timesteps
-  int count_vcf = start - 1;
-  while ((test = getc(vcf)) != EOF) {
-    ungetc(test, vcf);
-
-    count++;
+  int count_step = 0; // count calculated timesteps
+  int count_vcf = start - 1; // count timesteps from the beginning
+  while (true) {
+    count_step++;
     count_vcf++;
-
-    // write step? //{{{
-    if (!silent && !script) {
+    // print step? //{{{
+    if (!silent && isatty(STDOUT_FILENO)) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
 
     RestorePBC(Counts, BoxLength, &Bead);
 
@@ -480,19 +425,23 @@ int main(int argc, char *argv[]) {
     }
     free(temp); //}}}
 
-    if (end == count_vcf)
+    if (end == count_vcf) {
       break;
+    }
+    // if there's no additional timestep, exit the while loop
+    bool rubbish; // not used
+    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+      break;
+    }
   }
   fclose(vcf);
 
   if (!silent) {
-    if (script) {
-      fprintf(stdout, "Last Step: %d\n", count_vcf);
-    } else {
+    if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
-      fprintf(stdout, "\r                          ");
-      fprintf(stdout, "\rLast Step: %d\n", count_vcf);
+      fprintf(stdout, "\r                          \r");
     }
+    fprintf(stdout, "Last Step: %d\n", count_vcf);
   } //}}}
 
   // write surface to output file //{{{
@@ -503,7 +452,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // print command to output file //{{{
+  // print command to output file
   putc('#', out);
   PrintCommand(out, argc, argv);
 
@@ -542,11 +491,7 @@ int main(int argc, char *argv[]) {
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  free(Index);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(stuff);
   for (int i = 0; i < bins[0]; i++) {
     for (int j = 0; j < bins[1]; j++) {

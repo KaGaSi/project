@@ -19,7 +19,6 @@ void CommonHelp(bool error) {
   fprintf(ptr, "      -v             verbose output\n");
   fprintf(ptr, "      --silent       no output (overrides verbose option)\n");
   fprintf(ptr, "      -h             print this help and exit\n");
-  fprintf(ptr, "      --script       no progress output (useful if output is routed to a file)\n");
   fprintf(ptr, "      --version      print version number and exit\n");
 } //}}}
 
@@ -113,8 +112,13 @@ bool ExcludeOption(int argc, char **argv, COUNTS Counts,
     if (strcmp(argv[i], "-x") == 0) {
       // wrong argument to -x option //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing an argument to '-x' option ");
-        fprintf(stderr, "(or molecule name beginning with a dash)!\n");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "-x");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing an argument (or molecule name beginning with a dash)\n\n");
+        ResetColour(STDERR_FILENO);
         exit(1);
       } //}}}
       // read molecule(s) names
@@ -122,8 +126,17 @@ bool ExcludeOption(int argc, char **argv, COUNTS Counts,
       while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
         if (type == -1) { // is it in vsf?
-          fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "Error: non-existent molecule \033[1;33m%s\033[1;31m\n", argv[i+1+j]);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "-x");
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - non-existent ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", argv[i+1+j]);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - molecule\n\n");
+          ResetColour(STDERR_FILENO);
           ErrorMoleculeType(Counts, *MoleculeType);
           return(true);
         } else {
@@ -503,4 +516,20 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
   }
 
   return(false);
+} //}}}
+
+// StartEndTime() //{{{
+/**
+ * Options for starting and ending timesteps.
+ */
+void StartEndTime(int argc, char **argv, int *start, int *end) {
+  *start = 1;
+  if (IntegerOption(argc, argv, "-st", start)) {
+    exit(1);
+  }
+  *end = -1;
+  if (IntegerOption(argc, argv, "-e", end)) {
+    exit(1);
+  }
+  ErrorStartEnd(*start, *end);
 } //}}}

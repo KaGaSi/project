@@ -21,7 +21,6 @@ resulting CONFIG file, as xyz file does not contain box size.\n\n");
   fprintf(ptr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
   fprintf(ptr, "      -s             no output\n");
   fprintf(ptr, "      -h             print this help and exit\n");
-  fprintf(ptr, "      --script       do not reprint line (useful when output goes to file)\n");
   fprintf(ptr, "      --version      print version number and exit\n");
 } //}}}
 
@@ -56,7 +55,6 @@ int main(int argc, char *argv[]) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
@@ -68,7 +66,6 @@ int main(int argc, char *argv[]) {
 
   bool verbose, silent;
   SilentOption(argc, argv, &verbose, &silent);
-  bool script = BoolOption(argc, argv, "--script");
 
   // timestep to create CONFIG file from //{{{
   int timestep = -1;
@@ -128,10 +125,11 @@ int main(int argc, char *argv[]) {
     ungetc(test, xyz);
 
     count++;
-    if (!silent && !script) {
+    // print step? //{{{
+    if (!silent && isatty(STDOUT_FILENO)) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count);
-    }
+    } //}}}
 
     // skip remainder of number-of-beads line
     while (getc(xyz) != '\n')
@@ -148,18 +146,25 @@ int main(int argc, char *argv[]) {
       while (getc(xyz) != '\n')
         ;
     }
-  }
+  } //}}}
 
+  // print config step number? //{{{
+  if (!silent) {
+    if (isatty(STDOUT_FILENO)) {
+      fflush(stdout);
+      fprintf(stdout, "\r                          \r");
+    }
+    fprintf(stdout, "Config Step: %d\n", count);
+  } //}}}
+
+  // read the coordinates from the chosen timestep and create CONFIG //{{{
   // restore pointer position in xyz file
-  fsetpos(xyz, &pos); //}}}
-
-  // read the coordinates from the chosen timestep and create CONFIG
-  // open CONFIG //{{{
+  fsetpos(xyz, &pos);
   FILE *config;
   if ((config = fopen("CONFIG", "w")) == NULL) {
     ErrorFileOpen("CONFIG", 'w');
     exit(1);
-  } //}}}
+  }
 
   // print first stuff to CONFIG
   fprintf(config, "CONFIG from %s\n0 1\n", input_xyz);
@@ -176,10 +181,13 @@ int main(int argc, char *argv[]) {
 
     // error - less then four whitespace-separated strings //{{{
     if (words < 4) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_xyz);
-      fprintf(stderr, " - not enough columns in \033[1;33m%d\033[1;31m. timestep\n", count);
-      fprintf(stderr, "\033[0m");
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", input_xyz);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - not enough columns in timestep %d\n", count);
+      ResetColour(STDERR_FILENO);
       ErrorPrintLine(split, words);
       exit(1);
     } //}}}
@@ -201,16 +209,7 @@ int main(int argc, char *argv[]) {
     fprintf(config, "%lf %lf %lf\n", atof(split[1]), atof(split[2]), atof(split[3]));
   }
   fclose(config);
-  fclose(xyz);
-
-  if (!silent) {
-    if (script) {
-      fprintf(stdout, "Last Step: %6d\n", count);
-    } else {
-      fflush(stdout);
-      fprintf(stdout, "\nConfig Step: %6d\n", count);
-    }
-  } //}}}
+  fclose(xyz); //}}}
 
   return 0;
 }

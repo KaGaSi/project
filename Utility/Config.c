@@ -55,7 +55,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
@@ -69,32 +68,14 @@ int main(int argc, char *argv[]) {
 
   // <input> - input coordinate file //{{{
   char input_coor[LINE];
+  char *input_vsf = calloc(LINE,sizeof(char));
   strcpy(input_coor, argv[++count]);
-
-  // test if <input> filename ends with '.vcf' or '.vtf' (required by VMD)
-  int ext = 2;
-  char extension[2][5];
-  strcpy(extension[0], ".vcf");
-  strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_coor, ext, extension)) {
+  // test that <input> filename ends with '.vcf' or '.vtf'
+  bool vtf;
+  if (!InputCoor(&vtf, input_coor, input_vsf)) {
     Help(argv[0], true);
     exit(1);
-  }
-  // if vtf, copy to input_vsf
-  char *input_vsf = calloc(LINE,sizeof(char));
-  if (strcmp(strrchr(input_coor, '.'),".vtf") == 0) {
-    strcpy(input_vsf, input_coor);
-  } else {
-    strcpy(input_vsf, "traject.vsf");
   } //}}}
-
-  // variables - structures //{{{
-  BEADTYPE *BeadType; // structure with info about all bead types
-  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
-  BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
 
   // options before reading system data //{{{
   bool silent;
@@ -114,17 +95,19 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  // read system information
-  bool indexed = ReadStructure(input_vsf, input_coor, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-  // open input coordinate file //{{{
-  FILE *vcf;
-  if ((vcf = fopen(input_coor, "r")) == NULL) {
-    ErrorFileOpen(input_coor, 'r');
-    exit(1);
-  } //}}}
-
-  VECTOR BoxLength = GetPBC(vcf, input_coor);
+  // read information from vtf file(s) //{{{
+  BEADTYPE *BeadType; // structure with info about all bead types
+  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
+  BEAD *Bead; // structure with info about every bead
+  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  MOLECULE *Molecule; // structure with info about every molecule
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
+  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
@@ -133,103 +116,99 @@ int main(int argc, char *argv[]) {
 
   // warn if not all beads //{{{
   if (Counts.Beads != Counts.BeadsInVsf) {
-    fprintf(stderr, "\033[1;33m");
-    fprintf(stdout, "\nWarning: '%s' does not contain all beads from '%s'\n\n", input_coor, input_vsf);
-    fprintf(stderr, "\033[0m");
+    YellowText(STDOUT_FILENO);
+    fprintf(stdout, "\nWarning: ");
+    CyanText(STDOUT_FILENO);
+    fprintf(stdout, "%s", input_coor);
+    YellowText(STDOUT_FILENO);
+    fprintf(stdout, " does not contain all beads from ");
+    CyanText(STDOUT_FILENO);
+    fprintf(stdout, "%s", input_vsf);
+    YellowText(STDOUT_FILENO);
+    fprintf(stdout, "\n\n");
+    ResetColour(STDOUT_FILENO);
   } //}}}
 
-  // vsf file is not needed anymore
-  free(input_vsf);
+  // open input coordinate file //{{{
+  FILE *vcf;
+  if ((vcf = fopen(input_coor, "r")) == NULL) {
+    ErrorFileOpen(input_coor, 'r');
+    exit(1);
+  }
+  // skip structure part of a vtf
+  if (vtf) {
+    SkipStructVtf(vcf, input_coor);
+  } //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));
 
   // main loop //{{{
   fpos_t pos; // for saving pointer position in vcf file
-  int test;
   count = 0;
-  while ((test = getc(vcf)) != EOF && count != timestep) {
-    ungetc(test, vcf);
-
+  while (true) {
     count++;
-    if (!silent && !script) {
+    // print step? //{{{
+    if (!silent && isatty(STDOUT_FILENO)) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count);
-    }
-
+    } //}}}
     // save pointer position in file
-    fpos_t pos_old = pos;
     fgetpos(vcf, &pos);
 
-    if (SkipCoor(vcf, Counts, &stuff)) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: premature end of \033[1;33m%s\033[1;31m file\n\n", input_coor);
-      fprintf(stderr, "\033[0m");
-      pos = pos_old;
-      count--;
+    SkipVcfCoor(vcf, input_coor, Counts, &stuff);
+
+    if (timestep == count) {
+      break;
+    }
+
+    // if there's no additional timestep, exit the while loop
+    bool rubbish; // not used
+    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+      break;
     }
   }
 
-  // restore pointer position in FIELD file
+  // restore pointer position in vcf file & read the coordinates
   fsetpos(vcf, &pos);
-
-  ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+  ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+  fclose(vcf);
 
   if (!silent) {
-    if (script) {
-      fprintf(stdout, "CONFIG Step: %d\n", count);
-    } else {
+    if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
-      fprintf(stdout, "\r                         ");
-      fprintf(stdout, "\rCCONFIG Step: %d\n", count);
+      fprintf(stdout, "\r                          \r");
     }
-  }
-
-  fclose(vcf); //}}}
+    fprintf(stdout, "Last Step: %d\n", count);
+  } //}}}
 
   // create CONFIG //{{{
-  // open output CONFIG file for writing //{{{
+  // open output CONFIG file for writing
   FILE *out;
   if ((out = fopen("CONFIG", "w")) == NULL) {
     ErrorFileOpen("CONFIG", 'w');
     exit(1);
-  } //}}}
+  }
 
-  // print CONFIG file initial stuff //{{{
+  // print CONFIG file initial stuff
   fprintf(out, "NAME\n       0       1\n");
   fprintf(out, "%lf 0.000000 0.000000\n", BoxLength.x);
   fprintf(out, "0.000000 %lf 0.000000\n", BoxLength.y);
-  fprintf(out, "0.000000 0.000000 %lf\n", BoxLength.z); //}}}
+  fprintf(out, "0.000000 0.000000 %lf\n", BoxLength.z);
 
-  // bead coordinates //{{{
+  // bead coordinates
   // unbonded beads must be first (dl_meso requirement)
-  count = 0;
   for (int i = 0; i < Counts.Beads; i++) {
-    if (Bead[i].Molecule == -1) {
-      fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, ++count);
-      fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x-BoxLength.x/2,
-                                    Bead[i].Position.y-BoxLength.y/2,
-                                    Bead[i].Position.z-BoxLength.z/2);
-    }
+    fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, i+1);
+    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x-BoxLength.x/2,
+                                  Bead[i].Position.y-BoxLength.y/2,
+                                  Bead[i].Position.z-BoxLength.z/2);
   }
-  // bonded beads follow
-  for (int i = 0; i < Counts.Beads; i++) {
-    if (Bead[i].Molecule != -1) {
-      fprintf(out, "%s %d\n", BeadType[Bead[i].Type].Name, ++count);
-      fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x-BoxLength.x/2,
-                                    Bead[i].Position.y-BoxLength.y/2,
-                                    Bead[i].Position.z-BoxLength.z/2);
-    }
-  } //}}}
-
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(BeadType);
-  free(Index);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead);
+  free(input_vsf);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(stuff);
   //}}}
 

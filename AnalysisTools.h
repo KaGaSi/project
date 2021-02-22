@@ -104,9 +104,11 @@ void PrintAggregate(COUNTS Counts, int *Index,
 
 // PrintBondTypes() //{{{
 void PrintBondTypes(COUNTS Counts, PARAMS *bond_type);  //}}}
+void PrintBondTypes2(int number_of_bonds, PARAMS *bond_type);
 
 // PrintAngleTypes() //{{{
 void PrintAngleTypes(COUNTS Counts, PARAMS *angle_type);  //}}}
+void PrintAngleTypes2(int number_of_angles, PARAMS *angle_type);
 
 // FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name
@@ -129,6 +131,8 @@ int FindBeadType2(char *name, int types_of_beads, BEADTYPE *BeadType);
  */
 int FindMoleculeType(char *name, COUNTS Counts, MOLECULETYPE *MoleculeType); //}}}
 int FindMoleculeType2(char *name, int number_of_types, MOLECULETYPE *MoleculeType);
+
+void FillMolBTypes(int number_of_types, MOLECULETYPE **MoleculeType);
 
 // Distancet() //{{{
 /**
@@ -283,31 +287,28 @@ void SortAngles(int **angle, int length); //}}}
 /**
  * \brief Free memory allocated for Bead struct array.
  *
- * \param [in]  Counts      number of beads, molecu.es, etc.
- * \param [out] Bead        information about individual beads
+ * \param [in]  number_of_beads   number of beads
+ * \param [out] Bead              information about individual beads
  */
-void FreeBead(COUNTS Counts, BEAD **Bead); //}}}
-void FreeBead2(int number_of_beads, BEAD **Bead);
+void FreeBead(int number_of_beads, BEAD **Bead); //}}}
 
 // FreeMolecule() //{{{
 /**
  * \brief Free memory allocated for Molecule struct array.
  *
- * \param [in]  Counts      number of beads, molecu.es, etc.
- * \param [out] Molecule    information about individual molecules
+ * \param [in]  number_of_molecules   number of molecules
+ * \param [out] Molecule              information about individual molecules
  */
-void FreeMolecule(COUNTS Counts, MOLECULE **Molecule); //}}}
-void FreeMolecule2(int number_of_molecules, MOLECULE **Molecule);
+void FreeMolecule(int number_of_molecules, MOLECULE **Molecule); //}}}
 
 // FreeMoleculeType() //{{{
 /**
  * \brief Free memory allocated for MoleculeType struct array.
  *
- * \param [in]  Counts         number of beads, molecu.es, etc.
- * \param [out] MoleculeType   information about individual molecules
+ * \param [in]  number_of_types  number of molecule types
+ * \param [out] MoleculeType     information about molecule types
  */
-void FreeMoleculeType(COUNTS Counts, MOLECULETYPE **MoleculeType); //}}}
-void FreeMoleculeType2(int number_of_types, MOLECULETYPE **MoleculeType);
+void FreeMoleculeType(int number_of_types, MOLECULETYPE **MoleculeType); //}}}
 
 // FreeAggregate() //{{{
 /**
@@ -317,4 +318,17 @@ void FreeMoleculeType2(int number_of_types, MOLECULETYPE **MoleculeType);
  * \param [out] Aggregate   information about individual molecules
  */
 void FreeAggregate(COUNTS Counts, AGGREGATE **Aggregate); //}}}
+
+// FreeSystemInfo() //{{{
+/**
+ * \brief Free memory for all standard arrays and structures of arrays.
+ *
+ * \param [in]  Counts         numbers of beads, molecules, and types
+ * \param [out] MoleculeType   information about molecule types
+ * \param [out] Molecule       information about individual molecules
+ * \param [out] BeadType       information about bead types
+ * \param [out] Bead           information about individual beads
+ */
+void FreeSystemInfo(COUNTS Counts, MOLECULETYPE **MoleculeType, MOLECULE **Molecule,
+                    BEADTYPE **BeadType, BEAD **Bead, int **Index); //}}}
 #endif

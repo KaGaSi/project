@@ -155,11 +155,7 @@ int main(int argc, char *argv[]) {
   WriteVsf(output_vsf, Counts, BeadType, Bead, MoleculeType, Molecule, false);
 
   // free memory (to make valgrind happy) //{{{
-  free(BeadType);
-  FreeBead(Counts, &Bead);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  free(Index);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(angle_type);
   free(bond_type); //}}}
 }

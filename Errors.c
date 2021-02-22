@@ -34,7 +34,7 @@ bool ErrorDiscard(int start, int step, char *file, FILE *coor) {
     RedText(STDERR_FILENO);
     fprintf(stderr, " - starting timestep (");
     YellowText(STDERR_FILENO);
-    fprintf(stderr, "%d", step);
+    fprintf(stderr, "%d", start);
     RedText(STDERR_FILENO);
     fprintf(stderr, ") is higher than the total number of steps (");
     YellowText(STDERR_FILENO);
@@ -213,5 +213,34 @@ void WarnElNeutrality(COUNTS Counts, BEADTYPE *BeadType, char *file) {
     YellowText(STDERR_FILENO);
     fprintf(stderr, ")!\n\n");
     ResetColour(STDERR_FILENO);
+  }
+} //}}}
+
+// ErrorStartEnd() //{{{
+/**
+ * Error when ending timestep is higher than the starting one.
+ */
+void ErrorStartEnd(int start, int end) {
+  if (end != -1 && start > end) {
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nErorr: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "-st");
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " and ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "-e");
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " - starting step (");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%d", start);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, ") is higher than ending step (");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%d", end);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, ")\n");
+    ResetColour(STDERR_FILENO);
+    exit(1);
   }
 } //}}}

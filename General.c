@@ -5,13 +5,13 @@
  * Function to test if provided string is a real number.
  */
 bool IsDouble(char *a) {
+  // only one dot and scientific e can be present
+  bool dot = false,
+       sci_e = false;
   // wrong first character - can be minus, dot, or number
   if (a[0] != '-' && a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
     return false;
-  }
-  // only one dot can be present
-  bool dot = false;
-  if (a[0] == '.') {
+  } else if (a[0] == '.') {
     dot = true;
   }
   // test the remaining characters - either digit, or dot (but only 1 in total)
@@ -21,6 +21,22 @@ bool IsDouble(char *a) {
         return false;
       } else {
         dot = true;
+      }
+    } else if (a[i] == 'e' || a[i] == 'E') { // scientific notation?
+      // format must be: e/E[-/+]<int>
+      if (sci_e) {
+        return false;
+      } else {
+        sci_e = true;
+      }
+      printf("\n%s %d %ld %lf\n", a, i, strlen(a), atof(a));
+      if ((i+1) >= strlen(a)) {
+        return false;
+      } else if (a[i+1] == '-' || a[i+1] == '+') {
+        i++; // skip the '-' sign in the for loop
+        if ((i+1) >= strlen(a)) {
+          return false;
+        }
       }
     } else if (a[i] < '0' || a[i] > '9') {
       return false;
@@ -318,6 +334,9 @@ void PrintCommand(FILE *ptr, int argc, char *argv[]) {
 } //}}}
 
 // RedText() //{{{
+/**
+ * Function to switch output tty colour to red either for stdout or stderr.
+ */
 void RedText(int a) {
   if (isatty(a) && a == STDOUT_FILENO) {
     fprintf(stdout, "\033[1;31m");
@@ -327,6 +346,9 @@ void RedText(int a) {
 } //}}}
 
 // YellowText() //{{{
+/**
+ * Function to switch output tty colour to yellow either for stdout or stderr.
+ */
 void YellowText(int a) {
   if (isatty(a) && a == STDOUT_FILENO) {
     fprintf(stdout, "\033[1;33m");
@@ -336,6 +358,9 @@ void YellowText(int a) {
 } //}}}
 
 // CyanText() //{{{
+/**
+ * Function to switch output tty colour to cyan either for stdout or stderr.
+ */
 void CyanText(int a) {
   if (isatty(a) && a == STDOUT_FILENO) {
     fprintf(stdout, "\033[1;36m");
@@ -345,10 +370,42 @@ void CyanText(int a) {
 } //}}}
 
 // ResetColour() //{{{
+/**
+ * Function to reset output tty colour either for stdout or stderr.
+ */
 void ResetColour(int a) {
   if (isatty(a) && a == STDOUT_FILENO) {
     fprintf(stdout, "\033[0m");
   } else if (isatty(a) && a == STDERR_FILENO) {
     fprintf(stderr, "\033[0m");
   }
+} //}}}
+
+// SafeStrcat() //{{{
+/**
+ * Function to safely concatenate strings; i.e., if the output array is too
+ * small, it first reallocs it.
+ */
+void SafeStrcat(char **out, char *in, int initial_size) {
+  int in_length = 0, out_length = 0; // string length, not counting '\0'
+  // get length of the in array
+  while (true) {
+    if (in[in_length] == '\0') {
+      break;
+    }
+    in_length++;
+  }
+  // get length of the out array
+  while (true) {
+    if ((*out)[out_length] == '\0') {
+      break;
+    }
+    out_length++;
+  }
+  int out_times_initial = out_length / initial_size + 1; // out array length in units of initial_size
+  int new_length = in_length + out_length; // minimum required length for out array
+  if (new_length > (out_times_initial*initial_size)) { // realloc out arry if too short
+    *out = realloc(*out, (out_times_initial+1)*initial_size*sizeof(char));
+  }
+  strcat(*out, in);
 } //}}}

@@ -1,6 +1,6 @@
 #include "../AnalysisTools.h"
 
-void Help(char cmd[50], bool error) { //{{{
+void Help(char cmd[50], bool error) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -21,11 +21,11 @@ visualisation tool.\n\n");
   fprintf(ptr, "      -h         print this help and exit\n");
   fprintf(ptr, "      --change   transform molecules according to the first one of each type\n");
   fprintf(ptr, "      --version  print version number and exit\n");
-} //}}}
+}
 
 int main(int argc, char *argv[]) {
 
-  // -h/--version options - print stuff and exit //{{{
+  // -h/--version options - print stuff and exit
   if (VersionOption(argc, argv)) {
     exit(0);
   }
@@ -35,9 +35,9 @@ int main(int argc, char *argv[]) {
       exit(0);
     }
   }
-  int req_args = 1; //}}}
+  int req_args = 1;
 
-  // check if correct number of arguments //{{{
+  // check if correct number of arguments
   int count = 0;
   for (int i = 1; i < argc && argv[count][0] != '-'; i++) {
     count++;
@@ -47,9 +47,9 @@ int main(int argc, char *argv[]) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
     exit(1);
-  } //}}}
+  }
 
-  // test if options are given correctly //{{{
+  // test if options are given correctly
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-i") != 0 &&
@@ -61,13 +61,13 @@ int main(int argc, char *argv[]) {
       Help(argv[0], true);
       exit(1);
     }
-  } //}}}
+  }
 
   // print command to stdout
   PrintCommand(stdout, argc, argv);
 
-  // options before reading system data //{{{
-  // use .vsf file other than traject.vsf? //{{{
+  // options before reading system data
+  // use .vsf file other than traject.vsf?
   char *input_vsf = calloc(LINE,sizeof(char));
   if (FileOption(argc, argv, "-i", &input_vsf)) {
     exit(1);
@@ -84,20 +84,20 @@ int main(int argc, char *argv[]) {
   if (ErrorExtension(input_vsf, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  } //}}}
+  }
 
   // print new vsf so that all molecules always contain the same beads as the
   // first one of their type in the vsf
   bool change = BoolOption(argc, argv, "--change");
 
-  // output verbosity //{{{
+  // output verbosity
   bool verbose = BoolOption(argc, argv, "-v"); // verbose output
-  // }}}
-  //}}}
+  // 
+ 
 
   count = 0; // count arguments
 
-  // <output.vsf> - output structure file (must end with .vsf) //{{{
+  // <output.vsf> - output structure file (must end with .vsf)
   char output[LINE];
   strcpy(output, argv[++count]);
 
@@ -108,41 +108,35 @@ int main(int argc, char *argv[]) {
   if (ErrorExtension(output, ext, extension)) {
     Help(argv[0], true);
     exit(1);
-  } //}}}
+  }
 
-  // variables - structures //{{{
+  // read information from vtf file(s)
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
   int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
   MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc. //}}}
+  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
+  VECTOR BoxLength; // couboid box dimensions
+  bool indexed; // indexed timestep?
+  int struct_lines; // number of structure lines (relevant for vtf)
+  FullVtfRead(input_vsf, "\0", false, false, &indexed, &struct_lines,
+              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule);
+  free(input_vsf);
 
-  ReadVtfStructure(input_vsf, true, &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-//// read system information
-//ReadStructure(input_vsf, "\0", &Counts, &BeadType, &Bead, &Index, &MoleculeType, &Molecule);
-
-//// vsf file is not needed anymore
-//free(input_vsf);
-
-  // print information - verbose option //{{{
+  // print information - verbose option
   if (verbose) {
     VECTOR BoxLength;
     BoxLength.x = -1;
     VerboseOutput("\0", Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-  } //}}}
+  }
 
   // create & fill output vsf file
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, change);
 
-  // free memory - to make valgrind happy //{{{
-  free(input_vsf);
-  free(BeadType);
-  free(Index);
-  FreeMoleculeType(Counts, &MoleculeType);
-  FreeMolecule(Counts, &Molecule);
-  FreeBead(Counts, &Bead); //}}}
+  // free memory - to make valgrind happy
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
 
   return 0;
 }
