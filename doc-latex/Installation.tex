@@ -1,7 +1,7 @@
 \chapter{Installation} \label{chap:Install}
 
-All programs can be compiled on linux using \texttt{cmake}, which generates
-\texttt{Makefile}, and subsequently running \texttt{make}. It requires
+All programs can be compiled on linux using \texttt{cmake} and subsequently
+running \texttt{make} on the generated \texttt{Makefile}. It requires
 \texttt{C} and \texttt{FORTRAN} compilers.
 
 The compilation should be done in a separate directory, such as
@@ -9,8 +9,8 @@ The compilation should be done in a separate directory, such as
 \texttt{AnalysisTools} root directory). To create the \texttt{Makefile},
 simply run \texttt{cmake \$ROOT\_DIR} in the \texttt{build} directory.  All
 utilities are then compiled by running \texttt{make} without any arguments.
-To compile individual utilities, run \texttt{make <utility name>}.
-The binaries will be in \texttt{build/bin} directory.
+To compile individual utilities, run \texttt{make <utility name>}.  The
+binaries will be in \texttt{build/bin} directory.
 
 Following is a one line command to create the \texttt{build} directory and
 compile all utilities (assuming the working directory is AnalysisTools root

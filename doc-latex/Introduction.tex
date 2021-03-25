@@ -1,18 +1,19 @@
 \chapter{Introdution}
 
-This software package is a set of utilities aimed to analyse trajectories
-of coarse-grained simulations. It works with
-\href{https://github.com/olenz/vtfplugin/wiki/VTF-format}{vtf trajectory
-files}.
+This set of utilities analyses trajectories of particle-based simulations.
+The emphasis is on assembly of molecules such as self-assembly of polymers
+and the properties of the resultant aggregates. Note that throughout the
+utilities and this manual, the term aggregates refers to any supramolecular
+structure (e.g., a bilayer, a micelle, or a vesicle).
 
-The emphasis is mainly on assembly of molecules, e.g., self-assembly of
-polymers. It therefore includes utilities to determine if molecules are in
-aggregates and to calculate various properties of aggregates. Also,
-throughout the utilities and this manual, the term aggregates refers to any
-supramolecular structure (e.g., a bilayer, a micelle, or a vesicle).  The
-package also contains some utilities to generate initial configurations (or
-adapt existing configurations) as well as to create input files for the
+The package also contains some utilities to generate initial configurations
+(or adapt existing) as well as to create input files for the
 \href{https://lammps.sandia.gov/}{LAMMPS molecular dynamic simulator} and
-the
-\href{https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx}{DL\_MESO
+the \href{https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx}{DL\_MESO
 simulation package}.
+
+It mainly works with
+\href{https://github.com/olenz/vtfplugin/wiki/VTF-format}{vtf trajectory
+files}, but it can also read \texttt{xyz} or LAMMPS custom format
+coordinate files as well as configuration files for LAMMPS and DL\_MESO
+simulation package.

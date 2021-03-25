@@ -14,9 +14,10 @@ well.\n\n");
 
   fprintf(ptr, "Usage:\n");
   fprintf(ptr, "   %s <input> <options>\n\n", cmd);
-  fprintf(ptr, "   <input>       input structure file (either vsf or vtf format)\n");
+  fprintf(ptr, "   <input>       vtf input structure file\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -c         input coordinate file in either vcf or vtf format (default: none)\n");
+  fprintf(ptr, "      -c         vtf input coordinate file (default: none)\n");
+  fprintf(ptr, "      --detailed differentiate bead types not just by names\n");
   fprintf(ptr, "      -v         verbose output\n");
   fprintf(ptr, "      -h         print this help and exit\n");
   fprintf(ptr, "      --version  print version number and exit\n");
@@ -52,6 +53,7 @@ int main(int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (argv[i][0] == '-' &&
         strcmp(argv[i], "-c") != 0 &&
+        strcmp(argv[i], "--detailed") != 0 &&
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-h") != 0) {
@@ -67,12 +69,12 @@ int main(int argc, char *argv[]) {
   // <input> - input structure file (must end with .vsf or .vtf) //{{{
   char *input_vsf = calloc(LINE,sizeof(char));
   strcpy(input_vsf, argv[++count]);
-  // test if <input> filename ends with '.vsf' or '.vtf' (required by VMD)
+  // test if <input> filename ends with '.vsf' or '.vtf'
   int ext = 2;
   char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
-  if (ErrorExtension(input_vsf, ext, extension)) {
+  if (ErrorExtension(input_vsf, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -95,11 +97,12 @@ int main(int argc, char *argv[]) {
       Help(argv[0], true);
       exit(1);
     } else if (test == 1) {
-      test = true;
+      vtf = true;
     }
   } //}}}
 
   bool verbose = BoolOption(argc, argv, "-v"); // verbose output?
+  bool detailed = BoolOption(argc, argv, "--detailed"); // verbose output?
   //}}}
 
   // read information from vtf file(s) //{{{
@@ -112,7 +115,7 @@ int main(int argc, char *argv[]) {
   VECTOR BoxLength = {-1, -1, -1}; // couboid box dimensions
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
-  FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
+  FullVtfRead(input_vsf, input_coor, detailed, vtf, &indexed, &struct_lines,
               &BoxLength, &Counts, &BeadType, &Bead, &Index,
               &MoleculeType, &Molecule);
   free(input_vsf); //}}}

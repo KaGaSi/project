@@ -587,10 +587,7 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  // skip structure part of a vtf
-  if (vtf) {
-    SkipStructVtf(vcf, input_coor);
-  } //}}}
+  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
 
   // write bead type names and pbc to <joined.vcf> if '-j' option was used //{{{
   if (joined_vcf[0] != '\0') {

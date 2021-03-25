@@ -10,7 +10,7 @@ void ErrorArgNumber(int count, int need) {
   YellowText(STDERR_FILENO);
   fprintf(stderr, "%d", count);
   RedText(STDERR_FILENO);
-  fprintf(stderr, " instead of");
+  fprintf(stderr, " instead of ");
   YellowText(STDERR_FILENO);
   fprintf(stderr, "%d", need);
   RedText(STDERR_FILENO);

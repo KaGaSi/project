@@ -110,6 +110,8 @@ void PrintBondTypes2(int number_of_bonds, PARAMS *bond_type);
 void PrintAngleTypes(COUNTS Counts, PARAMS *angle_type);  //}}}
 void PrintAngleTypes2(int number_of_angles, PARAMS *angle_type);
 
+void PrintDihedralTypes2(int number_of_dihedrals, PARAMS *dihedral_type);
+
 // FindBeadType() //{{{
 /** \brief Function to identify type of bead from its name
  *

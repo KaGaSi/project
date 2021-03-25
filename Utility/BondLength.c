@@ -248,10 +248,7 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  // skip structure part of a vtf
-  if (vtf) {
-    SkipStructVtf(vcf, input_coor);
-  } //}}}
+  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
 
   count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
