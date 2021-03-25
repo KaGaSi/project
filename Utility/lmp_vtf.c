@@ -126,7 +126,8 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput("\0", Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput("\0", Counts, BoxLength, BeadType, Bead,
+                  MoleculeType, Molecule);
     PrintBondTypes(Counts, bond_type);
     PrintAngleTypes(Counts, angle_type);
   } //}}}

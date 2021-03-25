@@ -55,6 +55,7 @@ set(UTILS AddToSystem
           SelectedVcf
           Surface
           TransformVsf
+          Velocity
           VisualizeAgg)
         foreach(utility ${UTILS})
   add_executable(${utility} Utility/${utility}.c)
