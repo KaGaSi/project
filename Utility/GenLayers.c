@@ -10,7 +10,7 @@ void Help(char cmd[50], bool error) { //{{{
 GenLayers reads information from a FIELD-like file and generates two \
 mirror monolayers in xy planes of the simulation box specified distance \
 from edges of the box (in z direction). Only the first molecule type in \
-the FIELD-like file is used to construct the layers. The molecules are \
+the FIELD-like file is used. The molecules are \
 generated on a square grid with distance between anchoring points specified \
 either explicitly or implicitly (by specifying the number of molecules per \
 layer).\n\n");
@@ -183,6 +183,7 @@ int main(int argc, char *argv[]) {
   COUNTS Counts = InitCounts;
   PARAMS *bond_type;
   PARAMS *angle_type;
+  PARAMS *dihedral_type;
   int *Index; //}}}
 
   // find bead types to be used & copy them //{{{
@@ -216,7 +217,7 @@ int main(int argc, char *argv[]) {
   Counts.TypesOfMolecules = 1;
   MoleculeType = calloc(Counts.TypesOfMolecules, sizeof(MOLECULETYPE));
   strcpy(MoleculeType[0].Name, MoleculeType_field[0].Name);
-  // copy beads (using the new bead type indicies)
+  // copy beads (using the new bead type indices)
   MoleculeType[0].nBeads = MoleculeType_field[0].nBeads;
   MoleculeType[0].Bead = calloc(MoleculeType[0].nBeads, sizeof(int));
   for (int j = 0; j < MoleculeType[0].nBeads; j++) {
@@ -233,7 +234,7 @@ int main(int argc, char *argv[]) {
     MoleculeType[0].Bond[j][0] = MoleculeType_field[0].Bond[j][0];
     MoleculeType[0].Bond[j][1] = MoleculeType_field[0].Bond[j][1];
     MoleculeType[0].Bond[j][2] = MoleculeType_field[0].Bond[j][2];
-    // number of bond types must be the highest bond type id in the molecule
+    // number of bond types is the highest type id in the molecule
     if (MoleculeType[0].Bond[j][2] >= Counts.TypesOfBonds) {
       Counts.TypesOfBonds = MoleculeType[0].Bond[j][2] + 1;
     }
@@ -248,17 +249,34 @@ int main(int argc, char *argv[]) {
     MoleculeType[0].Angle[j][1] = MoleculeType_field[0].Angle[j][1];
     MoleculeType[0].Angle[j][2] = MoleculeType_field[0].Angle[j][2];
     MoleculeType[0].Angle[j][3] = MoleculeType_field[0].Angle[j][3];
-    // number of angle types must be the highest angle type id in the molecule
+    // number of angle types is the highest angle type id in the molecule
     if (MoleculeType[0].Angle[j][3] >= Counts.TypesOfAngles) {
       Counts.TypesOfAngles = MoleculeType[0].Angle[j][3] + 1;
+    }
+  }
+  // copy dihedrals & count dihedrals types
+  Counts.TypesOfDihedrals = 0;
+  MoleculeType[0].nDihedrals = MoleculeType_field[0].nDihedrals;
+  MoleculeType[0].Dihedral = calloc(MoleculeType[0].nDihedrals, sizeof(int *));
+  for (int j = 0; j < MoleculeType[0].nDihedrals; j++) {
+    MoleculeType[0].Dihedral[j] = calloc(5, sizeof(int));
+    MoleculeType[0].Dihedral[j][0] = MoleculeType_field[0].Dihedral[j][0];
+    MoleculeType[0].Dihedral[j][1] = MoleculeType_field[0].Dihedral[j][1];
+    MoleculeType[0].Dihedral[j][2] = MoleculeType_field[0].Dihedral[j][2];
+    MoleculeType[0].Dihedral[j][3] = MoleculeType_field[0].Dihedral[j][3];
+    MoleculeType[0].Dihedral[j][4] = MoleculeType_field[0].Dihedral[j][4];
+    // number of dihedral types is the highest dihedral type id in the molecule
+    if (MoleculeType[0].Dihedral[j][4] >= Counts.TypesOfDihedrals) {
+      Counts.TypesOfDihedrals = MoleculeType[0].Dihedral[j][4] + 1;
     }
   }
   // copy mass & charge & fill the BType array
   MoleculeType[0].Mass = MoleculeType_field[0].Mass;
   MoleculeType[0].Charge = MoleculeType_field[0].Charge;
+  // fill BTypes struct using the new bead type indices
   FillMolBTypes(Counts.TypesOfMolecules, &MoleculeType); //}}}
 
-  // copy bond & angle types to be used //{{{
+  // copy bond & angle & dihedral types to be used //{{{
   bond_type = calloc(Counts.TypesOfBonds, sizeof(PARAMS));
   for (int i = 0; i < Counts.TypesOfBonds; i++) {
     bond_type[i].a = bond_type_field[i].a;
@@ -268,10 +286,15 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Counts.TypesOfAngles; i++) {
     angle_type[i].a = angle_type_field[i].a;
     angle_type[i].b = angle_type_field[i].b;
+  }
+  dihedral_type = calloc(Counts.TypesOfDihedrals, sizeof(PARAMS));
+  for (int i = 0; i < Counts.TypesOfDihedrals; i++) {
+    dihedral_type[i].a = dihedral_type_field[i].a;
+    dihedral_type[i].b = dihedral_type_field[i].b;
   } //}}}
 
   // number of molecules in x and y directions //{{{
-  int mols[2]; // maximum number of molecules in x and y directions per one wall
+  int mols[2]; // maximum number of molecules in x and y directions per wall
   if (number_of_mols == 0) { // if -nm option is not used
     mols[0] = round(BoxLength.x / spacing[0]);
     mols[1] = round(BoxLength.y / spacing[1]);
@@ -301,7 +324,7 @@ int main(int argc, char *argv[]) {
   Counts.Beads = Counts.Bonded;
   Counts.Unbonded = 0; //}}}
 
-  // allocate arrays
+  // allocate memory
   Molecule = calloc(Counts.Molecules, sizeof(MOLECULE));
   Bead = calloc(Counts.Beads, sizeof(BEAD));
   Index = calloc(Counts.Beads, sizeof(int));
@@ -330,11 +353,16 @@ int main(int argc, char *argv[]) {
     BeadType[i].Write = true;
   } //}}}
 
-  // move the used molecule so that first bead is [0,0,0] //{{{
+  // move the molecule, so its first bead is [0,0,0] //{{{
   for (int i = 1; i < MoleculeType[0].nBeads; i++) {
     int id_field = Molecule_field[0].Bead[i];
     Bead_field[id_field].Position.x -= Bead_field[id_field-i].Position.x;
-  } //}}}
+  }
+  // the first bead's coordinates aren't used, so this is just to be sure
+  int id_field = Molecule_field[0].Bead[0];
+  Bead_field[id_field].Position.x = 0;
+  Bead_field[id_field].Position.y = 0;
+  Bead_field[id_field].Position.z = 0; //}}}
 
   // generate brush on the grid & fill remaining Bead[] array //{{{
   count = 0;
@@ -342,6 +370,7 @@ int main(int argc, char *argv[]) {
     int count_mols = 0; // per layer
     for (int i = 0; i < mols[0]; i++) {
       for (int j = 0; j < mols[1]; j++) {
+        // first bead of a molecule
         Bead[count].Position.x = spacing[0] / 2 + spacing[0] * i;
         Bead[count].Position.y = spacing[1] / 2 + spacing[1] * j;
         if (layer == 0) {
@@ -351,6 +380,7 @@ int main(int argc, char *argv[]) {
         }
         Bead[count].Index = count;
         Bead[count].Type = MoleculeType[0].Bead[0];
+        // remaining beads of the molecule
         for (int k = 1; k < MoleculeType[0].nBeads; k++) {
           int id_field = Molecule_field[0].Bead[k];
           Bead[count+k].Position.x = Bead[count].Position.x +
@@ -368,8 +398,9 @@ int main(int argc, char *argv[]) {
           Bead[count+k].Type = MoleculeType[0].Bead[k];
         }
         count += MoleculeType[0].nBeads;
+        count_mols++;
         // stop placing molecules (-nm option)
-        if (++count_mols == number_of_mols) {
+        if (count_mols == number_of_mols) {
           break;
         }
       }
@@ -379,25 +410,7 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // open output .vcf file for writing //{{{
-  FILE *out;
-  if ((out = fopen(output_vcf, "w")) == NULL) {
-    ErrorFileOpen(output_vcf, 'w');
-    exit(1);
-  } //}}}
-
-  // string with command to be printed to output vsf //{{{
-  strcpy(stuff, "# Generated by: GenLayers ");
-  for (int i = 1; i < argc; i++) {
-    strcat(stuff, argv[i]);
-    strcat(stuff, " ");
-  }
-  strcat(stuff, "\n"); //}}}
-
-  // write output vsf file
-  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, false);
-
-  // adjust for gap value (-g option) //{{{
+  // adjust coordinates for gap from box side (-g option) //{{{
   for (int i = 0; i < Counts.Molecules; i++) {
     int mtype = Molecule[i].Type;
     for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
@@ -410,6 +423,24 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  // print the command to output vcf via the timestep preamble //{{{
+  strcpy(stuff, "# Generated by: GenLayers ");
+  for (int i = 1; i < argc; i++) {
+    strcat(stuff, argv[i]);
+    strcat(stuff, " ");
+  }
+  strcat(stuff, "\n"); //}}}
+
+  // write output vsf file
+  WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, false);
+
+  // open output .vcf file for writing //{{{
+  FILE *out;
+  if ((out = fopen(output_vcf, "w")) == NULL) {
+    ErrorFileOpen(output_vcf, 'w');
+    exit(1);
+  } //}}}
+
   // write output vcf file //{{{
   // pbc
   fprintf(out, "pbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
@@ -420,8 +451,8 @@ int main(int argc, char *argv[]) {
   // print information - verbose option //{{{
   if (verbose) {
     fprintf(stdout, "\nNote that only the first molecule in the ");
-    fprintf(stdout, "%s file and associated beads, ", input);
-    fprintf(stdout, "bonds, and angle are used.\n");
+    fprintf(stdout, "%s file (and the associated beads, ", input);
+    fprintf(stdout, "bonds, angles, and dihedrals) are used.\n");
     fprintf(stdout, "\nGrid of %d x %d ", mols[0], mols[1]);
     if (number_of_mols != 0) {
       fprintf(stdout, "(%d molecules) ", number_of_mols);
@@ -431,6 +462,7 @@ int main(int argc, char *argv[]) {
                   MoleculeType, Molecule);
     PrintBondTypes2(Counts.TypesOfBonds, bond_type);
     PrintAngleTypes2(Counts.TypesOfAngles, angle_type);
+    PrintDihedralTypes2(Counts.TypesOfDihedrals, dihedral_type);
   } //}}}
 
   // free memory - to make valgrind happy //{{{
@@ -440,8 +472,10 @@ int main(int argc, char *argv[]) {
                  &BeadType, &Bead, &Index);
   free(bond_type_field);
   free(angle_type_field);
+  free(dihedral_type_field);
   free(bond_type);
   free(angle_type);
+  free(dihedral_type);
   free(output_vcf);
   free(input); //}}}
 

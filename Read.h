@@ -8,26 +8,14 @@
 
 #include "AnalysisTools.h"
 
-void SkipStructVtf(FILE *vtf, char *name_vtf);
-
-// TODO: remove
 // GetPBC() //{{{
 /*
- * \brief Function to get box dimensions.
+ * \brief Function to get box dimensions from a vtf coordinate file.
  *
- * \param [in] vcf         opened coordinate file
- * \param [in] input_coor  name of the coordinate file
+ * \param [in] coor_file   name of the coordinate file
  * \return vector with box dimensions
  */
-VECTOR GetPBC(FILE *vcf, char *input_coor); //}}}
-// GetPBC2() //{{{
-/*
- * \brief Function to get box dimensions.
- *
- * \param [in] input_coor  name of the coordinate file
- * \return vector with box dimensions
- */
-VECTOR GetPBC2(char *input_coor); //}}}
+VECTOR GetPBC(char *coor_file); //}}}
 
 // ReadAggCommand() //{{{
 /**

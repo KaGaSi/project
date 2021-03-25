@@ -7,8 +7,10 @@ void Help(char cmd[50], bool error) { //{{{
   } else {
     ptr = stdout;
     fprintf(stdout, "\
-lmp_data utility generates lammps data file from FIELD and coordinate file. \
-It assumes molecules have bonds and can also have angles, but no dihedrals.\n\n");
+lmp_data utility generates lammps data file from the FIELD and coordinate \
+files. It assumes molecules have bonds and can also have angles and \
+dihedrals. For all cases, the a harmonic potential is assumed (the \
+dihedrals are written to the lmp data file as impropers).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
@@ -56,7 +58,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "--srp") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
@@ -116,43 +117,43 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // read information from vtf file(s) //{{{
-  BEADTYPE *BeadType; // structure with info about all bead types
-  MOLECULETYPE *MoleculeType; // structure with info about all molecule types
-  BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  MOLECULE *Molecule; // structure with info about every molecule
-  COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
-  bool indexed; // indexed timestep?
-  int struct_lines; // number of structure lines (relevant for vtf)
+  BEADTYPE *BeadType;
+  MOLECULETYPE *MoleculeType;
+  BEAD *Bead;
+  int *Index;
+  MOLECULE *Molecule;
+  COUNTS Counts = InitCounts;
+  VECTOR BoxLength;
+  bool indexed;
+  int struct_lines;
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
               &BoxLength, &Counts, &BeadType, &Bead, &Index,
               &MoleculeType, &Molecule);
   free(input_vsf); //}}}
 
-  // variables - structures for info from FIELD //{{{
-  BEADTYPE *BeadType_new; // structure with info about all bead types
-  MOLECULETYPE *MoleculeType_new; // structure with info about all molecule types
-  BEAD *Bead_new; // structure with info about every bead
-  int *Index_new; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  MOLECULE *Molecule_new; // structure with info about every molecule
-  COUNTS Counts_new = InitCounts; // structure with number of beads, molecules, etc.
-  PARAMS *bond_type; // information about bond types
-  PARAMS *angle_type; // information about angle types
-  PARAMS *dihedral_type; // information about dihedral types //}}}
-
-  // read system information from FIELD (mainly bond & angle types)
-  ReadField(input, NULL, &Counts_new, &BeadType_new, &Bead_new, &Index_new,
-            &MoleculeType_new, &Molecule_new, &bond_type, &angle_type, &dihedral_type);
+  // read FIELD to get bond, angle, and dihedral information //{{{
+  BEADTYPE *bt_new;
+  MOLECULETYPE *mt_new;
+  BEAD *Bead_new;
+  int *Index_new;
+  MOLECULE *Molecule_new;
+  COUNTS Counts_new = InitCounts;
+  PARAMS *bond_type;
+  PARAMS *angle_type;
+  PARAMS *dihedral_type;
+  ReadField(input, NULL, &Counts_new, &bt_new, &Bead_new, &Index_new,
+            &mt_new, &Molecule_new,
+            &bond_type, &angle_type, &dihedral_type); //}}}
 
   // add bond types & angles from field to all molecules from vsf //{{{
   Counts.TypesOfBonds = Counts_new.TypesOfBonds;
   Counts.TypesOfAngles = Counts_new.TypesOfAngles;
+  Counts.TypesOfDihedrals = Counts_new.TypesOfDihedrals;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     // identify molecule from vsf to the one from FIELD (via Name)
     int mol_field = -1;
     for (int j = 0; j < Counts_new.TypesOfMolecules; j++) {
-      if (strcmp(MoleculeType[i].Name, MoleculeType_new[j].Name) == 0) {
+      if (strcmp(MoleculeType[i].Name, mt_new[j].Name) == 0) {
         mol_field = j;
       }
     }
@@ -161,17 +162,29 @@ int main(int argc, char *argv[]) {
       // copy bond types - assumes sorted bond arrays in both molecules which
       // should have been done while reading vsf and FIELD files
       for (int j = 0; j < MoleculeType[i].nBonds; j++) {
-        MoleculeType[i].Bond[j][2] = MoleculeType_new[mol_field].Bond[j][2];
+        MoleculeType[i].Bond[j][2] = mt_new[mol_field].Bond[j][2];
       }
       // copy angles - vsf contains no angles
-      MoleculeType[i].nAngles = MoleculeType_new[mol_field].nAngles;
+      MoleculeType[i].nAngles = mt_new[mol_field].nAngles;
       MoleculeType[i].Angle = calloc(MoleculeType[i].nAngles, sizeof(int *));
       for (int j = 0; j < MoleculeType[i].nAngles; j++) {
         MoleculeType[i].Angle[j] = calloc(4, sizeof(int));
-        MoleculeType[i].Angle[j][0] = MoleculeType_new[mol_field].Angle[j][0];
-        MoleculeType[i].Angle[j][1] = MoleculeType_new[mol_field].Angle[j][1];
-        MoleculeType[i].Angle[j][2] = MoleculeType_new[mol_field].Angle[j][2];
-        MoleculeType[i].Angle[j][3] = MoleculeType_new[mol_field].Angle[j][3];
+        MoleculeType[i].Angle[j][0] = mt_new[mol_field].Angle[j][0];
+        MoleculeType[i].Angle[j][1] = mt_new[mol_field].Angle[j][1];
+        MoleculeType[i].Angle[j][2] = mt_new[mol_field].Angle[j][2];
+        MoleculeType[i].Angle[j][3] = mt_new[mol_field].Angle[j][3];
+      }
+      // copy dihedrals - vsf contains no dihedrals
+      MoleculeType[i].nDihedrals = mt_new[mol_field].nDihedrals;
+      MoleculeType[i].Dihedral = calloc(MoleculeType[i].nDihedrals,
+                                        sizeof(int *));
+      for (int j = 0; j < MoleculeType[i].nDihedrals; j++) {
+        MoleculeType[i].Dihedral[j] = calloc(5, sizeof(int));
+        MoleculeType[i].Dihedral[j][0] = mt_new[mol_field].Dihedral[j][0];
+        MoleculeType[i].Dihedral[j][1] = mt_new[mol_field].Dihedral[j][1];
+        MoleculeType[i].Dihedral[j][2] = mt_new[mol_field].Dihedral[j][2];
+        MoleculeType[i].Dihedral[j][3] = mt_new[mol_field].Dihedral[j][3];
+        MoleculeType[i].Dihedral[j][4] = mt_new[mol_field].Dihedral[j][4];
       }
     // warn if the molecule type isn't in FIELD
     } else {
@@ -185,8 +198,9 @@ int main(int argc, char *argv[]) {
   // print information - verbose output //{{{
   if (verbose) {
     VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-    PrintBondTypes(Counts, bond_type);
-    PrintAngleTypes(Counts, angle_type);
+    PrintBondTypes2(Counts.TypesOfBonds, bond_type);
+    PrintAngleTypes2(Counts.TypesOfAngles, angle_type);
+    PrintDihedralTypes2(Counts.TypesOfDihedrals, dihedral_type);
   } //}}}
 
   // warn if not all beads //{{{
@@ -197,17 +211,16 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // vsf file is not needed anymore
-  free(input_vsf);
 
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
+  char *stuff = calloc(LINE, sizeof(char)); // timestep preamble
 
   // open input coordinate file //{{{
   FILE *vcf;
   if ((vcf = fopen(input_coor, "r")) == NULL) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
-  } //}}}
+  }
+  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
 
   // main loop //{{{
   count = 0;
@@ -238,10 +251,12 @@ int main(int argc, char *argv[]) {
 
   // count total number of bonds & angles //{{{
   int count_bonds = 0,
-      count_angles = 0;
+      count_angles = 0,
+      count_dihedrals = 0;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     count_bonds += MoleculeType[i].Number * MoleculeType[i].nBonds;
     count_angles += MoleculeType[i].Number * MoleculeType[i].nAngles;
+    count_dihedrals += MoleculeType[i].Number * MoleculeType[i].nDihedrals;
   } //}}}
 
   // create lammps data file //{{{
@@ -259,6 +274,7 @@ int main(int argc, char *argv[]) {
   fprintf(out, "%7d atoms\n", Counts.BeadsInVsf);
   fprintf(out, "%7d bonds\n", count_bonds);
   fprintf(out, "%7d angles\n", count_angles);
+  fprintf(out, "%7d impropers\n", count_dihedrals);
   if (srp) { // an extra srp bead
     fprintf(out, "%7d atom types\n", Counts.TypesOfBeads+1);
   } else {
@@ -266,6 +282,7 @@ int main(int argc, char *argv[]) {
   }
   fprintf(out, "%7d bond types\n", Counts.TypesOfBonds);
   fprintf(out, "%7d angle types\n", Counts.TypesOfAngles);
+  fprintf(out, "%7d improper types\n", Counts.TypesOfDihedrals);
   putc('\n', out); //}}}
 
   // print box size //{{{
@@ -300,6 +317,16 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < Counts.TypesOfAngles; i++) {
       // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
       fprintf(out, "%2d %lf %lf\n", i+1, angle_type[i].a/2, angle_type[i].b);
+    }
+    putc('\n', out);
+  } //}}}
+
+  // print dihedral (impropers in lammps speak) coefficients //{{{
+  if (Counts.TypesOfDihedrals > 0) {
+    fprintf(out, "Improper Coeffs\n\n");
+    for (int i = 0; i < Counts.TypesOfDihedrals; i++) {
+      // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
+      fprintf(out, "%2d %lf %lf\n", i+1, dihedral_type[i].a/2, dihedral_type[i].b);
     }
     putc('\n', out);
   } //}}}
@@ -366,15 +393,34 @@ int main(int argc, char *argv[]) {
     putc('\n', out);
   } //}}}
 
+  // print dihedral (impropers in lammps speak) information //{{{
+  if (Counts.TypesOfDihedrals > 0) {
+    fprintf(out, "Impropers\n\n");
+    count = 0;
+    for (int i = 0; i < Counts.Molecules; i++) {
+      int mtype = Molecule[i].Type;
+      for (int j = 0; j < MoleculeType[mtype].nDihedrals; j++) {
+        count++;
+        int type = MoleculeType[mtype].Dihedral[j][4];
+        int id1 = Molecule[i].Bead[MoleculeType[mtype].Dihedral[j][0]];
+        int id2 = Molecule[i].Bead[MoleculeType[mtype].Dihedral[j][1]];
+        int id3 = Molecule[i].Bead[MoleculeType[mtype].Dihedral[j][2]];
+        int id4 = Molecule[i].Bead[MoleculeType[mtype].Dihedral[j][3]];
+        fprintf(out, "%7d %3d %7d %7d %7d %7d\n", count, type+1, id1+1, id2+1, id3+1, id4+1);
+      }
+    }
+    putc('\n', out);
+  } //}}}
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
   FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
-  FreeSystemInfo(Counts_new, &MoleculeType_new, &Molecule_new, &BeadType_new, &Bead_new, &Index_new);
+  FreeSystemInfo(Counts_new, &mt_new, &Molecule_new, &bt_new, &Bead_new, &Index_new);
   free(stuff);
   free(input);
-  free(angle_type);
   free(bond_type);
+  free(angle_type);
+  free(dihedral_type);
   //}}}
 
   return 0;

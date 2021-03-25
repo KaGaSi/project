@@ -205,7 +205,8 @@ int main(int argc, char *argv[]) {
   if ((vcf = fopen(input_coor, "r")) == NULL) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
-  } //}}}
+  }
+  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
 
   // main loop //{{{
   count = 0; // count timesteps

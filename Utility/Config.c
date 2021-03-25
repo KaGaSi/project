@@ -135,10 +135,7 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  // skip structure part of a vtf
-  if (vtf) {
-    SkipStructVtf(vcf, input_coor);
-  } //}}}
+  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
 
   // create array for the first line of a timestep ('# <number and/or other comment>')
   char *stuff = calloc(LINE, sizeof(char));

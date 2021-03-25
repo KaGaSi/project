@@ -232,7 +232,8 @@ int main(int argc, char *argv[]) {
   if ((vcf = fopen(input_coor, "r")) == NULL) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
-  } //}}}
+  }
+  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
 
   count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 

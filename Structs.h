@@ -82,6 +82,7 @@ typedef struct Bead {
       Index; // index of the bead according to .vsf file (needed for indexed timesteps)
 
   VECTOR Position; // cartesian coordinates of the bead
+  VECTOR Velocity; ///< velocity of the bead
 
   bool Flag; // some flag for, e.g., use/not use
 } BEAD; //}}}
@@ -98,10 +99,13 @@ typedef struct MoleculeType {
       *Bead, // ids of bead types of every molecule bead
       nBonds, // number of bonds in every molecule of given type
       **Bond, // pair of ids for every bond (with relative bead numbers from 0 to nBeads)
-               // has to be sorted; size: [MoleculeType[i].Bond[2]
-      nAngles, // number of Angles in every molecule of given type
+               // has to be sorted; size: [MoleculeType[i].Bond[3]
+      nAngles, // number of angles in every molecule of given type
       **Angle, // trio of ids for every angle (with relative bead numbers from 0 to nBeads)
-               // has to be sorted; size: [MoleculeType[i].Angle[3]
+               // has to be sorted; size: [MoleculeType[i].Angle[4]
+      nDihedrals, // number of dihedrals in every molecule of given type
+      **Dihedral, // fourtet of ids for every dihedral (with relative bead numbers from 0 to nBeads)
+               // has to be sorted; size: [MoleculeType[i].Dihedral[5]
       nBTypes, // number of bead types in every molecule of given type
       *BType; // ids of bead types in every molecule of given type (corresponds to indices in BeadType struct)
 
