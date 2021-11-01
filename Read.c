@@ -1,13 +1,18 @@
 #include "Read.h"
+// TODO test output of snprintf() to get rid of a warning; see https://stackoverflow.com/questions/51534284/how-to-circumvent-format-truncation-warning-in-gcc
 
-// GetPBC() //{{{
+// TODO: what's gonna happen with Counts.Beads & Counts.BeadsInVsf; I guess it
+//       should stay and be used strictly - InVsf means in vsf, the other in
+//       vcf
+
+// GetPBC_old() //{{{
 /*
  * Function to get box dimensions from the provided coordinate file, that
  * is search for a 'pbc <float> <float> <float>' line. The provided file
  * can either be a vcf coordinate only file or a full vtf one.
  */
-VECTOR GetPBC(char *coor_file) {
-  VECTOR BoxLength;
+VECTOR GetPBC_old(char *coor_file) {
+  VECTOR BoxLength = {-1};
   // open the coordinate file
   FILE *coor;
   if ((coor = fopen(coor_file, "r")) == NULL) {
@@ -21,7 +26,12 @@ VECTOR GetPBC(char *coor_file) {
    * coordinate line).
    */
   char line[LINE];
-  while (fgets(line, sizeof(line), coor)) {
+  while (fgets(line, sizeof line, coor)) {
+    // if the line is too long, skip the rest of it
+    if (strcspn(line, "\n") == (LINE-1)) {
+      while (getc(coor) != '\n')
+        ;
+    }
     char split[30][100];
     int words = SplitLine(split, line, " \t");
     // pbc line found
@@ -51,18 +61,90 @@ VECTOR GetPBC(char *coor_file) {
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", coor_file);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - unrecognised line while searching for");
-      fprintf(stderr, " box dimensions (pbc line must be before");
-      fprintf(stderr, " the first coordinate line)\n");
+      fprintf(stderr, " - unrecognised line while searching for \
+box dimensions (pbc line must be before the first coordinate line)\n");
       ResetColour(STDERR_FILENO);
       ErrorPrintLine(split, words);
       exit(1); //}}}
     }
   };
-
   fclose(coor);
-
   return BoxLength;
+} //}}}
+
+// GetPBC() //{{{
+/*
+ * Function to get box dimensions from the provided coordinate file, that
+ * is search for a 'pbc <float> <float> <float>' line. The provided file
+ * can either be a vcf coordinate only file or a full vtf one.
+ */
+void GetPBC(char *coor_file, BOX *Box) {
+  // open the coordinate file
+  FILE *coor;
+  if ((coor = fopen(coor_file, "r")) == NULL) {
+    ErrorFileOpen(coor_file, 'r');
+    exit(1);
+  }
+  /*
+   * The pbc line can be embedded inside a vtf's structure block, so
+   * there's no simple skipping of the part. Instead, search for the line
+   * until a line starting with a number (such line must be the first
+   * coordinate line).
+   */
+  char line[LINE];
+  while (fgets(line, sizeof line, coor)) {
+    // if the line is too long, skip the rest of it
+    if (strcspn(line, "\n") == (LINE-1)) {
+      while (getc(coor) != '\n')
+        ;
+    }
+    char split[30][100];
+    int words = SplitLine(split, line, " \t");
+    // pbc line found
+    if (strcasecmp(split[0], "pbc") == 0) {
+      // error - pbc line has wrong format //{{{
+      if (!IsPosDouble(split[1]) ||
+          !IsPosDouble(split[2]) ||
+          !IsPosDouble(split[3]) ) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", coor_file);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - incorrect pbc line\n");
+        ResetColour(STDERR_FILENO);
+        ErrorPrintLine(split, words);
+        exit(1);
+      } //}}}
+      (*Box).Length.x = atof(split[1]);
+      (*Box).Length.y = atof(split[2]);
+      (*Box).Length.z = atof(split[3]);
+      if (words >= 7 &&
+          IsDouble(split[4]) && IsDouble(split[5]) && IsDouble(split[6])) {
+        (*Box).alpha = atof(split[4]);
+        (*Box).beta = atof(split[5]);
+        (*Box).gamma = atof(split[6]);
+      } else {
+        (*Box).alpha = 90;
+        (*Box).beta = 90;
+        (*Box).gamma = 90;
+      }
+      break;
+    // error - line starting with a number //{{{
+    } else if (words > 0 && (IsInteger(split[0]) || IsDouble(split[0]))) {
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", coor_file);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - unrecognised line while searching for \
+box dimensions (pbc line must be before the first coordinate line)\n");
+      ResetColour(STDERR_FILENO);
+      ErrorPrintLine(split, words);
+      exit(1); //}}}
+    }
+  };
+  fclose(coor);
 } //}}}
 
 // ReadAggCommand() //{{{
@@ -73,7 +155,6 @@ VECTOR GetPBC(char *coor_file) {
 void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
                     char *input_coor, char *input_agg,
                     double *distance, int *contacts) {
-
   // open input aggregate file
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
@@ -82,7 +163,12 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
   }
   // read first line (Aggregate command)
   char line[LINE], split[30][100];
-  fgets(line, sizeof(line), agg);
+  fgets(line, sizeof line, agg);
+  // if the line is too long (which it should never be), skip the rest of it
+  if (strcspn(line, "\n") == (LINE-1)) {
+    while (getc(agg) != '\n')
+      ;
+  }
   int words = SplitLine(split, line, " \t");
   // error - not enough strings for a proper Aggregate command //{{{
   if (words < 6) {
@@ -103,8 +189,8 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
     YellowText(STDERR_FILENO);
     fprintf(stderr, "%s", input_agg);
     RedText(STDERR_FILENO);
-    fprintf(stderr, " - <distance> in the Aggregate command");
-    fprintf(stderr, " must be non-negative real number\n");
+    fprintf(stderr, " - <distance> in the Aggregate command \
+must be non-negative real number\n");
     ResetColour(STDERR_FILENO);
     ErrorPrintLine(split, words);
     exit(1);
@@ -117,8 +203,8 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
     YellowText(STDERR_FILENO);
     fprintf(stderr, "%s", input_agg);
     RedText(STDERR_FILENO);
-    fprintf(stderr, " - <contacts> in the Aggregate command");
-    fprintf(stderr, "must be a non-negative integer\n");
+    fprintf(stderr, " - <contacts> in the Aggregate command \
+must be a non-negative integer\n");
     ResetColour(STDERR_FILENO);
     ErrorPrintLine(split, words);
     exit(1);
@@ -136,8 +222,8 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
     fprintf(stderr, "%s", split[1]);
     YellowText(STDERR_FILENO);
     fprintf(stderr, ")\n");
-    fprintf(stderr, "         Mismatch between beads present in both files");
-    fprintf(stderr, "can lead to undefined behaviour.\n\n");
+    fprintf(stderr, "         Mismatch between beads present in both files \
+can lead to undefined behaviour.\n");
     ResetColour(STDERR_FILENO);
   } //}}}
   // read <type names> from Aggregates command //{{{
@@ -165,7 +251,7 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
 } //}}}
 
 // CountVtfStructLines() //{{{
-/**
+/*
  * Function to count lines in the structure part of a vtf file (i.e., it
  * returns the number of the last line containing atom/bond keyword).
  */
@@ -182,6 +268,11 @@ int CountVtfStructLines(bool vtf, char *input) {
     while(true) {
       char split[30][100], line[LINE];
       fgets(line, sizeof line, vtf);
+      // if the line is too long, skip the rest of it
+      if (strcspn(line, "\n") == (LINE-1)) {
+        while (getc(vtf) != '\n')
+          ;
+      }
       if (feof(vtf)) { // exit while loop on vsf file finish
         break;
       }
@@ -210,7 +301,7 @@ int CountVtfStructLines(bool vtf, char *input) {
       YellowText(STDERR_FILENO);
       fprintf(stderr, "CountVtfStructLines()");
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - something weird\n\n");
+      fprintf(stderr, " - something weird\n");
       ResetColour(STDERR_FILENO);
       exit(1);
     } //}}}
@@ -225,12 +316,10 @@ int CountVtfStructLines(bool vtf, char *input) {
  * Function to skip a structure part of a vtf file (i.e., combined vsf/vcf
  * file).
  */
-void SkipVtfStructure(bool vtf, FILE *vcf, int struct_lines) {
-  if (vtf) {
-    for (int i = 0; i < struct_lines; i++) {
-      while (getc(vcf) != '\n')
-        ;
-    }
+void SkipVtfStructure(FILE *vcf, int struct_lines) {
+  for (int i = 0; i < struct_lines; i++) {
+    while (getc(vcf) != '\n')
+      ;
   }
 } //}}}
 
@@ -260,7 +349,7 @@ bool CheckVtfTimestepLine(int words, char split[30][100]) {
 } //}}}
 
 // CheckVtfAtomLine() //{{{
-/**
+/*
  * Function to check if the provided line is a proper vtf structure atom line.
  */
 bool CheckVtfAtomLine(int words, char split[30][100], char *error) {
@@ -275,42 +364,52 @@ bool CheckVtfAtomLine(int words, char split[30][100], char *error) {
     return false;
   }
   // is the mandatory n[ame] keyword present?
-  bool name = false;
+  bool exists = false;
   for (int i = 2; i < words; i+=2) {
     if (split[i][0] == 'n') {
-      name = true;
+      exists = true;
       break;
     }
   }
-  if (!name) {
+  if (!exists) {
     strcpy(error, "missing 'name' in atom line");
     return false;
   }
-  // TODO: some default naming if resname is missing
-  // if resid is present, there must be resname as well
+  // if res[name] is present, there must be resid as well
   for (int i = 2; i < words; i+=2) {
-    if (strcmp(split[i], "resid") == 0) {
-      // check that resid is followed by <int>
-      if (!IsInteger(split[i+1])) {
-        strcpy(error, "'resid' must be followed by <int>");
-        return false;
-      }
-      // search for res[name]
-      name = false;
-      for (int j = 2; j < words; j+=2) {
-        if (strncmp(split[j], "resname", 3) == 0 && j != i) {
-          name = true;
-          break;
+    if (strncmp(split[i], "res", 3) == 0) {
+      if (strcmp(split[i], "resid") == 0) { // search for resname
+        exists = false;
+        for (int j = 2; j < words; j+=2) {
+          if (strncmp(split[j], "resname", 3) == 0 &&
+              strcmp(split[j], "resid") != 0) {
+            exists = true;
+            break;
+          }
         }
+        if (!exists) {
+          strcpy(error, "if 'resid' is present, 'resname' must be too");
+          return false;
+        }
+        break;
+      } else { // search for resid
+        exists = false;
+        for (int j = 2; j < words; j+=2) {
+          if (strcmp(split[j], "resid") == 0) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          strcpy(error, "if 'resname' is present, 'resid' must be too");
+          return false;
+        }
+        break;
       }
-      if (!name) {
-        strcpy(error, "if 'resid' is present, 'resname' must be too");
-        return false;
-      }
-      break;
     }
   }
   // if mass, charge, or radius are present, they must be followed by <float>
+  // if resid is present, it must be followed by an <int>
   for (int i = 2; i < words; i+=2) {
     if ((strcmp(split[i], "charge") == 0 || split[i][0] == 'q') &&
         !IsDouble(split[i+1])) {
@@ -324,13 +423,16 @@ bool CheckVtfAtomLine(int words, char split[30][100], char *error) {
                (!IsPosDouble(split[i+1]) || atof(split[i+1]) <= 0)) {
       strcpy(error, "'mass' must be followed by positive <float>");
       return false;
+    } else if (strcmp(split[i], "resid") == 0 && !IsInteger(split[i+1])) {
+      strcpy(error, "'resid' must be followed by a whole number");
+      return false;
     }
   }
   return true;
 } //}}}
 
 // CheckVtfBondLine() //{{{
-/**
+/*
  * Function to check if the provided line is a proper vtf structure bond line.
  */
 bool CheckVtfBondLine(int words, char split[30][100], char *error) {
@@ -387,7 +489,7 @@ or 'two-colon' string of bonds)");
 } //}}}
 
 // CheckVtfCoordinateLine() //{{{
-/**
+/*
  * Function to check if the provided line is a proper vtf coordinate line.
  */
 bool CheckVtfCoordinateLine(int words, char split[30][100],
@@ -417,101 +519,16 @@ bool CheckVtfCoordinateLine(int words, char split[30][100],
   return true;
 } //}}}
 
-// CopyMoleculeType() //{{{
-/**
- * Function to copy a MOLECULETYPE struct into a new one. Requires that the
- * output struct is not alloc'd.
- */
-void CopyMoleculeType(int number_of_types,
-                      MOLECULETYPE **mt_out, MOLECULETYPE *mt_in) {
-  *mt_out = calloc(number_of_types, sizeof(MOLECULETYPE));
-  for (int i = 0; i < number_of_types; i++) {
-    strcpy((*mt_out)[i].Name, mt_in[i].Name);
-    (*mt_out)[i].Number = mt_in[i].Number;
-    (*mt_out)[i].Charge = mt_in[i].Charge;
-    (*mt_out)[i].Mass = mt_in[i].Mass;
-    (*mt_out)[i].Use = mt_in[i].Use;
-    (*mt_out)[i].Write = mt_in[i].Write;
-    (*mt_out)[i].nBeads = mt_in[i].nBeads;
-    // copy all beads
-    (*mt_out)[i].Bead = calloc((*mt_out)[i].nBeads, sizeof(int));
-    for (int j = 0; j < (*mt_out)[i].nBeads; j++) {
-      (*mt_out)[i].Bead[j] = mt_in[i].Bead[j];
-    }
-    // copy bead types
-    (*mt_out)[i].nBTypes = mt_in[i].nBTypes;
-    (*mt_out)[i].BType = calloc((*mt_out)[i].nBTypes, sizeof(int));
-    for (int j = 0; j < (*mt_out)[i].nBTypes; j++) {
-      (*mt_out)[i].BType[j] = mt_in[i].BType[j];
-    }
-    // copy bonds if present
-    if (mt_in[i].nBonds > 0) {
-      (*mt_out)[i].nBonds = mt_in[i].nBonds;
-      (*mt_out)[i].Bond = calloc((*mt_out)[i].nBonds, sizeof(int *));
-      for (int j = 0; j < (*mt_out)[i].nBonds; j++) {
-        (*mt_out)[i].Bond[j] = calloc(3, sizeof(int));
-        (*mt_out)[i].Bond[j][0] = mt_in[i].Bond[j][0];
-        (*mt_out)[i].Bond[j][1] = mt_in[i].Bond[j][1];
-        (*mt_out)[i].Bond[j][2] = mt_in[i].Bond[j][2];
-      }
-    }
-    // copy angles if present
-    if (mt_in[i].nAngles > 0) {
-      (*mt_out)[i].nAngles = mt_in[i].nAngles;
-      (*mt_out)[i].Angle = calloc((*mt_out)[i].nAngles, sizeof(int *));
-      for (int j = 0; j < (*mt_out)[i].nAngles; j++) {
-        (*mt_out)[i].Angle[j] = calloc(4, sizeof(int));
-        (*mt_out)[i].Angle[j][0] = mt_in[i].Angle[j][0];
-        (*mt_out)[i].Angle[j][1] = mt_in[i].Angle[j][1];
-        (*mt_out)[i].Angle[j][2] = mt_in[i].Angle[j][2];
-        (*mt_out)[i].Angle[j][3] = mt_in[i].Angle[j][3];
-      }
-    }
-    // copy dihedrals if present
-    if (mt_in[i].nDihedrals > 0) {
-      (*mt_out)[i].nDihedrals = mt_in[i].nDihedrals;
-      (*mt_out)[i].Dihedral = calloc((*mt_out)[i].nDihedrals, sizeof(int *));
-      for (int j = 0; j < (*mt_out)[i].nDihedrals; j++) {
-        (*mt_out)[i].Dihedral[j] = calloc(4, sizeof(int));
-        (*mt_out)[i].Dihedral[j][0] = mt_in[i].Dihedral[j][0];
-        (*mt_out)[i].Dihedral[j][1] = mt_in[i].Dihedral[j][1];
-        (*mt_out)[i].Dihedral[j][2] = mt_in[i].Dihedral[j][2];
-        (*mt_out)[i].Dihedral[j][3] = mt_in[i].Dihedral[j][3];
-        (*mt_out)[i].Dihedral[j][4] = mt_in[i].Dihedral[j][4];
-      }
-    }
-  }
-} //}}}
-
-// CopyMolecule() //{{{
-/**
- * Function to copy a MOLECULE struct into a new one. Requires that the output
- * struct is not alloc'd.
- */
-void CopyMolecule(int number_of_molecules, MOLECULETYPE *mt,
-                  MOLECULE **m_out, MOLECULE *m_in) {
-  *m_out = calloc(number_of_molecules, sizeof(MOLECULE));
-  for (int i = 0; i < number_of_molecules; i++) {
-    (*m_out)[i].Type = m_in[i].Type;
-    (*m_out)[i].Aggregate = m_in[i].Aggregate;
-    int mtype = m_in[i].Type;
-    (*m_out)[i].Bead = calloc(mt[mtype].nBeads, sizeof(int));
-    for (int j = 0; j < mt[mtype].nBeads; j++) {
-      (*m_out)[i].Bead[j] = m_in[i].Bead[j];
-    }
-  }
-} //}}}
-
 // NewBeadType() //{{{
 /*
- * Function to add a new bead type to a BEADTYPE struct (and increment the
- * number of bead types).
+ * Function to add a new bead type to a BEADTYPE struct
+ * (and increment the number of bead types).
  */
 void NewBeadType(BEADTYPE **BeadType, int *number_of_types, char *name,
                  double charge, double mass, double radius) {
   int btype = *number_of_types;
   (*number_of_types)++;
-  *BeadType = realloc(*BeadType, (btype+1)*sizeof(BEADTYPE));
+  *BeadType = realloc(*BeadType, sizeof (BEADTYPE) * (btype + 1));
   strcpy((*BeadType)[btype].Name, name);
   (*BeadType)[btype].Number = 0;
   (*BeadType)[btype].Charge = charge;
@@ -528,7 +545,7 @@ void NewMolType(char *name, int *number_of_types,
                 MOLECULETYPE **MoleculeType, char *vsf_file) {
   int mtype = (*number_of_types)++;
   *MoleculeType = realloc(*MoleculeType,
-                          (*number_of_types)*sizeof(MOLECULETYPE));
+                          sizeof (MOLECULETYPE) * (*number_of_types));
   // copy new name to MoleculeType[].Name
   strncpy((*MoleculeType)[mtype].Name, name, MOL_NAME);
   // initialize struct members
@@ -614,8 +631,8 @@ void FillMolType(int number_of_types, BEADTYPE *BeadType,
 // CheckVtfTimestep() //{{{
 /*
  * Function to find what beads and molecules are in a timestep. For now, the
- * function is used only in FullVtfRead to determine these things for all
- * timesteps. Presumably, later something similar will be used to deremine
+ * function is used only in FullVtfRead to determine these things only once for
+ * all timesteps. Presumably, later something similar will be used to deremine
  * system composition of each step.
  */
 bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
@@ -624,9 +641,11 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
 
 //PrintMoleculeType2((*Counts).TypesOfMolecules, *BeadType, *MoleculeType);
   bool indexed; // is the timestep indexed? ...returned by this function
-  // skip timestep preamble and determine if a timestep is ordered/indexed //{{{
-  char *stuff = calloc(LINE, sizeof(char));
-  int lines = ReadTimestepPreamble(&indexed, vcf_file, vcf, &stuff, true);
+  // skip timestep preamble and determine if a it's ordered/indexed //{{{
+  char *stuff = calloc(LINE, sizeof *stuff);
+  // TODO: just added boxlength for variable box size
+  BOX Box;
+  int lines = ReadVtfTimestepPreamble(&indexed, vcf_file, vcf, &stuff, &Box, true);
   free(stuff);
   for (int i = 0; i < lines; i++) {
     while (getc(vcf) != '\n')
@@ -641,6 +660,11 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
   while (true) {
     char split[30][100], line[LINE];
     fgets(line, sizeof line, vcf);
+    // if the line is too long, skip the rest of it
+    if (strcspn(line, "\n") == (LINE-1)) {
+      while (getc(vcf) != '\n')
+        ;
+    }
     // break loop on the end of the coordinate file
     if (feof(vcf)) {
       break;
@@ -694,8 +718,8 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
   c_new.BeadsInVsf = (*Counts).BeadsInVsf;
   // copy beads present in the timestep to a new BEAD struct & Index array //{{{
   int count = 0;
-  BEAD *b_new = calloc(c_new.Beads, sizeof(BEAD));
-  int *index_new = calloc((*Counts).BeadsInVsf, sizeof(int));
+  BEAD *b_new = calloc(c_new.Beads, sizeof (BEAD));
+  int *index_new = malloc(sizeof *index_new * (*Counts).BeadsInVsf);
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     if ((*Bead)[i].Flag) {
       b_new[count] = (*Bead)[i];
@@ -710,7 +734,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
     }
   } //}}}
   // count numbers of beads of different types //{{{
-  int *numbers = calloc((*Counts).TypesOfBeads, sizeof(int));
+  int *numbers = calloc((*Counts).TypesOfBeads, sizeof *numbers);
   for (int i = 0; i < c_new.Beads; i++) {
     int btype = b_new[i].Type;
     numbers[btype]++;
@@ -737,7 +761,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
     }
   } //}}}
   // copy present bead types to a new BEADTYPE struct //{{{
-  BEADTYPE *bt_new = calloc(c_new.TypesOfBeads, sizeof(BEADTYPE));
+  BEADTYPE *bt_new = calloc(c_new.TypesOfBeads, sizeof (BEADTYPE));
   count = 0;
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
     if (numbers[i] != 0) {
@@ -761,12 +785,12 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
    * 2) copy the molecule types present in the coordinate file to a new
    *    MOLECULETYPE struct
    * 3) prune the molecules to contain only beads present in the timestep
-   *    3a) use only present bead
+   *    3a) use only present beads
    *    3b) use only bonds between present beads
    *    3c) use only angles between present beads
-   *        TODO: test that it works
+   *        TODO: test that it works (once extra info is read from other files)
    *    3d) use only dihedrals between present beads
-   *        TODO: test that it works
+   *        TODO: test that it works (once extra info is read from other files)
    * 4) determine BTypes, charge, and mass of the 'new' molecule types (taking
    *    into account only present bead types)
    */
@@ -783,7 +807,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
     }
   } //}}}
   // 2) & 3) //{{{
-  MOLECULETYPE *mt_new = calloc(c_new.TypesOfMolecules, sizeof(MOLECULETYPE));
+  MOLECULETYPE *mt_new = calloc(c_new.TypesOfMolecules, sizeof (MOLECULETYPE));
   count = 0;
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     for (int j = 0; j < (*MoleculeType)[i].nBTypes; j++) {
@@ -794,7 +818,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
         mt_new[count].Number = (*MoleculeType)[i].Number;
         // 3a) //{{{
         mt_new[count].nBeads = 0;
-        mt_new[count].Bead = calloc(1, sizeof(int));
+        mt_new[count].Bead = malloc(sizeof *mt_new[count].Bead * 1);
         for (int k = 0; k < (*MoleculeType)[i].nBeads; k++) {
           int btype = (*MoleculeType)[i].Bead[k];
           btype = FindBeadType2((*BeadType)[btype].Name,
@@ -802,14 +826,15 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
           if (btype != -1) {
             int id = mt_new[count].nBeads++;
             mt_new[count].Bead = realloc(mt_new[count].Bead,
-                                         mt_new[count].nBeads*sizeof(int));
+                                         sizeof *mt_new[count].Bead *
+                                         mt_new[count].nBeads);
             mt_new[count].Bead[id] = btype;
           }
         } //}}}
         // 3b) //{{{
         if ((*MoleculeType)[i].nBonds > 0) {
           mt_new[count].nBonds = 0;
-          mt_new[count].Bond = calloc(1, sizeof(int *));
+          mt_new[count].Bond = malloc(sizeof *mt_new[count].Bond * 1);
           // go through all original types, testing each pair of beads
           for (int k = 0; k < (*MoleculeType)[i].nBonds; k++) {
             int id1 = (*MoleculeType)[i].Bond[k][0],
@@ -823,8 +848,8 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
             if (btype1 != -1 && btype2 != -1) {
               int id = mt_new[count].nBonds++;
               mt_new[count].Bond = realloc(mt_new[count].Bond,
-                                           mt_new[count].nBonds*sizeof(int *));
-              mt_new[count].Bond[id] = calloc(3,sizeof(int));
+                                           mt_new[count].nBonds *
+                                           sizeof *mt_new[count].Bond);
               /* these indices correspond to the old MOLECULETYPE that contains
                * all beads - will be adjusted later */
               mt_new[count].Bond[id][0] = (*MoleculeType)[i].Bond[k][0];
@@ -840,7 +865,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
         // 3c) //{{{
         if ((*MoleculeType)[i].nAngles > 0) {
           mt_new[count].nAngles = 0;
-          mt_new[count].Angle = calloc(1, sizeof(int *));
+          mt_new[count].Angle = malloc(sizeof *mt_new[count].Angle * 1);
           // go through all original types, testing each pair of beads
           for (int k = 0; k < (*MoleculeType)[i].nAngles; k++) {
             int id1 = (*MoleculeType)[i].Angle[k][0],
@@ -858,8 +883,8 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
             if (btype1 != -1 && btype2 != -1 && btype3 != -1) {
               int id = mt_new[count].nBonds++;
               mt_new[count].Angle = realloc(mt_new[count].Angle,
-                                        mt_new[count].nAngles*sizeof(int *));
-              mt_new[count].Angle[id] = calloc(4,sizeof(int));
+                                            sizeof *mt_new[count].Angle *
+                                            mt_new[count].nAngles);
               /* these indices correspond to the old MOLECULETYPE that contains
                * all beads - will be adjusted later */
               mt_new[count].Angle[id][0] = (*MoleculeType)[i].Angle[k][0];
@@ -876,7 +901,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
         // 3d) //{{{
         if ((*MoleculeType)[i].nDihedrals > 0) {
           mt_new[count].nDihedrals = 0;
-          mt_new[count].Dihedral = calloc(1, sizeof(int *));
+          mt_new[count].Dihedral = malloc(sizeof *mt_new[count].Dihedral * 1);
           // go through all original types, testing each pair of beads
           for (int k = 0; k < (*MoleculeType)[i].nDihedrals; k++) {
             int id1 = (*MoleculeType)[i].Dihedral[k][0],
@@ -898,8 +923,8 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
             if (btype1 != -1 && btype2 != -1 && btype3 != -1 && btype4 != -1) {
               int id = mt_new[count].nDihedrals++;
               mt_new[count].Dihedral = realloc(mt_new[count].Dihedral,
-                                       mt_new[count].nDihedrals*sizeof(int *));
-              mt_new[count].Dihedral[id] = calloc(5,sizeof(int));
+                                               sizeof *mt_new[count].Dihedral *
+                                               mt_new[count].nDihedrals);
               /* these indices correspond to the old MOLECULETYPE that contains
                * all beads - will be adjusted later */
               mt_new[count].Dihedral[id][0] = (*MoleculeType)[i].Dihedral[k][0];
@@ -978,7 +1003,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
   FillMolCharge(c_new.TypesOfMolecules, bt_new, &mt_new);
   //}}}
   // copy molecules present in the timestep to a new MOLECULE struct //{{{
-  MOLECULE *m_new = calloc(c_new.Molecules, sizeof(MOLECULE));
+  MOLECULE *m_new = calloc(c_new.Molecules, sizeof (MOLECULE));
   count = 0; // count molecules
   for (int i = 0; i < (*Counts).Molecules; i++) {
     int old_mtype = (*Molecule)[i].Type;
@@ -986,8 +1011,9 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
                                       c_new.TypesOfMolecules, mt_new);
     if (new_mtype != -1) {
       m_new[count].Type = new_mtype;
-      m_new[count].Bead = calloc(mt_new[new_mtype].nBeads, sizeof(int));
-      int count2 = 0; // counts beads in count-th molecule
+      m_new[count].Bead = calloc(mt_new[new_mtype].nBeads,
+                                 sizeof *m_new[count].Bead);
+      int count2 = 0; // counts present beads in count-th molecule
       for (int j = 0; j < (*MoleculeType)[old_mtype].nBeads; j++) {
         int old_btype = (*MoleculeType)[old_mtype].Bead[j];
         if (FindBeadType2((*BeadType)[old_btype].Name,
@@ -1004,22 +1030,17 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
   } //}}}
   // copy data back to original structs & realloc the structs //{{{
   // BEAD struct - realloc and copy; redo Index array
-  *Bead = realloc(*Bead, c_new.Beads*sizeof(BEAD));
+  *Bead = realloc(*Bead, sizeof (BEAD) * c_new.Beads);
   for (int i = 0; i < c_new.Beads; i++) {
     (*Bead)[i] = b_new[i];
     (*Index)[(*Bead)[i].Index] = i;
   }
-  // BEADTYPE struct - realloc and copy
-  *BeadType = realloc(*BeadType, c_new.TypesOfBeads*sizeof(BEADTYPE));
-  for (int i = 0; i < c_new.TypesOfBeads; i++) {
-    (*BeadType)[i] = bt_new[i];
-  }
-  // MOLECULETYPE - free memory because CopyMoleculeType calloc's it
-  FreeMoleculeType((*Counts).TypesOfMolecules, MoleculeType);
-  CopyMoleculeType(c_new.TypesOfMolecules, MoleculeType, mt_new);
-  // MOLECULE - free memory because CopyMolecule calloc's it
-  FreeMolecule((*Counts).Molecules, Molecule);
-  CopyMolecule(c_new.Molecules, *MoleculeType, Molecule, m_new);
+  // BEADTYPE struct - bt_new into BeadType
+  CopyBeadType(c_new.TypesOfBeads, BeadType, bt_new, 3);
+  // MOLECULETYPE - mt_new into MoleculeType
+  CopyMoleculeType(c_new.TypesOfMolecules, MoleculeType, mt_new, 1);
+  // MOLECULE - m_new into Molecule
+  CopyMolecule(c_new.Molecules, *MoleculeType, Molecule, m_new, 1);
   // copy the new Counts struct back to the original one
   *Counts = c_new; //}}}
   // free memory
@@ -1030,19 +1051,21 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
 // ReadVtfStructure() //{{{
 /*
  * Function to read vtf structure file. It can recognize bead and molecule
- * types either according to name only (taking everything with the same for
- * the first bead/molecule with that name) or according to all information
- * (name, mass, charge, and radius for bead types; bead order, bonds,
- * angles, and dihedrals for molecule types).
+ * types either according to name only (taking everything with the same name
+ * for the first bead/molecule with that name) or according to all information
+ * (name, mass, charge, and radius for bead types; bead order, bonds, angles,
+ * and dihedrals for molecule types).
  */
-// TODO: split into more functions and incorporate possible extra
-// information from lammps data/dl_meso FIELD files.
+/*
+ * TODO: split into more functions and incorporate possible extra information
+ * from lammps data/dl_meso FIELD files.
+ */
 void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
                       BEADTYPE **BeadType, BEAD **Bead, int **Index,
                       MOLECULETYPE **MoleculeType, MOLECULE **Molecule) {
 
   (*Counts) = InitCounts; // zeroize
-  // test if the struct_file is full vtf or just vsf //{{{
+  // test if struct_file is a full vtf or just vsf //{{{
   bool struct_vtf = false;
   char *dot = strrchr(struct_file, '.');
   if (strcmp(dot, ".vtf") == 0) {
@@ -1059,8 +1082,8 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
   // 1) read through the structure part to find basic info: //{{{
   /*
    * i) check for errors
-   * ii) find number of beads
-   * iii) save bead and molecule names
+   * ii) find number of beads and molecules
+   * iii) save unique bead and molecule names
    */
   int count_atom_lines = 0, // number of atom lines
       default_atom_line = -1, // line number of the first 'atom default' line
@@ -1068,13 +1091,18 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
       count_comment_lines = 0, // number of comments (#) or blank lines
       atom_names = 0, res_names = 0, // number of unieque bead & molecule names
       last_struct = 0; // number of the last structure line (i.e., bond or atom)
-  char **atom_name = calloc(1, sizeof(char *)); // names of different atoms
-  char **res_name = calloc(1, sizeof(char *)); // names of different molecules
+  char (*atom_name)[BEAD_NAME+1] = malloc(sizeof *atom_name * 1);
+  char (*res_name)[MOL_NAME+1] = malloc(sizeof *res_name * 1);
   while(true) {
     char error[LINE] = {'\0'}, // error message; no error for strlen(error) == 0
          split[30][100], line[LINE];
     fgets(line, sizeof line, vsf);
-    if (feof(vsf)) { // exit while loop on vsf file finish
+    if (strcspn(line, "\n") == (LINE-1)) {
+      while (getc(vsf) != '\n')
+        ;
+    }
+//buffer[strcspn(buffer, "\r\n")] = '\0';
+    if (feof(vsf)) { // break while loop on end of file
       break;
     }
     int words = SplitLine(split, line, "\t ");
@@ -1087,6 +1115,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
       count_comment_lines++;
       continue;
     }
+    // check first character of the line for a[tom]/b[ond] line
     switch(split[0][0]) {
       case 'a': // atom line //{{{
         if (CheckVtfAtomLine(words, split, error)) {
@@ -1094,7 +1123,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
           last_struct = count_atom_lines +
                         count_bond_lines +
                         count_comment_lines;
-        } else {
+        } else { // error - not a proper atom line //{{{
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError: ");
           YellowText(STDERR_FILENO);
@@ -1104,8 +1133,10 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
           ResetColour(STDERR_FILENO);
           ErrorPrintLine(split, words);
           exit(1);
-        }
+        } //}}}
+        // check if default line, otherwise count the number of beads //{{{
         if (strcmp(split[1], "default") == 0) {
+          // warning - more than one 'default line'
           if (default_atom_line != -1) {
             YellowText(STDERR_FILENO);
             fprintf(stderr, "\nWarning: ");
@@ -1117,54 +1148,55 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
             CyanText(STDERR_FILENO);
             fprintf(stderr, "%d\n", default_atom_line+1);
             ResetColour(STDERR_FILENO);
-          } else {
+          } else { // save line number of the default line
             default_atom_line = count_atom_lines +
                                 count_comment_lines +
-                                count_bond_lines - 1; // so it starts from 0
+                                count_bond_lines - 1; // 1st line should be 0th
           }
         } else {
           // check for highest index (i.e., the number of beads in vsf)
           if (atoi(split[1]) >= (*Counts).BeadsInVsf) {
-            (*Counts).BeadsInVsf = atoi(split[1]) + 1; // vtf indices start at 0
+            // vtf atom indices start at 0, so add 1
+            (*Counts).BeadsInVsf = atoi(split[1]) + 1;
           }
-        }
-        // save bead & molecule names (if not saved already)
+        } //}}}
+        // save unique bead and molecule names & count molecules //{{{
         for (int i = 0; i < words; i+= 2) {
           if (split[i][0] == 'n') { // atom name
-            // is the name saved already?
-            int in = -1;
+            bool new = true; // assume the name is yet unknown
             for (int j = 0; j < atom_names; j++) {
               if (strncmp(split[i+1], atom_name[j], BEAD_NAME) == 0) {
-                in = j;
+                new = false;
                 break;
               }
             }
-            // add new name if not saved yet
-            if (in == -1) {
-              atom_name = realloc(atom_name, (atom_names+1)*sizeof(char *));
-              atom_name[atom_names] = calloc(BEAD_NAME+1, sizeof(char));
+            if (new) { // unknown (i.e., new) name
+              atom_name = realloc(atom_name, sizeof *atom_name *
+                                  (atom_names + 1));
               strncpy(atom_name[atom_names], split[i+1], BEAD_NAME);
               atom_names++;
             }
-          } else if (strncmp(split[i], "res", 3) == 0 &&
-                     strcmp(split[i], "resid") != 0) { // molecule name
-            // is the name saved already?
-            int in = -1;
+          } else if (strcmp(split[i], "resid") == 0) { // molecule index
+            // check for highest index (i.e., the number of molecules)
+            if (atoi(split[i+1]) >= (*Counts).Molecules) {
+              // vtf resid indices start at 1, so don't add 1
+              (*Counts).Molecules = atoi(split[i+1]);
+            }
+          } else if (strncmp(split[i], "res", 3) == 0) { // molecule name
+            bool new = true; // assume the name is yet unknown
             for (int j = 0; j < res_names; j++) {
               if (strncmp(split[i+1], res_name[j], MOL_NAME) == 0) {
-                in = j;
+                new = false;
                 break;
               }
             }
-            // add new name if not saved yet
-            if (in == -1) {
-              res_name = realloc(res_name, (res_names+1)*sizeof(char *));
-              res_name[res_names] = calloc(MOL_NAME+1, sizeof(char));
+            if (new) { // unknown (i.e., new) name
+              res_name = realloc(res_name, sizeof *res_name * (res_names + 1));
               strncpy(res_name[res_names], split[i+1], MOL_NAME);
               res_names++;
             }
           }
-        }
+        } //}}}
         break; //}}}
       case 'b': // bond line //{{{
         if (CheckVtfBondLine(words, split, error)) {
@@ -1172,7 +1204,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
           last_struct = count_atom_lines +
                         count_bond_lines +
                         count_comment_lines;
-        } else {
+        } else { // error - not a proper bond line
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError: ");
           YellowText(STDERR_FILENO);
@@ -1183,19 +1215,19 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
           exit(1);
         }
         break; //}}}
-      default: // something unrecognised //{{{
+      default: // unrecognised structure line //{{{
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "%s", struct_file);
         YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", struct_file);
+        RedText(STDERR_FILENO);
         fprintf(stderr, " - unrecognised line\n");
         ResetColour(STDERR_FILENO);
         ErrorPrintLine(split, words);
         exit(1); //}}}
     }
   } //}}}
-  // error - missing default line but have too few atom lines //{{{
+  // error - no default line and too few atom lines //{{{
   if (default_atom_line == -1 && count_atom_lines != (*Counts).BeadsInVsf) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
@@ -1203,49 +1235,55 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
     fprintf(stderr, "%s", struct_file);
     RedText(STDERR_FILENO);
     fprintf(stderr, " - missing atom line(s)\n");
-    fprintf(stderr, "       (i.e., when 'atom default' is omitted,");
-    fprintf(stderr, " there must be a line for each atom)\n");
+    fprintf(stderr, "       (i.e., when 'atom default' is omitted, \
+there must be a line for each atom)\n");
     ResetColour(STDERR_FILENO);
     exit(1);
   } //}}}
-  // total number of lines in the structure section (file type dependent) //{{{
+  // total number of lines in the structure section //{{{
+  /*
+   * File type dependent: for a full vtf file, number of structure lines
+   * corresponds to the last atom/bond lines; for a separate vsf file, the
+   * number corresponds to the total number of lines in the file.
+   */
   int total_lines = last_struct;
   if (!struct_vtf) {
     total_lines = count_atom_lines + count_bond_lines + count_comment_lines;
   } //}}}
-  // declare & allocate & initilize stuff for holding all vsf info //{{{
-    // structure to save info from atom lines
-    struct atom {
-      int index, name, resid, resname;
-      double charge, mass, radius;
-    } *atom = calloc(count_atom_lines, sizeof(struct atom));
-    for (int i = 0; i < count_atom_lines; i++) {
-      atom[i].resid = -1; // i.e., not in a molecule
-      atom[i].charge = CHARGE; // i.e., missing charge in the atom line
-      atom[i].mass = MASS; // i.e., missing mass in the atom line
-      atom[i].radius = RADIUS; // i.e., missing radius in the atom line
-    }
-    // array to connect atom ids in vsf with 'struct atom' numbering
-    int *atom_id = calloc((*Counts).BeadsInVsf, sizeof(int));
-    for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
-      atom_id[i] = -1; // if it stays -1, it's 'atom default'
-    }
-    // structure to save info from bond lines
-    struct bond {
-      int index1, index2;
-    } *bond = calloc(count_bond_lines, sizeof(struct bond)); //}}}
-  // 2) save all vsf lines and count number of molecules //{{{
+  // structures and arrays to hold all vsf info //{{{
+  // info from atom lines
+  struct atom {
+    int index, name, resid, resname;
+    double charge, mass, radius;
+  } *atom = calloc(count_atom_lines, sizeof *atom);
+  for (int i = 0; i < count_atom_lines; i++) {
+    atom[i].resid = -1; // i.e., not in a molecule
+    atom[i].charge = CHARGE; // i.e., missing charge in the atom line
+    atom[i].mass = MASS; // i.e., missing mass in the atom line
+    atom[i].radius = RADIUS; // i.e., missing radius in the atom line
+  }
+  // array to connect atom ids in vsf with 'struct atom' numbering
+  int *atom_id = malloc(sizeof *atom_id * (*Counts).BeadsInVsf);
+  for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
+    atom_id[i] = -1; // if it stays -1, it's 'atom default'
+  }
+  // info from bond lines
+  struct bond {
+    int index1, index2; // indices from vsf file
+  } *bond = calloc(count_bond_lines, sizeof *bond); //}}}
+  // 2) save all vsf lines //{{{
   fsetpos(vsf, &pos); // restore file pointer to the beginning of struct_file
   int count_atoms = 0, count_bonds = 0;
   for (int line_no = 0; line_no < total_lines; line_no++) {
     char split[30][100], line[LINE];
     fgets(line, sizeof line, vsf);
-    int words = SplitLine(split, line, "\t ");
-    // in case of a vtf structure file, finish reading at the 'timestep' line
-    if (struct_vtf && CheckVtfTimestepLine(words, split)) {
-      break;
+    // if the line is too long, skip the rest of it
+    if (strcspn(line, "\n") == (LINE-1)) {
+      while (getc(vsf) != '\n')
+        ;
     }
-    // skip blank, comment, and pbc lines, (i.e., count them as comment lines)
+    int words = SplitLine(split, line, "\t ");
+    // skip blank, comment, and pbc lines
     if (words == 0 || split[0][0] == '#' || strcasecmp(split[0], "pbc") == 0) {
       continue;
     }
@@ -1262,14 +1300,10 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
             atom_id[atoi(split[1])] = id;
             atom[id].index = atoi(split[1]);
           }
-          // go through the line
-          for (int i = 0; i < words; i+=2) {
-            // if the bead is in a molecule, count it as bonded
+          // go through the line (first two strings are 'a[tom] <id>/default')
+          for (int i = 2; i < words; i+=2) {
             if (strncmp(split[i], "resid", 3) == 0 &&
-                strcmp(split[i], "resname") != 0) {
-              if (atoi(split[i+1]) > (*Counts).Molecules) {
-                (*Counts).Molecules = atoi(split[i+1]); // molecule index
-              }
+                strcmp(split[i], "resname") != 0) { // resid index
               atom[id].resid = atoi(split[i+1]) - 1; // vsf resid starts with 1
             } else if (split[i][0] == 'n') { // bead name
               for (int j = 0; j < atom_names; j++) {
@@ -1324,7 +1358,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
       RedText(STDERR_FILENO);
       fprintf(stderr, " - bead index too high in ");
       YellowText(STDERR_FILENO);
-      fprintf(stderr, "bond %d:%d\n\n", bond[i].index1, bond[i].index2);
+      fprintf(stderr, "bond %d:%d\n", bond[i].index1, bond[i].index2);
       ResetColour(STDERR_FILENO);
       exit(1);
     }
@@ -1335,8 +1369,8 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
       atom_id[i] = count_atom_lines - 1;
     }
   } //}}}
-  // 3) fill BEADTYPE struct //{{{
-  BEADTYPE *bt = calloc(1, sizeof(BEADTYPE));
+  // 3) identify bead types & fill BEADTYPE struct //{{{
+  BEADTYPE *bt = malloc(sizeof (BEADTYPE) * 1);
   // save default type - if there is one
   if (atom[count_atom_lines-1].index == -1) {
     (*Counts).TypesOfBeads = 1;
@@ -1348,40 +1382,66 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
   if (detailed) { // check other stuff besides name //{{{
     /*
      * First, identify bead types based on name, charge, masse, and radius,
-     * possibly creating an excess of bead types. Some may then be merged.
+     * e.g., lines
+     *   atom 0 n x q 1 m 1
+     *   atom 1 n x q 2 m 1
+     * will be of two different types. This can create an excess of bead
+     * types, so some may have to be merged.
      *
      * What is to be merged:
-     * i) identify bead types according to all data, not just the name;
-     *    e.g., lines
-     *      atom 0 n x q 1 m 1
-     *      atom 1 n x q 2 m 1
-     *    will be of two different types
-     * ii) however, should keyword be missing in one line but present in
-     *     another, that should not create a different type, e.g., lines
+     * i) If a keyword is missing in one line but present in another, that
+     *    does not count as a different type, e.g., lines
      *       atom 0 n x q 1 m 1
      *       atom 1 n x     m 1
-     *     are of the same type (both with charge +1)
-     * iii) however, there can be ambiguities, so e.g., lines
+     *    are of the same type (both with charge +1);
+     * ii) however, there can be ambiguities, so e.g., lines
      *        atom 0 n x q 1 m 1
      *        atom 1 n x     m 1
      *        atom 2 n x q 0 m 1
-     *      are three different types (should atom 1 have charge 1 or 0?)
-     * iv) however, only some lines can be ambiguous
+     *     remain three distinct types (atom 1 has undefined charge);
+     * iii) but only some lines can be ambiguous, e.g., lines
+     *        atom 0 n x q 1 m 1
+     *        atom 1 n x     m 1
+     *        atom 2 n x q 0 m 1
+     *        atom 3 n x q 0
+     *      are still three different types (the last two should be
+     *      considered the same because there is no ambiguity because all
+     *      beads have the same mass)
+     * iv) note that sometimes the charge/mass/radius can remain undefined
+     *     even though there's only one well defined value; e.g., lines
      *       atom 0 n x q 1 m 1
      *       atom 1 n x     m 1
      *       atom 2 n x q 0 m 1
      *       atom 3 n x q 0
-     *     are still three different types (the last two should be
-     *     considered the same because there is no ambiguity as all beads have
-     *     the same mass)
+     *       atom 4 n x q 0 m 1 r 1
+     *     will make radius well defined (with value 1) only for beads
+     *     sharing the type with atom 4 (i.e., atoms 2, 3, and 4), while
+     *     the first two atoms will still have undefined radius. What
+     *     should the radius of atoms 0 and 1 be when the mass/charge are
+     *     different to that of the last atom?
      *
      * Merging procedure:
-     * 1) identify unique names
+     * 1) identify unique names that will never merge
      * 2) for each unique name, find values of charge/mass/radius, noting
      *    ambiguities (i.e., when more than one well defined value exists)
-     * 3) ...
+     * 3) create 2D boolean array of size <unique names>*<unique names> to
+     *    see what should be merged based on points 1) and 2):
+     *    i) pick two bead types sharing a name (or the same bead type twice
+     *       if it does not share a name with any other), say 'i' and 'k'.
+     *    ii) check every bead type (say 'j') against i and k; if i and
+     *        j should be merged (i.e., share a name), check k's value of
+     *        diff_q/m/r - if it is a proper value, merge i and j; if not,
+     *        merge i and j only if they have the same diff_q/m/r value.
+     * 4) merge the types and count the number of unique types
+     *    i) create a new type when a diagonal element of the array is true
+     *    ii) check the remaining types against and merge those that should
+     *        be merge with that new type, making the diagonal element for
+     *        that merged type false so that no new type is created when
+     *        its time comes in i)
+     * 5) reorder the types so that types sharing the name are next to each
+     *    other
      */
-    // create bead types according to bead properties //{{{
+    // create (possibly too many) bead types according to bead properties //{{{
     for (int i = 0; i < count_atoms; i++) {
       int btype = -1;
       for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
@@ -1411,7 +1471,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
       }
     } //}}}
     // Merging //{{{
-    // 1) find and save unigue names //{{{
+    // 1) count and save unigue names //{{{
     int number_of_names = 0;
     char name[(*Counts).TypesOfBeads][BEAD_NAME+1];
     for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
@@ -1428,8 +1488,6 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
       }
     } //}}}
     // 2) //{{{
-    // 'impossible' value indicating multiple values of charge/mass/radius
-    int high = 1000000;
     // arrays for holding the value of charge/mass/radius for each bead type //{{{
     double diff_q[number_of_names],
            diff_m[number_of_names],
@@ -1447,12 +1505,14 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
     // find the proper values for charge/mass/radius for each type //{{{
     /*
      * diff_q/m/r = high ... more than one value for beads with that name
-     * diff_q/m/r = <value> ... exactly that one values;
+     * diff_q/m/r = <value> ... exactly that one value;
      *                          if both proper and undefined values exist
      *                          (i.e., when there's really one value, but it's
      *                          not written in each atom line), the proper
      *                          value is assigned
      */
+    // high, impossible number to indicate multiple values of charge/mass/radius
+    int high = 1000000;
     // go through all bead type pairs (including self-pairs)
     for (int i = 0; i < number_of_names; i++) {
       for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
@@ -1486,18 +1546,18 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
       }
     } //}}}
     //}}}
-    /*
-    // test print diff_q/m/r //{{{}
+    /* test print diff_q/m/r //{{{
     for (int i = 0; i < number_of_names; i++) {
       printf("%s: q=%10.1f; m=%10.1f; r=%10.1f\n", name[i], diff_q[i], diff_m[i], diff_r[i]);
-    } //}}}
-    */
+    }
+    */ //}}}
+    // 3) //{{{
     // initialize merge array by assuming nothing will be merged //{{{
     bool merge[(*Counts).TypesOfBeads][(*Counts).TypesOfBeads];
     for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
       for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
         merge[i][j] = false; // 'i' and 'j' aren't to be merged
-        merge[i][i] = true; // 'i' type was merged/copied
+        merge[i][i] = true; // 'i' and 'i' is to be merged/copied
       }
     } //}}}
     // assume same-name bead types are to be merged //{{{
@@ -1508,14 +1568,18 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
         }
       }
     } //}}}
+    // go through each bead type and compare it to two others //{{{
     for (int i = 0; i < ((*Counts).TypesOfBeads-1); i++) {
+      // i)
       int k = 0;
       for (; k < (*Counts).TypesOfBeads; k++) {
         if (strcmp(name[k], bt[i].Name) == 0) {
           break;
         }
       }
+      // ii)
       for (int j = (i+1); j < (*Counts).TypesOfBeads; j++) {
+        // check charge
         if (merge[i][j]) {
           if (diff_q[k] == high) {
             if (bt[i].Charge == bt[j].Charge) {
@@ -1527,6 +1591,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
             merge[i][j] = true;
           }
         }
+        // check mass
         if (merge[i][j]) {
           if (diff_m[k] == high) {
             if (bt[i].Mass == bt[j].Mass) {
@@ -1538,6 +1603,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
             merge[i][j] = true;
           }
         }
+        // check radius
         if (merge[i][j]) {
           if (diff_r[k] == high) {
             if (bt[i].Radius == bt[j].Radius) {
@@ -1550,9 +1616,9 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
           }
         }
       }
-    }
-    /*
-    // test print merge matrix //{{{
+    } //}}}
+    //}}}
+    /* test print merge matrix //{{{
     printf("   ");
     for (int i = 0; i < 5; i++) {
       printf("%s ", bt[i].Name);
@@ -1564,15 +1630,16 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
         printf(" %d", merge[i][j]);
       }
       putchar('\n');
-    } //}}}
-    */
-    BEADTYPE *temp = calloc((*Counts).TypesOfBeads, sizeof(BEADTYPE));
+    }
+    */ //}}}
+    // 4) //{{{
+    BEADTYPE *temp = calloc((*Counts).TypesOfBeads, sizeof (BEADTYPE));
     int count = 0;
     for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-      if (merge[i][i]) {
+      if (merge[i][i]) { // i)
         temp[count] = bt[i];
         for (int j = (i+1); j < (*Counts).TypesOfBeads; j++) {
-          if (merge[i][j]) {
+          if (merge[i][j]) { // ii)
             temp[count].Number += bt[j].Number;
             if (temp[count].Charge == CHARGE) {
               temp[count].Charge = bt[j].Charge;
@@ -1589,16 +1656,15 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
         count++;
       }
     }
-    (*Counts).TypesOfBeads = count;
+    (*Counts).TypesOfBeads = count; //}}}
     //}}}
-    // reorder the types, placing same-named ones next to each other //{{{
+    // 5) //{{{
+    // copy all bead types temporarily to bt struct
     for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-      // copy all bead types to a temporary struct
       bt[i] = temp[i];
-      // was 'i' already copied back to temp?
-      bt[i].Use = false;
+      bt[i].Use = false; // will indicate that it wasn't copied yet
     }
-    // copy the bead types back in a proper order
+    // copy the bead types back to temp array in a proper order
     count = 0;
     for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
       if (!bt[i].Use) {
@@ -1611,30 +1677,30 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
           }
         }
       }
-    } //}}}
+    }
+    // finally, copy the types from the temporary array back to bt array
     for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
       bt[i] = temp[i];
     }
-    free(temp);
+    free(temp); //}}}
     //}}}
   } else { // check only bead type name //{{{
-    // charge/mass/radius is taken from the first bead with the given name (even if undefined)
-    // go through all atoms (besides atom default line)
+    /*
+     * charge/mass/radius is taken from the first bead with the given name
+     * (even if undefined)
+     */
+    // go through all non-default atoms
     for (int i = 0; i < count_atoms; i++) {
-      int btype = -1;
+      int btype = -1; // assume bead i is of new type
       for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
         if (strcmp(bt[j].Name, atom_name[atom[i].name]) == 0) {
-          btype = j;
+          btype = j; // nope, not a new type
         }
       }
       if (btype == -1) { // new bead type
-        btype = (*Counts).TypesOfBeads++;
-        bt = realloc(bt, (*Counts).TypesOfBeads*sizeof(BEADTYPE));
-        strcpy(bt[btype].Name, atom_name[atom[i].name]);
-        bt[btype].Number = 0;
-        bt[btype].Charge = atom[i].charge;
-        bt[btype].Mass = atom[i].mass;
-        bt[btype].Radius = atom[i].radius;
+        NewBeadType(&bt, &(*Counts).TypesOfBeads, atom_name[atom[i].name],
+                    atom[i].charge, atom[i].mass, atom[i].radius);
+        btype = (*Counts).TypesOfBeads - 1;
       }
       bt[btype].Number++;
     }
@@ -1647,10 +1713,11 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
     }
   } //}}}
   //}}}
-  // 4) fill BEAD struct //{{{
-  BEAD *bead_all = calloc((*Counts).BeadsInVsf, sizeof(BEAD));
-  int *index_all = calloc((*Counts).BeadsInVsf, sizeof(int)); // connect to internal indexing (atom_id)
-  // unbonded beads
+  // 4) fill BEAD struct, putting unbonded beads first //{{{
+  BEAD *bead_all = calloc((*Counts).BeadsInVsf, sizeof (BEAD));
+  // connect to internal indexing (atom_id)
+  int *index_all = malloc(sizeof *index_all * (*Counts).BeadsInVsf);
+  // unbonded beads //{{{
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     int internal_id = atom_id[i];
     if (atom[internal_id].resid == -1) {
@@ -1658,43 +1725,49 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
       bead_all[id].Molecule = -1;
       index_all[id] = internal_id;
       if (detailed) { // find bead type based on all information //{{{
-        /*
-         * i) find a bead type that shares a name
-         * ii) check whether there are other bead types with the same name
-         *     a) if so, go through all bead types and check name as well as
-         *        charge, mass, and radius
-         *     b) if not, no need to go through the bead types again
-         *     ...necessary as when there's only one bead type with given
-         *     name, the test bead may have unspecified value of
-         *     charge/mass/radius, whereas the bead type may have the value
-         *     specified
-         */
+        bead_all[id].Type = -1;
+        // 1) if a bead shares all values with a bead type, it is of that type
         for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
-          if (strcmp(bt[j].Name, atom_name[atom[internal_id].name]) == 0) {
-            bool name2 = false;
-            for (int k = 0; k < (*Counts).TypesOfBeads; k++) {
-              if (j != k && strcmp(bt[j].Name, bt[k].Name) == 0) {
-                name2 = true;
-                break;
-              }
-            }
-            if (name2) {
-              for (int k = 0; k < (*Counts).TypesOfBeads; k++) {
-                if (strcmp(bt[k].Name, atom_name[atom[internal_id].name]) == 0 &&
-                    bt[k].Charge == atom[internal_id].charge &&
-                    bt[k].Mass == atom[internal_id].mass &&
-                    bt[k].Radius == atom[internal_id].radius) {
-                  bead_all[id].Type = k;
-                }
-              }
-            } else {
-              bead_all[id].Type = j;
-            }
+          if (strcmp(bt[j].Name, atom_name[atom[internal_id].name]) == 0 &&
+              bt[j].Charge == atom[internal_id].charge &&
+              bt[j].Mass == atom[internal_id].mass &&
+              bt[j].Radius == atom[internal_id].radius) {
+            bead_all[id].Type = j;
+            break;
           }
         }
-        //}}}
+        /*
+         * 2) if no type was assigned, check for undefined values of the bead's
+         *    charge/mass/radius
+         */
+        if (bead_all[id].Type == -1) {
+          for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
+            // only check if the bead type and bead share name
+            if (strcmp(bt[j].Name, atom_name[atom[internal_id].name]) == 0) {
+              // check charge
+              if (bt[j].Charge != atom[internal_id].charge &&
+                  atom[internal_id].charge != CHARGE) {
+                continue;
+              }
+              // check mass
+              if (bt[j].Mass != atom[internal_id].mass &&
+                  atom[internal_id].mass != MASS) {
+                continue;
+              }
+              // check radius
+              if (bt[j].Radius != atom[internal_id].radius &&
+                  atom[internal_id].radius != RADIUS) {
+                continue;
+              }
+              // assign bead type if all checks passed
+              bead_all[id].Type = j;
+              break;
+            }
+          }
+        } //}}}
       } else { // find bead based only on name //{{{
-        bead_all[id].Type = FindBeadType2(atom_name[atom[internal_id].name], (*Counts).TypesOfBeads, bt);
+        bead_all[id].Type = FindBeadType2(atom_name[atom[internal_id].name],
+                                          (*Counts).TypesOfBeads, bt);
       } //}}}
       if (internal_id == (count_atom_lines-1)) { // default bead
         bead_all[id].Index = -1; // to be filled later
@@ -1702,60 +1775,66 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
         bead_all[id].Index = atom[internal_id].index;
       }
     }
-  }
-  // bonded beads
+  } //}}}
+  // bonded beads //{{{
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     int internal_id = atom_id[i];
     if (atom[internal_id].resid != -1) {
-      int id = (*Counts).Unbonded + (*Counts).Bonded++;
+      int id = (*Counts).Unbonded + (*Counts).Bonded; // place after unbonded
+      (*Counts).Bonded++;
       bead_all[id].Molecule = atom[internal_id].resid;
       if (detailed) { // find bead type based on all information //{{{
-        /*
-         * Same as for unbonded
-         * i) find a bead type that shares a name
-         * ii) check whether there are other bead types with the same name
-         *     a) if so, go through all bead types and check name as well as
-         *        charge, mass, and radius
-         *     b) if not, no need to go through the bead types again
-         *     ...necessary as when there's only one bead type with given
-         *     name, the test bead may have unspecified value of
-         *     charge/mass/radius, whereas the bead type may have the value
-         *     specified
-         */
+        bead_all[id].Type = -1;
+        // 1) if a bead shares all values with a bead type, it is of that type
         for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
-          if (strcmp(bt[j].Name, atom_name[atom[internal_id].name]) == 0) {
-            bool name2 = false;
-            for (int k = 0; k < (*Counts).TypesOfBeads; k++) {
-              if (j != k && strcmp(bt[j].Name, bt[k].Name) == 0) {
-                name2 = true;
-                break;
-              }
-            }
-            if (name2) {
-              for (int k = 0; k < (*Counts).TypesOfBeads; k++) {
-                if (strcmp(bt[k].Name, atom_name[atom[internal_id].name]) == 0 &&
-                    bt[k].Charge == atom[internal_id].charge &&
-                    bt[k].Mass == atom[internal_id].mass &&
-                    bt[k].Radius == atom[internal_id].radius) {
-                  bead_all[id].Type = k;
-                }
-              }
-            } else {
-              bead_all[id].Type = j;
-            }
+          if (strcmp(bt[j].Name, atom_name[atom[internal_id].name]) == 0 &&
+              bt[j].Charge == atom[internal_id].charge &&
+              bt[j].Mass == atom[internal_id].mass &&
+              bt[j].Radius == atom[internal_id].radius) {
+            bead_all[id].Type = j;
+            break;
           }
         }
-        //}}}
+        /*
+         * 2) if no type was assigned, check for undefined values of the bead's
+         *    charge/mass/radius
+         */
+        if (bead_all[id].Type == -1) {
+          for (int j = 0; j < (*Counts).TypesOfBeads; j++) {
+            // only check if the bead type and bead share name
+            if (strcmp(bt[j].Name, atom_name[atom[internal_id].name]) == 0) {
+              // check charge
+              if (bt[j].Charge != atom[internal_id].charge &&
+                  atom[internal_id].charge != CHARGE) {
+                continue;
+              }
+              // check mass
+              if (bt[j].Mass != atom[internal_id].mass &&
+                  atom[internal_id].mass != MASS) {
+                continue;
+              }
+              // check radius
+              if (bt[j].Radius != atom[internal_id].radius &&
+                  atom[internal_id].radius != RADIUS) {
+                continue;
+              }
+              // assign bead type if all checks passed
+              bead_all[id].Type = j;
+              break;
+            }
+          }
+        } //}}}
       } else { // find bead based only on name //{{{
-        bead_all[id].Type = FindBeadType2(atom_name[atom[internal_id].name], (*Counts).TypesOfBeads, bt);
+        bead_all[id].Type = FindBeadType2(atom_name[atom[internal_id].name],
+                                          (*Counts).TypesOfBeads, bt);
       } //}}}
       bead_all[id].Index = atom[internal_id].index;
       index_all[id] = internal_id;
     }
-  }
+  } //}}}
   // fill BEAD[].Index array for default beads //{{{
-  // i) identify already used indices (i.e., indices specifically written in the vsf file)
-  bool *filled = calloc((*Counts).BeadsInVsf, sizeof(bool));
+  // i) identify used indices (i.e., those explicitly written in the vsf file)
+  bool *filled = calloc((*Counts).BeadsInVsf, sizeof *filled);
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     if (bead_all[i].Index != -1) {
       filled[bead_all[i].Index] = true;
@@ -1775,6 +1854,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
     }
   }
   free(filled); //}}}
+  //}}}
   // construct 'proper' Index array //{{{
   /*
    * until now, index_all was connected to atom struct, but from now on it will
@@ -1784,27 +1864,29 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
   for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
     index_all[bead_all[i].Index] = i;
   } //}}}
-  //}}}
-  // rename the bead types with the same name (does nothing if !detailed) //{{{
-  // ...must be after 4) as that uses the original, possibly duplicate names
-  // TODO: must it really be here?
-  for (int i = 0; i < ((*Counts).TypesOfBeads-1); i++) {
-    count = 0;
-    for (int j = (i+1); j < (*Counts).TypesOfBeads; j++) {
-      if (strcmp(bt[i].Name, bt[j].Name) == 0) {
-        count++;
-        char name[BEAD_NAME+1];
-        // shorten name if necessary
-        if (count < 10) {
-          strncpy(name, bt[j].Name, BEAD_NAME-2);
-        } else if (count < 100) {
-          strncpy(name, bt[j].Name, BEAD_NAME-3);
+  // if detailed, rename the bead types with the same name //{{{
+  if (detailed) {
+    for (int i = 0; i < ((*Counts).TypesOfBeads-1); i++) {
+      count = 0;
+      for (int j = (i+1); j < (*Counts).TypesOfBeads; j++) {
+        if (strcmp(bt[i].Name, bt[j].Name) == 0) {
+          count++;
+          char name[BEAD_NAME+1];
+          // shorten name if necessary
+          if (count < 10) {
+            strncpy(name, bt[j].Name, BEAD_NAME-2);
+          } else if (count < 100) {
+            strncpy(name, bt[j].Name, BEAD_NAME-3);
+          }
+//        P_IGNORE(-Wformat-truncation);
+          // BEAD_NAME is max string length, i.e., array is longer
+          snprintf(bt[j].Name, BEAD_NAME+1, "%s_%d", name, count);
+//        P_POP;
         }
-        sprintf(bt[j].Name, "%s_%d", name, count);
       }
     }
   } //}}}
-  // 5) identify molecule types base on all data //{{{
+  // 5) identify molecule types based on all data //{{{
   /*
    * Molecules of one type must share:
    * i) molecule name
@@ -1813,47 +1895,10 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
    * iv) connectivity
    */
   // count beads in each molecule for ii) //{{{
-  int *atoms_per_mol = calloc ((*Counts).Molecules, sizeof(int));
-  for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
-    int internal_id = atom_id[i];
-    if (atom[internal_id].resid != -1) {
-      atoms_per_mol[atom[internal_id].resid]++;
-    }
+  int *atoms_per_mol = calloc((*Counts).Molecules, sizeof *atoms_per_mol);
+  for (int i = (*Counts).Unbonded; i < (*Counts).BeadsInVsf; i++) {
+    atoms_per_mol[bead_all[i].Molecule]++;
   } //}}}
-// test print number of beads in each molecule //{{{
-/*
-for (int i = 0; i < (*Counts).Molecules; i++) {
-  printf("%d: %d\n", i, atoms_per_mol[i]);
-}
-putchar('\n');
-*/ //}}}
-  // allocate MOLECULE struct //{{{
-  MOLECULE *mol = calloc((*Counts).Molecules, sizeof(MOLECULE));
-  for (int i = 0; i < (*Counts).Molecules; i++) {
-    mol[i].Bead = calloc(atoms_per_mol[i], sizeof(int));
-//printf("%d\n", atoms_per_mol[i]);
-  } //}}}
-  // add bead indices to Molecule[].Bead array for iv) //{{{
-  int *count_in_mol = calloc((*Counts).Molecules, sizeof(int));
-  for (int i = 0; i < (*Counts).BeadsInVsf; i++) {
-    int bead_id = atom_id[i];
-    int mol_id = atom[bead_id].resid;
-    if (mol_id != -1) {
-      mol[mol_id].Bead[count_in_mol[mol_id]] = index_all[atom[bead_id].index];
-      count_in_mol[mol_id]++;
-    }
-  } //}}}
-// test print beads in molecules //{{{
-/*
-for (int i = 0; i < (*Counts).Molecules; i++) {
-  printf("%d:", i);
-  for (int j = 0; j < atoms_per_mol[i]; j++) {
-    printf(" %d", mol[i].Bead[j]);
-  }
-  putchar('\n');
-}
-putchar('\n');
-*/ //}}}
   // error - resid numbering in vsf must be continuous //{{{
   for (int i = 0; i < (*Counts).Molecules; i++) {
     if (atoms_per_mol[i] == 0) {
@@ -1863,123 +1908,192 @@ putchar('\n');
       fprintf(stderr, "%s", struct_file);
       RedText(STDERR_FILENO);
       fprintf(stderr, " - 'resid' numbering is not continuous\n");
+      fprintf(stderr, "       Molecule ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%d", i);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " is missing\n");
       ResetColour(STDERR_FILENO);
       exit(1);
     }
   } //}}}
+  /*
+  // test print number of beads in each molecule //{{{
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    printf("%d: %d\n", i, atoms_per_mol[i]);
+  }
+  putchar('\n'); //}}}
+  */
+  // allocate MOLECULE struct & and fill with indices for iv) //{{{
+  MOLECULE *mol = calloc((*Counts).Molecules, sizeof (MOLECULE));
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    mol[i].Bead = calloc(atoms_per_mol[i], sizeof *mol[i].Bead);
+    mol[i].Aggregate = -1; // in no aggregate
+  }
+  // fill to Molecule[].Bead array with bead indices
+  int *count_in_mol = calloc((*Counts).Molecules, sizeof *count_in_mol);
+  for (int i = (*Counts).Unbonded; i < (*Counts).BeadsInVsf; i++) {
+    int m_id = bead_all[i].Molecule;
+    mol[m_id].Bead[count_in_mol[m_id]] = i;
+    count_in_mol[m_id]++;
+  }
+  // pro-forma: test that the two bead counts in individual molecules agree
+  // unless things are somehow weirdly bad, the error is never triggered
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    if (count_in_mol[i] != atoms_per_mol[i]) {
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: something wrong with bead count in molecule");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%d", i);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%d!=%d\n", count_in_mol[i], atoms_per_mol[i]);
+      ResetColour(STDERR_FILENO);
+      exit(1);
+    }
+  } //}}}
+  /*
+  // test print beads in molecules //{{{
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    printf("%d:", i);
+    for (int j = 0; j < atoms_per_mol[i]; j++) {
+      printf(" %d", mol[i].Bead[j]);
+    }
+    putchar('\n');
+  }
+  putchar('\n'); //}}}
+  */
   // count bonds in all molecules for ii) //{{{
-  int *bonds_per_mol = calloc ((*Counts).Molecules, sizeof(int));
+//P_IGNORE(-Walloc-size-larger-than=);
+  int *bonds_per_mol = calloc((*Counts).Molecules, sizeof *bonds_per_mol);
+//P_POP
   for (int i = 0; i < count_bond_lines; i++) {
-    int mol_id1 = atom[atom_id[bond[i].index1]].resid;
-    int mol_id2 = atom[atom_id[bond[i].index2]].resid;
+    int m_id1 = bead_all[index_all[bond[i].index1]].Molecule;
+    int m_id2 = bead_all[index_all[bond[i].index2]].Molecule;
     // error - beads from one bond are in different molecules
-    if (mol_id1 != mol_id2) {
+    if (m_id1 != m_id2) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", struct_file);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - bonded beads in different molecules (beads ");
+      fprintf(stderr, " - bonded beads in different molecules (bead ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%d", bond[i].index1);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " and ");
+      fprintf(stderr, " in molecule ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%d", m_id1+1); // resid start at 1 in vsf
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " and bead ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%d", bond[i].index2);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " in molecule ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%d", m_id2+1); // resid start at 1 in vsf
       RedText(STDERR_FILENO);
       fprintf(stderr, ")\n");
       ResetColour(STDERR_FILENO);
       exit(1);
     }
-    bonds_per_mol[mol_id1]++;
+    bonds_per_mol[m_id1]++;
   } //}}}
   // save connectivity for each molecule for iv) //{{{
-  // allocate 3D connectivity array //{{{
+  // allocate connectivity array //{{{
   /*
-   * in connectivity[i][j][k]:
+   * in molec[i].connect[j][k]:
    *   i ... molecule id
    *   j ... bond id
-   *   k ... 0 and 1 contain connected bead indices; 2 is not used as there are no bond types
+   *   k ... 0 and 1: connected bead indices; 2: bond type (not used now)
    */
-  int ***connectivity = calloc((*Counts).Molecules, sizeof(int **));
+  struct connectivity {
+    int (*connect)[3];
+  } *molec = malloc(sizeof *molec * (*Counts).Molecules);
   for (int i = 0; i < (*Counts).Molecules; i++) {
     count_in_mol[i] = 0;
-    connectivity[i] = calloc(bonds_per_mol[i], sizeof(int *));
+    molec[i].connect = malloc(sizeof *molec[i].connect * bonds_per_mol[i]);
     for (int j = 0; j < bonds_per_mol[i]; j++) {
-      connectivity[i][j] = calloc(3, sizeof(int));
-      connectivity[i][j][0] = -1;
-      connectivity[i][j][1] = -1;
+      molec[i].connect[j][0] = -1;
+      molec[i].connect[j][1] = -1;
     }
   } //}}}
   // save ids of bonded beads
   for (int i = 0; i < count_bond_lines; i++) {
-    int mol_id = atom[atom_id[bond[i].index1]].resid;
-    int id1 = index_all[bond[i].index1];
-    int id2 = index_all[bond[i].index2];
-    bool done[2] = {false};
-    for (int j = 0; j < atoms_per_mol[mol_id]; j++) {
-      if (!done[0] && mol[mol_id].Bead[j] == id1) {
-        connectivity[mol_id][count_in_mol[mol_id]][0] = j;
+    int id1 = index_all[bond[i].index1],
+        id2 = index_all[bond[i].index2];
+    int m_id = bead_all[id1].Molecule;
+    bool done[2] = {false}; // so as not to go through the whole molecule
+    for (int j = 0; j < atoms_per_mol[m_id]; j++) {
+      if (mol[m_id].Bead[j] == id1) {
+        molec[m_id].connect[count_in_mol[m_id]][0] = j;
+        done[0] = true;
       }
-      if (!done[1] && mol[mol_id].Bead[j] == id2) {
-        connectivity[mol_id][count_in_mol[mol_id]][1] = j;
+      if (mol[m_id].Bead[j] == id2) {
+        molec[m_id].connect[count_in_mol[m_id]][1] = j;
+        done[1] = true;
       }
       if (done[0] && done[1]) {
         break;
       }
     }
-    count_in_mol[mol_id]++;
+    count_in_mol[m_id]++;
   }
   // sort bonds -- pro forma as bead ids in atom struct are sorted
   for (int i = 0; i < (*Counts).Molecules; i++) {
-    SortBonds(connectivity[i], bonds_per_mol[i]);
+    SortBonds(molec[i].connect, bonds_per_mol[i]);
   }
   //}}}
-// test print bonds in molecules //{{{
-/*
-for (int i = 0; i < (*Counts).Molecules; i++) {
-  printf("%d:", i);
-  for (int j = 0; j < bonds_per_mol[i]; j++) {
-    printf(" %d-%d", connectivity[i][j][0]+1, connectivity[i][j][1]+1);
-  }
-  putchar('\n');
-}
-putchar('\n');
-*/ //}}}
-  // count molecule types based on i) through to iv) //{{{
-  // ...or just on i) if !detailed (and exit if a molecule contains too few/too many beads)
-  MOLECULETYPE *mt = calloc(1, sizeof(MOLECULETYPE));
+  /*
+  // test print bonds in molecules //{{{
   for (int i = 0; i < (*Counts).Molecules; i++) {
-    bool add = false;
-    int first_bead = bead_all[mol[i].Bead[0]].Index;
-    int name = atom[atom_id[first_bead]].resname;
-//  printf("%5d %5d %5d %s\n", first_bead, atom_id[first_bead], name, res_name[name]);
+    printf("%d:", i);
+    for (int j = 0; j < bonds_per_mol[i]; j++) {
+      printf(" %d-%d", connectivity[i][j][0]+1, connectivity[i][j][1]+1);
+    }
+    putchar('\n');
+  }
+  putchar('\n'); //}}}
+  */
+  // count molecule types based //{{{
+  /*
+   * a) if detailed, check i) through iv)
+   * b) if !detailed, check only i) and exit if a molecule contains too few or
+   *    too many beads
+   */
+  MOLECULETYPE *mt = calloc(1, sizeof (MOLECULETYPE));
+  for (int i = 0; i < (*Counts).Molecules; i++) {
+    // atom struct is necessary because the name is not recorded anywhere else
+    int id = bead_all[mol[i].Bead[0]].Index; // id of the molecule's first bead
+    int name = atom[atom_id[id]].resname; // name index in res_name array
+    bool add = false; // assume no type exists that i can be added to
     // go through all molecule types to find a match for molecule i //{{{
     for (int j = 0; j < (*Counts).TypesOfMolecules; j++) {
-      if (detailed) { // check name, numbers of beads & bonds, and connectivity
-        if (strcmp(res_name[name], mt[j].Name) == 0 &&
-            atoms_per_mol[i] == mt[j].nBeads &&
-            bonds_per_mol[i] == mt[j].nBonds) {
-          bool same_beads = true;
+      if (detailed) { // a)
+        if (strcmp(res_name[name], mt[j].Name) == 0 && // check name,
+            atoms_per_mol[i] == mt[j].nBeads && // number of beads, and
+            bonds_per_mol[i] == mt[j].nBonds) { // number of bonds
+          bool same_beads = true; // assume molecule i has j type's bead order
           for (int k = 0; k < mt[j].nBeads; k++) {
             if (bead_all[mol[i].Bead[k]].Type != mt[j].Bead[k]) {
-              same_beads = false;
+              same_beads = false; // nope, it doesn't; is not type j
               break;
             }
           }
-          bool same_bonds = true;
+          bool same_bonds = true; // assume molecule i has j type's connectivity
           for (int k = 0; k < mt[j].nBonds; k++) {
-            if (connectivity[i][k][0] != mt[j].Bond[k][0] ||
-                connectivity[i][k][1] != mt[j].Bond[k][1]) {
-              same_bonds = false;
+            if (molec[i].connect[k][0] != mt[j].Bond[k][0] ||
+                molec[i].connect[k][1] != mt[j].Bond[k][1]) {
+              same_bonds = false; // nope, it doesn't; i is not type j
               break;
             }
           }
           if (same_beads && same_bonds) {
-            add = true;
+            add = true; // add to existing molecule type
           }
         }
-      } else { // check name only
+      } else { // b)
         if (strcmp(res_name[name], mt[j].Name) == 0) {
           add = true;
           // error - too few/too many beads in a molecule
@@ -1995,9 +2109,9 @@ putchar('\n');
             RedText(STDERR_FILENO);
             fprintf(stderr, " contains too ");
             if (atoms_per_mol[i] > mt[j].nBeads) {
-              fprintf(stderr, "many");
+              fprintf(stderr, "many ");
             } else {
-              fprintf(stderr, "few");
+              fprintf(stderr, "few ");
             }
             fprintf(stderr, "beads (%d instead of %d)\n", atoms_per_mol[i], mt[j].nBeads);
             ResetColour(STDERR_FILENO);
@@ -2011,15 +2125,15 @@ putchar('\n');
         break;
       }
     } //}}}
-    // didn't find matching type (or no type yet exists), so create molecule type //{{{
+    // new molecule type if no match found for i or no type exists yet //{{{
     if (!add || (*Counts).TypesOfMolecules == 0) {
       int type = (*Counts).TypesOfMolecules++;
       mol[i].Type = type;
-      mt = realloc(mt, (*Counts).TypesOfMolecules*sizeof(MOLECULETYPE));
+      mt = realloc(mt, sizeof (MOLECULETYPE) * (*Counts).TypesOfMolecules);
       strcpy(mt[type].Name, res_name[name]);
       mt[type].Number = 1;
       mt[type].nBeads = atoms_per_mol[i];
-      mt[type].Bead = calloc(mt[type].nBeads, sizeof(int));
+      mt[type].Bead = malloc(sizeof *mt[type].Bead * mt[type].nBeads);
       for (int j = 0; j < mt[type].nBeads; j++) {
         int bead = mol[i].Bead[j];
         int id = bead;
@@ -2027,11 +2141,10 @@ putchar('\n');
       }
       mt[type].nBonds = bonds_per_mol[i];
       if (bonds_per_mol[i] > 0) {
-        mt[type].Bond = calloc(bonds_per_mol[i], sizeof(int *));
+        mt[type].Bond = malloc(sizeof *mt[type].Bond * bonds_per_mol[i]);
         for (int j = 0; j < bonds_per_mol[i]; j++) {
-          mt[type].Bond[j] = calloc(3, sizeof(int));
-          mt[type].Bond[j][0] = connectivity[i][j][0];
-          mt[type].Bond[j][1] = connectivity[i][j][1];
+          mt[type].Bond[j][0] = molec[i].connect[j][0];
+          mt[type].Bond[j][1] = molec[i].connect[j][1];
           mt[type].Bond[j][2] = -1; // no bond types
         }
       }
@@ -2039,90 +2152,49 @@ putchar('\n');
       mt[type].nDihedrals = 0;
     } //}}}
   } //}}}
-  // rename the molecule types with the same name (does nothing if !detailed) //{{{
-  for (int i = 0; i < ((*Counts).TypesOfMolecules-1); i++) {
-    count = 0;
-    for (int j = (i+1); j < (*Counts).TypesOfMolecules; j++) {
-      if (strcmp(mt[i].Name, mt[j].Name) == 0) {
-        count++;
-        // shorten name if necessary to append '_<int>'
-        char name[MOL_NAME+1];
-        strcpy(name, mt[j].Name);
-        if (count < 10) {
-          name[MOL_NAME-2] = '\0';
-        } else if (count < 100) {
-          name[MOL_NAME-3] = '\0';
+  // if detailed, rename the molecule types with the same name //{{{
+  if (detailed) {
+    for (int i = 0; i < ((*Counts).TypesOfMolecules-1); i++) {
+      count = 0; // number of types sharing the name with type i
+      for (int j = (i+1); j < (*Counts).TypesOfMolecules; j++) {
+        if (strcmp(mt[i].Name, mt[j].Name) == 0) {
+          count++;
+          // shorten name if necessary to append '_<int>'
+          char name[MOL_NAME+1];
+          strcpy(name, mt[j].Name);
+          if (count < 10) {
+            name[MOL_NAME-2] = '\0';
+          } else if (count < 100) {
+            name[MOL_NAME-3] = '\0';
+          } else if (count < 1000) {
+            name[MOL_NAME-4] = '\0';
+          }
+//        P_IGNORE(-Wformat-truncation);
+          snprintf(mt[j].Name, MOL_NAME+1, "%s_%d", name, count);
+//        P_POP;
         }
-        snprintf(mt[j].Name, MOL_NAME+1, "%s_%d", name, count);
       }
     }
   } //}}}
   // calculate molecules' mass and charge and fill their BType array
   FillMolType((*Counts).TypesOfMolecules, bt, &mt); //}}}
-  // 6) end by copying everything back to their 'proper' arrays and structures //{{{
+  // 6) copy everything back to their 'proper' arrays and structures //{{{
   (*Counts).Beads = (*Counts).BeadsInVsf;
-  // indexing
-  *Index = calloc((*Counts).Beads, sizeof(int));
+  *Index = malloc(sizeof **Index * (*Counts).Beads);
   for (int i = 0; i < (*Counts).Beads; i++) {
     (*Index)[i] = index_all[i];
   }
-  // bead types
-  *BeadType = calloc((*Counts).TypesOfBeads, sizeof(BEADTYPE));
+  *BeadType = malloc(sizeof (BEADTYPE) * (*Counts).TypesOfBeads);
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-    strcpy((*BeadType)[i].Name, bt[i].Name);
-    (*BeadType)[i].Number = bt[i].Number;
-    (*BeadType)[i].Charge = bt[i].Charge;
-    (*BeadType)[i].Mass = bt[i].Mass;
-    (*BeadType)[i].Radius = bt[i].Radius;
+    (*BeadType)[i] = bt[i];
   }
-  // individual beads
-  *Bead = calloc((*Counts).Beads, sizeof(BEAD));
+  *Bead = malloc(sizeof (BEAD) * (*Counts).Beads);
   for (int i = 0; i < (*Counts).Beads; i++) {
-    (*Bead)[i].Type = bead_all[i].Type;
-    (*Bead)[i].Molecule = bead_all[i].Molecule;
-    (*Bead)[i].nAggregates = 0;
-    (*Bead)[i].Index = bead_all[i].Index;
+    (*Bead)[i] = bead_all[i];
   }
   // molecule types
-  *MoleculeType = calloc((*Counts).TypesOfMolecules, sizeof(MOLECULETYPE));
-  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-    strcpy((*MoleculeType)[i].Name, mt[i].Name);
-    (*MoleculeType)[i].Number = mt[i].Number;
-    (*MoleculeType)[i].nBeads = mt[i].nBeads;
-    (*MoleculeType)[i].Bead = calloc((*MoleculeType)[i].nBeads, sizeof(int));
-    for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
-      (*MoleculeType)[i].Bead[j] = mt[i].Bead[j];
-    }
-    (*MoleculeType)[i].nBonds = mt[i].nBonds;
-    if ((*MoleculeType)[i].nBonds > 0) {
-      (*MoleculeType)[i].Bond = calloc((*MoleculeType)[i].nBonds, sizeof(int *));
-      for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
-        (*MoleculeType)[i].Bond[j] = calloc(3, sizeof(int));
-        (*MoleculeType)[i].Bond[j][0] = mt[i].Bond[j][0];
-        (*MoleculeType)[i].Bond[j][1] = mt[i].Bond[j][1];
-        (*MoleculeType)[i].Bond[j][2] = mt[i].Bond[j][2];
-      }
-    }
-    (*MoleculeType)[i].nAngles = 0; // TODO: there will be FIELD/lammps files
-    (*MoleculeType)[i].nDihedrals = 0; // TODO: there will be FIELD/lammps files
-    (*MoleculeType)[i].nBTypes = mt[i].nBTypes;
-    (*MoleculeType)[i].BType = calloc((*MoleculeType)[i].nBTypes, sizeof(int));
-    for (int j = 0; j < (*MoleculeType)[i].nBTypes; j++) {
-      (*MoleculeType)[i].BType[j] = mt[i].BType[j];
-    }
-    (*MoleculeType)[i].Mass = mt[i].Mass;
-    (*MoleculeType)[i].Charge = mt[i].Charge;
-  }
-  // individual molecules
-  *Molecule = calloc((*Counts).Molecules, sizeof(MOLECULE));
-  for (int i = 0; i < (*Counts).Molecules; i++) {
-    (*Molecule)[i].Type = mol[i].Type;
-    (*Molecule)[i].Bead = calloc((*MoleculeType)[(*Molecule)[i].Type].nBeads, sizeof(int));
-    for (int j = 0; j < (*MoleculeType)[(*Molecule)[i].Type].nBeads; j++) {
-      (*Molecule)[i].Bead[j] = mol[i].Bead[j];
-    }
-    (*Molecule)[i].Aggregate = -1;
-  } //}}}
+  CopyMoleculeType((*Counts).TypesOfMolecules, MoleculeType, mt, 2);
+  CopyMolecule((*Counts).Molecules, *MoleculeType, Molecule, mol, 2); //}}}
   // free memory //{{{
   free(bt);
   free(index_all);
@@ -2130,20 +2202,21 @@ putchar('\n');
   FreeMolecule((*Counts).Molecules, &mol);
   FreeMoleculeType((*Counts).TypesOfMolecules, &mt);
   for (int i = 0; i < (*Counts).Molecules; i++) {
-    for (int j = 0; j < bonds_per_mol[i]; j++) {
-      free(connectivity[i][j]);
-    }
-    free(connectivity[i]);
+//  for (int j = 0; j < bonds_per_mol[i]; j++) {
+//    free(connectivity[i][j]);
+//  }
+    free(molec[i].connect);
   }
-  free(connectivity);
-  for (int i = 0; i < atom_names; i++) {
-    free(atom_name[i]);
-  }
+  free(molec);
+//free(connectivity);
+//for (int i = 0; i < atom_names; i++) {
+//  free(atom_name[i]);
+//}
   free(atom_name);
   free(atom_id);
-  for (int i = 0; i < res_names; i++) {
-    free(res_name[i]);
-  }
+//for (int i = 0; i < res_names; i++) {
+//  free(res_name[i]);
+//}
   free(res_name);
   free(atom);
   free(bond);
@@ -2153,66 +2226,204 @@ putchar('\n');
 } //}}}
 
 // FullVtfRead() //{{{
-void FullVtfRead(char *struct_file, char *vcf_file, bool detailed, bool vtf, bool *indexed, int *struct_lines,
-                 VECTOR *BoxLength, COUNTS *Counts,
+/*
+ * Function to read vtf structure and (optionally) detect what beads are
+ * present in a coordinate file. First, read structure file; second, check
+ * coordinate file if present; third TODO: check FIELD/lammps file for extra
+ * info (bond/angle stuff). The function warns if the system isn't electrically
+ * neutral.
+ */
+void FullVtfRead(char *struct_file, char *vcf_file, bool detailed, bool vtf,
+                 bool *indexed, int *struct_lines, BOX *Box, COUNTS *Counts,
                  BEADTYPE **BeadType, BEAD **Bead, int **Index,
                  MOLECULETYPE **MoleculeType, MOLECULE **Molecule) {
   // read the whole structure section
-  ReadVtfStructure(struct_file, detailed, Counts, BeadType, Bead, Index, MoleculeType, Molecule);
-
-  // count structure lines if vtf as the coordinate file (-1 otherwise)
+  ReadVtfStructure(struct_file, detailed, Counts, BeadType, Bead, Index,
+                   MoleculeType, Molecule);
+  // check coordinate file if provided //{{{
   if (vcf_file[0] != '\0') {
-    // get box size
-    *BoxLength = GetPBC(vcf_file);
-    // number of structure lines (useful if vcf_file is vtf)
+    GetPBC(vcf_file, Box);
+    // number of structure lines (or -1 if coordinate file is not vtf)
     *struct_lines = CountVtfStructLines(vtf, vcf_file);
-    // determine timestep type & what coordinate file contains from the first timestep
+    // get timestep type & contained beads from the first timestep
     FILE *vcf;
     if ((vcf = fopen(vcf_file, "r")) == NULL) {
       ErrorFileOpen(vcf_file, 'r');
       exit(1);
     }
-    SkipVtfStructure(vtf, vcf, *struct_lines);
-    *indexed = CheckVtfTimestep(vcf, vcf_file, Counts, BeadType, Bead, Index, MoleculeType, Molecule);
+    SkipVtfStructure(vcf, *struct_lines);
+    *indexed = CheckVtfTimestep(vcf, vcf_file, Counts, BeadType, Bead, Index,
+                                MoleculeType, Molecule);
     fclose(vcf);
-  }
-
+  } //}}}
   // check electroneutrality
   WarnElNeutrality(*Counts, *BeadType, struct_file);
-
-  // allocate memory for aggregates
+  // allocate memory for aggregates - TODO: that'll be scrapped at some time
   for (int i = 0; i < (*Counts).Beads; i++) {
-    (*Bead)[i].Aggregate = calloc(1, sizeof(int));
+    (*Bead)[i].Aggregate = calloc(1, sizeof *(*Bead)[i].Aggregate);
   }
+  FillMolMassCharge((*Counts).TypesOfMolecules, MoleculeType, *BeadType);
 } //}}}
 
-// ReadTimestepPreamble() //{{{
-/**
- * Function to read timestep preamble
+// ReadVtfTimestepPreamble_old() //{{{
+/*
+ * Function to read timestep preamble, i.e., comments, pbc, and timestep lines.
  */
-int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char **stuff, bool quit) {
+int ReadVtfTimestepPreamble_old(bool *indexed, char *input_coor, FILE *vcf_file,
+                            char **stuff, VECTOR *BoxLength, bool quit) {
+  return 0;
+//// save pointer position in vcf_file
+//fpos_t position;
+//fgetpos(vcf_file, &position); // get file pointer position
+//(*stuff)[0] = '\0'; // start with empty string
+//int words, count_lines = 0;
+//char split[30][100];
+//bool timestep = false;
+//// read lines until float-started line is encountered
+//do {
+//  char line[LINE] = {0}, line2[LINE];
+//  fgets(line, sizeof line, vcf_file);
+//  // if the line is too long, skip the rest of it
+//  if (strcspn(line, "\n") == (LINE-1)) {
+//    while (getc(vcf_file) != '\n')
+//      ;
+//  }
+//  if (feof(vcf_file)) {
+//    return -1;
+//  }
+//  strcpy(line2, line); // save 'unsplit' line
+//  words = SplitLine(split, line, " \t");
+//  // comment line - copy to stuff array //{{{
+//  if (split[0][0] == '#') {
+//    strncat(*stuff, line2, LINE-strlen(*stuff)-1);
+//  //}}}
+//  // error (as long as we care) - incorrect line //{{{
+//  /*
+//   * error if not
+//   * 1) blank line
+//   * 2) timestep line starting with with 't[imestep]|i[ndexed]|o[rdered]',
+//   * 3) pbc line starting with 'pbc',
+//   * 4) float-initiated line, i.e., first coordinate line
+//   */
+//  } else if (quit && // should the funciton exit on error?
+//             words != 0 && // 1)
+//             split[0][0] != 't' && //
+//             split[0][0] != 'i' && // 2)
+//             split[0][0] != 'o' && //
+//             strcasecmp(split[0], "pbc") != 0 && // 3)
+//             !IsDouble(split[0])) { // 4)
+//    RedText(STDERR_FILENO);
+//    fprintf(stderr, "\nError: ");
+//    YellowText(STDERR_FILENO);
+//    fprintf(stderr, "%s", input_coor);
+//    RedText(STDERR_FILENO);
+//    fprintf(stderr, " - unrecognised line in the timestep preamble\n");
+//    ResetColour(STDERR_FILENO);
+//    ErrorPrintLine(split, words);
+//    exit(1);
+//  } //}}}
+//  // change BoxLength, if correct pbc line is present
+//  if (strcasecmp(split[0], "pbc") == 0 &&
+//      IsDouble(split[1]) && IsDouble(split[2]) && IsDouble(split[3])) {
+//    (*BoxLength).x = atof(split[1]);
+//    (*BoxLength).y = atof(split[2]);
+//    (*BoxLength).z = atof(split[3]);
+//  }
+//  // if the line is longer than LINE, copy the next part to stuff array //{{{
+//  while (strlen(line2) == (LINE-1) && line2[LINE-1] == '\n') {
+//    fgets(line2, sizeof line2, vcf_file);
+//    // if the line is too long, skip the rest of it
+//    if (strcspn(line, "\n") == (LINE-1)) {
+//      while (getc(vcf_file) != '\n')
+//        ;
+//    }
+//    if (feof(vcf_file)) {
+//      return -1;
+//    }
+//    strncat(*stuff, line2, LINE-strlen(*stuff)-1);
+//    count_lines++;
+//  } //}}}
+//  // test for a t(imestep) i(ndexed)/o(rdered) line //{{{
+//  if ((words > 1 && split[0][0] == 't' && split[1][0] == 'i') ||
+//      split[0][0] == 'i') {
+//    timestep = true;
+//    *indexed = true; // indexed timestep present
+//  } else if ((words > 1 && split[0][0] == 't' && split[1][0] == 'o') ||
+//             split[0][0] == 'o' || (words == 1 && split[0][0] == 't')) {
+//    timestep = true;
+//    *indexed = false; // ordered timestep present
+//  } //}}}
+//  count_lines++;
+//} while (words == 0 || !IsDouble(split[0]));
+//count_lines--; // the last counted line contained the first coordinate line
+//// error (as long as we care) - missing timestep line //{{{
+//if (quit && !timestep) {
+//  RedText(STDERR_FILENO);
+//  fprintf(stderr, "\nError: ");
+//  YellowText(STDERR_FILENO);
+//  fprintf(stderr, "%s", input_coor);
+//  RedText(STDERR_FILENO);
+//  fprintf(stderr, " - missing t(imestep) o(rdered)/i(indexed) line\n");
+//  if (indexed) {
+//    fprintf(stderr, "       or more indexed coordinate lines");
+//    fprintf(stderr, " than in the first timestep\n");
+//  }
+//  ResetColour(STDERR_FILENO);
+//  exit(1);
+//} //}}}
+//fsetpos(vcf_file, &position); // restore pointer position
+//return count_lines;
+} //}}}
+
+// ReadVtfTimestepPreamble() //{{{
+/*
+ * Function to read timestep preamble, i.e., comments, pbc, and timestep lines.
+ */
+int ReadVtfTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file,
+                            char **stuff, BOX *Box, bool quit) {
   // save pointer position in vcf_file
   fpos_t position;
-  fgetpos(vcf_file, &position);
-  (*stuff)[0] = '\0'; // empty the array
+  fgetpos(vcf_file, &position); // get file pointer position
+  (*stuff)[0] = '\0'; // start with empty string
   int words, count_lines = 0;
   char split[30][100];
   bool timestep = false;
+  // read lines until float-started line is encountered
   do {
-    char line[LINE], line2[LINE];
-    fgets(line, sizeof(line), vcf_file);
+    char line[LINE] = {0}, line2[LINE];
+    fgets(line, sizeof line, vcf_file);
+    // if the line is too long, skip the rest of it
+    if (strcspn(line, "\n") == (LINE-1)) {
+      while (getc(vcf_file) != '\n')
+        ;
+    }
     if (feof(vcf_file)) {
       return -1;
     }
-    strcpy(line2, line); // save line string to strcat to stuff array
+    strcpy(line2, line); // save 'unsplit' line
     words = SplitLine(split, line, " \t");
-    // comment line - copy to stuff array
+    // comment line - copy to stuff array //{{{
     if (split[0][0] == '#') {
-      SafeStrcat(stuff, line2, LINE);
-    // error if not timestep or pbc line, blank line, or a double (i.e., start of the coordinate lines)
-    } else if (quit && (split[0][0] != 't' && split[0][0] != 'i' && split[0][0] != 'o' &&
-               words != 0 && strcasecmp(split[0], "pbc") != 0 && !IsDouble(split[0]))) {
-      fprintf(stderr, "\033[1;31m");
+      // TODO: thoroughly test
+//    P_IGNORE(-Wformat-truncation);
+      strncat(*stuff, line2, LINE-strlen(*stuff)-1);
+//    P_POP;
+    //}}}
+    // error (only if we care) - incorrect line //{{{
+    /*
+     * error if not
+     * 1) blank line
+     * 2) timestep line starting with with 't[imestep]|i[ndexed]|o[rdered]',
+     * 3) pbc line starting with 'pbc',
+     * 4) float-initiated line, i.e., first coordinate line
+     */
+    } else if (quit && // should the funciton exit on error?
+               words != 0 && // 1)
+               split[0][0] != 't' && //
+               split[0][0] != 'i' && // 2)
+               split[0][0] != 'o' && //
+               strcasecmp(split[0], "pbc") != 0 && // 3)
+               !IsDouble(split[0])) { // 4)
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
@@ -2222,58 +2433,121 @@ int ReadTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file, char *
       ResetColour(STDERR_FILENO);
       ErrorPrintLine(split, words);
       exit(1);
+    } //}}}
+    // change BoxLength, if correct pbc line is present
+    if (strcasecmp(split[0], "pbc") == 0 &&
+        IsDouble(split[1]) && IsDouble(split[2]) && IsDouble(split[3])) {
+      (*Box).Length.x = atof(split[1]);
+      (*Box).Length.y = atof(split[2]);
+      (*Box).Length.z = atof(split[3]);
+      if (words > 6 &&
+          IsDouble(split[4]) && IsDouble(split[5]) && IsDouble(split[6])) {
+        (*Box).alpha = atof(split[4]);
+        (*Box).beta = atof(split[5]);
+        (*Box).gamma = atof(split[6]);
+      } else {
+        (*Box).alpha = 90;
+        (*Box).beta = 90;
+        (*Box).gamma = 90;
+      }
     }
-    // continue reading the same line if it's too long
-    while (strlen(line2) == (LINE-1)) {
-      fgets(line2, sizeof(line2), vcf_file);
+    // if the line is longer than LINE, copy the next part to stuff array //{{{
+    while (strlen(line2) == (LINE-1) && line2[LINE-1] == '\n') {
+      fgets(line2, sizeof line2, vcf_file);
+      // if the line is too long, skip the rest of it
+      if (strcspn(line, "\n") == (LINE-1)) {
+        while (getc(vcf_file) != '\n')
+          ;
+      }
       if (feof(vcf_file)) {
         return -1;
       }
-      SafeStrcat(stuff, line2, LINE);
+      strncat(*stuff, line2, LINE-strlen(*stuff)-1);
       count_lines++;
-    }
+    } //}}}
     // test for a t(imestep) i(ndexed)/o(rdered) line //{{{
     if ((words > 1 && split[0][0] == 't' && split[1][0] == 'i') ||
         split[0][0] == 'i') {
       timestep = true;
       *indexed = true; // indexed timestep present
     } else if ((words > 1 && split[0][0] == 't' && split[1][0] == 'o') ||
-               split[0][0] == 'o' || (words == 1 && split[0][0] == 't')){
+               split[0][0] == 'o' || (words == 1 && split[0][0] == 't')) {
       timestep = true;
       *indexed = false; // ordered timestep present
     } //}}}
     count_lines++;
   } while (words == 0 || !IsDouble(split[0]));
   count_lines--; // the last counted line contained the first coordinate line
-  // error - missing timestep line //{{{
+  // error (as long as we care) - missing timestep line //{{{
   if (quit && !timestep) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
     YellowText(STDERR_FILENO);
     fprintf(stderr, "%s", input_coor);
     RedText(STDERR_FILENO);
-    fprintf(stderr, " - missing [t(imestep)] o(rdered)/i(indexed) line\n");
+    fprintf(stderr, " - missing t(imestep) o(rdered)/i(indexed) line\n");
     if (indexed) {
-      fprintf(stderr, "       or more coordinate lines than in the first timestep\n");
+      fprintf(stderr, "       or more indexed coordinate lines");
+      fprintf(stderr, " than in the first timestep\n");
     }
     ResetColour(STDERR_FILENO);
     exit(1);
   } //}}}
-  char line2[LINE];
-  fgets(line2, sizeof(line2), vcf_file);
-  fsetpos(vcf_file, &position); // restore pointer position
-  fgets(line2, sizeof(line2), vcf_file);
   fsetpos(vcf_file, &position); // restore pointer position
   return count_lines;
 } //}}}
 
-// ReadCoordinates() //{{{
-/**
- * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
+// LastStep() //{{{
+/*
+ * Function to check that there are no more data in vcf/agg files.
  */
-void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
+bool LastStep(FILE *vcf_file, FILE *agg_file) {
+  fpos_t position;
+  char split[30][100];
+  int words = 0;
+  // check coordinate file //{{{
+  /*
+   * the first float-started line is assumed to be the first coordinate line of
+   * the new timestep.
+   */
+  fgetpos(vcf_file, &position); // get coor file pointer position
+  do {
+    char line[LINE] = {0};
+    fgets(line, sizeof line, vcf_file);
+    // if the line is too long, skip the rest of it
+    if (strcspn(line, "\n") == (LINE-1)) {
+      while (getc(vcf_file) != '\n')
+        ;
+    }
+    words = SplitLine(split, line, " \t");
+    if (feof(vcf_file)) {
+      return true;
+    }
+  } while (words == 0 || !IsDouble(split[0]));
+  fsetpos(vcf_file, &position); // restore coor file pointer position //}}}
+  // if aggregate file is provided, check that too //{{{
+  if (agg_file != NULL) {
+    fgetpos(agg_file, &position); // get agg file pointer position
+    // check for aggregate file ending
+    if (feof(agg_file)) {
+      return true;
+    }
+    fsetpos(agg_file, &position); // restore agg file pointer position
+  } //}}}
+  return false;
+} //}}}
+
+// ReadCoordinates_old() //{{{
+/*
+ * Function reading coordinates from vtf file with indexed timesteps (\ref
+ * IndexedCoorFile). TODO: deprecated
+ */
+void ReadCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
   bool test_indexed; // to test if the present timestep type is the same as detected by ReadStructure()
-  int count_lines = ReadTimestepPreamble(&test_indexed, input_coor, vcf_file, stuff, true);
+  // TODO: added box for variable box size
+  BOX Box;
+  int count_lines = ReadVtfTimestepPreamble(&test_indexed, input_coor, vcf_file,
+                                            stuff, &Box, true);
   // error - wrong type of step (indexed vs. ordered) //{{{
   if (test_indexed != indexed) {
     RedText(STDERR_FILENO);
@@ -2291,13 +2565,18 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
   } //}}}
   // skip the preamble lines //{{{
   for (int i = 0; i < count_lines; i++) {
-    char line[LINE];
-    fgets(line, sizeof(line), vcf_file);
+    while (getc(vcf_file) != '\n')
+      ;
   } //}}}
   if (indexed) { // indexed timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       char line[LINE], split[30][100];
-      fgets(line, sizeof(line), vcf_file);
+      fgets(line, sizeof line, vcf_file);
+      // if the line is too long, skip the rest of it
+      if (strcspn(line, "\n") == (LINE-1)) {
+        while (getc(vcf_file) != '\n')
+          ;
+      }
       // error - end of file
       if (feof(vcf_file)) {
         RedText(STDERR_FILENO);
@@ -2333,7 +2612,12 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
   } else { // ordered timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       char line[LINE], split[30][100];
-      fgets(line, sizeof(line), vcf_file);
+      fgets(line, sizeof line, vcf_file);
+      // if the line is too long, skip the rest of it
+      if (strcspn(line, "\n") == (LINE-1)) {
+        while (getc(vcf_file) != '\n')
+          ;
+      }
       int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <double> <double> <double>
       if (words < 3 || !IsDouble(split[0]) ||
@@ -2352,17 +2636,139 @@ void ReadCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Coun
       (*Bead)[i].Position.x = atof(split[0]);
       (*Bead)[i].Position.y = atof(split[1]);
       (*Bead)[i].Position.z = atof(split[2]);
+    }
+  } //}}}
+} //}}}
+
+// ReadVcfCoordinates_old() //{{{
+/*
+ * Function reading coordinates from vtf coordinate file.
+ */
+void ReadVcfCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file,
+                        VECTOR *BoxLength, COUNTS Counts,
+                        int *Index, BEAD **Bead, char **stuff) {
+  // count preamble lines (exiting on an unrecognised line)
+  bool test_indexed; // is current timestep ordered or indexed?
+  BOX Box;
+  int preamble_lines = ReadVtfTimestepPreamble(&test_indexed, input_coor,
+                                               vcf_file, stuff, &Box,
+                                               true);
+  // error - wrong type of step (indexed vs. ordered) //{{{
+  if (test_indexed != indexed) {
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nError: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%s", input_coor);
+    RedText(STDERR_FILENO);
+    if (test_indexed) {
+      fprintf(stderr, " - indexed timestep instead of an ordered one\n");
+    } else {
+      fprintf(stderr, " - ordered timestep instead of an indexed one\n");
+    }
+    ResetColour(STDERR_FILENO);
+    exit(1);
+  } //}}}
+  // skip the preamble lines //{{{
+  for (int i = 0; i < preamble_lines; i++) {
+    while (getc(vcf_file) != '\n')
+      ;
+  } //}}}
+  if (indexed) { // indexed timestep //{{{
+    for (int i = 0; i < Counts.Beads; i++) {
+      char line[LINE], split[30][100];
+      fgets(line, sizeof line, vcf_file);
+      // if the line is too long, skip the rest of it
+      if (strcspn(line, "\n") == (LINE-1)) {
+        while (getc(vcf_file) != '\n')
+          ;
+      }
+      // error - end of file //{{{
+      if (feof(vcf_file)) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", input_coor);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - unexpected end of file\n");
+        fprintf(stderr, "       maybe fewer beads in a timestep");
+        fprintf(stderr, " than in the first timestep\n");
+        ResetColour(STDERR_FILENO);
+        exit(1);
+      } //}}}
+      int words = SplitLine(split, line, " \t");
+      // error - coordinate line must be <int> <double> <double> <double> //{{{
+      if (words < 4 || !IsInteger(split[0]) ||
+          !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", input_coor);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - cannot read a coordinate line\n");
+        ResetColour(STDERR_FILENO);
+        ErrorPrintLine(split, words);
+        exit(1);
+      } //}}}
+      int index = atoi(split[0]);
+      // bead coordinates
+      int id = Index[index];
+      (*Bead)[id].Position.x = atof(split[1]);
+      (*Bead)[id].Position.y = atof(split[2]);
+      (*Bead)[id].Position.z = atof(split[3]);
+      if (words >= 7) { // bead velocities, if present
+        (*Bead)[id].Velocity.x = atof(split[4]);
+        (*Bead)[id].Velocity.y = atof(split[5]);
+        (*Bead)[id].Velocity.z = atof(split[6]);
+      }
+    } //}}}
+  } else { // ordered timestep //{{{
+    for (int i = 0; i < Counts.Beads; i++) {
+      char line[LINE], split[30][100];
+      fgets(line, sizeof line, vcf_file);
+      // if the line is too long, skip the rest of it
+      if (strcspn(line, "\n") == (LINE-1)) {
+        while (getc(vcf_file) != '\n')
+          ;
+      }
+      int words = SplitLine(split, line, " \t");
+      // error - coordinate line must be <double> <double> <double> //{{{
+      if (words < 3 ||
+          !IsDouble(split[0]) || !IsDouble(split[1]) || !IsDouble(split[2])) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", input_coor);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - cannot read coordinates\n");
+        ResetColour(STDERR_FILENO);
+        ErrorPrintLine(split, words);
+        exit(1);
+      } //}}}
+      // bead coordinates
+      (*Bead)[i].Position.x = atof(split[0]);
+      (*Bead)[i].Position.y = atof(split[1]);
+      (*Bead)[i].Position.z = atof(split[2]);
+      if (words >= 6) { // bead velocities, if present
+        (*Bead)[i].Velocity.x = atof(split[3]);
+        (*Bead)[i].Velocity.y = atof(split[4]);
+        (*Bead)[i].Velocity.z = atof(split[5]);
+      }
     }
   } //}}}
 } //}}}
 
 // ReadVcfCoordinates() //{{{
-/**
- * Function reading coordinates from .vcf file with indexed timesteps (\ref IndexedCoorFile).
+/*
+ * Function reading coordinates from vtf coordinate file.
  */
-void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS Counts, int *Index, BEAD **Bead, char **stuff) {
-  bool test_indexed; // to test if the present timestep type is the same as detected by ReadStructure()
-  int count_lines = ReadTimestepPreamble(&test_indexed, input_coor, vcf_file, stuff, true);
+void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file,
+                        BOX *Box, COUNTS Counts,
+                        int *Index, BEAD **Bead, char **stuff) {
+  // count preamble lines (exiting on an unrecognised line)
+  bool test_indexed; // is current timestep ordered or indexed?
+  int preamble_lines = ReadVtfTimestepPreamble(&test_indexed, input_coor,
+                                               vcf_file, stuff, Box, true);
+  TransformMatrices(Box);
   // error - wrong type of step (indexed vs. ordered) //{{{
   if (test_indexed != indexed) {
     RedText(STDERR_FILENO);
@@ -2379,15 +2785,20 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS C
     exit(1);
   } //}}}
   // skip the preamble lines //{{{
-  for (int i = 0; i < count_lines; i++) {
-    char line[LINE];
-    fgets(line, sizeof(line), vcf_file);
+  for (int i = 0; i < preamble_lines; i++) {
+    while (getc(vcf_file) != '\n')
+      ;
   } //}}}
   if (indexed) { // indexed timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       char line[LINE], split[30][100];
-      fgets(line, sizeof(line), vcf_file);
-      // error - end of file
+      fgets(line, sizeof line, vcf_file);
+      // if the line is too long, skip the rest of it
+      if (strcspn(line, "\n") == (LINE-1)) {
+        while (getc(vcf_file) != '\n')
+          ;
+      }
+      // error - end of file //{{{
       if (feof(vcf_file)) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
@@ -2395,14 +2806,15 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS C
         fprintf(stderr, "%s", input_coor);
         RedText(STDERR_FILENO);
         fprintf(stderr, " - unexpected end of file\n");
-        fprintf(stderr, "       possibly fewer beads in a timestep than in the first timestep\n");
+        fprintf(stderr, "       maybe fewer beads in a timestep");
+        fprintf(stderr, " than in the first timestep\n");
         ResetColour(STDERR_FILENO);
         exit(1);
-      }
+      } //}}}
       int words = SplitLine(split, line, " \t");
-      // error - coordinate line must be <int> <double> <double> <double>
-      if (words < 4 || !IsInteger(split[0]) || !IsDouble(split[1]) ||
-          !IsDouble(split[2]) || !IsDouble(split[3])) {
+      // error - coordinate line must be <int> <double> <double> <double> //{{{
+      if (words < 4 || !IsInteger(split[0]) ||
+          !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2412,26 +2824,32 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS C
         ResetColour(STDERR_FILENO);
         ErrorPrintLine(split, words);
         exit(1);
-      }
+      } //}}}
       int index = atoi(split[0]);
       // bead coordinates
-      (*Bead)[Index[index]].Position.x = atof(split[1]);
-      (*Bead)[Index[index]].Position.y = atof(split[2]);
-      (*Bead)[Index[index]].Position.z = atof(split[3]);
-      if (words >= 7) {
-        (*Bead)[Index[index]].Velocity.x = atof(split[4]);
-        (*Bead)[Index[index]].Velocity.y = atof(split[5]);
-        (*Bead)[Index[index]].Velocity.z = atof(split[6]);
+      int id = Index[index];
+      (*Bead)[id].Position.x = atof(split[1]);
+      (*Bead)[id].Position.y = atof(split[2]);
+      (*Bead)[id].Position.z = atof(split[3]);
+      if (words >= 7) { // bead velocities, if present
+        (*Bead)[id].Velocity.x = atof(split[4]);
+        (*Bead)[id].Velocity.y = atof(split[5]);
+        (*Bead)[id].Velocity.z = atof(split[6]);
       }
     } //}}}
   } else { // ordered timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       char line[LINE], split[30][100];
-      fgets(line, sizeof(line), vcf_file);
+      fgets(line, sizeof line, vcf_file);
+      // if the line is too long, skip the rest of it
+      if (strcspn(line, "\n") == (LINE-1)) {
+        while (getc(vcf_file) != '\n')
+          ;
+      }
       int words = SplitLine(split, line, " \t");
-      // error - coordinate line must be <double> <double> <double>
-      if (words < 3 || !IsDouble(split[0]) ||
-          !IsDouble(split[1]) || !IsDouble(split[2])) {
+      // error - coordinate line must be <double> <double> <double> //{{{
+      if (words < 3 ||
+          !IsDouble(split[0]) || !IsDouble(split[1]) || !IsDouble(split[2])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2441,12 +2859,12 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS C
         ResetColour(STDERR_FILENO);
         ErrorPrintLine(split, words);
         exit(1);
-      }
+      } //}}}
       // bead coordinates
       (*Bead)[i].Position.x = atof(split[0]);
       (*Bead)[i].Position.y = atof(split[1]);
       (*Bead)[i].Position.z = atof(split[2]);
-      if (words >= 6) {
+      if (words >= 6) { // bead velocities, if present
         (*Bead)[i].Velocity.x = atof(split[3]);
         (*Bead)[i].Velocity.y = atof(split[4]);
         (*Bead)[i].Velocity.z = atof(split[5]);
@@ -2456,21 +2874,24 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file, COUNTS C
 } //}}}
 
 // SkipVcfCoor() //{{{
-/**
- * Function to skip one timestep in a vcf coordinate file.
+/*
+ * Function to skip one timestep in a vtf coordinate file.
  */
-void SkipVcfCoor(FILE *vcf_file, char *input_coor, COUNTS Counts, char **stuff) {
+void SkipVcfCoor(FILE *vcf_file, char *input_coor,
+                 COUNTS Counts, char **stuff) {
   bool rubbish; // testing timestep type - not used here
-  // read and skip timestep preamble
-  int count_lines = ReadTimestepPreamble(&rubbish, input_coor, vcf_file, stuff, false);
-  for (int i = 0; i < count_lines; i++) {
-    char line[LINE];
-    fgets(line, sizeof(line), vcf_file);
+  // skip timestep preamble (don't exit if it includes something wrong)
+  BOX dust; // not used
+  int preamble_lines = ReadVtfTimestepPreamble(&rubbish, input_coor, vcf_file,
+                                               stuff, &dust, false);
+  for (int i = 0; i < preamble_lines; i++) {
+    while (getc(vcf_file) != '\n')
+      ;
   }
   // skip coordinate lines
   for (int i = 0; i < Counts.Beads; i++) {
-    char line[LINE];
-    fgets(line, sizeof(line), vcf_file);
+    while (getc(vcf_file) != '\n')
+      ;
     // premature end of file?
     if (feof(vcf_file) == EOF) {
       RedText(STDERR_FILENO);
@@ -2478,24 +2899,27 @@ void SkipVcfCoor(FILE *vcf_file, char *input_coor, COUNTS Counts, char **stuff) 
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", input_coor);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " file\n\n");
+      fprintf(stderr, " file\n");
       ResetColour(STDERR_FILENO);
       exit(1);
     }
   }
 } //}}}
 
+// TODO: rewrite to use fgets & SplitLine instead of fscanf
+// TODO: restructure aggregates - don't include in BEAD
 // ReadAggregates() //{{{
-/**
- * Function reading information about aggregates from `.agg` file (\ref AggregateFile) generated by Aggregates utility.
+/*
+ * Function reading information about aggregates from agg file generated by
+ * Aggregates utility.
  */
-void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggregate,
-                    BEADTYPE *BeadType, BEAD **Bead,
-                    MOLECULETYPE *MoleculeType, MOLECULE **Molecule, int *Index) {
-
+void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts,
+                    AGGREGATE **Aggregate, BEADTYPE *BeadType, BEAD **Bead,
+                    MOLECULETYPE *MoleculeType, MOLECULE **Molecule,
+                    int *Index) {
   char line[LINE], split[30][100];
-  // read (Last) Step line
-  fgets(line, sizeof(line), fr);
+  // read 'Step|Last Step' line
+  fgets(line, sizeof line, fr);
   int words = SplitLine(split, line, " \t");
   // error if the first line is 'L[ast Step]' or isn't 'Step: <int>'//{{{
   if (split[0][0] == 'L') {
@@ -2507,7 +2931,8 @@ void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggreg
     fprintf(stderr, " file");
     ResetColour(STDERR_FILENO);
     exit(1);
-  } else if (words < 2 || !IsInteger(split[1])) {
+  } else if (words < 2 || strcmp(split[0], "Step:") != 0 ||
+             !IsInteger(split[1])) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
     YellowText(STDERR_FILENO);
@@ -2518,17 +2943,15 @@ void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggreg
     ErrorPrintLine(split, words);
     exit(1);
   } //}}}
-
   // initialize array of number of aggregates per bead //{{{
   for (int i = 0; i < (*Counts).Beads; i++) {
     (*Bead)[i].nAggregates = 0;
   } //}}}
-
   // get number of aggregates //{{{
-  fgets(line, sizeof(line), fr);
+  fgets(line, sizeof line, fr);
   words = SplitLine(split, line, " \t");
-  // number of aggregates must be <int>
-  if (words != 0 && !IsInteger(split[0])) {
+  // error - the number of aggregates must be <int>
+  if (words == 0 || !IsInteger(split[0])) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
     YellowText(STDERR_FILENO);
@@ -2540,30 +2963,39 @@ void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggreg
     exit(1);
   }
   (*Counts).Aggregates = atoi(split[0]); //}}}
-
-  // skip blank line
-  fgets(line, sizeof(line), fr);
-
+  // skip blank line - error if not a blank line //{{{
+  fgets(line, sizeof line, fr);
+  words = SplitLine(split, line, " \t");
+  if (words > 0) {
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nError: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%s", agg_file);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " - missing a blank line after number of aggregates\n");
+    ResetColour(STDERR_FILENO);
+    ErrorPrintLine(split, words);
+    exit(1);
+  } //}}}
   // go through all aggregates
   for (int i = 0; i < (*Counts).Aggregates; i++) {
+    // TODO: error catching - use fgets() & SafeStrcat() & SplitLine()
     // read molecules in Aggregate 'i' //{{{
     fscanf(fr, "%d :", &(*Aggregate)[i].nMolecules);
     for (int j = 0; j < (*Aggregate)[i].nMolecules; j++) {
       int mol;
       fscanf(fr, "%d", &mol);
-      mol--; // in agg file the numbers correspond to vmd
-
+      mol--; // in agg file, the numbers correspond to vmd
       (*Aggregate)[i].Molecule[j] = mol;
       (*Molecule)[mol].Aggregate = i;
     }
-
     while (getc(fr) != '\n')
      ; //}}}
-
     // read monomeric beads in Aggregate 'i' //{{{
     int count;
     fscanf(fr, "%d :", &count);
-    (*Aggregate)[i].nMonomers = 0; // their number will be counted according to which beads are in vcf
+    // their number will be counted according to which beads are in vcf
+    (*Aggregate)[i].nMonomers = 0;
     for (int j = 0; j < count; j++) {
       int vsf_id;
       fscanf(fr, "%d", &vsf_id); // monomer index in vsf file
@@ -2572,19 +3004,18 @@ void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggreg
         int beads = (*Aggregate)[i].nMonomers++;
         (*Aggregate)[i].Monomer[beads] = id;
         (*Bead)[id].nAggregates++;
-        (*Bead)[id].Aggregate = realloc((*Bead)[id].Aggregate, (*Bead)[id].nAggregates*sizeof(int));
+        (*Bead)[id].Aggregate = realloc((*Bead)[id].Aggregate,
+                                        sizeof *(*Bead)[id].Aggregate *
+                                        (*Bead)[id].nAggregates);
         (*Bead)[id].Aggregate[(*Bead)[id].nAggregates-1] = i;
       }
     }
-
     while (getc(fr) != '\n')
      ; //}}}
   }
-
   // skip blank line at the end of every entry
   while (getc(fr) != '\n')
     ;
-
   // fill Aggregate[].Bead, Bead[].Aggregate, and Molecule[].Aggregate arrays //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
     (*Aggregate)[i].nBeads = 0;
@@ -2607,7 +3038,6 @@ void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggreg
   // fill Bead[].Aggregate for monomeric Beads
 //  for (int i = 0, i < (*Counts).Bead)
   //}}}
-
   // calculate aggregates' masses //{{{
   for (int i = 0; i < (*Counts).Aggregates; i++) {
     (*Aggregate)[i].Mass = 0;
@@ -2621,13 +3051,18 @@ void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts, AGGREGATE **Aggreg
 } //}}}
 
 // SkipAgg() //{{{
-/**
+/*
  * Function to skip one timestep in aggregate file.
+ */
+/*
+ * TODO: all agg file stuff - consider what & how to read it; do I want to
+ * exit(1) if there's fewer steps in agg than in coor file? That seems to be
+ * what's happening now...
  */
 void SkipAgg(FILE *agg, char *agg_file) {
   char line[LINE], split[30][100];
   // read (Last) Step line
-  fgets(line, sizeof(line), agg);
+  fgets(line, sizeof line, agg);
   int words = SplitLine(split, line, " \t");
   // error if the first line is 'L[ast Step]' or isn't 'Step: <int>'//{{{
   if (split[0][0] == 'L') {
@@ -2650,9 +3085,8 @@ void SkipAgg(FILE *agg, char *agg_file) {
     ErrorPrintLine(split, words);
     exit(1);
   } //}}}
-
   // get number of aggregates
-  fgets(line, sizeof(line), agg);
+  fgets(line, sizeof line, agg);
   words = SplitLine(split, line, " \t");
   // Error - number of aggregates must be <int> //{{{
   if (words != 0 && !IsInteger(split[0])) {
@@ -2667,8 +3101,9 @@ void SkipAgg(FILE *agg, char *agg_file) {
     exit(1);
   } //}}}
   int aggs = atoi(split[0]);
-  int test;
-  for (int i = 0; i < (2*aggs); i++) {
+  // skip the blank line and the aggregate lines
+  for (int i = 0; i < (1+2*aggs); i++) {
+    int test;
     while ((test = getc(agg)) != '\n') {
       if (test == EOF) {
         RedText(STDERR_FILENO);
@@ -2683,24 +3118,22 @@ void SkipAgg(FILE *agg, char *agg_file) {
     }
   }
   // skip empty line at the end
-  for (int i = 0; i < 2; i++) {
-    while ((test = getc(agg)) != '\n') {
-      if (test == EOF) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: premature end of ");
-        YellowText(STDERR_FILENO);
-        fprintf(stderr, "%s", agg_file);
-        RedText(STDERR_FILENO);
-        fprintf(stderr, " file");
-        ResetColour(STDERR_FILENO);
-        exit(1);
-      }
-    }
+  fgets(line, sizeof line, agg);
+  words = SplitLine(split, line, " \t");
+  if (feof(agg) == EOF) {
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nError: premature end of ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%s", agg_file);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " file");
+    ResetColour(STDERR_FILENO);
+    exit(1);
   }
 } //}}}
 
 // ReadFieldPbc() //{{{
-/**
+/*
  * Function reading box size from the first line of the FIELD-like file.
  */
 bool ReadFieldPbc(char *field, VECTOR *BoxLength) {
@@ -2713,17 +3146,19 @@ bool ReadFieldPbc(char *field, VECTOR *BoxLength) {
   } //}}}
   // read first line
   char line[LINE], split[30][100];
-  fgets(line, sizeof(line), fr);
+  fgets(line, sizeof line, fr);
   int words = SplitLine(split, line, " \t");
-  // box size must be 'pbc <double> <double> <double>', so test:
-  // 1) enough strings
-  // 2) 'pbc' string
-  // 3) positive doubles
-  if (words >= 4 && // 1
-      strcasecmp(split[0], "pbc") == 0 && // 3) pbc keyword
-      IsPosDouble(split[1]) && // 2) first <double>
-      IsPosDouble(split[2]) && // 2) second <double>
-      IsPosDouble(split[3])) { // 2) third <double>
+  /*
+   * box size must be 'pbc <double> <double> <double>'; test
+   * 1) number of strings
+   * 2) 'pbc' string
+   * 3) positive doubles
+   */
+  if (words >= 4 && // 1)
+      strcasecmp(split[0], "pbc") == 0 && // 2)
+      IsPosDouble(split[1]) && //
+      IsPosDouble(split[2]) && // 3)
+      IsPosDouble(split[3])) { //
     (*BoxLength).x = atof(split[1]);
     (*BoxLength).y = atof(split[2]);
     (*BoxLength).z = atof(split[3]);
@@ -2734,29 +3169,26 @@ bool ReadFieldPbc(char *field, VECTOR *BoxLength) {
 } //}}}
 
 // ReadFieldBeadType() //{{{
-/**
+/*
  * Function reading the species section of the FIELD-like file.
  */
-void ReadFieldBeadType(char *field, COUNTS *Counts, BEADTYPE **BeadType, BEAD **Bead) {
-
+void ReadFieldBeadType(char *field, COUNTS *Counts,
+                       BEADTYPE **BeadType, BEAD **Bead) {
   // open FIELD-like file //{{{
   FILE *fr;
   if ((fr = fopen(field, "r")) == NULL) {
     ErrorFileOpen(field, 'r');
     exit(1);
   } //}}}
-
   char line[LINE], split[30][100];
-
   // read number of bead types //{{{
-  bool missing = true; // is 'species' keyword missing?
-  while(fgets(line, sizeof(line), fr)) {
+  bool missing = true; // assume species keyword is missing
+  while(fgets(line, sizeof line, fr)) {
     int words = SplitLine(split, line, " \t");
     if (strcasecmp(split[0], "species") == 0) {
-      missing = false;
+      missing = false; // species keyword is present
       // check if the next string is a number
-      if (words < 2 ||            // missing next string
-          !IsInteger(split[1])) { // next string isn't a number
+      if (words < 2 || !IsInteger(split[1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2781,29 +3213,30 @@ void ReadFieldBeadType(char *field, COUNTS *Counts, BEADTYPE **BeadType, BEAD **
     ResetColour(STDERR_FILENO);
     exit(1);
   } //}}}
-
-  *BeadType = calloc((*Counts).TypesOfBeads,sizeof(struct BeadType));
-
+  *BeadType = calloc((*Counts).TypesOfBeads, sizeof (BEADTYPE));
   // read info about bead types //{{{
   (*Counts).Unbonded = 0;
   (*Counts).Beads = 0;
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-    fgets(line, sizeof(line), fr);
+    fgets(line, sizeof line, fr);
     int words = SplitLine(split, line, " \t");
-
-    // Error on the line: //{{{
-    // 1) empty line
-    // 2) less then four strings
-    // 3) second string isn't a positive double (mass)
-    // 4) third string isn't a double (charge)
-    // 5) fifth string isn't an integer (unbonded beads)
+    // Error on the line //{{{
+    /*
+     * species lines must be <name> <mass> <charge> <number> and cannot contain
+     * blamk lines, so error when:
+     *   1) empty line
+     *   2) fewer than four strings
+     *   3) second string isn't a positive double (mass)
+     *   4) third string isn't a double (charge)
+     *   5) fifth string isn't an integer (unbonded beads)
+     */
     if (words == 1 && split[0][0] == '\0') { // 1)
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", field);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - no blank spaces permitted in the species section\n\n");
+      fprintf(stderr, " - no blank lines permitted in the species section\n\n");
       ResetColour(STDERR_FILENO);
       exit(1);
     } else if (words < 4 ||                  // 2)
@@ -2820,18 +3253,17 @@ void ReadFieldBeadType(char *field, COUNTS *Counts, BEADTYPE **BeadType, BEAD **
       ErrorPrintLine(split, words);
       exit(1);
     } //}}}
-
+//  P_IGNORE(-Wformat-truncation);
     snprintf((*BeadType)[i].Name, BEAD_NAME+1, "%s", split[0]);
+//  P_POP;
     (*BeadType)[i].Mass = atof(split[1]);
     (*BeadType)[i].Charge = atof(split[2]);
     (*BeadType)[i].Number = atoi(split[3]);
     (*Counts).Unbonded += (*BeadType)[i].Number;
   } //}}}
-
   (*Counts).Beads = (*Counts).Unbonded;
-
   // allocate & fill Bead array //{{{
-  *Bead = calloc((*Counts).Unbonded, sizeof(struct Bead));
+  *Bead = calloc((*Counts).Unbonded, sizeof (BEAD));
   int count = 0;
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
     for (int j = 0; j < (*BeadType)[i].Number; j++) {
@@ -2841,12 +3273,11 @@ void ReadFieldBeadType(char *field, COUNTS *Counts, BEADTYPE **BeadType, BEAD **
       count++;
     }
   } //}}}
-
   fclose(fr);
 } //}}}
 
 // ReadFieldMolecules() //{{{
-/**
+/*
  * Function reading the molecules section of the FIELD-like file.
  */
 void ReadFieldMolecules(char *field, COUNTS *Counts,
@@ -2861,16 +3292,14 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     ErrorFileOpen(field, 'r');
     exit(1);
   } //}}}
-
   char line[LINE], split[30][100];
-
   // read number of molecule types //{{{
-  bool missing = true; // is molecule keyword missing?
-  while(fgets(line, sizeof(line), fr)) {
+  bool missing = true; // assume molecule keyword is missing
+  while(fgets(line, sizeof line, fr)) {
     int words = SplitLine(split, line, " \t");
     if (strncasecmp(split[0], "molecule", 8) == 0) {
-      missing = false;
-      // error - next string isn't a number
+      missing = false; // molecule keyword is present
+      // error - 'molecule' not followed by an integer
       if (!IsInteger(split[1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
@@ -2886,6 +3315,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
       break;
     }
   }
+  // error - no molecule keyword
   if (missing) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
@@ -2896,25 +3326,20 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     ResetColour(STDERR_FILENO);
     exit(1);
   } //}}}
-
-  // allocate molecule type struct //{{{
-  *MoleculeType = calloc((*Counts).TypesOfMolecules,sizeof(struct MoleculeType));
-  for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-    (*MoleculeType)[i].Number = 0;
-    (*MoleculeType)[i].nBeads = 0;
-    (*MoleculeType)[i].nBonds = 0;
-  } //}}}
-
+  // allocate molecule type struct
+  *MoleculeType = calloc((*Counts).TypesOfMolecules, sizeof (MOLECULETYPE));
   // test proper number of 'finish' keywords //{{{
   fpos_t position;
-  fgetpos(fr, &position); // save pointer position
+  fgetpos(fr, &position); // save pointer position in field
   int count = 0;
-  while(fgets(line, sizeof(line), fr)) {
+  // count 'finish' keywords
+  while(fgets(line, sizeof line, fr)) {
     SplitLine(split, line, " \t");
     if (strcmp(split[0], "finish") == 0) {
       count++;
     }
   }
+  // error - fewer 'finish'es than molecule types
   if (count < (*Counts).TypesOfMolecules) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
@@ -2925,20 +3350,35 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     ResetColour(STDERR_FILENO);
     exit(1);
   }
+  // restore the file pointer position
   fsetpos(fr, &position); //}}}
 
   // read info about molecule types //{{{
+  /*
+   * Order of entries:
+   *   1) <molecule name>
+   *   2) nummol[s] <int>
+   *   3) bead[s] <int>
+   *      <int> lines: <bead name> <x> <y> <z>
+   *   4) bond[s] <int> (optional)
+   *      <int> lines: harm <id1> <id2> <k> <r_0>
+   *   5) angle[s] <int> (optional)
+   *      <int> lines: harm <id1> <id2> <id3> <k> <theta_0>
+   *   6) dihed[rals] <int> (optional)
+   *      <int> lines: harm <id1> <id2> <id3> <id4> <k> <theta_0>
+   *   7) finish keyword
+   */
   fgetpos(fr, &position); // save pointer position
   (*Counts).TypesOfBonds = 0;
   (*Counts).TypesOfAngles = 0;
   (*Counts).TypesOfDihedrals = 0;
-  (*bond_type) = calloc(1, sizeof(struct Params));
-  (*angle_type) = calloc(1, sizeof(struct Params));
-  (*dihedral_type) = calloc(1, sizeof(struct Params));
+  *bond_type = malloc(sizeof (PARAMS) * 1);
+  *angle_type = malloc(sizeof (PARAMS) * 1);
+  *dihedral_type = malloc(sizeof (PARAMS) * 1);
   // stored bond & angle types - temporary //{{{
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
-    // read i-th molecule name
-    fgets(line, sizeof(line), fr);
+    // 1) //{{{
+    fgets(line, sizeof line, fr);
     SplitLine(split, line, " \t");
     if (split[0][0] == '\0') {
       RedText(STDERR_FILENO);
@@ -2946,72 +3386,58 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", field);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - missing molecule name\n\n");
+      fprintf(stderr, " - expecting molecule name\n\n");
       ResetColour(STDERR_FILENO);
       exit(1);
     }
-    // TODO: 1) check dl_manual - do bonds/angles/dihedrals must be in this order?
-    //       2) after reading coordinates, read a string and make an if (bond) {} else if (angle) {} else if {dihedral}
-    //          ...although that's hardly correct - I need to check first bonds, than angles and than dihedrals (no if/else if)
+    // copy name to MOLECULETYPE
+//  P_IGNORE(-Wformat-truncation);
+    // MOL_NAME is max string length, i.e., array is longer
     snprintf((*MoleculeType)[i].Name, MOL_NAME+1, "%s", split[0]);
-    // read number of the molecules //{{{
-    fgets(line, sizeof(line), fr);
+//  P_POP; //}}}
+    // 2) //{{{
+    fgets(line, sizeof line, fr);
     int words = SplitLine(split, line, " \t");
-    if (strcasecmp(split[0], "nummols") != 0) {
+    if (strncasecmp(split[0], "nummols", 6) != 0 ||
+        words < 2 || !IsInteger(split[1])) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", field);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - missing 'nummols' keyword\n");
-      ResetColour(STDERR_FILENO);
-      ErrorPrintLine(split, words);
-      exit(1);
-    }
-    if (words < 2 || !IsInteger(split[1])) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", field);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " - 'nummols' must be followed by a whole number\n");
+      fprintf(stderr, " - expecting 'nummol[s] <number of molecules>'\n");
       ResetColour(STDERR_FILENO);
       ErrorPrintLine(split, words);
       exit(1);
     }
     (*MoleculeType)[i].Number = atoi(split[1]); //}}}
-    // read number of beads in the molecule //{{{
-    fgets(line, sizeof(line), fr);
+    // 3) //{{{
+    // read number of beads
+    fgets(line, sizeof line, fr);
     words = SplitLine(split, line, " \t");
-    if (strncasecmp(split[0], "beads", 4) != 0) {
+    // error - wrong keyword line //{{{
+    if (strncasecmp(split[0], "beads", 4) != 0 ||
+        words < 2 || !IsInteger(split[1])) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", field);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - missing 'beads' keyword\n");
+      fprintf(stderr, " - expecting 'bead[s] <number of beads>'\n");
       ResetColour(STDERR_FILENO);
       ErrorPrintLine(split, words);
       exit(1);
-    }
-    if (words < 2 || !IsInteger(split[1])) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", field);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " - 'beads' must be followed by a non-negative integer\n");
-      ResetColour(STDERR_FILENO);
-      ErrorPrintLine(split, words);
-      exit(1);
-    }
+    } //}}}
     (*MoleculeType)[i].nBeads = atoi(split[1]);
-    (*MoleculeType)[i].Bead = calloc((*MoleculeType)[i].nBeads, sizeof(int)); //}}}
-    // read bead info //{{{
+    (*MoleculeType)[i].Bead = malloc(sizeof *(*MoleculeType)[i].Bead *
+                                     (*MoleculeType)[i].nBeads);
+    memset((*MoleculeType)[i].Bead, 0,
+           sizeof *(*MoleculeType)[i].Bead *(*MoleculeType)[i].nBeads);
+    // read bead info
     for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       words = SplitLine(split, line, " \t");
-      // bead line must be 'name <double> <double> <double>'
+      // error - bead line must be '<name> <double> <double> <double>' //{{{
       if (words < 4 ||
           !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
         RedText(STDERR_FILENO);
@@ -3025,8 +3451,9 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
         ResetColour(STDERR_FILENO);
         ErrorPrintLine(split, words);
         exit(1);
-      }
+      } //}}}
       int type = FindBeadType(split[0], *Counts, *BeadType);
+      // error - unknown bead type //{{{
       if (type == -1) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
@@ -3037,118 +3464,133 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", split[0]);
         RedText(STDERR_FILENO);
-        fprintf(stderr, "in molecule ");
+        fprintf(stderr, " in molecule ");
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s\n", (*MoleculeType)[i].Name);
         ResetColour(STDERR_FILENO);
         ErrorBeadType(*Counts, *BeadType);
         exit(1);
-      }
+      } //}}}
       (*MoleculeType)[i].Bead[j] = type;
+      // TODO: Read coordinates?
     } //}}}
-    // read number of bonds in the molecule //{{{
-    fgets(line, sizeof(line), fr);
+    // 4) //{{{
+    // read number of bonds in the molecule
+    fgets(line, sizeof line, fr);
     words = SplitLine(split, line, " \t");
-    if (strncasecmp(split[0], "bonds", 4) != 0) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", field);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " - missing 'bonds' keyword\n");
-      ResetColour(STDERR_FILENO);
-      ErrorPrintLine(split, words);
-      exit(1);
-    }
-    if (words < 2 || !IsInteger(split[1])) {
-      RedText(STDERR_FILENO);
-      YellowText(STDERR_FILENO);
-      RedText(STDERR_FILENO);
-      ResetColour(STDERR_FILENO);
-      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - 'bonds' must be followed by a non-negative integer\n", field);
-      ErrorPrintLine(split, words);
-      exit(1);
-    }
-    (*MoleculeType)[i].nBonds = atoi(split[1]);
-    (*MoleculeType)[i].Bond = calloc((*MoleculeType)[i].nBonds, sizeof(int *));
-    for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
-      (*MoleculeType)[i].Bond[j] = calloc(3, sizeof(int));
-      (*MoleculeType)[i].Bond[j][2] = -1; // no bond type assigned
-    } //}}}
-    // read bond info //{{{
-    for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
-      fgets(line, sizeof(line), fr);
-      words = SplitLine(split, line, " \t");
-      // error - bead line must be '<type> <bead id> <bead id> <bond strenthe> <distance>' //{{{
-      if (words < 5 ||
-          !IsInteger(split[1]) || atoi(split[1]) == 0 || // bead ids must start from 1
-          !IsInteger(split[2]) || atoi(split[2]) == 0 ||
-          !IsPosDouble(split[3]) || !IsPosDouble(split[4])) {
+    // are bonds present?
+    if (strncasecmp(split[0], "bonds", 4) == 0) {
+      // error - wrong keyword line //{{{
+      if (strncasecmp(split[0], "bonds", 4) != 0 ||
+          words < 2 || !IsInteger(split[1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", field);
         RedText(STDERR_FILENO);
-        fprintf(stderr, " - wrong bond line in molecule\n");
-        YellowText(STDERR_FILENO);
-        fprintf(stderr, "%s\n", (*MoleculeType)[i].Name);
+        fprintf(stderr, " - expecting 'bond[s] <number of bonds>'\n");
         ResetColour(STDERR_FILENO);
         ErrorPrintLine(split, words);
         exit(1);
       } //}}}
-      (*MoleculeType)[i].Bond[j][0] = atoi(split[1]) - 1;
-      (*MoleculeType)[i].Bond[j][1] = atoi(split[2]) - 1;
-      // find if the bond type is new
-      bool known = false;
-      for (int k = 0; k < (*Counts).TypesOfBonds; k++) {
-        if ((*bond_type)[k].a == atof(split[3]) && (*bond_type)[k].b == atof(split[4])) {
-          known = true;
-          break;
+      (*MoleculeType)[i].nBonds = atoi(split[1]);
+      (*MoleculeType)[i].Bond = malloc(sizeof *(*MoleculeType)[i].Bond *
+                                       (*MoleculeType)[i].nBonds);
+      memset((*MoleculeType)[i].Bond, 0,
+             sizeof *(*MoleculeType)[i].Bond * (*MoleculeType)[i].nBonds);
+      // allocate memory for bonds
+      for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
+        (*MoleculeType)[i].Bond[j][2] = -1; // no bond type assigned
+      }
+      // read bond info
+      for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
+        fgets(line, sizeof line, fr);
+        words = SplitLine(split, line, " \t");
+        // error - bead line must be '<name> <id1> <id2> <double> <double>' //{{{
+        if (words < 5 || !IsInteger(split[1]) || !IsInteger(split[2]) ||
+            !IsPosDouble(split[3]) || !IsPosDouble(split[4])) {
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", field);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - wrong bond line in molecule ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s\n", (*MoleculeType)[i].Name);
+          ResetColour(STDERR_FILENO);
+          ErrorPrintLine(split, words);
+          exit(1);
+        } //}}}
+        // error - wrong bead index //{{{
+        if (atoi(split[1]) > (*MoleculeType)[i].nBeads || atoi(split[1]) < 1 ||
+            atoi(split[2]) > (*MoleculeType)[i].nBeads || atoi(split[2]) < 1) {
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", field);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - wrong bead index in a bond in molecule ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s\n", (*MoleculeType)[i].Name);
+          ResetColour(STDERR_FILENO);
+          ErrorPrintLine(split, words);
+          exit(1);
+        } //}}}
+        (*MoleculeType)[i].Bond[j][0] = atoi(split[1]) - 1;
+        (*MoleculeType)[i].Bond[j][1] = atoi(split[2]) - 1;
+        // find if the bond type is new
+        bool known = false; // assume it's new
+        for (int k = 0; k < (*Counts).TypesOfBonds; k++) {
+          if ((*bond_type)[k].a == atof(split[3]) &&
+              (*bond_type)[k].b == atof(split[4])) {
+            known = true; // it's not new
+            break;
+          }
+        }
+        if (!known) { // add new bond type if necessary
+          (*Counts).TypesOfBonds++;
+          *bond_type = realloc(*bond_type, sizeof (PARAMS) *
+                               (*Counts).TypesOfBonds);
+          (*bond_type)[(*Counts).TypesOfBonds-1].a = atof(split[3]);
+          (*bond_type)[(*Counts).TypesOfBonds-1].b = atof(split[4]);
         }
       }
-      if (!known) {
-        (*Counts).TypesOfBonds++;
-        (*bond_type) = realloc((*bond_type), (*Counts).TypesOfBonds*sizeof(struct Params));
-        (*bond_type)[(*Counts).TypesOfBonds-1].a = atof(split[3]);
-        (*bond_type)[(*Counts).TypesOfBonds-1].b = atof(split[4]);
-      }
     } //}}}
-    // read angle info if present //{{{
+    // 5) //{{{
     fpos_t position2;
-    fgetpos(fr, &position2);
-    fgets(line, sizeof(line), fr);
+    fgetpos(fr, &position2); // save file pointer
+    fgets(line, sizeof line, fr);
     words = SplitLine(split, line, " \t");
     // are angles present?
     if (strncasecmp(split[0], "angles", 5) == 0) {
-      // get number of angles //{{{
+      // error - missing number of angles //{{{
       if (words < 2 || !IsInteger(split[1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", field);
         RedText(STDERR_FILENO);
-        fprintf(stderr, " - 'angles' must be followed by a whole number\n");
+        fprintf(stderr, " - expecting 'angle[s] <number of angles>'\n");
         ResetColour(STDERR_FILENO);
         ErrorPrintLine(split, words);
         exit(1);
-      }
-      (*MoleculeType)[i].nAngles = atoi(split[1]);
-      (*MoleculeType)[i].Angle = calloc((*MoleculeType)[i].nAngles,
-                                        sizeof(int *));
-      for (int j = 0; j < (*MoleculeType)[i].nAngles; j++) {
-        (*MoleculeType)[i].Angle[j] = calloc(4, sizeof(int));
-        (*MoleculeType)[i].Angle[j][3] = -1; // no angle type assigned
       } //}}}
-      // get info about angles
+      (*MoleculeType)[i].nAngles = atoi(split[1]);
+      (*MoleculeType)[i].Angle = malloc(sizeof *(*MoleculeType)[i].Angle *
+                                        (*MoleculeType)[i].nAngles);
+      memset((*MoleculeType)[i].Angle, 0,
+             sizeof *(*MoleculeType)[i].Angle * (*MoleculeType)[i].nAngles);
       for (int j = 0; j < (*MoleculeType)[i].nAngles; j++) {
-        fgets(line, sizeof(line), fr);
+        (*MoleculeType)[i].Angle[j][3] = -1; // no angle type assigned
+      }
+      // read info about angles
+      for (int j = 0; j < (*MoleculeType)[i].nAngles; j++) {
+        fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // error - wrong angle line //{{{
-        // '<type> 3x<bead id> <spring strength> <angle>'
-        if (words < 6 ||
-            !IsInteger(split[1]) || atoi(split[1]) == 0 || // ids start from 1
-            !IsInteger(split[2]) || atoi(split[2]) == 0 ||
-            !IsInteger(split[3]) || atoi(split[3]) == 0 ||
+        // '<type> 3x<id> <double> <double>'
+        if (words < 6 || !IsInteger(split[1]) ||
+            !IsInteger(split[2]) || !IsInteger(split[3]) ||
             !IsPosDouble(split[4]) || !IsPosDouble(split[5])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError: ");
@@ -3164,75 +3606,78 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
         (*MoleculeType)[i].Angle[j][0] = atoi(split[1]) - 1;
         (*MoleculeType)[i].Angle[j][1] = atoi(split[2]) - 1;
         (*MoleculeType)[i].Angle[j][2] = atoi(split[3]) - 1;
-        bool known = false;
+        // find whether the angle type is known
+        bool known = false; // assume it's a new angle type
         for (int k = 0; k < (*Counts).TypesOfAngles; k++) {
           if ((*angle_type)[k].a == atof(split[4]) &&
               (*angle_type)[k].b == atof(split[5])) {
             (*MoleculeType)[i].Angle[j][3] = k;
-            known = true;
+            known = true; // it's not a new angle type
             break;
           }
         }
-        if (!known) {
+        if (!known) { // add a new angle type if necessary
           (*Counts).TypesOfAngles++;
-          (*angle_type) = realloc((*angle_type),
-                                  (*Counts).TypesOfAngles*sizeof(PARAMS));
+          *angle_type = realloc(*angle_type, sizeof (PARAMS) *
+                                (*Counts).TypesOfAngles);
           (*angle_type)[(*Counts).TypesOfAngles-1].a = atof(split[4]);
           (*angle_type)[(*Counts).TypesOfAngles-1].b = atof(split[5]);
           (*MoleculeType)[i].Angle[j][3] = (*Counts).TypesOfDihedrals - 1;
         }
       }
-    // error - aren't there more angles, by any chance?
+    // error - extra bonds (from previous section)
     } else if (strncasecmp(split[0], "harm", 4) == 0) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", field);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - extra angle line in molecule ");
+      fprintf(stderr, " - extra bond line in molecule ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s\n", (*MoleculeType)[i].Name);
       ErrorPrintLine(split, words);
       exit(1);
     } else {
+      // reset file pointer as the angle section isn't present
       fsetpos(fr, &position2);
     } //}}}
-    // read dihedral info if present //{{{
+    // 6) //{{{
     fgetpos(fr, &position2);
-    fgets(line, sizeof(line), fr);
+    fgets(line, sizeof line, fr); // save file pointer
     words = SplitLine(split, line, " \t");
     // are dihedrals present?
     if (strncasecmp(split[0], "dihedrals", 5) == 0) {
-      // get number of dihedrals //{{{
+      // get number of dihedrals
+      // error - wrong number of dihedrals //{{{
       if (words < 2 || !IsInteger(split[1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", field);
         RedText(STDERR_FILENO);
-        fprintf(stderr, " - 'dihedrals' must be followed by a whole number\n");
+        fprintf(stderr, " - expecting 'dihed[rals] <number of angles>'\n");
         ResetColour(STDERR_FILENO);
         ErrorPrintLine(split, words);
         exit(1);
-      }
-      (*MoleculeType)[i].nDihedrals = atoi(split[1]);
-      (*MoleculeType)[i].Dihedral = calloc((*MoleculeType)[i].nDihedrals,
-                                           sizeof(int *));
-      for (int j = 0; j < (*MoleculeType)[i].nDihedrals; j++) {
-        (*MoleculeType)[i].Dihedral[j] = calloc(5, sizeof(int));
-        (*MoleculeType)[i].Dihedral[j][4] = -1; // no dihedral type assigned
       } //}}}
+      // allocate memory for dihedrals
+      (*MoleculeType)[i].nDihedrals = atoi(split[1]);
+      (*MoleculeType)[i].Dihedral = malloc(sizeof *(*MoleculeType)[i].Dihedral *
+                                           (*MoleculeType)[i].nDihedrals);
+      memset((*MoleculeType)[i].Dihedral, 0,
+             sizeof *(*MoleculeType)[i].Dihedral *
+             (*MoleculeType)[i].nDihedrals);
+      for (int j = 0; j < (*MoleculeType)[i].nDihedrals; j++) {
+        (*MoleculeType)[i].Dihedral[j][4] = -1; // no dihedral type assigned
+      }
       // get info about dihedrals
       for (int j = 0; j < (*MoleculeType)[i].nDihedrals; j++) {
-        fgets(line, sizeof(line), fr);
+        fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // error - wrong dihedral line //{{{
-        // '<type> 4x<bead id> <spring strength> <angle>'
-        if (words < 7 ||
-            !IsInteger(split[1]) || atoi(split[1]) == 0 || // ids start from 1
-            !IsInteger(split[2]) || atoi(split[2]) == 0 ||
-            !IsInteger(split[3]) || atoi(split[3]) == 0 ||
-            !IsInteger(split[4]) || atoi(split[4]) == 0 ||
+        // '<type> 4x<id> <double> <double>'
+        if (words < 7 || !IsInteger(split[1]) || !IsInteger(split[2]) ||
+            !IsInteger(split[3]) || !IsInteger(split[4]) ||
             !IsPosDouble(split[5]) || !IsPosDouble(split[6])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError: ");
@@ -3249,44 +3694,46 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
         (*MoleculeType)[i].Dihedral[j][1] = atoi(split[2]) - 1;
         (*MoleculeType)[i].Dihedral[j][2] = atoi(split[3]) - 1;
         (*MoleculeType)[i].Dihedral[j][3] = atoi(split[4]) - 1;
-        bool known = false;
+        // find if this dihedral type is known
+        bool known = false; // assume it's a new type
         for (int k = 0; k < (*Counts).TypesOfDihedrals; k++) {
           if ((*dihedral_type)[k].a == atof(split[5]) &&
               (*dihedral_type)[k].b == atof(split[6])) {
             (*MoleculeType)[i].Dihedral[j][4] = k;
-            known = true;
+            known = true; // it's not a new type
             break;
           }
         }
-        if (!known) {
+        if (!known) { // create a new dihedral type if necessary
           (*Counts).TypesOfDihedrals++;
-          (*dihedral_type) = realloc((*dihedral_type),
-                                     (*Counts).TypesOfDihedrals*sizeof(PARAMS));
+          *dihedral_type = realloc(*dihedral_type, sizeof (PARAMS) *
+                                   (*Counts).TypesOfDihedrals);
           (*dihedral_type)[(*Counts).TypesOfDihedrals-1].a = atof(split[5]);
           (*dihedral_type)[(*Counts).TypesOfDihedrals-1].b = atof(split[6]);
           (*MoleculeType)[i].Dihedral[j][4] = (*Counts).TypesOfDihedrals - 1;
         }
       }
-    // error - aren't there more dihedrals, by any chance?
+    // error - extra bonds or angles (from previous section)
     } else if (strncasecmp(split[0], "harm", 4) == 0) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", field);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - extra dihedral line in molecule ");
+      fprintf(stderr, " - extra bond or angle line in molecule ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s\n", (*MoleculeType)[i].Name);
       ErrorPrintLine(split, words);
       exit(1);
     } else {
+      // reset file pointer as the dihedral section isn't present
       fsetpos(fr, &position2);
     } //}}}
     (*Counts).Bonded += (*MoleculeType)[i].Number * (*MoleculeType)[i].nBeads;
     (*Counts).Molecules += (*MoleculeType)[i].Number;
     // skip till 'finish' //{{{
     fsetpos(fr, &position2);
-    while(fgets(line, sizeof(line), fr)) {
+    while(fgets(line, sizeof line, fr)) {
       SplitLine(split, line, " \t");
       if (strcasecmp(split[0], "finish") == 0) {
         break;
@@ -3310,7 +3757,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
   // update the number beads in the system //{{{
   (*Counts).Beads += (*Counts).Bonded;
   (*Counts).BeadsInVsf = (*Counts).Beads;
-  *Bead = realloc(*Bead, (*Counts).Beads*sizeof(struct Bead));
+  *Bead = realloc(*Bead, sizeof (BEAD) * (*Counts).Beads);
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
       int btype = (*MoleculeType)[i].Bead[j];
@@ -3323,12 +3770,12 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
   count = (*Counts).Unbonded;
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     // skip name, nummols, and beads lines //{{{
-    fgets(line, sizeof(line), fr);
-    fgets(line, sizeof(line), fr);
-    fgets(line, sizeof(line), fr); //}}}
+    fgets(line, sizeof line, fr);
+    fgets(line, sizeof line, fr);
+    fgets(line, sizeof line, fr); //}}}
     // read bead lines //{{{
     for (int j = 0; j < (*MoleculeType)[i].nBeads; j++) {
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       SplitLine(split, line, " \t");
       for (int k = 0; k < (*MoleculeType)[i].Number; k++) {
         int id = count + k * (*MoleculeType)[i].nBeads;
@@ -3341,10 +3788,10 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     // set count to the first bead of the next molecule type
     count += ((*MoleculeType)[i].Number - 1) * (*MoleculeType)[i].nBeads;
     // skip bonds line
-    fgets(line, sizeof(line), fr);
+    fgets(line, sizeof line, fr);
     // read bond types //{{{
     for (int j = 0; j < (*MoleculeType)[i].nBonds; j++) {
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       SplitLine(split, line, " \t");
       for (int k = 0; k < (*Counts).TypesOfBonds; k++) {
         if ((*bond_type)[k].a == atof(split[3]) && (*bond_type)[k].b == atof(split[4])) {
@@ -3357,9 +3804,9 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     for (int j = 0; j < (*MoleculeType)[i].nAngles; j++) {
       // skip 'angles' line at the beginning of the angle section //{{{
       if (j == 0) {
-        fgets(line, sizeof(line), fr);
+        fgets(line, sizeof line, fr);
       } //}}}
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       SplitLine(split, line, " \t");
       for (int k = 0; k < (*Counts).TypesOfAngles; k++) {
         if ((*angle_type)[k].a == atof(split[4]) && (*angle_type)[k].b == atof(split[5])) {
@@ -3369,7 +3816,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
       }
     } //}}}
     // skip till 'finish' //{{{
-    while(fgets(line, sizeof(line), fr)) {
+    while(fgets(line, sizeof line, fr)) {
       SplitLine(split, line, " \t");
       if (strcasecmp(split[0], "finish") == 0) {
         break;
@@ -3389,7 +3836,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
 } //}}}
 
 // ReadField() //{{{
-/**
+/*
  * Function reading the FIELD-like file; it completely fills provided structs,
  * overriding any possible data in there. If the FIELD-like file is a source of
  * some additional structure information, new structs must be used, and the
@@ -3414,21 +3861,25 @@ void ReadField(char *field, VECTOR *BoxLength, COUNTS *Counts,
     exit(1);
   } //}}}
   ReadFieldBeadType(field, Counts, BeadType, Bead);
+  // FIELD doesn't contain bead radius, so fill it with impossible values
+  for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
+    (*BeadType)[i].Radius = RADIUS;
+  }
   ReadFieldMolecules(field, Counts, BeadType, Bead, MoleculeType, Molecule,
                      bond_type, angle_type, dihedral_type);
   // allocate Bead[].Aggregate array - needed only to free() //{{{
   for (int i = 0; i < (*Counts).Beads; i++) {
-    (*Bead)[i].Aggregate = calloc(10, sizeof(int));
+    (*Bead)[i].Aggregate = calloc(10, sizeof *(*Bead)[i].Aggregate);
   } //}}}
   FillMolBTypes((*Counts).TypesOfMolecules, MoleculeType);
   // fill Molecule & Bead structs //{{{
-  *Molecule = calloc((*Counts).Molecules,sizeof(struct Molecule));
+  *Molecule = calloc((*Counts).Molecules, sizeof (MOLECULE));
   int count_mol = 0, count_bead = (*Counts).Unbonded;
   for (int i = 0; i < (*Counts).TypesOfMolecules; i++) {
     for (int j = 0; j < (*MoleculeType)[i].Number; j++) {
       (*Molecule)[count_mol].Type = i;
-      (*Molecule)[count_mol].Bead =
-          malloc((*MoleculeType)[i].nBeads*sizeof(int));
+      (*Molecule)[count_mol].Bead = malloc(sizeof *(*Molecule)[count_mol].Bead *
+                                           (*MoleculeType)[i].nBeads);
       for (int k = 0; k < (*MoleculeType)[i].nBeads; k++) {
         int btype = (*MoleculeType)[i].Bead[k];
         (*Molecule)[count_mol].Bead[k] = count_bead;
@@ -3441,7 +3892,7 @@ void ReadField(char *field, VECTOR *BoxLength, COUNTS *Counts,
     }
   } //}}}
   // fill Index - I don't thinks it's used right now //{{{
-  *Index = calloc((*Counts).Beads, sizeof(int));
+  *Index = malloc(sizeof **Index * (*Counts).Beads);
   for (int i = 0; i < (*Counts).Beads; i++) {
     (*Index)[i] = i;
   } //}}}
@@ -3464,7 +3915,12 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
 
   // ignore first line (comment) //{{{
   char line[LINE];
-  fgets(line, sizeof(line), fr); //}}}
+  fgets(line, sizeof line, fr);
+  // if the line is too long, skip the rest of it
+  if (strcspn(line, "\n") == (LINE-1)) {
+    while (getc(fr) != '\n')
+      ;
+  } //}}}
 
   // read data file header //{{{
   // data file header lines must start with a number (or '#' for comment),
@@ -3472,7 +3928,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
   char split[30][100];
   int words;
   do {
-    fgets(line, sizeof(line), fr);
+    fgets(line, sizeof line, fr);
     words = SplitLine(split, line, " \t");
     // number of atoms //{{{
     if (words > 1 && strcmp(split[1], "atoms") == 0) {
@@ -3671,7 +4127,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
   } //}}}
 
   // fill something in BeadType struct //{{{
-  *BeadType = calloc((*Counts).TypesOfBeads, sizeof(struct BeadType));
+  *BeadType = calloc((*Counts).TypesOfBeads, sizeof (BEADTYPE));
   for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
     sprintf((*BeadType)[i].Name, "bead%d", i+1);
     (*BeadType)[i].Use = true;
@@ -3679,28 +4135,28 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
   } //}}}
 
   // bead struct memory allocation //{{{
-  *Bead = calloc((*Counts).Beads, sizeof(struct Bead));
+  *Bead = calloc((*Counts).Beads, sizeof (BEAD));
   for (int i = 0; i < (*Counts).Beads; i++) {
-    (*Bead)[i].Aggregate = calloc(1, sizeof(int));
+    (*Bead)[i].Aggregate = malloc(sizeof *(*Bead)[i].Aggregate * 1);
   } //}}}
 
-  *Index = calloc((*Counts).Beads, sizeof(int)); // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
-  *bond_type = calloc((*Counts).TypesOfBonds, sizeof(PARAMS));
-  *angle_type = calloc((*Counts).TypesOfAngles, sizeof(PARAMS));
+  *Index = calloc((*Counts).Beads, sizeof **Index);
+  *bond_type = calloc((*Counts).TypesOfBonds, sizeof (PARAMS));
+  *angle_type = calloc((*Counts).TypesOfAngles, sizeof (PARAMS));
 
   // read body of data file //{{{
   int test,
-      *mols, // number of beads in each molecule
+      *mols = NULL, // number of beads in each molecule
       monomer = 0; // monomer beads designated by mol_ID = 0 in data file
   while ((test = getc(fr)) != EOF) {
     ungetc(test, fr);
     // atom masses //{{{
     if (words > 0 && strcmp(split[0], "Masses") == 0) {
       // skip one line (mandatory in lammps data format)
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       // get mass of every bead
       for (int i = 0; i < (*Counts).TypesOfBeads; i++) {
-        fgets(line, sizeof(line), fr);
+        fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // error if incorrect line //{{{
         if (words < 2 || !IsInteger(split[0]) || !IsPosDouble(split[1])) {
@@ -3718,7 +4174,10 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         // if there's a comment at the end of the line, consider it bead name
         if (words > 2 && split[2][0] == '#') {
           if (strlen(split[2]) == 1 && words > 3) { // comment form '# name'
+//          P_IGNORE(-Wformat-truncation);
+            // BEAD_NAME is max string length, i.e., array is longer
             snprintf((*BeadType)[i].Name, BEAD_NAME+1, "%s", split[3]);
+//          P_POP;
           } else if (strlen(split[2]) > 1) { // comment form '#name'
             for (int j = 0; j < strlen(split[2]); j++) {
               split[2][j] = split[2][j+1];
@@ -3731,10 +4190,10 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     // bond coefficients //{{{
     if (words > 1 && strcmp(split[0], "Bond") == 0 && strcmp(split[1], "Coeffs") == 0) {
       // skip one line (mandatory in lammps data format)
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       // get mass of every bead
       for (int i = 0; i < (*Counts).TypesOfBonds; i++) {
-        fgets(line, sizeof(line), fr);
+        fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // error if incorrect line //{{{
         if (words < 3 || !IsInteger(split[0]) || !IsPosDouble(split[1]) || !IsPosDouble(split[2])) {
@@ -3755,10 +4214,10 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     // angle coefficients //{{{
     if (words > 1 && strcmp(split[0], "Angle") == 0 && strcmp(split[1], "Coeffs") == 0) {
       // skip one line (mandatory in lammps data format)
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       // get mass of every bead
       for (int i = 0; i < (*Counts).TypesOfAngles; i++) {
-        fgets(line, sizeof(line), fr);
+        fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // error if incorrect line //{{{
         if (words < 3 || !IsInteger(split[0]) || !IsPosDouble(split[1]) || !IsPosDouble(split[2])) {
@@ -3779,20 +4238,20 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     // atoms section //{{{
     if (words > 0 && strcmp(split[0], "Atoms") == 0) {
       // array for number of beads in each molecule
-      mols = calloc((*Counts).Beads, sizeof(int));
+      mols = calloc((*Counts).Beads, sizeof *mols);
       // array for list of beads in each molecule
       // bead_mols[i] ... molecule's id; bead_mols[][i] ... molecule's beads
-      int **bead_mols = calloc((*Counts).Beads, sizeof(int *));
+      int **bead_mols = calloc((*Counts).Beads, sizeof **bead_mols);
       for (int i = 0; i < (*Counts).Beads; i++) {
-        bead_mols[i] = calloc(1, sizeof(int));
+        bead_mols[i] = malloc(sizeof *bead_mols[i] * 1);
       }
       // skip one line (mandatory in lammps data format)
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       // go through atom section to get basic info //{{{
       fpos_t pos; // set file counter
       fgetpos(fr, &pos); // save file pointer
       for (int i = 0; i < (*Counts).Beads; i++) {
-        fgets(line, sizeof(line), fr);
+        fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // format of each line: <id> <mol_id> <btype> <charge> <x> <y> <z>
         // Error - incorrect format //{{{
@@ -3818,7 +4277,8 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
           (*Bead)[id].Molecule = -1;
         } else { // possibly in a molecule (if more beads share its mol_id)
           mols[mol_id]++;
-          bead_mols[mol_id] = realloc(bead_mols[mol_id], mols[mol_id]*sizeof(int));
+          bead_mols[mol_id] = realloc(bead_mols[mol_id],
+                                      sizeof *bead_mols[mol_id] * mols[mol_id]);
           bead_mols[mol_id][mols[mol_id]-1] = id;
           (*Bead)[id].Molecule = mol_id;
         }
@@ -3850,18 +4310,18 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         }
       } //}}}
       // TODO: is the 'remove 1-bead...' necessary? Join with 'allocate Molecule struct...'
-      // remove 1-bead molecules from mols array and sort bead_mols arrayy according to ascending bead index //{{{
+      // remove single-bead molecules from mols array/{{{
       count = 0; // count real molecules (i.e., those with more than 1 bead)
       for (int i = 0; i < (*Counts).Beads; i++) {
         if (mols[i] > 1) {
           mols[count] = mols[i];
-          // realloc bead_mols[count] to bead_mols[i] as it realloc'd in the first place
-          bead_mols[count] = realloc(bead_mols[count], mols[count]*sizeof(int));
+          bead_mols[count] = realloc(bead_mols[count],
+                                     sizeof *bead_mols[count] * mols[count]);
           for (int j = 0; j < mols[i]; j++) {
             bead_mols[count][j] = bead_mols[i][j];
           }
           // sort molecules in bead_mols[count][] according to ascending id
-          SortArray(&bead_mols[count], mols[i], 0);
+          SortArray(bead_mols[count], mols[i], 0);
           count++;
         }
       } //}}}
@@ -3870,9 +4330,9 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         mols[i] = 0;
       } //}}}
       // allocate Molecule struct and fill Molecule[].Bead array //{{{
-      (*Molecule) = calloc((*Counts).Molecules, sizeof(struct Molecule));
+      *Molecule = calloc((*Counts).Molecules, sizeof (MOLECULE));
       for (int i = 0; i < (*Counts).Molecules; i++) {
-        (*Molecule)[i].Bead = calloc(mols[i], sizeof(int));
+        (*Molecule)[i].Bead = malloc(sizeof *(*Molecule)[i].Bead * mols[i]);
         for (int j = 0; j < mols[i]; j++) {
           (*Molecule)[i].Bead[j] = bead_mols[i][j];
         }
@@ -3888,20 +4348,21 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     if (words > 0 && strcmp(split[0], "Bonds") == 0) {
       // allocate helper arrays to hold bond info //{{{
       // number of bonds in each molecule
-      int *bonds_per_mol = calloc((*Counts).Molecules, sizeof(int));
+      int *bonds_per_mol = calloc((*Counts).Molecules, sizeof *bonds_per_mol);
       // bond list for each molecule
       // [i][j][] ... bond id in the molecule 'i'
       // [i][][0] & [i][][1] ... ids of connected beads in molecule 'i'
       // [i][][2] ... bond type
-      int ***mol_bonds = calloc((*Counts).Molecules, sizeof(int **));
+      // TODO: this ain't right - some struct with (*array)[3] akin to connectivity
+      int (**mol_bonds)[3] = calloc((*Counts).Molecules, sizeof (**mol_bonds)[3]);
       for (int i = 0; i < (*Counts).Molecules; i++) {
          mol_bonds[i] = calloc(1, sizeof(int *));
       } //}}}
       // skip one line (mandatory in lammps data format)
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       // read all bonds //{{{
       for (int i = 0; i < *bonds; i++) {
-        fgets(line, sizeof(line), fr);
+        fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // format of each line: <bond id> <bond type> <bead1> <bead2>
         // Error - incorrect format //{{{
@@ -3942,8 +4403,8 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         bonds_per_mol[mol]++;
         int bond = bonds_per_mol[mol];
         // add bonded beads to the molecule they belong to
-        mol_bonds[mol] = realloc(mol_bonds[mol], bond*sizeof(int *));
-        mol_bonds[mol][bond-1] = calloc(3, sizeof(int));
+        mol_bonds[mol] = realloc(mol_bonds[mol],
+                                 sizeof *mol_bonds[mol] * bond);
         mol_bonds[mol][bond-1][0] = bead1;
         mol_bonds[mol][bond-1][1] = bead2;
         mol_bonds[mol][bond-1][2] = type;
@@ -3966,9 +4427,9 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         }
       } //}}}
       // identify molecule type based on bead order and connectivity //{{{
-      *MoleculeType = calloc(1, sizeof(struct MoleculeType));
+      *MoleculeType = malloc(sizeof *MoleculeType * 1);
       // number of molecule types differing in connectivity but not in beads - naming purposes
-      int *diff_conn = calloc(1, sizeof(int));
+      int *diff_conn = malloc(sizeof *diff_conn * 1);
       // number of molecule types differing in bead order - naming purposes
       int mtype_bead_order = 0;
       for (int i = 0; i < (*Counts).Molecules; i++) {
@@ -4015,8 +4476,9 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         // add new type? //{{{
         if (!exists) {
           int mtype = (*Counts).TypesOfMolecules;
-          *MoleculeType = realloc(*MoleculeType, (mtype+1)*sizeof(struct MoleculeType));
-          diff_conn = realloc(diff_conn, (mtype+1)*sizeof(int));
+          *MoleculeType = realloc(*MoleculeType,
+                                  sizeof (MOLECULETYPE) * (mtype + 1));
+          diff_conn = realloc(diff_conn, sizeof *diff_conn * (mtype + 1));
           diff_conn[mtype] = 0;
           // molecule name
           if (same_bead && !same_conn) { // same beads - mol<type_bead_order>-b#
@@ -4029,18 +4491,26 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
             } else if (diff_conn[type_bead_order] < 100) {
               name[MOL_NAME-4] = '\0';
             }
+//          P_IGNORE(-Wformat-truncation);
+            // MOL_NAME is max string length, i.e., array is longer
             snprintf((*MoleculeType)[mtype].Name, MOL_NAME+1, "%s-b%d", name, diff_conn[type_bead_order]);
+//          P_POP;
           } else { // same connectivity or both different - mol#
+//          P_IGNORE(-Wformat-truncation);
             mtype_bead_order++;
             snprintf((*MoleculeType)[mtype].Name, MOL_NAME+1, "mol%d", mtype_bead_order);
+//          P_POP;
           }
           (*Molecule)[i].Type = mtype;
           (*MoleculeType)[mtype].Number = 1;
           // copy bead sequence and determine BTypes stuff
           (*MoleculeType)[mtype].nBeads = mols[i];
-          (*MoleculeType)[mtype].Bead = calloc((*MoleculeType)[mtype].nBeads, sizeof(int));
+          (*MoleculeType)[mtype].Bead =
+              malloc(sizeof *(*MoleculeType)[mtype].Bead *
+                     (*MoleculeType)[mtype].nBeads);
           (*MoleculeType)[mtype].nBTypes = 0;
-          (*MoleculeType)[mtype].BType = calloc(1, sizeof(int));
+          (*MoleculeType)[mtype].BType =
+              malloc(sizeof *(*MoleculeType)[mtype].BType * 1);
           for (int j = 0; j < (*MoleculeType)[mtype].nBeads; j++) {
             int btype = (*Bead)[(*Molecule)[i].Bead[j]].Type;
             (*MoleculeType)[mtype].Bead[j] = btype;
@@ -4053,21 +4523,25 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
             if (!exists) { // recycled exists
               int types = (*MoleculeType)[mtype].nBTypes;
               (*MoleculeType)[mtype].nBTypes++;
-              (*MoleculeType)[mtype].BType = realloc((*MoleculeType)[mtype].BType, (types+1)*sizeof(int));
+              (*MoleculeType)[mtype].BType =
+                  realloc((*MoleculeType)[mtype].BType,
+                          sizeof *(*MoleculeType)[mtype].BType * (types + 1));
               (*MoleculeType)[mtype].BType[types] = btype;
             }
           }
           // copy bonds
           (*MoleculeType)[mtype].nBonds = bonds_per_mol[i];
-          (*MoleculeType)[mtype].Bond = calloc((*MoleculeType)[mtype].nBonds, sizeof(int *));
+          (*MoleculeType)[mtype].Bond =
+              malloc(sizeof *(*MoleculeType)[mtype].Bond *
+                     (*MoleculeType)[mtype].nBonds);
           for (int j = 0; j < (*MoleculeType)[mtype].nBonds; j++) {
-            (*MoleculeType)[mtype].Bond[j] = calloc(3, sizeof(int));
             (*MoleculeType)[mtype].Bond[j][0] = mol_bonds[i][j][0];
             (*MoleculeType)[mtype].Bond[j][1] = mol_bonds[i][j][1];
             (*MoleculeType)[mtype].Bond[j][2] = mol_bonds[i][j][2];
           }
           (*MoleculeType)[mtype].nAngles = 0;
-          (*MoleculeType)[mtype].Angle = calloc(1, sizeof(int *));
+          (*MoleculeType)[mtype].Angle =
+              malloc(sizeof *(*MoleculeType)[mtype].Angle * 1);
           (*MoleculeType)[mtype].Write = true;
           (*Counts).TypesOfMolecules++;
         } //}}}
@@ -4087,20 +4561,22 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     if (words > 0 && strcmp(split[0], "Angles") == 0) {
       // allocate helper arrays to hold angle info //{{{
       // number of angles in each molecule
-      int *angles_per_mol = calloc((*Counts).Molecules, sizeof(int));
+      int *angles_per_mol = calloc((*Counts).Molecules, sizeof *angles_per_mol);
       // bond list for each molecule
-      // [i][j][] ... bond id in the molecule 'i'
-      // [i][][0] & [i][][1] & [i][][2] ... ids of connected beads in molecule 'i'
-      // [i][][3] ... angle type
-      int ***mol_angles = calloc((*Counts).Molecules, sizeof(int **));
+      // temp[i].angle[j][] ... bond id in the molecule 'i'
+      // temp[i].angle[][0] & [i][][1] & [i][][2] ... ids of connected beads in molecule 'i'
+      // temp[i].angle[][3] ... angle type
+      struct temp {
+        int (*angle)[4];
+      } *molec = calloc((*Counts).Molecules, sizeof *molec);
       for (int i = 0; i < (*Counts).Molecules; i++) {
-         mol_angles[i] = calloc(1, sizeof(int *));
+         molec[i].angle = calloc(1, sizeof *molec[i].angle);
       } //}}}
       // skip one line (mandatory in lammps data format)
-      fgets(line, sizeof(line), fr);
+      fgets(line, sizeof line, fr);
       // read all angles //{{{
       for (int i = 0; i < *angles; i++) {
-        fgets(line, sizeof(line), fr);
+        fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // format of each line: <angle id> <angle type> <bead1> <bead2> <bead3>
         // Error - incorrect format //{{{
@@ -4140,18 +4616,18 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         } //}}}
         // increment number of bonds in the molecule
         angles_per_mol[mol]++;
-        int angle = angles_per_mol[mol];
+        int num = angles_per_mol[mol];
         // add angle beads to the molecule they belong to
-        mol_angles[mol] = realloc(mol_angles[mol], angle*sizeof(int *));
-        mol_angles[mol][angle-1] = calloc(4, sizeof(int));
-        mol_angles[mol][angle-1][0] = bead1;
-        mol_angles[mol][angle-1][1] = bead2;
-        mol_angles[mol][angle-1][2] = bead3;
-        mol_angles[mol][angle-1][3] = type;
+        molec[mol].angle = realloc(molec[mol].angle,
+                                   sizeof *molec[mol].angle * num);
+        molec[mol].angle[num-1][0] = bead1;
+        molec[mol].angle[num-1][1] = bead2;
+        molec[mol].angle[num-1][2] = bead3;
+        molec[mol].angle[num-1][3] = type;
       } //}}}
       // sort angles according to the id of the first bead in a bond //{{{
       for (int i = 0; i < (*Counts).Molecules; i++) {
-        SortAngles(mol_angles[i], angles_per_mol[i]);
+        SortAngles(molec[i].angle, angles_per_mol[i]);
       } //}}}
       // minimize mol_angles based on lowest id in each molecule //{{{
       for (int i = 0; i < (*Counts).Molecules; i++) {
@@ -4162,25 +4638,30 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
           }
         }
         for (int j = 0; j < angles_per_mol[i]; j++) {
-          mol_angles[i][j][0] -= lowest;
-          mol_angles[i][j][1] -= lowest;
-          mol_angles[i][j][2] -= lowest;
+          molec[i].angle[j][0] -= lowest;
+          molec[i].angle[j][1] -= lowest;
+          molec[i].angle[j][2] -= lowest;
         }
       } //}}}
-      // add angles to existing molecule types (or create a new one differing only in angles)
-      // ...'basic' molecule types already generated in bonds section
-      int *extra = calloc((*Counts).TypesOfMolecules, sizeof(int)); // number of molecule types differing in angles
+      /*
+       * add angles to existing molecule types (or create a new one differing only in angles)
+       * ...'basic' molecule types already generated in bonds section
+       */
+      // number of molecule types differing in angles
+      int *extra = calloc((*Counts).TypesOfMolecules, sizeof *extra);
       for (int i = 0; i < (*Counts).Molecules; i++) {
         int mtype = (*Molecule)[i].Type;
         if ((*MoleculeType)[mtype].nAngles == 0) { // add angles if there are no angles in the molecule type //{{{
           (*MoleculeType)[mtype].nAngles = angles_per_mol[i];
-          (*MoleculeType)[mtype].Angle = realloc((*MoleculeType)[mtype].Angle, (*MoleculeType)[mtype].nAngles*sizeof(int *));
+          (*MoleculeType)[mtype].Angle =
+              realloc((*MoleculeType)[mtype].Angle,
+                      sizeof *(*MoleculeType)[mtype].Angle *
+                      (*MoleculeType)[mtype].nAngles);
           for (int j = 0; j < (*MoleculeType)[mtype].nAngles; j++) {
-            (*MoleculeType)[mtype].Angle[j] = calloc(4, sizeof(int));
-            (*MoleculeType)[mtype].Angle[j][0] = mol_angles[i][j][0];
-            (*MoleculeType)[mtype].Angle[j][1] = mol_angles[i][j][1];
-            (*MoleculeType)[mtype].Angle[j][2] = mol_angles[i][j][2];
-            (*MoleculeType)[mtype].Angle[j][3] = mol_angles[i][j][3];
+            (*MoleculeType)[mtype].Angle[j][0] = molec[i].angle[j][0];
+            (*MoleculeType)[mtype].Angle[j][1] = molec[i].angle[j][1];
+            (*MoleculeType)[mtype].Angle[j][2] = molec[i].angle[j][2];
+            (*MoleculeType)[mtype].Angle[j][3] = molec[i].angle[j][3];
           } //}}}
         } else { // if angles already present, check whether they're the same //{{{
           bool exists = true;
@@ -4190,10 +4671,10 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
           } //}}}
           // same angles as in mtype? //{{{
           for (int j = 0; j < angles_per_mol[i] && j < (*MoleculeType)[mtype].nAngles; j++) {
-            if ((*MoleculeType)[mtype].Angle[j][0] != mol_angles[i][j][0] ||
-                (*MoleculeType)[mtype].Angle[j][1] != mol_angles[i][j][1] ||
-                (*MoleculeType)[mtype].Angle[j][2] != mol_angles[i][j][2] ||
-                (*MoleculeType)[mtype].Angle[j][3] != mol_angles[i][j][3] ) {
+            if ((*MoleculeType)[mtype].Angle[j][0] != molec[i].angle[j][0] ||
+                (*MoleculeType)[mtype].Angle[j][1] != molec[i].angle[j][1] ||
+                (*MoleculeType)[mtype].Angle[j][2] != molec[i].angle[j][2] ||
+                (*MoleculeType)[mtype].Angle[j][3] != molec[i].angle[j][3] ) {
               exists = false;
             }
           } //}}}
@@ -4205,10 +4686,10 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
               if ((*MoleculeType)[j].nAngles == angles_per_mol[i]) {
                 int count = 0;
                 for (int k = 0; k < (*MoleculeType)[j].nAngles; k++) {
-                  if ((*MoleculeType)[j].Angle[k][0] == mol_angles[i][k][0] &&
-                      (*MoleculeType)[j].Angle[k][1] == mol_angles[i][k][1] &&
-                      (*MoleculeType)[j].Angle[k][2] == mol_angles[i][k][2] &&
-                      (*MoleculeType)[j].Angle[k][3] == mol_angles[i][k][3] ) {
+                  if ((*MoleculeType)[j].Angle[k][0] == molec[i].angle[k][0] &&
+                      (*MoleculeType)[j].Angle[k][1] == molec[i].angle[k][1] &&
+                      (*MoleculeType)[j].Angle[k][2] == molec[i].angle[k][2] &&
+                      (*MoleculeType)[j].Angle[k][3] == molec[i].angle[k][3] ) {
                     count++;
                   }
                 }
@@ -4228,7 +4709,8 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
             extra[mtype]++;
             (*Molecule)[i].Type = new;
             (*Counts).TypesOfMolecules++;
-            *MoleculeType = realloc(*MoleculeType, (new+1)*sizeof(struct MoleculeType));
+            *MoleculeType = realloc(*MoleculeType,
+                                    sizeof (MOLECULETYPE) * (new + 1));
             // shorten name if necessary to append '-a<int>'
             char name[MOL_NAME+1];
             strcpy(name, (*MoleculeType)[mtype].Name);
@@ -4237,33 +4719,43 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
             } else if (extra[mtype] < 100) {
               name[MOL_NAME-4] = '\0';
             }
-            snprintf((*MoleculeType)[mtype].Name, MOL_NAME+1, "%s-a%d", name, extra[mtype]);
+//          P_IGNORE(-Wformat-truncation);
+            // MOL_NAME is max string length, i.e., array is longer
+            snprintf((*MoleculeType)[mtype].Name, MOL_NAME+1, "%s-a%d",
+                      name, extra[mtype]);
+//          P_POP;
             (*MoleculeType)[new].Number = 1;
             (*MoleculeType)[mtype].Number--;
             (*MoleculeType)[new].nBeads = (*MoleculeType)[mtype].nBeads;
-            (*MoleculeType)[new].Bead = calloc((*MoleculeType)[new].nBeads, sizeof(int));
+            (*MoleculeType)[new].Bead =
+                malloc(sizeof *(*MoleculeType)[new].Bead *
+                       (*MoleculeType)[new].nBeads);
             for (int j = 0; j < (*MoleculeType)[new].nBeads; j++) {
               (*MoleculeType)[new].Bead[j] = (*MoleculeType)[mtype].Bead[j];
             }
             (*MoleculeType)[new].nBonds = (*MoleculeType)[mtype].nBonds;
-            (*MoleculeType)[new].Bond = calloc((*MoleculeType)[new].nBonds, sizeof(int *));
+            (*MoleculeType)[new].Bond =
+                malloc(sizeof *(*MoleculeType)[new].Bond *
+                       (*MoleculeType)[new].nBonds);
             for (int j = 0; j < (*MoleculeType)[new].nBonds; j++) {
-              (*MoleculeType)[new].Bond[j] = calloc(3, sizeof(int));
               (*MoleculeType)[new].Bond[j][0] = (*MoleculeType)[mtype].Bond[j][0];
               (*MoleculeType)[new].Bond[j][1] = (*MoleculeType)[mtype].Bond[j][1];
               (*MoleculeType)[new].Bond[j][2] = (*MoleculeType)[mtype].Bond[j][2];
             }
             (*MoleculeType)[new].nAngles = (*MoleculeType)[mtype].nAngles;
-            (*MoleculeType)[new].Angle = calloc((*MoleculeType)[new].nAngles, sizeof(int *));
+            (*MoleculeType)[new].Angle =
+                malloc(sizeof *(*MoleculeType)[new].Angle *
+                       (*MoleculeType)[new].nAngles);
             for (int j = 0; j < (*MoleculeType)[new].nAngles; j++) {
-              (*MoleculeType)[new].Angle[j] = calloc(4, sizeof(int));
-              (*MoleculeType)[new].Angle[j][0] = mol_angles[i][j][0];
-              (*MoleculeType)[new].Angle[j][1] = mol_angles[i][j][1];
-              (*MoleculeType)[new].Angle[j][2] = mol_angles[i][j][2];
-              (*MoleculeType)[new].Angle[j][3] = mol_angles[i][j][3];
+              (*MoleculeType)[new].Angle[j][0] = molec[i].angle[j][0];
+              (*MoleculeType)[new].Angle[j][1] = molec[i].angle[j][1];
+              (*MoleculeType)[new].Angle[j][2] = molec[i].angle[j][2];
+              (*MoleculeType)[new].Angle[j][3] = molec[i].angle[j][3];
             }
             (*MoleculeType)[new].nBTypes = (*MoleculeType)[mtype].nBTypes;
-            (*MoleculeType)[new].BType = calloc((*MoleculeType)[new].nBTypes, sizeof(int));
+            (*MoleculeType)[new].BType =
+                malloc(sizeof *(*MoleculeType)[new].BType *
+                       (*MoleculeType)[new].nBTypes);
             for (int j = 0; j < (*MoleculeType)[new].nBTypes; j++) {
               (*MoleculeType)[new].BType[j] = (*MoleculeType)[mtype].BType[j];
             }
@@ -4274,17 +4766,14 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
       }
       // free helper arrays //{{{
       for (int i = 0; i < (*Counts).Molecules; i++) {
-        for (int j = 0; j < angles_per_mol[i]; j++) {
-          free(mol_angles[i][j]);
-        }
-        free(mol_angles[i]);
+        free(molec[i].angle);
       }
-      free(mol_angles);
+      free(molec);
       free(angles_per_mol);
       free(extra); //}}}
     } //}}}
     // read and split next line
-    fgets(line, sizeof(line), fr);
+    fgets(line, sizeof line, fr);
     words = SplitLine(split, line, " \t");
   } //}}}
   free(mols);
@@ -4303,14 +4792,14 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
 } //}}}
 
 // SkipCoorSteps() { //{{{
-/**
+/*
  * Function to skip timesteps (coordinate file only) from the beginning (-st
  * option).
  */
 int SkipCoorSteps(FILE *vcf, char *input_coor, COUNTS Counts, int start, bool silent) {
   int test;
   int count = 0;
-  char *stuff = calloc(LINE, sizeof(char)); // just for SkipVcfCoor
+  char *stuff = malloc(sizeof *stuff * LINE); // just for SkipVcfCoor
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
     count++;
@@ -4329,23 +4818,39 @@ int SkipCoorSteps(FILE *vcf, char *input_coor, COUNTS Counts, int start, bool si
     }
     fprintf(stdout, "Starting step: %d\n", start);
   } //}}}
-  // is the vcf file continuing?
-  if (ErrorDiscard(start, count, input_coor, vcf)) {
-    exit(1);
-  }
   free(stuff);
+  // error if last step //{{{
+  if (LastStep(vcf, NULL)) {
+    fflush(stdout);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nError: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%s", input_coor);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " - starting timestep (");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%d", start);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, ") is higher than the total number of steps (");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%d", count);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, ")\n\n");
+    ResetColour(STDERR_FILENO);
+    exit(1);
+  } //}}}
   return count;
 } //}}}
 
 // SkipCoorAggSteps() { //{{{
-/**
+/*
  * Function to skip timesteps (coordinate and aggregate files) from the
  * beginning (-st option).
  */
 int SkipCoorAggSteps(FILE *vcf, char *input_coor, FILE *agg, char *input_agg,
                      COUNTS Counts, int start, bool silent) {
   int test, count = 0;
-  char *stuff = calloc(LINE, sizeof(char)); // just for SkipVcfCoor
+  char *stuff = malloc(sizeof *stuff * LINE); // just for SkipVcfCoor
   // TODO: use feof()
   for (int i = 1; i < start && (test = getc(vcf)) != EOF; i++) {
     ungetc(test, vcf);
@@ -4358,6 +4863,7 @@ int SkipCoorAggSteps(FILE *vcf, char *input_coor, FILE *agg, char *input_agg,
     SkipAgg(agg, input_agg);
     SkipVcfCoor(vcf, input_coor, Counts, &stuff);
   }
+  free(stuff);
   // print starting step? //{{{
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
@@ -4366,9 +4872,25 @@ int SkipCoorAggSteps(FILE *vcf, char *input_coor, FILE *agg, char *input_agg,
     }
     fprintf(stdout, "Starting step: %d\n", start);
   } //}}}
-  // is the vcf file continuing?
-  if (ErrorDiscard(start, count, input_coor, vcf)) {
+  // error if last step //{{{
+  if (LastStep(vcf, NULL)) {
+    fflush(stdout);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, "\nError: ");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%s", input_coor);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, " - starting timestep (");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%d", start);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, ") is higher than the total number of steps (");
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "%d", count);
+    RedText(STDERR_FILENO);
+    fprintf(stderr, ")\n\n");
+    ResetColour(STDERR_FILENO);
     exit(1);
-  }
+  } //}}}
   return count;
 } //}}}

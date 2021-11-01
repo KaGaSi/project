@@ -1,5 +1,9 @@
 #include "../AnalysisTools.h"
 
+// TODO: what exactly does it do?
+// TODO: --all option?
+// TODO: triclinic box - velocities in the axes directions?
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -11,13 +15,13 @@ TBA\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <width> <output> <bead name(s)> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <width> <output> <bead(s)> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>                 input filename (vcf or vtf format)\n");
-  fprintf(ptr, "   <width>                 width of a single distribution bin\n");
-  fprintf(ptr, "   <output>                output file with distribution of bond lengths\n");
-  fprintf(ptr, "   <bead name(s)>          bead name(s) to calculate velocities for\n");
-  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "   <input>     input coordinate file (vcf or vtf format)\n");
+  fprintf(ptr, "   <width>     width of a single distribution bin\n");
+  fprintf(ptr, "   <output>    output file with ..\n");
+  fprintf(ptr, "   <bead(s)>   bead name(s) to calculate velocities for\n");
+  fprintf(ptr, "   [options]\n");
   fprintf(ptr, "      -st <int>            starting timestep for calculation\n");
   fprintf(ptr, "      -e <end>             ending timestep for calculation\n");
   CommonHelp(error);
@@ -39,7 +43,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
@@ -56,7 +60,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--script") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0) {
@@ -70,9 +73,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -90,31 +92,15 @@ int main(int argc, char *argv[]) {
   double width = atof(argv[count]); //}}}
 
   // <output> - file name with bond length distribution //{{{
-  char output[LINE];
-  strcpy(output, argv[++count]); //}}}
+  char output[LINE] = "";
+  snprintf(output, LINE, "%s", argv[++count]); //}}}
 
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
-  // starting & ending timesteps //{{{
-  int start = 1;
-  if (IntegerOption(argc, argv, "-st", &start)) {
-    exit(1);
-  }
-  int end = -1;
-  if (IntegerOption(argc, argv, "-e", &end)) {
-    exit(1);
-  }
-  ErrorStartEnd(start, end); //}}}
-
-  // number of steps to skip per one used //{{{
-  int skip = 0;
-  if (IntegerOption(argc, argv, "-sk", &skip)) {
-    exit(1);
-  } //}}}
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
+  int start, end;
+  StartEndTime(argc, argv, &start, &end);
   //}}}
 
   // print command to stdout //{{{
@@ -126,32 +112,51 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &Box, &Counts, &BeadType, &Bead, &Index,
               &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+  // warning - Velocity makes sense only for orthogonal box
+  if (Box.alpha != 90 ||
+      Box.beta != 90 ||
+      Box.gamma != 90) {
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "\nWarning: non-orthogonal box; angles - ");
+    CyanText(STDERR_FILENO);
+    fprintf(stderr, "%lf %lf %lf", Box.alpha, Box.beta, Box.gamma);
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, ".\n         %s works properly only for \
+orthogonal box.\n", argv[0]);
+    ResetColour(STDERR_FILENO);
+  } //}}}
 
+  // <bead names> - names of bead types to use //{{{
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Use = false;
   }
-  // <bead names> - names of bead types to use //{{{
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
     if (type == -1) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - non-existent bead name \033[1;33m%s\033[1;31m\n", input_coor, argv[count]);
-      fprintf(stderr, "\033[0m");
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", input_coor);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - non-existent bead name ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s\n", argv[count]);
+      ResetColour(STDERR_FILENO);
       ErrorBeadType(Counts, BeadType);
       exit(1);
     }
     BeadType[type].Use = true;
   } //}}}
+
   int total_beads = 0;
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     if (BeadType[i].Use) {
@@ -165,30 +170,28 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
   // number of bins
   VECTOR bins;
-  bins.x = ceil(BoxLength.x / width);
-  bins.y = ceil(BoxLength.y / width);
-  bins.z = ceil(BoxLength.z / width);
+  bins.x = ceil(Box.Length.x / width);
+  bins.y = ceil(Box.Length.y / width);
+  bins.z = ceil(Box.Length.z / width);
 
   // arrays for distributions //{{{
-  VECTOR *velocity_x = calloc(bins.x, sizeof(VECTOR)),
-         *velocity_y = calloc(bins.y, sizeof(VECTOR)),
-         *velocity_z = calloc(bins.z, sizeof(VECTOR));
-  long int *count_x = calloc(bins.x, sizeof(long int)),
-           *count_y = calloc(bins.y, sizeof(long int)),
-           *count_z = calloc(bins.z, sizeof(long int));
+  VECTOR *velocity_x = calloc(bins.x, sizeof *velocity_x),
+         *velocity_y = calloc(bins.y, sizeof *velocity_y),
+         *velocity_z = calloc(bins.z, sizeof *velocity_z);
+  long int *count_x = calloc(bins.x, sizeof *count_x),
+           *count_y = calloc(bins.y, sizeof *count_y),
+           *count_z = calloc(bins.z, sizeof *count_z);
   //}}}
-
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
 
   count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
@@ -209,6 +212,7 @@ int main(int argc, char *argv[]) {
   // main loop //{{{
   count = 0; // count timesteps in the main loop
   int count_vcf = start - 1; // count timesteps from the beginning
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count++;
     count_vcf++;
@@ -218,25 +222,40 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+    // read coordinates & wrap into box
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
+    // warning - Velocity makes sense only for orthogonal box //{{{
+    if (Box.alpha != 90 ||
+        Box.beta != 90 ||
+        Box.gamma != 90) {
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "\nWarning: non-orthogonal box; angles - ");
+      CyanText(STDERR_FILENO);
+      fprintf(stderr, "%lf %lf %lf", Box.alpha, Box.beta, Box.gamma);
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, ".\n         %s works properly only for \
+orthogonal box.\n", argv[0]);
+      ResetColour(STDERR_FILENO);
+    } //}}}
+    RestorePBC(Counts.Beads, Box, &Bead);
 
     double KE = 0;
     VECTOR temp_step = {0, 0, 0},
-           *velocity_x_step = calloc(bins.x, sizeof(VECTOR)),
-           *velocity_y_step = calloc(bins.y, sizeof(VECTOR)),
-           *velocity_z_step = calloc(bins.z, sizeof(VECTOR));
-    int *count_z_step = calloc(bins.z, sizeof(INTVECTOR));
+           *velocity_x_step = calloc(bins.x, sizeof *velocity_x_step),
+           *velocity_y_step = calloc(bins.y, sizeof *velocity_y_step),
+           *velocity_z_step = calloc(bins.z, sizeof *velocity_z_step);
+    int *count_z_step = calloc(bins.z, sizeof *count_z_step);
     for (int i = 0; i < Counts.Beads; i++) {
       int btype = Bead[i].Type;
       temp_step.x += 0.5 * BeadType[btype].Mass * SQR(Bead[i].Velocity.x);
       temp_step.y += 0.5 * BeadType[btype].Mass * SQR(Bead[i].Velocity.y);
       temp_step.z += 0.5 * BeadType[btype].Mass * SQR(Bead[i].Velocity.z);
-      KE += 0.5 * BeadType[btype].Mass * (SQR(Bead[i].Velocity.x) + SQR(Bead[i].Velocity.y) + SQR(Bead[i].Velocity.z));
+      KE += 0.5 * BeadType[btype].Mass * (SQR(Bead[i].Velocity.x) +
+                                          SQR(Bead[i].Velocity.y) +
+                                          SQR(Bead[i].Velocity.z));
 
       if (BeadType[btype].Use) {
-        if (Bead[i].Position.x == BoxLength.x) {
-          Bead[i].Position.x -= BoxLength.x;
-        }
         int j = Bead[i].Position.x / width;
         if (j < bins.x) {
           velocity_x_step[j].x += Bead[i].Velocity.x;
@@ -247,9 +266,6 @@ int main(int argc, char *argv[]) {
           printf("\nx: %d %lf %lf\n", j, bins.x, Bead[i].Position.x);
         }
 
-        if (Bead[i].Position.y == BoxLength.y) {
-          Bead[i].Position.y -= BoxLength.y;
-        }
         j = Bead[i].Position.y / width;
         if (j < bins.y) {
           velocity_y_step[j].x += Bead[i].Velocity.x;
@@ -260,9 +276,6 @@ int main(int argc, char *argv[]) {
           printf("\ny: %d %lf %lf\n", j, bins.y, Bead[i].Position.y);
         }
 
-        if (Bead[i].Position.z == BoxLength.z) {
-          Bead[i].Position.z -= BoxLength.z;
-        }
         j = Bead[i].Position.z / width;
         if (j < bins.z) {
           velocity_z_step[j].x += Bead[i].Velocity.x;
@@ -295,9 +308,6 @@ int main(int argc, char *argv[]) {
     double KE_correct = 0;
     VECTOR temp_step_correct = {0, 0, 0};
     for (int i = 0; i < Counts.Beads; i++) {
-      if (Bead[i].Position.z == BoxLength.z) {
-        Bead[i].Position.z -= BoxLength.z;
-      }
       int j = Bead[i].Position.z / width;
 
       int btype = Bead[i].Type;
@@ -340,17 +350,12 @@ int main(int argc, char *argv[]) {
     free(count_z_step);
 
     // -e option - exit main loop if last step is done
-    if (end == count_vcf) {
-      break;
-    }
-    // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    if (LastStep(vcf, NULL) || end == count_vcf) {
       break;
     }
   }
   fclose(vcf);
-
+  // print last step count?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -388,23 +393,26 @@ int main(int argc, char *argv[]) {
   fprintf(out_z, "# (1) z-coordinate; (2) <v(x)>; (3) <v(y)>; (4) <v(z)>\n");
   for (int i = 0; i < bins.x; i++) {
     if (count_x[i] > 0) {
-      fprintf(out_x, "%7.4f %lf %lf %lf\n", width*(2*i+1)/2, velocity_x[i].x/count_x[i],
-                                                             velocity_x[i].y/count_x[i],
-                                                             velocity_x[i].z/count_x[i]);
+      fprintf(out_x, "%7.4f %lf %lf %lf\n", width*(2*i+1)/2,
+                                            velocity_x[i].x/count_x[i],
+                                            velocity_x[i].y/count_x[i],
+                                            velocity_x[i].z/count_x[i]);
     }
   }
   for (int i = 0; i < bins.y; i++) {
     if (count_y[i] > 0) {
-      fprintf(out_y, "%7.4f %lf %lf %lf\n", width*(2*i+1)/2, velocity_y[i].x/count_y[i],
-                                                             velocity_y[i].y/count_y[i],
-                                                             velocity_y[i].z/count_y[i]);
+      fprintf(out_y, "%7.4f %lf %lf %lf\n", width*(2*i+1)/2,
+                                            velocity_y[i].x/count_y[i],
+                                            velocity_y[i].y/count_y[i],
+                                            velocity_y[i].z/count_y[i]);
     }
   }
   for (int i = 0; i < bins.z; i++) {
     if (count_z[i] > 0) {
-      fprintf(out_z, "%7.4f %lf %lf %lf\n", width*(2*i+1)/2, velocity_z[i].x/count_z[i],
-                                                             velocity_z[i].y/count_z[i],
-                                                             velocity_z[i].z/count_z[i]);
+      fprintf(out_z, "%7.4f %lf %lf %lf\n", width*(2*i+1)/2,
+                                            velocity_z[i].x/count_z[i],
+                                            velocity_z[i].y/count_z[i],
+                                            velocity_z[i].z/count_z[i]);
     }
   }
   fclose(out_x);

@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     count++;
   }
 
-  if (argc < req_args) {
+  if (count < req_args) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
     exit(1);
@@ -118,8 +118,7 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
+  CommonOptions(argc, argv, &input_vsf, &verbose, &silent);
 
   // starting & ending timesteps //{{{
   int start = 1;
@@ -188,7 +187,7 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
   VECTOR BoxLength; // couboid box dimensions
@@ -302,7 +301,9 @@ int main(int argc, char *argv[]) {
   // array for distributions //{{{
   double *orientation[Counts.TypesOfMolecules][number_of_angles],
          avg_orientation[Counts.TypesOfMolecules][number_of_angles];
+  long int number_of_mols[Counts.TypesOfMolecules];
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    number_of_mols[i] = 0;
     for (int j = 0; j < number_of_angles; j++) {
       orientation[i][j] = calloc(bins, sizeof(double));
       avg_orientation[i][j] = 0;
@@ -318,7 +319,7 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
   count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
@@ -341,7 +342,9 @@ int main(int argc, char *argv[]) {
     // go through all molecules
     for (int i = 0; i < Counts.Molecules; i++) {
       int mtype = Molecule[i].Type;
-      if (MoleculeType[mtype].Use) { // use only specified molecule types
+      VECTOR cog = GeomCentre(MoleculeType[mtype].nBeads, Molecule[i].Bead, Bead);
+      if ((cog.z < 10 || cog.z > 34) && MoleculeType[mtype].Use) { // use only specified molecule types
+  number_of_mols[mtype]++;
         for (int j = 0; j < number_of_beads; j += 2) {
           int mbeads = MoleculeType[mtype].nBeads;
           int id1 = -2, id2 = -1;
@@ -397,7 +400,7 @@ int main(int argc, char *argv[]) {
     }
     // if there's no additional timestep, exit the while loop
     bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    if (ReadVtfTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
       break;
     }
   }
@@ -472,7 +475,7 @@ int main(int argc, char *argv[]) {
                 continue;
               }
             case 3: // bead[k] & bead[k+1] okay
-              fprintf(out, "%10f", orientation[j][k/2][i]/(count_step*MoleculeType[j].Number));
+              fprintf(out, "%10f", orientation[j][k/2][i]/number_of_mols[j]);
               break;
           }
         }
@@ -481,8 +484,8 @@ int main(int argc, char *argv[]) {
     putc('\n', out);
   } //}}}
 
-  // write averages //{{{
-  // legend line
+  // write overall averages //{{{
+  // legend line //{{{
   fprintf(out, "# Average orientation order parameter");
   count = 0;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -499,7 +502,7 @@ int main(int argc, char *argv[]) {
       }
     }
   }
-  putc('\n', out);
+  putc('\n', out); //}}}
   // data line
   putc('#', out);
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -511,7 +514,7 @@ int main(int argc, char *argv[]) {
             bead[j+1] >= mbeads) { // both higher than number beads - skip
           continue;
         }
-        fprintf(out, "%10f", avg_orientation[i][j/2]/(count_step*MoleculeType[i].Number));
+        fprintf(out, "%10f", avg_orientation[i][j/2]/number_of_mols[i]);
       }
     }
   }

@@ -9,18 +9,19 @@ void Help(char cmd[50], bool error) { //{{{
     fprintf(ptr, "\
 DensityBox utility calculates number \
 density for all bead types in the direction of specified axis (x, y, or z).\
-\n\n");
+The utility works properly only for orthogonal boxes that do not change \
+size \n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <width> <output> <axis> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <width> <output> <axis> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input filename (either vcf or vtf format)\n");
-  fprintf(ptr, "   <width>           width of a single bin\n");
-  fprintf(ptr, "   <output>          output density file (automatic ending '<axis>.rho' added)\n");
-  fprintf(ptr, "   <axis>            calculate along x, y, or z axis\n");
+  fprintf(ptr, "   <input>    input coordinate file (vcf or vtf format)\n");
+  fprintf(ptr, "   <width>    width of a single bin\n");
+  fprintf(ptr, "   <output>   output density file (automatic ending \
+'<axis>.rho' added)\n");
+  fprintf(ptr, "   <axis>     calculate along x, y, or z axis\n");
   fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -n <int>       number of bins to average\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   fprintf(ptr, "      -e <end>       number of timestep to end with\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
@@ -43,7 +44,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
@@ -61,9 +62,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
-        strcmp(argv[i], "-n") != 0 &&
-        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
+        strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-x") != 0) {
 
       ErrorOption(argv[i]);
@@ -75,9 +75,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -85,7 +84,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <width> - number of starting timestep //{{{
+  // <width> - width of a single bin //{{{
   // Error - non-numeric argument
   if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<width>");
@@ -94,32 +93,39 @@ int main(int argc, char *argv[]) {
   }
   double width = atof(argv[count]); //}}}
 
-  // <output.rho> - filename with bead densities //{{{
-  char output_rho[LINE];
-  strcpy(output_rho, argv[++count]); //}}}
+  // <output> - filename with bead densities //{{{
+  char output_rho[LINE] = "";
+  snprintf(output_rho, LINE, "%s", argv[++count]); //}}}
+
+  // <axis> - x, y, or z //{{{
+  char axis = 'x';
+  while (++count < argc && argv[count][0] != '-') {
+    axis = argv[count][0];
+    // Error - not x/y/z
+    if (axis != 'x' && axis != 'y' && axis != 'z') {
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "<axis>");
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - use 'x', 'y', or 'z'\n\n");
+      ResetColour(STDERR_FILENO);
+      Help(argv[0], true);
+      exit(1);
+    }
+    // add <axis>.rho to the output filename
+    char str[LINE];
+    output_rho[LINE-5] = '\0'; // ensure output_rho isn't too long
+    snprintf(str, LINE, "%s%c.rho", output_rho, axis);
+    strcpy(output_rho, str);
+  } //}}}
 
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
-  // starting & ending timesteps //{{{
-  int start = 1;
-  if (IntegerOption(argc, argv, "-st", &start)) {
-    exit(1);
-  }
-  int end = -1;
-  if (IntegerOption(argc, argv, "-e", &end)) {
-    exit(1);
-  }
-  ErrorStartEnd(start, end); //}}}
-
-  // number of bins to average //{{{
-  int avg = 1;
-  if (IntegerOption(argc, argv, "-n", &avg)) {
-    exit(1);
-  } //}}}
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
+  int start, end;
+  StartEndTime(argc, argv, &start, &end);
   //}}}
 
   // print command to stdout //{{{
@@ -131,52 +137,42 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
+              &Box, &Counts, &BeadType, &Bead, &Index,
               &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+  // warning - works properly only for orthogonal box
+  if (Box.alpha != 90 ||
+      Box.beta != 90 ||
+      Box.gamma != 90) {
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "\nWarning: non-orthogonal box; angles - ");
+    CyanText(STDERR_FILENO);
+    fprintf(stderr, "%lf %lf %lf", Box.alpha, Box.beta, Box.gamma);
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, ".\n         %s works properly only for \
+orthogonal box.\n", argv[0]);
+    ResetColour(STDERR_FILENO);
+  } //}}}
 
   // '-x' option //{{{
   if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
     exit(1);
   } //}}}
 
-  // <axis> - x, y, or z //{{{
-  char axis = 'x';
-  while (++count < argc && argv[count][0] != '-') {
-
-    axis = argv[count][0];
-
-    if (axis != 'x' && axis != 'y' && axis != 'z') {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: \033[1;33m<axis>\033[1;31m must be 'x', 'y', or 'z'\n\n");
-      fprintf(stderr, "\033[0m");
-      exit(1);
-    }
-  } //}}}
-
   // write initial stuff to output density file //{{{
   FILE *out;
-  char str[1050];
-
-  sprintf(str, "%s%c.rho", output_rho, axis);
-  strcpy(output_rho, str);
   if ((out = fopen(output_rho, "w")) == NULL) {
     ErrorFileOpen(output_rho, 'w');
     exit(1);
   }
-
-  // print command to output file
-  putc('#', out);
-  PrintCommand(out, argc, argv);
-
-  // print bead type names to output file //{{{
+  PrintByline(out, argc, argv);
+  // print bead type names to output file
   fprintf(out, "# columns: (1) distance;");
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     fprintf(out, " (%d) %s", i+2, BeadType[i].Name);
@@ -185,46 +181,40 @@ int main(int argc, char *argv[]) {
     }
   }
   putc('\n', out);
-//for (int i = 0; i < Counts.TypesOfBeads; i++) {
-//  fprintf(out, " %d: %s", 4*i+2, BeadType[i].Name);
-//}
-//fprintf(out, "\n# for each molecule type: rdp | stderr | rnp | stderr\n"); //}}}
-
   fclose(out); //}}}
 
   // number of bins //{{{
   double max_dist;
-  if (axis == 'x') {
-    max_dist = BoxLength.x;
-  } else if (axis == 'y') {
-    max_dist = BoxLength.y;
-  } else {
-    max_dist = BoxLength.z;
+  switch(axis) {
+    case 'x':
+      max_dist = Box.Length.x;
+      break;
+    case 'y':
+      max_dist = Box.Length.y;
+      break;
+    case 'z':
+      max_dist = Box.Length.z;
+      break;
   }
   int bins = ceil(max_dist / width); //}}}
 
+// TODO: sizeof ...argh!
   // allocate memory for density arrays //{{{
-  long int **rho = malloc(Counts.TypesOfBeads*sizeof(long int *));
-  long int **rho_2 = malloc(Counts.TypesOfBeads*sizeof(long int *));
+//long int **rho = malloc(Counts.TypesOfBeads*sizeof(long int *));
+//long int **rho_2 = malloc(Counts.TypesOfBeads*sizeof(long int *));
+  long int **rho = malloc(Counts.TypesOfBeads * sizeof **rho);
+  long int **rho_2 = malloc(Counts.TypesOfBeads * sizeof **rho_2);
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    rho[i] = calloc(bins,sizeof(long int));
-    rho_2[i] = calloc(bins,sizeof(long int));
+//  rho[i] = calloc(bins, sizeof(long int));
+//  rho_2[i] = calloc(bins, sizeof(long int));
+    rho[i] = calloc(bins, sizeof *rho[i]);
+    rho_2[i] = calloc(bins, sizeof *rho_2[i]);
   } //}}}
-
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-
-    fprintf(stdout, "Chosen molecule types:");
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (MoleculeType[i].Use) {
-        fprintf(stdout, " %s", MoleculeType[i].Name);
-      }
-    }
-    putchar('\n');
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
   // open input coordinate file //{{{
@@ -233,13 +223,14 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
   count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
   // main loop //{{{
   count = 0; // count timesteps in the main loop
   int count_vcf = start - 1; // count timesteps from the beginning
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count++;
     count_vcf++;
@@ -248,42 +239,56 @@ int main(int argc, char *argv[]) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
-
-    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
-    // add pbc //{{{
-    for (int i = 0; i < Counts.Beads; i++) {
-      while (Bead[i].Position.x >= BoxLength.x) {
-        Bead[i].Position.x -= BoxLength.x;
-      }
-      while (Bead[i].Position.x < 0) {
-        Bead[i].Position.x += BoxLength.x;
-      }
-      while (Bead[i].Position.y >= BoxLength.y) {
-        Bead[i].Position.y -= BoxLength.y;
-      }
-      while (Bead[i].Position.y < 0) {
-        Bead[i].Position.y += BoxLength.y;
-      }
-      while (Bead[i].Position.z >= BoxLength.z) {
-        Bead[i].Position.z -= BoxLength.z;
-      }
-      while (Bead[i].Position.z < 0) {
-        Bead[i].Position.z += BoxLength.z;
-      }
+    // read coordinates and wrap box - assumes orthogonal box
+    BOX test = InitBox; // check the box didn't change
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
+    // warning - box size/angles //{{{
+    if (Box.Length.x != test.Length.x ||
+        Box.Length.y != test.Length.y ||
+        Box.Length.z != test.Length.z) {
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "\nWarning: box side lengths changed from ");
+      CyanText(STDERR_FILENO);
+      fprintf(stderr, "%lf %lf %lf", Box.Length.x, Box.Length.y, Box.Length.z);
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, " to ");
+      CyanText(STDERR_FILENO);
+      fprintf(stderr, "%lf %lf %lf", test.Length.x, test.Length.y,
+                                     test.Length.z);
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, ".\n         %s works properly only when the box \
+size is constant.\n", argv[0]);
+      ResetColour(STDERR_FILENO);
+    }
+    if (Box.alpha != 90 ||
+        Box.beta != 90 ||
+        Box.gamma != 90) {
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "\nWarning: non-orthogonal box; angles - ");
+      CyanText(STDERR_FILENO);
+      fprintf(stderr, "%lf %lf %lf", Box.alpha, Box.beta, Box.gamma);
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, ".\n         %s works properly only for \
+orthogonal box.\n", argv[0]);
+      ResetColour(STDERR_FILENO);
     } //}}}
+    RestorePBC(Counts.Beads, Box, &Bead);
 
+  // TODO: sizeof ...argh!
     // allocate memory for temporary density arrays //{{{
-    int **temp_rho = malloc(Counts.TypesOfBeads*sizeof(int *));
+//  int **temp_rho = malloc(Counts.TypesOfBeads*sizeof(int *));
+    int **temp_rho = malloc(Counts.TypesOfBeads * sizeof **temp_rho);
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      temp_rho[i] = calloc(bins,sizeof(int));
+//    temp_rho[i] = calloc(bins,sizeof(int));
+      temp_rho[i] = calloc(bins, sizeof temp_rho[i]);
     } //}}}
 
     // calculate densities //{{{
     for (int i = 0; i < Counts.Beads; i++) {
       bool use = true;
       int mol = Bead[i].Molecule;
-      if (mol != -1) {
+      if (mol != -1) { // do not use excluded molecules (-x option)
         int mtype = Molecule[mol].Type;
         use = MoleculeType[mtype].Use;
       }
@@ -315,16 +320,13 @@ int main(int argc, char *argv[]) {
     }
     free(temp_rho); //}}}
 
-    if (end == count_vcf)
-      break;
-    // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    // exit the while loop if there's no more coordinates or -e step was reached
+    if (LastStep(vcf, NULL) || end == count_vcf) {
       break;
     }
   }
   fclose(vcf);
-
+  // print last step?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -340,22 +342,18 @@ int main(int argc, char *argv[]) {
   }
 
   // calculate rdf
-  double volume = width * avg;
+  double volume = width;
   if (axis == 'x') {
-    volume *= BoxLength.y * BoxLength.z;
+    volume *= Box.Length.y * Box.Length.z;
   } else if (axis == 'y') {
-    volume *= BoxLength.x * BoxLength.z;
+    volume *= Box.Length.x * Box.Length.z;
   } else {
-    volume *= BoxLength.x * BoxLength.y;
+    volume *= Box.Length.x * Box.Length.y;
   }
-  for (int i = 0; i < (bins-avg); i++) {
-    fprintf(out, "%7.3f", width*(i+0.5*avg));
+  for (int i = 0; i < bins; i++) {
+    fprintf(out, "%7.3f", width*(2*i+1)/2);
     for (int j = 0; j < Counts.TypesOfBeads; j++) {
-      double temp_rho = 0;
-      // sum densities to be averaged
-      for (int k = 0; k < avg; k++) {
-        temp_rho += rho[j][i+k] / (volume * count);
-      }
+      double temp_rho = rho[j][i] / (volume * count);
       // print average value to output file
       fprintf(out, " %10f", temp_rho);
     }

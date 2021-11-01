@@ -21,6 +21,14 @@
 #include "Read.h"
 #include "Write.h"
 
+// TransformMatrices()
+void TransformMatrices(BOX *Box);
+
+void ToFractional(VECTOR *coor, BOX Box);
+void ToFractionalCoor(int number_of_beads, BEAD **Bead, BOX Box);
+VECTOR FromFractional(VECTOR coor, BOX Box);
+void FromFractionalCoor(int number_of_beads, BEAD **Bead, BOX Box);
+
 // InputCoor() //{{{
 /**
  * \brief Function test input coordinate file is correct
@@ -32,7 +40,7 @@
  */
 bool InputCoor(bool *vtf, char *file_coor, char *file_struct); //}}}
 
-// VerboseOutput() //{{{
+// VerboseOutput_old() //{{{
 /**
  * \brief Function printing basic information about system if `-v` or `-V`
  * option is provided
@@ -45,7 +53,23 @@ bool InputCoor(bool *vtf, char *file_coor, char *file_struct); //}}}
  * \param [in] MoleculeType  information about molecule types
  * \param [in] Molecule      information about individual molecules
  */
-void VerboseOutput(char *input_vcf, COUNTS Counts, VECTOR BoxLength,
+void VerboseOutput_old(char *input_vcf, COUNTS Counts, VECTOR BoxLength,
+                   BEADTYPE *BeadType, BEAD *Bead,
+                   MOLECULETYPE *MoleculeType, MOLECULE *Molecule); //}}}
+// VerboseOutput() //{{{
+/**
+ * \brief Function printing basic information about system if `-v` or `-V`
+ * option is provided
+ *
+ * \param [in] input_vcf     .vcf coordinate file
+ * \param [in] Counts        numbers of beads, molecules, etc.
+ * \param [in] Box           dimension and angles of the simulation box
+ * \param [in] BeadType      information about bead types
+ * \param [in] Bead          informationn about individual beads
+ * \param [in] MoleculeType  information about molecule types
+ * \param [in] Molecule      information about individual molecules
+ */
+void VerboseOutput(char *input_vcf, COUNTS Counts, BOX Box,
                    BEADTYPE *BeadType, BEAD *Bead,
                    MOLECULETYPE *MoleculeType, MOLECULE *Molecule); //}}}
 
@@ -136,6 +160,13 @@ int FindMoleculeType2(char *name, int number_of_types, MOLECULETYPE *MoleculeTyp
 
 void FillMolBTypes(int number_of_types, MOLECULETYPE **MoleculeType);
 
+// FillMolMassCharge() //{{{
+/*
+ * Function to calculate total mass and charge of molecules.
+ */
+void FillMolMassCharge(int number_of_types, MOLECULETYPE **MoleculeType,
+                 BEADTYPE *BeadType); //}}}
+
 // Distancet() //{{{
 /**
  * \brief Function to calculate distance vector between two beads.
@@ -158,9 +189,13 @@ VECTOR Distance(VECTOR id1, VECTOR id2, VECTOR BoxLength); //}}}
  * \param [in]  MoleculeType   information about molecule types
  * \param [in]  Molecule       information about individual molecules
  */
-void RemovePBCMolecules(COUNTS Counts, VECTOR BoxLength,
+void RemovePBCMolecules_old(COUNTS Counts, VECTOR BoxLength,
                         BEADTYPE *BeadType, BEAD **Bead,
                         MOLECULETYPE *MoleculeType, MOLECULE *Molecule); //}}}
+// TODO: somehow generalise triclinic stuff
+void RemovePBCMolecules(COUNTS Counts, BOX Box,
+                        BEADTYPE *BeadType, BEAD **Bead,
+                        MOLECULETYPE *MoleculeType, MOLECULE *Molecule);
 
 // RemovePBCAggregates() //{{{
 /**
@@ -179,7 +214,7 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
                          VECTOR BoxLength, BEADTYPE *BeadType, BEAD **Bead,
                          MOLECULETYPE *MoleculeType, MOLECULE *Molecule); //}}}
 
-// RestorePBC() //{{{
+// RestorePBC_old() //{{{
 /**
  * \brief Function to restore pbc.
  *
@@ -187,8 +222,8 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
  * \param [in]  BoxLength      dimension of the simulation box
  * \param [out] Bead           information about individual beads (coordinates)
  */
-void RestorePBC(COUNTS Counts, VECTOR BoxLength, BEAD **Bead); //}}}
-// RestorePBC2() //{{{
+void RestorePBC_old(COUNTS Counts, VECTOR BoxLength, BEAD **Bead); //}}}
+// RestorePBC() //{{{
 /**
  * \brief Function to restore pbc.
  *
@@ -196,7 +231,7 @@ void RestorePBC(COUNTS Counts, VECTOR BoxLength, BEAD **Bead); //}}}
  * \param [in]  BoxLength         dimension of the simulation box
  * \param [out] Bead              information about individual beads (coordinates)
  */
-void RestorePBC2(int number_of_beads, VECTOR BoxLength, BEAD **Bead); //}}}
+void RestorePBC(int number_of_beads, BOX Box, BEAD **Bead); //}}}
 
 // CentreOfMass() //{{{
 /**
@@ -233,7 +268,7 @@ VECTOR GeomCentre(int n, int *list, BEAD *Bead); //}}}
  * \param [in] Bead          informationn about individual beads
  * \return vector with principal moments of gyration tensor (sorted as x<y<z)
  */
-VECTOR Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength,
+VECTOR Gyration(int n, int *list, COUNTS Counts,
                 BEADTYPE *BeadType, BEAD **Bead); //}}}
 
 // EvaluateContacts() //{{{
@@ -274,7 +309,7 @@ void LinkedList(VECTOR BoxLength, COUNTS Counts, BEAD *Bead,
  * \param [out] bond    2D array of bonds
  * \param [in]  length  number of bonds
  */
-void SortBonds(int **bond, int length); //}}}
+void SortBonds(int (*bond)[3], int length); //}}}
 
 // SortAngles() //{{{
 /**
@@ -283,7 +318,40 @@ void SortBonds(int **bond, int length); //}}}
  * \param [out] angle   2D array of angles
  * \param [in]  length  number of angles
  */
-void SortAngles(int **angle, int length); //}}}
+void SortAngles(int (*angle)[4], int length); //}}}
+void SortDihedrals(int (*dihedral)[5], int length);
+
+// CopyBeadType() //{{{
+/**
+ * Function to copy BEADType structure into a new.
+ */
+void CopyBeadType(int number_of_types, BEADTYPE **bt_out,
+                  BEADTYPE *bt_in, int mode); //}}}
+
+// CopyMoleculeType() //{{{
+/**
+ * Function to copy MOLECULETYPE structure into a new one.
+ */
+void CopyMoleculeType(int number_of_types, MOLECULETYPE **mt_out,
+                      MOLECULETYPE *mt_in, int mode); //}}}
+
+// CopyMolecule() //{{{
+/*
+ * Function to copy a MOLECULE struct into a new one.
+ */
+void CopyMolecule(int number_of_molecules, MOLECULETYPE *mt,
+                  MOLECULE **m_out, MOLECULE *m_in, int mode); //}}}
+
+// CopySystem() //{{{
+/*
+ * Function to copy the whole system - COUNTS, BEADTYPE, BEAD, MOLECULETYPE,
+ * and MOLECULE structures and Index array.
+ */
+void CopySystem(COUNTS *Counts_out, COUNTS Counts_in,
+                BEADTYPE **bt_out, BEADTYPE *bt_in,
+                BEAD **bead_out, BEAD *bead_in, int **index_out, int *index_in,
+                MOLECULETYPE **mt_out, MOLECULETYPE *m_in,
+                MOLECULE **mol_out, MOLECULE *mol_in, int mode); //}}}
 
 // FreeBead() //{{{
 /**

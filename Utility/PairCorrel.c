@@ -6,7 +6,7 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stderr;
   } else {
     ptr = stdout;
-    fprintf(stdout, " \
+    fprintf(ptr, "\
 PairCorrel utility calculates pair correlation function for specified \
 bead types. All pairs of bead types (including same type pairs) are \
 calculated - given A and B types, pcf between A-A, A-B and B-B are \
@@ -14,16 +14,18 @@ calculated.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <width> <output> <bead type(s)> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <width> <output> <bead(s)> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>          input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <width>          width of a single bin\n");
-  fprintf(ptr, "   <output>         output file with pair correlation function(s)\n");
-  fprintf(ptr, "   <bead type(s)>   bead type name(s) for pcf calculation\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -n <int>      number of bins to average\n");
-  fprintf(ptr, "      -st <int>     starting timestep for calculation (default: 1)\n");
-  fprintf(ptr, "      -e <end>      ending timestep for calculation (default: none)\n");
+  fprintf(ptr, "   <input>     input coordinate file (vcf or vtf format)\n");
+  fprintf(ptr, "   <width>     width of a single bin\n");
+  fprintf(ptr, "   <output>    output file with pair correlation \
+function(s)\n");
+  fprintf(ptr, "   <bead(s)>   bead name(s) for calculation \
+(optional and ignored if '--all' is used)\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      --all       use all bead types (overwrites <bead(s)>)\n");
+  fprintf(ptr, "      -st <int>   starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>    ending timestep for calculation\n");
   CommonHelp(error);
 } //}}}
 
@@ -43,11 +45,14 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
-  if (count < req_args) {
+  // use all bead types? ...do now to check correct number of arguments
+  bool all = BoolOption(argc, argv, "--all");
+
+  if (count < (req_args-1) || (count == (req_args-1) && !all)) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
     exit(1);
@@ -61,7 +66,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
-        strcmp(argv[i], "-n") != 0 &&
+        strcmp(argv[i], "--all") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0) {
 
@@ -74,9 +79,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -84,41 +88,25 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <width> - width of single bin //{{{
+  // <width> - width of a single bin //{{{
   // Error - non-numeric argument
   if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<width>");
     Help(argv[0], true);
     exit(1);
   }
-  double bin_width = atof(argv[count]); //}}}
+  double width = atof(argv[count]); //}}}
 
   // <output> - filename with pcf(s) //{{{
-  char output_pcf[LINE];
-  strcpy(output_pcf, argv[++count]); //}}}
+  char output_pcf[LINE] = "";
+  snprintf(output_pcf, LINE, "%s", argv[++count]); //}}}
 
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
-  // starting & ending timesteps //{{{
-  int start = 1;
-  if (IntegerOption(argc, argv, "-st", &start)) {
-    exit(1);
-  }
-  int end = -1;
-  if (IntegerOption(argc, argv, "-e", &end)) {
-    exit(1);
-  }
-  ErrorStartEnd(start, end); //}}}
-
-  // number of bins to average //{{{
-  int avg = 1;
-  if (IntegerOption(argc, argv, "-n", &avg)) {
-    exit(1);
-  } //}}}
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
+  int start, end;
+  StartEndTime(argc, argv, &start, &end);
   //}}}
 
   // print command to stdout //{{{
@@ -130,35 +118,41 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
-              &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+              &Box, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
-  // <type names> - names of bead types to use //{{{
-  while (++count < argc && argv[count][0] != '-') {
-    int type = FindBeadType(argv[count], Counts, BeadType);
-    if (type == -1) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", input_coor);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " - non-existent bead name ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s\n", argv[count]);
-      ResetColour(STDERR_FILENO);
-      ErrorBeadType(Counts, BeadType);
-      exit(1);
+  // <bead(s)> - names of bead types to use //{{{
+  if (!all) { // --all option not used
+    while (++count < argc && argv[count][0] != '-') {
+      int type = FindBeadType(argv[count], Counts, BeadType);
+      // error - nonexistent bead  //{{{
+      if (type == -1) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", input_coor);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - non-existent bead name ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s\n", argv[count]);
+        ResetColour(STDERR_FILENO);
+        ErrorBeadType(Counts, BeadType);
+        exit(1);
+      } //}}}
+      BeadType[type].Use = true;
+    } //}}}
+  } else { // --all option is used
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      BeadType[i].Use = true;
     }
-    BeadType[type].Use = true;
-  } //}}}
+  }
 
   // write initial stuff to output pcf file //{{{
   FILE *out;
@@ -166,18 +160,15 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(output_pcf, 'w');
     exit(1);
   }
-
-  // print command to output file
-  putc('#', out);
-  PrintCommand(out, argc, argv);
-
+  PrintByline(out, argc, argv);
   // print bead type names to output file //{{{
   fprintf(out, "# (1) distance;");
   count = 1;
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     for (int j = i; j < Counts.TypesOfBeads; j++) {
       if (BeadType[i].Use && BeadType[j].Use) {
-        fprintf(out, " (%d) %s-%s", ++count, BeadType[i].Name, BeadType[j].Name);
+        count++;
+        fprintf(out, " (%d) %s-%s", count, BeadType[i].Name, BeadType[j].Name);
         if (i != (Counts.TypesOfBeads-1) || j != (Counts.TypesOfBeads-1)) {
           putc(';', out);
         }
@@ -185,29 +176,33 @@ int main(int argc, char *argv[]) {
     }
   }
   putc('\n', out); //}}}
-
   fclose(out); //}}}
 
-  // number of bins - maximum distance is taken as half of the shortes BoxLength //{{{
-  double max_dist = Min3(BoxLength.x, BoxLength.y, BoxLength.z) / 2;
-  int bins = ceil(max_dist / bin_width); //}}}
+  // number of bins //{{{
+  double max_dist = 0.5 * Min3(Box.Length.x, Box.Length.y, Box.Length.z);
+  int bins = ceil(max_dist / width); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
-
-  // allocate memory for pcf arrays //{{{
-  int *counter = calloc(Counts.TypesOfBeads,sizeof(int)); // to count number of pairs
-  double ***pcf = malloc(Counts.TypesOfBeads*sizeof(double **));
+// TODO: sizeof ...argh!
+  // allocate memory //{{{
+  // array counting number of pairs
+  int *counter = calloc(Counts.TypesOfBeads, sizeof *counter);
+  // pair correlation function
+  // TODO: possibly change to long int?
+//double ***pcf = malloc(Counts.TypesOfBeads * sizeof(double **));
+  double ***pcf = malloc(Counts.TypesOfBeads * sizeof **pcf);
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    pcf[i] = malloc(Counts.TypesOfBeads*sizeof(double *));
+//  pcf[i] = malloc(Counts.TypesOfBeads * sizeof(double *));
+    pcf[i] = malloc(Counts.TypesOfBeads * sizeof *pcf[i]);
     for (int j = 0; j < Counts.TypesOfBeads; j++) {
-      pcf[i][j] = calloc(bins,sizeof(double));
+//    pcf[i][j] = calloc(bins, sizeof(double));
+      pcf[i][j] = calloc(bins, sizeof *pcf[i][j]);
     }
   } //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
   // open input coordinate file //{{{
@@ -216,13 +211,14 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
   count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
   // main loop //{{{
   int count_step = 0; // count calculated timesteps
   int count_vcf = start - 1; // count timesteps from the beginning
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count_step++;
     count_vcf++;
@@ -231,9 +227,12 @@ int main(int argc, char *argv[]) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
-
-    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
+    // read coordinates & wrap box
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
+    ToFractionalCoor(Counts.Beads, &Bead, Box);
+    RestorePBC(Counts.Beads, Box, &Bead);
+    // TODO: check + fractionals?
     // calculate pair correlation function //{{{
     for (int j = 0; j < (Counts.Bonded+Counts.Unbonded); j++) {
       if (BeadType[Bead[j].Type].Use) {
@@ -261,12 +260,13 @@ int main(int argc, char *argv[]) {
             counter[type2]++;
 
             // distance between bead1 and bead2
-            VECTOR rij = Distance(Bead[bead1].Position, Bead[bead2].Position, BoxLength);
+            // TODO: fractional coordinates?
+            VECTOR rij = Distance(Bead[bead1].Position, Bead[bead2].Position, Box.Length);
             rij.x = Length(rij);
 
             // count only distances up to half of the shortest box length
             if (rij.x < max_dist) {
-              int l = rij.x / bin_width;
+              int l = rij.x / width;
               pcf[type1][type2][l]++;
             }
           }
@@ -274,17 +274,13 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
 
-    if (end == count_vcf) {
-      break;
-    }
-    // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    // exit the while loop if there's no more coordinates or -e step was reached
+    if (LastStep(vcf, NULL) || end == count_vcf) {
       break;
     }
   }
   fclose(vcf);
-
+  // print last step?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -293,12 +289,12 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Last Step: %d\n", count_vcf);
   } //}}}
 
+// TODO: check
   // write data to output file(s) //{{{
   if ((out = fopen(output_pcf, "a")) == NULL) {
     ErrorFileOpen(output_pcf, 'a');
     exit(1);
   }
-
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     counter[0] = 0;
   }
@@ -309,25 +305,21 @@ int main(int argc, char *argv[]) {
   }
 
   // calculate pcf
-  for (int j = 0; j < (bins-avg); j++) {
+  for (int j = 0; j < bins; j++) {
 
     // calculate volume of every shell that will be averaged
-    double shell[avg];
-    for (int k = 0; k < avg; k++) {
-      shell[k] = 4.0 / 3 * PI * CUBE(bin_width) * (CUBE(j+k+1) - CUBE(j+k));
-    }
+    double shell;
+    shell = 4.0 / 3 * PI * CUBE(width) * (CUBE(j+1) - CUBE(j));
+    fprintf(out, "%8.5f", width*(2*j+1)/2);
 
-    fprintf(out, "%8.5f", bin_width*(j+0.5*avg));
-
-    double volume = BoxLength.x * BoxLength.y * BoxLength.z;
+    // TODO: volume of triclinic?
+    double volume = Box.Length.x * Box.Length.y * Box.Length.z;
     for (int k = 0; k < Counts.TypesOfBeads; k++) {
       for (int l = k; l < Counts.TypesOfBeads; l++) {
         if (BeadType[k].Use && BeadType[l].Use) {
 
-          double temp = 0; // for normalisation
-
           // sum up pcfs from all shells to be averaged
-          for (int m = 0; m < avg; m++) {
+//        for (int m = 0; m < 1; m++) {
             double pairs;
             if (k == l) {
               pairs = ((SQR(BeadType[k].Number) - BeadType[k].Number)) / 2;
@@ -336,12 +328,12 @@ int main(int argc, char *argv[]) {
             }
             // for normalisation
             double pair_den = volume / pairs;
-            double norm_factor = pair_den / shell[m] / count_step;
-            temp += pcf[k][l][j+m] * norm_factor;
-          }
+            double norm_factor = pair_den / shell / count_step;
+            double temp = pcf[k][l][j] * norm_factor;
+//        }
 
           // print average value to output file
-          fprintf(out, " %10f", temp/avg);
+          fprintf(out, " %10f", temp);
         }
       }
     }
