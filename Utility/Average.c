@@ -106,7 +106,7 @@ int main ( int argc, char** argv ) {
   }
   int n_blocks = atoi(argv[count]); //}}}
 
-  double *data = calloc(1,sizeof(double));
+  double *data = malloc(sizeof *data * 1);
 
   // read data from <input> file //{{{
   FILE *fr;
@@ -146,7 +146,7 @@ int main ( int argc, char** argv ) {
       // save the value
       if (discard < lines) {
         count = lines - discard - 1;
-        data = realloc(data, (count+1)*sizeof(double));
+        data = realloc(data, sizeof *data * (count + 1));
         data[count] = atof(split[column-1]);
       }
     } //}}}
@@ -170,7 +170,8 @@ int main ( int argc, char** argv ) {
   // number of data points per block
   int data_per_block = count / n_blocks;
   // allocate array for block averages
-  long double *avg_block = calloc(n_blocks,sizeof(long double));
+  long double *avg_block = malloc(sizeof *avg_block * n_blocks);
+  memset(avg_block, 0, sizeof *avg_block * n_blocks);
   // overall averages
   long double avg_all[2] = {0}; // [0] for avg, [1] for avg of squares //}}}
 

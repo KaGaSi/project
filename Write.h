@@ -20,8 +20,12 @@
  * \param [in] Molecule      coordinates of individual molecules
  * \param [in] stuff         array of chars containing comment line to place at the beginning
  */
-void WriteCoorIndexed(FILE *vcf_file, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
-                      MOLECULETYPE *MoleculeType, MOLECULE *Molecule, char *stuff); //}}}
+void WriteCoorIndexed_old(FILE *vcf_file, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
+                      MOLECULETYPE *MoleculeType, MOLECULE *Molecule, char *stuff, VECTOR BoxLength); //}}}
+void WriteCoorIndexed(FILE *vcf_file, COUNTS Counts,
+                      BEADTYPE *BeadType, BEAD *Bead,
+                      MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
+                      char *stuff, BOX Box);
 
 // WriteCoorXYZ() //{{{
 /**
@@ -63,4 +67,11 @@ void WriteVsf(char *input_vsf, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
  */
 void WriteAggregates(int step_count, char *agg_file, COUNTS Counts,
                      MOLECULETYPE *MoleculeType, BEAD *Bead, AGGREGATE *Aggregate); //}}}
+
+void WriteField(char *field, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
+                MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
+                PARAMS *bond_type, PARAMS *angle_type, PARAMS *dihedral_type);
+
+// PrintByline() //{{{
+void PrintByline(FILE *ptr, int argc, char *argv[]);
 #endif

@@ -1,5 +1,7 @@
 #include "../AnalysisTools.h"
 
+// TODO: write function ReadXyzCoordinates()
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -14,14 +16,15 @@ resulting CONFIG file, as xyz file does not contain box size.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input.xyz> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input.xyz> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input.xyz>       input filename (xyz format)\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -st <step>     timestep for creating CONFIG (default: last)\n");
-  fprintf(ptr, "      -s             no output\n");
-  fprintf(ptr, "      -h             print this help and exit\n");
-  fprintf(ptr, "      --version      print version number and exit\n");
+  fprintf(ptr, "   <input.xyz>   filename (xyz format)\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      -st <step>   timestep for creating CONFIG \
+(default: last)\n");
+  fprintf(ptr, "      --silent     no output\n");
+  fprintf(ptr, "      -h           print this help and exit\n");
+  fprintf(ptr, "      --version    print version number and exit\n");
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -40,7 +43,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
@@ -64,6 +67,21 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count mandatory arguments
+
+  // <input.xyz> - input coordinate file (must end with .xyz) //{{{
+  char input_xyz[LINE] = "";
+  snprintf(input_xyz, LINE, "%s", argv[++count]);
+
+  // test if <input> filename ends with '.xyz' (required by VMD)
+  int ext = 1;
+  char extension[2][5];
+  strcpy(extension[0], ".xyz");
+  if (ErrorExtension(input_xyz, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
   bool verbose, silent;
   SilentOption(argc, argv, &verbose, &silent);
 
@@ -78,21 +96,6 @@ int main(int argc, char *argv[]) {
     PrintCommand(stdout, argc, argv);
   } //}}}
 
-  count = 0; // count mandatory arguments
-
-  // <input.xyz> - filename of input xyz file (must end with .xyz) //{{{
-  char input_xyz[LINE];
-  strcpy(input_xyz, argv[++count]);
-
-  // test if <input> filename ends with '.xyz' (required by VMD)
-  int ext = 1;
-  char extension[2][5];
-  strcpy(extension[0], ".xyz");
-  if (ErrorExtension(input_xyz, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
   // get number of beads from xyz file //{{{
   // open input coordinate file
   FILE *xyz;
@@ -103,6 +106,7 @@ int main(int argc, char *argv[]) {
 
   int beads;
   if (fscanf(xyz, "%d", &beads) != 1) {
+    // TODO: correct colours etc.
     fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "Error: cannot read number of beads from \033[1;33m%s\033[1;31m\n\n", input_xyz);
     fprintf(stderr, "\033[0m");
@@ -206,7 +210,9 @@ int main(int argc, char *argv[]) {
 
     // print bead to CONFIG
     fprintf(config, "%s %d\n", split[0], i+1);
-    fprintf(config, "%lf %lf %lf\n", atof(split[1]), atof(split[2]), atof(split[3]));
+    fprintf(config, "%lf %lf %lf\n", atof(split[1]),
+                                     atof(split[2]),
+                                     atof(split[3]));
   }
   fclose(config);
   fclose(xyz); //}}}

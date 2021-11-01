@@ -1,12 +1,14 @@
 #include "../AnalysisTools.h"
 
+// TODO: change double rho arrays into (long) int?
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
     ptr = stderr;
   } else {
     ptr = stdout;
-    fprintf(stdout, "\
+    fprintf(ptr, "\
 DensityMolecules utility calculates number density for all bead types from \
 the centre of mass (or any bead in a molecule) of specified molecules \
 similarly to how DensityAggregates calculates the density for \
@@ -14,18 +16,23 @@ aggregates.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <width> <output.rho> <mol name(s)> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <width> <output> <mol(s)> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>            input filename (either vcf or vtf format)\n");
-  fprintf(ptr, "   <width>            width of a single bin\n");
-  fprintf(ptr, "   <output.rho>       output density file (automatic ending 'molecule_name.rho' added)\n");
-  fprintf(ptr, "   <mol name(s)>      molecule name(s) to calculate density for\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      --joined        specify that <input> contains joined coordinates\n");
-  fprintf(ptr, "      -n <int>        number of bins to average\n");
-  fprintf(ptr, "      -st <int>       starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>        ending timestep for calculation\n");
-  fprintf(ptr, "      -c <name> <int> use <int>-th molecule bead instead of centre of mass\n");
+  fprintf(ptr, "   <input>    input coordinate file (vcf or vtf format)\n");
+  fprintf(ptr, "   <width>    width of a single distribution bin\n");
+  fprintf(ptr, "   <output>   output density file \
+(automatic ending '<molecule_name>.rho' added)\n");
+  fprintf(ptr, "   <mol(s)>   molecule name(s) to calculate density for \
+(optional and ignored if '--all' is used)\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      --all            use all molecules \
+(overwrites <mol(s)>)\n");
+  fprintf(ptr, "      --joined         specify that <input> contains joined \
+coordinates\n");
+  fprintf(ptr, "      -st <int>        starting timestep for calculation\n");
+  fprintf(ptr, "      -e <end>         ending timestep for calculation\n");
+  fprintf(ptr, "      -c <out> <int>   use <int>-th molecule bead instead \
+of centre of mass\n");
   CommonHelp(error);
 } //}}}
 
@@ -45,11 +52,14 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
-  if (count < req_args) {
+  // use all molecules? ...do now to check correct number of arguments
+  bool all = BoolOption(argc, argv, "--all");
+
+  if (count < (req_args-1) || (count == (req_args-1) && !all)) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
     exit(1);
@@ -63,8 +73,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
+        strcmp(argv[i], "--all") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
-        strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-c") != 0) {
@@ -78,9 +88,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -88,7 +97,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <width> - number of starting timestep //{{{
+  // <width> - width of a single bin //{{{
   // Error - non-numeric argument
   if (!IsPosDouble(argv[++count])) {
     ErrorNaN("<width>");
@@ -97,27 +106,19 @@ int main(int argc, char *argv[]) {
   }
   double width = atof(argv[count]); //}}}
 
-  // <output.rho> - filename with bead densities //{{{
-  char output_rho[LINE];
-  strcpy(output_rho, argv[++count]); //}}}
+  // <output> - filename with bead densities //{{{
+  // leave space for <mol_name>.rho ending within LINE length
+  char output_rho[LINE-MOL_NAME-4] = "";
+  snprintf(output_rho, LINE-MOL_NAME-4, "%s", argv[++count]); //}}}
 
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
-  // are provided coordinates joined?
-  bool joined = BoolOption(argc, argv, "--joined");
-
-  // number of bins to average //{{{
-  int avg = 1;
-  if (IntegerOption(argc, argv, "-n", &avg)) {
-    exit(1);
-  } //}}}
-
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
   int start, end;
-  StartEndTime(argc, argv, &start, &end); //}}}
+  StartEndTime(argc, argv, &start, &end);
+  // are provided coordinates joined?
+  bool joined = BoolOption(argc, argv, "--joined"); //}}}
 
   // print command to stdout //{{{
   if (!silent) {
@@ -128,163 +129,125 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
-              &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+              &Box, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
-  // <molecule names> - types of molecules for calculation //{{{
-  while (++count < argc && argv[count][0] != '-') {
-
-    int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
-
-    if (mol_type == -1) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", input_coor);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " - non-existent molecule");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", argv[count]);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\n");
-      ResetColour(STDERR_FILENO);
-      ErrorMoleculeType(Counts, MoleculeType);
-      exit(1);
-    } else {
-      MoleculeType[mol_type].Use = true;
+  // <mol(s)> - names of molecule types to use //{{{
+  if (!all) { // --all option not used
+    while (++count < argc && argv[count][0] != '-') {
+      int type = FindMoleculeType(argv[count], Counts, MoleculeType);
+      // error - nonexistent molecule  //{{{
+      if (type == -1) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", input_coor);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - non-existent molecule type ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s\n", argv[count]);
+        ResetColour(STDERR_FILENO);
+        ErrorMoleculeType(Counts, MoleculeType);
+        exit(1);
+      } //}}}
+      MoleculeType[type].Use = true;
     }
-
-    // write initial stuff to output density file //{{{
-    FILE *out;
-
-    char str2[1050];
-    sprintf(str2, "%s%s.rho", output_rho, argv[count]);
-    if ((out = fopen(str2, "w")) == NULL) {
-      ErrorFileOpen(str2, 'w');
-      exit(1);
+  } else { // --all option is used
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      MoleculeType[i].Use = true;
     }
-
-    // print command to output file
-    putc('#', out);
-    PrintCommand(out, argc, argv);
-
-    // print bead type names to output file //{{{
-    fprintf(out, "# for each bead type: (1) rdp; (2) stderr; (3) rnp; (4) stderr\n");
-    fprintf(out, "# columns: (1) distance;");
-    for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      fprintf(out, " (%d) %s", 4*i+2, BeadType[i].Name);
-      if (i != (Counts.TypesOfBeads-1)) {
-        putc(';', out);
-      }
-    }
-    putc('\n', out); //}}}
-
-    fclose(out); //}}}
   } //}}}
 
   // -c option - specify which bead to use as a molecule centre //{{{
-  // array for considering whether to use COM or specified bead number //{{{
+  // array for considering whether to use COM or specified bead number
   int centre[Counts.TypesOfMolecules];
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     centre[i] = -1; // helper value
-  } //}}}
-
+  }
+  // the -c option can be used multiple times
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-c") == 0) {
-      int j = 1; // count extra arguments
-      while ((i+j) < argc && argv[i+j][0] != '-') {
-
-        int mol_type = FindMoleculeType(argv[i+j], Counts, MoleculeType);
-
-        if (mol_type == -1) {
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
-          YellowText(STDERR_FILENO);
-          fprintf(stderr, "-c");
-          RedText(STDERR_FILENO);
-          fprintf(stderr, " - non-existent molecule");
-          YellowText(STDERR_FILENO);
-          fprintf(stderr, "%s", argv[i+j]);
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\n");
-          ResetColour(STDERR_FILENO);
-          ErrorMoleculeType(Counts, MoleculeType);
-          exit(1);
-        } else {
-          // Error - non-numeric argument //{{{
-          if (!IsInteger(argv[i+j+1])) {
-            ErrorNaN("-c");
-            Help(argv[0], true);
-            exit(1);
-          } //}}}
-
-          MoleculeType[mol_type].Use = true;
-
-          centre[mol_type] = atoi(argv[i+j+1]) - 1; // bead indices start from 0
-
-          // Error - too high bead number //{{{
-          if (centre[mol_type] > MoleculeType[mol_type].nBeads) {
-              fprintf(stderr, "\nError: \033[1;33m-c\033[1;31m option - bead index \033[1;33m%d\033[1;31m", centre[mol_type]+1);
-            RedText(STDERR_FILENO);
-            fprintf(stderr, "\nError: ");
-            YellowText(STDERR_FILENO);
-            fprintf(stderr, "-c");
-            RedText(STDERR_FILENO);
-            fprintf(stderr, " - bead index");
-            YellowText(STDERR_FILENO);
-            fprintf(stderr, "%d", centre[mol_type]+1);
-            RedText(STDERR_FILENO);
-            fprintf(stderr, " is too high for molecule ");
-            YellowText(STDERR_FILENO);
-            fprintf(stderr, "%s", MoleculeType[mol_type].Name);
-            fprintf(stderr, "\n");
-            ResetColour(STDERR_FILENO);
-            exit(1);
-          } //}}}
-        }
-
-        j += 2; // +2 because there's "<mol name> number"
+    int mtype = -1, id = -1;
+    if (MoleculeTypeIntOption(argc, i, argv, "-c", &mtype, &id,
+          Counts, MoleculeType)) {
+      exit(1);
+    }
+    if (mtype > -1) {
+      if (!MoleculeType[mtype].Use) {
+        // warning - this molecule not specified in <mol(s)> //{{{
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "\nWarning: ");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "-c");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, " - molecule ");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "%s", MoleculeType[mtype].Name);
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, " not specified in <mol(s)>;");
+        fprintf(stderr, " this option will be ignored\n");
+        ResetColour(STDERR_FILENO); //}}}
+      } else if (id >= MoleculeType[mtype].nBeads) {
+        // warning - too high an id; using the last bead //{{{
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "\nWarning: ");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "-c");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, " - index ");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "%d", id);
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, " is larger than the number of beads in molecule ");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "%s", MoleculeType[mtype].Name);
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "; last bead will be used insted (i.e., index");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "%d", MoleculeType[mtype].nBeads-1);
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, ")\n");
+        centre[mtype] = MoleculeType[i].nBeads - 1; //}}}
+      } else {
+        // 'proper' index used
+        centre[mtype] = id - 1; // the index should start from zero
       }
     }
   } //}}}
 
   // number of bins //{{{
-  double max_dist = 0.5 * Min3(BoxLength.x, BoxLength.y, BoxLength.z);
+  double max_dist = 0.5 * Min3(Box.Length.x, Box.Length.y, Box.Length.z);
   int bins = ceil(max_dist / width); //}}}
 
+// TODO: sizeof ...argh!
   // allocate memory for density arrays //{{{
-  double ***rho = malloc(Counts.TypesOfBeads*sizeof(double **));
-  double ***rho_2 = malloc(Counts.TypesOfBeads*sizeof(double **));
+//double ***rho = malloc(Counts.TypesOfMolecules * sizeof(double **));
+//double ***rho_2 = malloc(Counts.TypesOfMolecules * sizeof(double **));
+  double ***rho = malloc(Counts.TypesOfBeads * sizeof ***rho);
+  double ***rho_2 = malloc(Counts.TypesOfBeads * sizeof ***rho_2);
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    rho[i] = malloc(Counts.TypesOfMolecules*sizeof(double *));
-    rho_2[i] = malloc(Counts.TypesOfMolecules*sizeof(double *));
+//  rho[i] = malloc(Counts.TypesOfMolecules * sizeof(double *));
+//  rho_2[i] = malloc(Counts.TypesOfMolecules * sizeof(double *));
+    rho[i] = malloc(Counts.TypesOfMolecules * sizeof **rho[i]);
+    rho_2[i] = malloc(Counts.TypesOfMolecules * sizeof **rho_2[i]);
     for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      rho[i][j] = calloc(bins,sizeof(double));
-      rho_2[i][j] = calloc(bins,sizeof(double));
+//    rho[i][j] = calloc(bins,sizeof(double));
+//    rho_2[i][j] = calloc(bins,sizeof(double));
+      rho[i][j] = calloc(bins, sizeof *rho[i][j]);
+      rho_2[i][j] = calloc(bins, sizeof *rho_2[i][j]);
     }
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
-
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-    fprintf(stdout, "Chosen molecule types:");
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      if (MoleculeType[i].Use) {
-        fprintf(stdout, " %s", MoleculeType[i].Name);
-      }
-    }
-    putchar('\n');
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
   // open input coordinate file //{{{
@@ -293,13 +256,14 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
   count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
 
   // main loop //{{{
   count = 0; // count timesteps in the main loop
   int count_vcf = start - 1; // count timesteps from the beginning
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count++;
     count_vcf++;
@@ -308,39 +272,46 @@ int main(int argc, char *argv[]) {
       fflush(stdout);
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
-
-    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
-    // join molecules if un-joined coordinates provided //{{{
+    // read & join molecules //{{{
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
+    // join molecules if un-joined coordinates provided
     if (!joined) {
-      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+      // transform coordinates into fractional ones for non-orthogonal box
+      ToFractionalCoor(Counts.Beads, &Bead, Box);
+      RemovePBCMolecules(Counts, Box, BeadType, &Bead, MoleculeType, Molecule);
     } //}}}
 
+  // TODO: sizeof ...argh!
     // allocate memory for temporary density arrays //{{{
-    double ***temp_rho = malloc(Counts.TypesOfBeads*sizeof(double **));
+//  double ***temp_rho = malloc(Counts.TypesOfBeads*sizeof(double **));
+    double ***temp_rho = malloc(Counts.TypesOfBeads * sizeof ***temp_rho);
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
-      temp_rho[i] = malloc(Counts.TypesOfMolecules*sizeof(double *));
+//    temp_rho[i] = malloc(Counts.TypesOfMolecules*sizeof(double *));
+      temp_rho[i] = malloc(Counts.TypesOfMolecules * sizeof **temp_rho[i]);
       for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-        temp_rho[i][j] = calloc(bins,sizeof(double));
+//      temp_rho[i][j] = calloc(bins,sizeof(double));
+        temp_rho[i][j] = calloc(bins,sizeof *temp_rho[i][j]);
       }
     } //}}}
 
     // calculate densities //{{{
     for (int i = 0; i < Counts.Molecules; i++) {
-      int mol_type_i = Molecule[i].Type;
-      if (MoleculeType[mol_type_i].Use) {
-
+      int mtype = Molecule[i].Type;
+      if (MoleculeType[mtype].Use) {
         // determine centre to calculate densities from //{{{
         VECTOR com;
-        if (centre[mol_type_i] == -1 ) { // use molecule's centre of mass
-          com = CentreOfMass(MoleculeType[mol_type_i].nBeads, Molecule[i].Bead, Bead, BeadType);
-        } else { // use centre[mol_type_i]-th molecule's bead as com
-          com.x = Bead[Molecule[i].Bead[centre[mol_type_i]]].Position.x;
-          com.y = Bead[Molecule[i].Bead[centre[mol_type_i]]].Position.y;
-          com.z = Bead[Molecule[i].Bead[centre[mol_type_i]]].Position.z;
+        if (centre[mtype] == -1 ) { // use molecule's centre of mass
+          com = CentreOfMass(MoleculeType[mtype].nBeads, Molecule[i].Bead,
+                             Bead, BeadType);
+        } else { // use centre[mtype]-th molecule's bead as com
+          int id = Molecule[i].Bead[centre[mtype]];
+          com.x = Bead[id].Position.x;
+          com.y = Bead[id].Position.y;
+          com.z = Bead[id].Position.z;
         } //}}}
 
-        // free temporary density array //{{{
+        // zeroize temporary density array //{{{
         for (int j = 0; j < Counts.TypesOfBeads; j++) {
           for (int k = 0; k < Counts.TypesOfMolecules; k++) {
             for (int l = 0; l < bins; l++) {
@@ -350,36 +321,32 @@ int main(int argc, char *argv[]) {
         } //}}}
 
         // molecule beads //{{{
-        for (int j = 0; j < MoleculeType[mol_type_i].nBeads; j++) {
-          int bead_j = Molecule[i].Bead[j];
+        for (int j = 0; j < MoleculeType[mtype].nBeads; j++) {
+          int id = Molecule[i].Bead[j];
 
-          VECTOR dist = Distance(Bead[bead_j].Position, com, BoxLength);
-          dist.x = Length(dist);
-
+          VECTOR dist = Distance(Bead[id].Position, com, Box.Length);
+          dist.x = Length(FromFractional(dist, Box));
           if (dist.x < max_dist) {
             int k = dist.x / width;
-
-            temp_rho[Bead[bead_j].Type][mol_type_i][k]++;
+            temp_rho[Bead[id].Type][mtype][k]++;
           }
         } //}}}
 
         // monomeric beads //{{{
         for (int j = 0; j < Counts.Unbonded; j++) {
-          VECTOR dist = Distance(Bead[j].Position, com, BoxLength);
-          dist.x = Length(dist);
-
+          VECTOR dist = Distance(Bead[j].Position, com, Box.Length);
+          dist.x = Length(FromFractional(dist, Box));
           if (dist.x < max_dist) {
             int k = dist.x / width;
-
-            temp_rho[Bead[j].Type][mol_type_i][k]++;
+            temp_rho[Bead[j].Type][mtype][k]++;
           }
         } //}}}
 
         // add from temporary density array to global density arrays //{{{
         for (int j = 0; j < Counts.TypesOfBeads; j++) {
           for (int k = 0; k < bins; k++) {
-            rho[j][mol_type_i][k] += temp_rho[j][mol_type_i][k];
-            rho_2[j][mol_type_i][k] += SQR(temp_rho[j][mol_type_i][k]);
+            rho[j][mtype][k] += temp_rho[j][mtype][k];
+            rho_2[j][mtype][k] += SQR(temp_rho[j][mtype][k]);
           }
         } //}}}
       }
@@ -394,17 +361,13 @@ int main(int argc, char *argv[]) {
     }
     free(temp_rho); //}}}
 
-    if (end == count_vcf) {
-      break;
-    }
-    // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    // exit the while loop if there's no more coordinates or -e step was reached
+    if (LastStep(vcf, NULL) || end == count_vcf) {
       break;
     }
   }
   fclose(vcf);
-
+  // print last step?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -413,51 +376,78 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Last Step: %d\n", count_vcf);
   } //}}}
 
+  // write initial stuff to output density file(s) //{{{
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    if (MoleculeType[i].Use) {
+      FILE *out;
+      char str[LINE];
+      sprintf(str, "%s%s.rho", output_rho, MoleculeType[i].Name);
+      if ((out = fopen(str, "w")) == NULL) {
+        ErrorFileOpen(str, 'w');
+        exit(1);
+      }
+      fclose(out);
+    }
+  } //}}}
+
   // write densities to output file(s) //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (MoleculeType[i].Use) {
       FILE *out;
-
-      char str2[1050];
-      sprintf(str2, "%s%s.rho", output_rho, MoleculeType[i].Name);
-      if ((out = fopen(str2, "a")) == NULL) {
-        ErrorFileOpen(str2, 'a');
+      char str[LINE]; // file name <output_rho><mol_name>.rho
+      sprintf(str, "%s%s.rho", output_rho, MoleculeType[i].Name);
+      if ((out = fopen(str, "a")) == NULL) {
+        ErrorFileOpen(str, 'a');
         exit(1);
       }
+      // initial stuff to the file //{{{
+      PrintByline(out, argc, argv);
+      fprintf(out, "# for each bead type: ");
+      fprintf(out, "(1) rdp; ");
+      fprintf(out, "(2) stderr; ");
+      fprintf(out, "(3) rnp; ");
+      fprintf(out, "(4) stderr\n");
+      fprintf(out, "# columns: (1) distance;");
+      for (int i = 0; i < Counts.TypesOfBeads; i++) {
+        fprintf(out, " (%d) %s", 4*i+2, BeadType[i].Name);
+        if (i != (Counts.TypesOfBeads-1)) {
+          putc(';', out);
+        }
+      }
+      putc('\n', out); //}}}
 
       // calculate rdf
-      for (int j = 1; j < (bins-avg); j++) {
-
+      for (int j = 0; j < bins; j++) {
         // calculate volume of every shell that will be averaged
-        double shell[avg];
-        for (int k = 0; k < avg; k++) {
-          shell[k] = 4 * PI * CUBE(width) *(CUBE(j+k+1) - CUBE(j+k)) / 3;
-        }
+        double shell;
+        shell = 4 * PI * CUBE(width) *(CUBE(j+1) - CUBE(j)) / 3;
 
-        fprintf(out, "%.2f", width*(j+0.5*avg));
+        fprintf(out, "%.3f", width*(2*j+1)/2);
 
         for (int k = 0; k < Counts.TypesOfBeads; k++) {
-          double temp_rdp = 0, temp_number = 0,
-                 temp_rdp_err = 0, temp_number_err = 0;
-
-          // sum rdfs from all shells to be averaged
-          for (int l = 0; l < avg; l++) {
-            temp_rdp += rho[k][i][j+l] / (shell[l] * MoleculeType[i].Number * count);
-            temp_rdp_err += rho_2[k][i][j+l] / (shell[l] * MoleculeType[i].Number * count);
-            temp_number += rho[k][i][j+l] / MoleculeType[i].Number;
-            temp_number_err += rho_2[k][i][j+l] / MoleculeType[i].Number;
+          // print rnp/rdp to file only if there's something the given bin
+          if (rho[k][i][j] > 0) {
+            double temp_rdp = 0, temp_rnp = 0,
+                   temp_rdp_err = 0, temp_rnp_err = 0;
+            // radial number profile
+            temp_rnp = rho[k][i][j] / (MoleculeType[i].Number * count);
+            temp_rnp_err = rho_2[k][i][j] / (MoleculeType[i].Number * count);
+            // radial density profile
+            temp_rdp = temp_rnp / shell;
+            temp_rdp_err = temp_rnp_err / shell;
+            // errors
+            temp_rdp_err = sqrt(temp_rdp_err - temp_rdp);
+            temp_rnp_err = sqrt(temp_rnp_err - temp_rnp);
+            // print to file
+            fprintf(out, " %10f %10f", temp_rdp, temp_rdp_err);
+            fprintf(out, " %10f %10f", temp_rnp, temp_rnp_err);
+          } else { // otherwise print question marks (for gnuplot)
+            fprintf(out, "          ?          ?");
+            fprintf(out, "          ?          ?");
           }
-
-          temp_rdp_err = sqrt(temp_rdp_err - temp_rdp);
-          temp_number_err = sqrt(temp_number_err - temp_number);
-
-          // print average value to output file
-          fprintf(out, " %10f %10f", temp_rdp/avg, temp_rdp_err/avg);
-          fprintf(out, " %10f %10f", temp_number/avg, temp_number_err/avg);
         }
         putc('\n',out);
       }
-
       fclose(out);
     }
   } //}}}

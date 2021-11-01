@@ -1,5 +1,8 @@
 #include "Options.h"
 
+// TODO: make the bool Functions() into ints - -1 for option not present; 0 for
+//       present; 1 for error. Then, use switch(Function()) in utils
+
 // CommonHelp() //{{{
 /**
  * Function to print help for common options, either for `-h` help option
@@ -12,42 +15,38 @@ void CommonHelp(bool error) {
   } else {
     ptr = stdout;
   }
-
-  fprintf(ptr, "   <standard options>\n");
-  fprintf(ptr, "      -i <name>      use input .vsf file different from traject.vsf\n");
-//fprintf(ptr, "      -b <name>      file containing bond alternatives to FIELD\n");
-  fprintf(ptr, "      -v             verbose output\n");
-  fprintf(ptr, "      --silent       no output (overrides verbose option)\n");
-  fprintf(ptr, "      -h             print this help and exit\n");
-  fprintf(ptr, "      --version      print version number and exit\n");
+  fprintf(ptr, "   [standard options]\n");
+  fprintf(ptr, "      -i <name>     input vtf structure file \
+(default: traject.vs)\n");
+  fprintf(ptr, "      -v            verbose output\n");
+  fprintf(ptr, "      --silent      no output (overrides verbose option)\n");
+  fprintf(ptr, "      -h            print this help and exit\n");
+  fprintf(ptr, "      --version     print version number and exit\n");
 } //}}}
 
 // CommonOptions() //{{{
 /**
  * Function for options common to most of the utilities.
  */
-// TODO: copy vsf_file to old_name; then if vsf_file[0] == '\0', copy old_name back to vsf_file
-void CommonOptions(int argc, char **argv, char **vsf_file,
-                   bool *verbose, bool *silent, bool *script) {
+void CommonOptions(int argc, char **argv, char *vsf_file,
+                   bool *verbose, bool *silent, int length) {
 
-  // -i <name> option - filename of input structure file //{{{
-  // save provided file name
-  char old_name[LINE];
-  strcpy(old_name, *vsf_file);
+  // -i <name> option - input structure file //{{{
   // test if '-i' option is there
-  if (FileOption(argc, argv, "-i", vsf_file)) {
+  char name[LINE] = {'\0'};
+  if (FileOption(argc, argv, "-i", name, length)) {
     exit(1);
   }
-  // copy back the old name if '-i' option is not present
-  if (*vsf_file[0] == '\0') {
-    strcpy(*vsf_file, old_name);
+  // copy the name if '-i' option is present
+  if (name[0] != '\0') {
+    snprintf(vsf_file, LINE, "%s", name);
   }
   // test if structure file ends with '.vsf' or '.vtf'
   int ext = 2;
   char extension[2][5];
   strcpy(extension[0], ".vsf");
   strcpy(extension[1], ".vtf");
-  if (ErrorExtension(*vsf_file, ext, extension) == -1) {
+  if (ErrorExtension(vsf_file, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -55,8 +54,6 @@ void CommonOptions(int argc, char **argv, char **vsf_file,
   *verbose = BoolOption(argc, argv, "-v");
   // --silent option - silent mode
   SilentOption(argc, argv, verbose, silent);
-  // --script - meant for when output is routed to file, so don't use flush & \r
-  *script = BoolOption(argc, argv, "--script"); // do not use \r & co.
 } //}}}
 
 // SilentOption() //{{{
@@ -135,7 +132,7 @@ bool ExcludeOption(int argc, char **argv, COUNTS Counts,
           YellowText(STDERR_FILENO);
           fprintf(stderr, "%s", argv[i+1+j]);
           RedText(STDERR_FILENO);
-          fprintf(stderr, " - molecule\n\n");
+          fprintf(stderr, " molecule\n\n");
           ResetColour(STDERR_FILENO);
           ErrorMoleculeType(Counts, *MoleculeType);
           return(true);
@@ -163,17 +160,31 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
     if (strcmp(argv[i], "-j") == 0) {
       // wrong argument to -j option //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "Missing argument to '-j' option ");
-        fprintf(stderr, "(or filename beginning with a dash)!\n");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "-j");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing output file name");
+        fprintf(stderr, " (or the file name begins with '-')\n\n");
+        ResetColour(STDERR_FILENO);
         return(true);
       } //}}}
-      strcpy(joined_vcf, argv[i+1]);
-      // test if <joined.vcf> filename ends with '.vcf' (required by VMD) //{{{
+      snprintf(joined_vcf, LINE, "%s", argv[i+1]);
+      // test if <joined.vcf> filename ends with '.vcf' //{{{
       char *dot = strrchr(joined_vcf, '.');
       if (!dot || (strcmp(dot, ".vcf") && strcmp(dot, ".vtf"))) {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m does not have .vcf ending!\n", joined_vcf);
-        fprintf(stderr, "\033[0m");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "-j");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - file ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", joined_vcf);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " must have .vcf ending\n\n");
+        ResetColour(STDERR_FILENO);
         return(true);
       } //}}}
     }
@@ -185,13 +196,12 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
 // BeadTypeOption() //{{{
 /**
  * Option to choose which bead types to use for calculation. If the option
- * is absent, all bead types are switched to `Use = true`. Argument: `-bt
- * <name(s)>`
+ * is absent, all bead types are switched to the specified 'bool use' value.
  */
 bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
                     COUNTS Counts, BEADTYPE **BeadType) {
 
-  // specify what bead types to use - either specified by '-bt' option or all
+  // specify what bead types to use - either specified by 'opt' or use all
   int types = -1;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
@@ -200,7 +210,18 @@ bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
       while (++types < argc && argv[types][0] != '-') {
         int type = FindBeadType(argv[types], Counts, *BeadType);
         if (type == -1) {
-          fprintf(stderr, "Bead type '%s' does not exist in structure file ('%s' option)!\n", argv[types], opt);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", opt);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - non-existent ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", argv[types]);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " bead type\n\n");
+          ResetColour(STDERR_FILENO);
+          ErrorBeadType(Counts, *BeadType);
           return(true);
         }
 
@@ -219,8 +240,7 @@ bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
 
 // BoolOption() //{{{
 /**
- * Function for any boolean option (i.e. without argument). The option
- * (e.g. `--script`) is an argument of this function.
+ * Function for any boolean option (i.e. without argument).
  */
 bool BoolOption(int argc, char **argv, char *opt) {
   for (int i = 1; i < argc; i++) {
@@ -233,8 +253,7 @@ bool BoolOption(int argc, char **argv, char *opt) {
 
 // IntegerOption() //{{{
 /**
- * Function for any option with integer argument. The option (e.g. `-n`)
- * is an argument of this function.
+ * Function for any option with integer argument.
  */
 bool IntegerOption(int argc, char **argv, char *opt, int *value) {
 
@@ -242,16 +261,24 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
     if (strcmp(argv[i], opt) == 0) {
       // Error - missing argument
       if ((i+1) >= argc) {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "Missing numeric argument for \033[1;33m%s\033[1;31m option!\n", opt);
-        fprintf(stderr, "\033[0m");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing numeric argument\n\n");
+        ResetColour(STDERR_FILENO);
         return(true);
       }
       // Error - non-numeric
       if (!IsInteger(argv[i+1])) {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "Non-numeric argement for \033[1;33m%s\033[1;31m option!\n", opt);
-        fprintf(stderr, "\033[0m");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - argument must be non-negative whole number\n\n");
+        ResetColour(STDERR_FILENO);
         return(true);
       }
       *value = atoi(argv[i+1]);
@@ -263,8 +290,7 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
 
 // DoubleOption() //{{{
 /**
- * Function for any option with double argument. The option (e.g. `-n`)
- * is an argument of this function.
+ * Function for any option with double argument.
  */
 bool DoubleOption(int argc, char **argv, char *opt, double *value) {
 
@@ -272,16 +298,24 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value) {
     if (strcmp(argv[i], opt) == 0) {
       // Error - missing argument
       if ((i+1) >= argc) {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "Missing numeric argument for \033[1;33m%s\033[1;31m option!\n", opt);
-        fprintf(stderr, "\033[0m");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing numeric argument\n\n");
+        ResetColour(STDERR_FILENO);
         return(true);
       }
       // Error - non-numeric
       if (!IsPosDouble(argv[i+1])) {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "Non-numeric argement for \033[1;33m%s\033[1;31m option!\n", opt);
-        fprintf(stderr, "\033[0m");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - argument must be positive number\n\n");
+        ResetColour(STDERR_FILENO);
         return(true);
       }
       *value = atof(argv[i+1]);
@@ -291,12 +325,13 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value) {
   return(false);
 } //}}}
 
+// TODO: join with IntegerOption and add max number of arguments as a parameter
 // MultiIntegerOption() //{{{
 /**
- * Function for any option with two integer arguments. The option (e.g. `-n`)
- * is an argument of this function.
+ * Function for any option with two or more (up to 100) integer arguments.
  */
-bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *values) {
+bool MultiIntegerOption(int argc, char **argv, char *opt,
+                        int *count, int *values) {
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
@@ -306,9 +341,14 @@ bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *value
       while ((arg) < argc && argv[arg][0] != '-') {
         // Error - non-numeric or missing argument
         if (!IsInteger(argv[arg])) {
-          fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "Error: option \033[1;33m%s\033[1;31m - non-numeric argement(s)\n", opt);
-          fprintf(stderr, "\033[0m");
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", opt);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - all argument(s) must be");
+          fprintf(stderr, " non-negative whole number(s)\n\n");
+          ResetColour(STDERR_FILENO);
           return true;
         }
         values[n] = atoi(argv[arg]);
@@ -316,10 +356,13 @@ bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *value
         arg = i+1+n;
         // warning - too many numeric arguments
         if (n == 100) {
-          fprintf(stderr, "\033[1;33m");
-          fprintf(stderr, "Warning: Option \033[1;36m%s\033[1;33m", opt);
-          fprintf(stderr, " - too many numberic arguments; only the first 100 used\n");
-          fprintf(stderr, "\033[0m");
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", opt);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - too many arguments; only the first 100 used\n\n");
+          ResetColour(STDERR_FILENO);
           *count = n;
           return true;
         }
@@ -333,33 +376,50 @@ bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *value
 
 // MultiDoubleOption() //{{{
 /**
- * Function for any option with two double arguments. The option (e.g. `-n`)
- * is an argument of this function.
+ * Function for any option with two or more (up to 100) double arguments.
  */
-bool MultiDoubleOption(int argc, char **argv, char *opt, int *count, double *values) {
+bool MultiDoubleOption(int argc, char **argv, char *opt,
+                       int *count, double *values) {
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       int n = 0; // number of arguments
       // read doubles
       int arg = i+1+n;
-      while ((arg) < argc && argv[arg][0] != '-') {
+//    while ((arg) < argc && argv[arg][0] != '-') {
+      // A = arg < argc; B = argv[arg][0] == '-'; C = IsDouble(argv[arg])
+      // A B C | we want | A and ((B and C) or (!B and C)) = A and C
+      // ----------------|------------------------------------------
+      // 1 1 1 | 1       | 1
+      // 1 1 0 | 0       | 0
+      // 1 0 1 | 1       | 1
+      // 0 0 0 | 0       | 0
+      // 0 1 1 | 0       | 0
+      // 0 1 0 | 0       | 0
+      while (arg < argc && IsDouble(argv[arg])) { // see expression table up
         // Error - non-numeric argument
-        if (!IsPosDouble(argv[arg])) {
-          fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "Error: option \033[1;33m%s\033[1;31m - non-numeric argement(s)\n", opt);
-          fprintf(stderr, "\033[0m");
-          return true;
-        }
+//      if (!IsPosDouble(argv[arg])) {
+//        RedText(STDERR_FILENO);
+//        fprintf(stderr, "\nError: ");
+//        YellowText(STDERR_FILENO);
+//        fprintf(stderr, "%s", opt);
+//        RedText(STDERR_FILENO);
+//        fprintf(stderr, " - argument(s) must be positive number(s)\n\n");
+//        ResetColour(STDERR_FILENO);
+//        return true;
+//      }
         values[n] = atof(argv[arg]);
         n++;
         arg = i+1+n;
         // warning - too many numeric arguments
         if (n == 100) {
-          fprintf(stderr, "\033[1;33m");
-          fprintf(stderr, "Warning: Option \033[1;36m%s\033[1;33m", opt);
-          fprintf(stderr, " - too many numberic arguments; only first 100 used\n");
-          fprintf(stderr, "\033[0m");
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", opt);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - too many arguments; only the first 100 used\n\n");
+          ResetColour(STDERR_FILENO);
           *count = n;
           return true;
         }
@@ -374,43 +434,64 @@ bool MultiDoubleOption(int argc, char **argv, char *opt, int *count, double *val
 // FileIntsOptions() //{{{
 /**
  * Function for any option with a file name and up to 100 integer
- * arguments. The option is an argument of this function.
+ * arguments.
  */
-bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, char *file) {
+bool FileIntsOption(int argc, char **argv, char *opt, int *values,
+                    int *count, char *file) {
 
   int n = 0;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       // Error - no output file name
-      if ((i+1) >= argc || argv[i+1][0] == '-' ||
-          (argv[i+1][0] >= '0' && argv[i+1][0] <= '9')) {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "Error: option \033[1;33m%s\033[1;31m - missing output file name", opt);
-        fprintf(stderr, " (or the file name begins with '-' or a number)\n");
-        fprintf(stderr, "\033[0m");
+      if ((i+1) >= argc || argv[i+1][0] == '-') {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing output file name");
+        fprintf(stderr, " (or the file name begins with '-')\n\n");
+        ResetColour(STDERR_FILENO);
         return false;
       }
-      strcpy(file, argv[i+1+n]);
+      snprintf(file, LINE, "%s", argv[i+1]);
       // read integers
       while ((i+2+n) < argc && argv[i+2+n][0] != '-') {
         // Error - non-numeric or missing argument
         if (!IsInteger(argv[i+2+n])) {
-          fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "Error: option \033[1;33m%s\033[1;31m - non-numeric argement(s)\n", opt);
-          fprintf(stderr, "\033[0m");
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", opt);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - argument must be non-negative whole number\n\n");
+          ResetColour(STDERR_FILENO);
           return true;
         }
         values[n] = atoi(argv[i+2+n]);
         n++;
         // warning - too many numeric arguments
         if (n == 100) {
-          fprintf(stderr, "\033[1;33m");
-          fprintf(stderr, "Warning: Option \033[1;36m%s\033[1;33m", opt);
-          fprintf(stderr, " - too many numberic arguments; only first 100 used\n");
-          fprintf(stderr, "\033[0m");
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", opt);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - too many arguments; only the first 100 used\n\n");
+          ResetColour(STDERR_FILENO);
           *count = n;
           return true;
         }
+      }
+      if (n == 0) {
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing numeric argument(s)\n\n");
+        ResetColour(STDERR_FILENO);
+        return true;
       }
     }
   }
@@ -423,23 +504,26 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, c
 /**
  * Generic option for file name. The option is an argument of this function.
  */
-bool FileOption(int argc, char **argv, char *opt, char **name) {
-
-  (*name)[0] = '\0';
+bool FileOption(int argc, char **argv, char *opt,
+                char *name, int length) {
+  name[0] = '\0';
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       // wrong argument to the option
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\033[1;33m");
-        fprintf(stderr, "\nMissing argument to \033[1;36m%s\033[1;33m option ", opt);
-        fprintf(stderr, "(or filename beginning with a dash)!\n\n");
-        fprintf(stderr, "\033[0m");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing output file name");
+        fprintf(stderr, " (or the file name begins with '-')\n\n");
+        ResetColour(STDERR_FILENO);
         return(true);
       }
-      strcpy(*name, argv[i+1]);
+      snprintf(name, LINE, "%s", argv[i+1]);
     }
   }
-
   return(false);
 } //}}}
 
@@ -454,19 +538,31 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
   *moltype = -1;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
-      // Error - missing or wrong argument
+      // Error - missing or wrong argument //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "Missing argument for \033[1;33m%s\033[1;31m option (or molecule name beginning with a dash)!\n", opt);
-        fprintf(stderr, "\033[0m");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing output file name");
+        fprintf(stderr, " (or the file name begins with '-')\n\n");
+        ResetColour(STDERR_FILENO);
         return(true);
-      }
+      } //}}}
       *moltype = FindMoleculeType(argv[i+1], Counts, *MoleculeType);
       if (*moltype == -1) {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "Error: molecule \033[1;33m%s\033[1;31m does not exist in structure file", argv[i+1]);
-        fprintf(stderr, "(\033[1;33m%s\033[1;31m option)!\n\n", opt);
-        fprintf(stderr, "\033[0m");
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - non-existent ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", argv[i+1]);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " molecule\n\n");
+        ResetColour(STDERR_FILENO);
         ErrorMoleculeType(Counts, *MoleculeType);
         return(true);
       }
@@ -476,46 +572,104 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
   return(false);
 } //}}}
 
+// TODO: why not use MoleculeType[].Use flag? Actually, I need to get rid of
+//       the flags from the structures
+// TODO: why not bool *moltype?
 // MoleculeTypeOption2() //{{{
 /**
- * Generic option for molecule types. The option is an argument of this
- * function.
+ * Generic option for molecule types that can take multiple arguments. The
+ * option is an argument of this function.
  */
-bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
+bool MoleculeTypeOption2(int argc, char **argv, char *opt, int *moltype,
                          COUNTS Counts, MOLECULETYPE **MoleculeType) {
 
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       // set all moltypes not to be used
       for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-        (*moltype)[j] = 0;
+        moltype[j] = 0;
       }
       // Error - missing or wrong argument //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "Missing argument for \033[1;33m%s\033[1;31m option (or molecule name beginning with a dash)!\n", opt);
-        fprintf(stderr, "\033[0m");
-        return(true);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, "\nError: ");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "%s", opt);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - missing molecule name");
+        fprintf(stderr, " (or the name begins with '-')\n\n");
+        ResetColour(STDERR_FILENO);
+        ErrorMoleculeType(Counts, *MoleculeType);
+        return true;
       } //}}}
       // read molecule(s) names
       int j = 0;
       while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
         if (type == -1) { // is argv[i+1+j] in vsf?
-          fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "Error: molecule \033[1;33m%s\033[1;31m does not exist in the coordinate file ", argv[i+1+j]);
-          fprintf(stderr, "(\033[1;33m%s\033[1;31m option)!\n\n", opt);
-          fprintf(stderr, "\033[0m");
+          RedText(STDERR_FILENO);
+          fprintf(stderr, "\nError: ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", opt);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " - non-existent ");
+          YellowText(STDERR_FILENO);
+          fprintf(stderr, "%s", argv[i+1+j]);
+          RedText(STDERR_FILENO);
+          fprintf(stderr, " molecule\n\n");
+          ResetColour(STDERR_FILENO);
           ErrorMoleculeType(Counts, *MoleculeType);
-          return(true);
+          return true;
         }
-        (*moltype)[type] = 1;
+        moltype[type] = 1;
         j++;
       }
     }
   }
 
-  return(false);
+  return false;
+} //}}}
+
+// MoleculeTypeIntOption() //{{{
+/**
+ * Generic option for a single molecule type followed by a single integer
+ * number. The option is an argument of this function.
+ */
+bool MoleculeTypeIntOption(int argc, int i, char **argv, char *opt,
+                           int *moltype, int *value, COUNTS Counts,
+                           MOLECULETYPE *MoleculeType) {
+  *moltype = -1;
+  if (strcmp(argv[i], opt) == 0) {
+    // Error - missing or wrong arguments //{{{
+    if ((i+2) >= argc || argv[i+1][0] == '-' || !IsInteger(argv[i+2])) {
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", opt);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - two arguments required (<mol name> <int>)");
+      ResetColour(STDERR_FILENO);
+      return true;
+    } //}}}
+    *moltype = FindMoleculeType(argv[i+1], Counts, MoleculeType);
+    if (*moltype == -1) {
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", opt);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - non-existent ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%s", argv[i+1]);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " molecule\n\n");
+      ResetColour(STDERR_FILENO);
+      ErrorMoleculeType(Counts, MoleculeType);
+      return true;
+    }
+    *value = atoi(argv[i+2]);
+  }
+  return false;
 } //}}}
 
 // StartEndTime() //{{{

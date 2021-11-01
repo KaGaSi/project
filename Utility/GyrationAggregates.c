@@ -6,7 +6,7 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stderr;
   } else {
     ptr = stdout;
-    fprintf(stdout, "\
+    fprintf(ptr, "\
 GyrationAggregates calculates gyration tensor for aggregates and determines \
 shape descriptors like radius of gyration, acylindricity, asphericity, or \
 relative shape anisotropy. By default, it calculates per-timestep averages, \
@@ -17,21 +17,27 @@ range.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <input.agg> <output> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <in.agg> <output> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>              input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <input.agg>          input agg file\n");
-  fprintf(ptr, "   <output>             output file with data during simulation run\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      --joined          specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "   <input>    input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <in.agg>   input agg file\n");
+  fprintf(ptr, "   <output>   output file with per-timestep data\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      --joined          specify that <input> contains joined \
+coordinates\n");
   fprintf(ptr, "      -bt               specify bead types to be used for calculation (default is all)\n");
-  fprintf(ptr, "      -m <name(s)>      agg size means number of <name(s)> molecule types in an aggregate\n");
+  fprintf(ptr, "      -m <name(s)>      agg size means number of <name(s)> \
+molecules in an aggregate\n");
   fprintf(ptr, "      -x <name(s)>      exclude aggregates containing only specified molecule(s)\n");
-  fprintf(ptr, "      --only <name(s)>  use only aggregates composed of specified molecule(s)\n");
-  fprintf(ptr, "      -ps <file>        save per-size averages to a file\n");
-  fprintf(ptr, "      -n <int> <int>    calculate for aggregate sizes in given range\n");
-  fprintf(ptr, "      -st <int>         starting timestep for calculation (only affects per-size and overall averages)\n");
-  fprintf(ptr, "      -e <end>          ending timestep for calculation (only affects per-size and overall averages)\n");
+  fprintf(ptr, "      -only <name(s)>   use only aggregates composed \
+of specified molecule(s)\n");
+  fprintf(ptr, "      -ps <file>        save per-size averages to a <file>\n");
+  fprintf(ptr, "      -n <int> <int>    calculate for aggregate sizes in \
+given range\n");
+  fprintf(ptr, "      -st <int>         starting timestep for calculation \
+(only affects per-size and overall averages)\n");
+  fprintf(ptr, "      -e <end>          ending timestep for calculation \
+(only affects per-size and overall averages)\n");
   CommonHelp(error);
 } //}}}
 
@@ -51,10 +57,9 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
-
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
@@ -68,12 +73,12 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
+        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-bt") != 0 &&
         strcmp(argv[i], "-m") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
-        strcmp(argv[i], "--only") != 0 &&
+        strcmp(argv[i], "-only") != 0 &&
         strcmp(argv[i], "-ps") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
@@ -88,9 +93,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -98,38 +102,33 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <input.agg> - filename of input agg file //{{{
-  char input_agg[LINE];
-  strcpy(input_agg, argv[++count]);
-
-  // test if <input.agg> filename ends with '.agg'
-  char extension[2][5];
+  // <in.agg> - input aggregate file //{{{
+  char input_agg[LINE] = "";
+  snprintf(input_agg, LINE, "%s", argv[++count]);
+  // test if <in.agg> ends with '.agg'
   int ext = 1;
+  char extension[2][5];
   strcpy(extension[0], ".agg");
-  if (ErrorExtension(input_agg, ext, extension)) {
+  if (ErrorExtension(input_agg, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
 
-  // <output> - filename with data during simulation run //{{{
+  // <output> - filename with data during simulation run
   char output[LINE];
-  strcpy(output, argv[++count]); //}}}
+  snprintf(output, LINE, "%s", argv[++count]);
 
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
-  // are provided coordinates joined? //{{{
-  bool joined = BoolOption(argc, argv, "--joined"); //}}}
-
-  // write per-agg averages to a file? //{{{
-  char *per_size_file = calloc(LINE,sizeof(char));
-  if (FileOption(argc, argv, "-ps", &per_size_file)) {
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
+  // are provided coordinates joined?
+  bool joined = BoolOption(argc, argv, "--joined");
+  // write per-agg averages to a file?
+  char per_size_file[LINE] = "";
+  if (FileOption(argc, argv, "-ps", per_size_file, LINE)) {
     exit(0);
-  } //}}}
-
+  }
   int start, end;
   StartEndTime(argc, argv, &start, &end); //}}}
 
@@ -142,21 +141,21 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
-              &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+              &Box, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
   // '-n' option - range of aggregation numbers //{{{
-  int range_As[2], test = 2;
-  range_As[0] = 1;
-  range_As[1] = Counts.Molecules;
+  int range_As[100], // TODO: 100 only until IntegerOption is changed
+      test = 2;                   //
+  range_As[0] = 1;                // by default, use all aggregation numbers
+  range_As[1] = Counts.Molecules; //
   if (MultiIntegerOption(argc, argv, "-n", &test, range_As)) {
     exit(1);
   }
@@ -170,21 +169,19 @@ int main(int argc, char *argv[]) {
     ResetColour(STDERR_FILENO);
     exit(1);
   }
-
   // make sure first number is larger
   if (range_As[0] > range_As[1]) {
-    int tmp = range_As[0];
-    range_As[0] = range_As[1];
-    range_As[1] = tmp;
+    SwapInt(&range_As[0], &range_As[1]);
   } //}}}
 
   // '-m' option //{{{
-  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int));
-  // all are to be used without '-m' option
+  int specific_moltype_for_size[Counts.TypesOfMolecules];
+  // set all to be used when '-m' option is missing
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
   }
-  if (MoleculeTypeOption2(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
+  if (MoleculeTypeOption2(argc, argv, "-m", specific_moltype_for_size,
+                          Counts, &MoleculeType)) {
     exit(1);
   } //}}}
 
@@ -192,24 +189,23 @@ int main(int argc, char *argv[]) {
   if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
     exit(1);
   }
-
+  // TODO those ridiculous flags are everywhere!
   // copy Use flag to Write (for '-x' option)
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = MoleculeType[i].Use;
   }
-
   // count total number of chains in excluded aggs
   long int exclude_count_chains = 0;
   // count total number of excluded aggs
   long int exclude_count_agg = 0; //}}}
 
-  // '--only' option //{{{
-  int *only_specific_moltype_aggregates = calloc(Counts.TypesOfMolecules,sizeof(int));
-  if (MoleculeTypeOption2(argc, argv, "--only", &only_specific_moltype_aggregates, Counts, &MoleculeType)) {
+  // '-only' option //{{{
+  int only_specific_moltype_aggregates[Counts.TypesOfMolecules];
+  if (MoleculeTypeOption2(argc, argv, "-only", only_specific_moltype_aggregates,
+                          Counts, &MoleculeType)) {
     exit(1);
   }
-
-  // is '--only' used?
+  // is '-only' used?
   bool only = false;
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     if (only_specific_moltype_aggregates[i] == 1) {
@@ -235,11 +231,7 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(output, 'w');
     exit(1);
   }
-
-  // print command to output file
-  putc('#', out);
-  PrintCommand(out, argc, argv);
-
+  PrintByline(out, argc, argv);
   // print legend line to output file
   count = 1;
   fprintf(out, "# column: ");
@@ -257,7 +249,6 @@ int main(int argc, char *argv[]) {
   fprintf(out, ", (%d) <eigen.y>_n", count++);
   fprintf(out, ", (%d) <eigen.z>_n", count++);
   putc('\n', out);
-
   fclose(out); //}}}
 
   double distance; // <distance> parameter from Aggregate command
@@ -271,51 +262,47 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   char line[LINE];
-  fgets(line, sizeof(line), agg);
-  fgets(line, sizeof(line), agg); //}}}
+  fgets(line, sizeof line, agg);
+  fgets(line, sizeof line, agg); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
 
   // allocate Aggregate struct //{{{
-  AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
+  AGGREGATE *Aggregate = calloc(Counts.Molecules, sizeof (AGGREGATE));
   for (int i = 0; i < Counts.Molecules; i++) {
     // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
-    Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
+    Aggregate[i].Monomer = calloc(Counts.Unbonded, sizeof *Aggregate[i].Monomer);
     // assumes all bonded beads can be in one aggregate - memory-heavy, but reliable
-    Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
+    Aggregate[i].Bead = calloc(Counts.Bonded, sizeof *Aggregate[i].Bead);
     // maximum of all molecules can be in one aggregate
-    Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
+    Aggregate[i].Molecule = calloc(Counts.Molecules, sizeof *Aggregate[i].Molecule);
   } //}}}
 
-  // print information - verbose output //{{{
-  if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+  if (verbose) { //{{{
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
+  // TODO memory allocation... Aaargh!
   // allocate memory for sum of various things //{{{
   // numbers of aggregates of all possibe sizes
-  int *agg_counts_sum = calloc(Counts.Molecules,sizeof(int));
+  int *agg_counts_sum = calloc(Counts.Molecules, sizeof *agg_counts_sum);
   // total radius of gyration: [size][0] normal sum, [size][1] sum of Rg*mass, [size][2] Rg*mass^2
-  double **Rg_sum = malloc(Counts.Molecules*sizeof(double *));
+  double (*Rg_sum)[3] = calloc(Counts.Molecules, sizeof *Rg_sum);
   // total square of radius of gyration: [size][0] normal sum, [size][1] sum of Rg^2*mass, [size][2] Rg^2*mass^2
-  double **sqrRg_sum = malloc(Counts.Molecules*sizeof(double *));
+  double (*sqrRg_sum)[3] = calloc(Counts.Molecules, sizeof *sqrRg_sum);
   // relative shape anisotropy: only normal sum
-  double *Anis_sum = calloc(Counts.Molecules,sizeof(double));
+  double *Anis_sum = calloc(Counts.Molecules, sizeof *Anis_sum);
   // acylindricity: only normal sum
-  double *Acyl_sum = calloc(Counts.Molecules,sizeof(double));
+  double *Acyl_sum = calloc(Counts.Molecules, sizeof *Acyl_sum);
   // asphericity: only normal sum
-  double *Aspher_sum = calloc(Counts.Molecules,sizeof(double));
+  double *Aspher_sum = calloc(Counts.Molecules, sizeof *Aspher_sum);
   // gyration tensor eigenvalues
-  VECTOR *eigen_sum = calloc(Counts.Molecules,sizeof(VECTOR));
+  VECTOR *eigen_sum = calloc(Counts.Molecules,sizeof (VECTOR));
   // total mass of aggregates: [size][0] normal sum, [size][1] sum of squares
-  long int **mass_sum = malloc(Counts.Molecules*sizeof(int *));
+  long int (*mass_sum)[2] = calloc(Counts.Molecules, sizeof *mass_sum);
   // number of molecule types in aggregates: [size][mol type] only normal sum
   int **molecules_sum = malloc(Counts.Molecules*sizeof(int *));
   for (int i = 0; i < Counts.Molecules; i++) {
-    Rg_sum[i] = calloc(3,sizeof(double));
-    sqrRg_sum[i] = calloc(3,sizeof(double));
-    mass_sum[i] = calloc(2,sizeof(long int));
     molecules_sum[i] = calloc(Counts.TypesOfMolecules,sizeof(int));
   } //}}}
 
@@ -325,10 +312,11 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
   // main loop //{{{
   count = 0; // count timesteps
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count++;
     // print step? //{{{
@@ -337,28 +325,33 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count);
     } //}}}
 
-    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
-    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
-    // join agggregates if un-joined coordinates provided //{{{
+    // TODO: will change (probably)
+    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead,
+                   MoleculeType, &Molecule, Index);
+    // TODO: fractionals - should the calculatio be in fractionals? I guess so.
+    //       why though? The aggregates are joined and that's that...
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
+    // transform coordinates into fractional ones for non-orthogonal box
+    ToFractionalCoor(Counts.Beads, &Bead, Box);
     if (!joined) {
-      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-      RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-    } //}}}
+      RemovePBCMolecules(Counts, Box, BeadType, &Bead,
+                         MoleculeType, Molecule);
+      RemovePBCAggregates(distance, Aggregate, Counts, Box.Length,
+                          BeadType, &Bead, MoleculeType, Molecule);
+    }
 
+    // TODO: allocation... Aaargh!
     // allocate arrays for the timestep //{{{
-    int *agg_counts_step = calloc(Counts.Molecules,sizeof(int));
-    double **Rg_step = malloc(Counts.Molecules*sizeof(double *));
-    double **sqrRg_step = malloc(Counts.Molecules*sizeof(double *));
-    double *Anis_step = calloc(Counts.Molecules,sizeof(double));
-    double *Acyl_step = calloc(Counts.Molecules,sizeof(double));
-    double *Aspher_step = calloc(Counts.Molecules,sizeof(double));
-    VECTOR *eigen_step = calloc(Counts.Molecules,sizeof(VECTOR));
-    for (int i = 0; i < Counts.Molecules; i++) {
-      Rg_step[i] = calloc(3,sizeof(double));
-      sqrRg_step[i] = calloc(3,sizeof(double));
-    } //}}}
+    int *agg_counts_step = calloc(Counts.Molecules, sizeof *agg_counts_step);
+    double (*Rg_step)[3] = calloc(Counts.Molecules, sizeof *Rg_step);
+    double (*sqrRg_step)[3] = calloc(Counts.Molecules, sizeof *sqrRg_step);
+    double *Anis_step = calloc(Counts.Molecules, sizeof *Anis_step);
+    double *Acyl_step = calloc(Counts.Molecules, sizeof *Acyl_step);
+    double *Aspher_step = calloc(Counts.Molecules,sizeof *Aspher_step);
+    VECTOR *eigen_step = calloc(Counts.Molecules, sizeof (VECTOR)); //}}}
 
+  // TODO check
     // calculate shape descriptors //{{{
     double mass_step[2] = {0}; // total mass of aggregates in a step: [0] normal, [1] sum of squares
     for (int i = 0; i < Counts.Aggregates; i++) {
@@ -378,7 +371,7 @@ int main(int argc, char *argv[]) {
         continue;
       } //}}}
 
-      // if '--only' is used, use only aggregates composed the specified molecule(s) //{{{
+      // if '-only' is used, use only aggregates composed the specified molecule(s) //{{{
       test = true;
       if (only) {
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
@@ -423,7 +416,8 @@ int main(int argc, char *argv[]) {
           }
         } //}}}
 
-        VECTOR eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+      // TODO fractionals
+        VECTOR eigen = Gyration(n, list, Counts, BeadType, &Bead);
 
         free(list); // free array of bead ids for gyration calculation
 
@@ -527,27 +521,23 @@ int main(int argc, char *argv[]) {
       agg_counts_step[0] += agg_counts_step[i];
     }
     // <R_G>
-    fprintf(out, " %8.5f %8.5f %8.5f", Rg_step[0][0]/agg_counts_step[0], Rg_step[0][1]/mass_step[0], Rg_step[0][2]/mass_step[1]);
+    fprintf(out, " %lf %lf %lf", Rg_step[0][0]/agg_counts_step[0], Rg_step[0][1]/mass_step[0], Rg_step[0][2]/mass_step[1]);
     // <R_G^2>
-    fprintf(out, " %8.5f %8.5f %8.5f", sqrRg_step[0][0]/agg_counts_step[0], sqrRg_step[0][1]/mass_step[0], sqrRg_step[0][2]/mass_step[1]);
+    fprintf(out, " %lf %lf %lf", sqrRg_step[0][0]/agg_counts_step[0], sqrRg_step[0][1]/mass_step[0], sqrRg_step[0][2]/mass_step[1]);
     // relative shape anisotropy
-    fprintf(out, " %8.5f", Anis_step[0]/agg_counts_step[0]);
+    fprintf(out, " %lf", Anis_step[0]/agg_counts_step[0]);
     // acylindricity
-    fprintf(out, " %8.5f", Acyl_step[0]/agg_counts_step[0]);
+    fprintf(out, " %lf", Acyl_step[0]/agg_counts_step[0]);
     // asphericity
-    fprintf(out, " %8.5f", Aspher_step[0]/agg_counts_step[0]);
+    fprintf(out, " %lf", Aspher_step[0]/agg_counts_step[0]);
     // eigenvalues
-    fprintf(out, " %8.5f %8.5f %8.5f", eigen_step[0].x/agg_counts_step[0], eigen_step[0].y/agg_counts_step[0], eigen_step[0].z/agg_counts_step[0]);
+    fprintf(out, " %lf %lf %lf", eigen_step[0].x/agg_counts_step[0], eigen_step[0].y/agg_counts_step[0], eigen_step[0].z/agg_counts_step[0]);
     putc('\n', out);
 
     fclose(out); //}}}
 
     // free memory //{{{
     free(agg_counts_step);
-    for (int i = 0; i < Counts.Molecules; i++) {
-      free(Rg_step[i]);
-      free(sqrRg_step[i]);
-    }
     free(Rg_step);
     free(sqrRg_step);
     free(Anis_step);
@@ -556,15 +546,13 @@ int main(int argc, char *argv[]) {
     free(eigen_step); //}}}
 
     // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    if (LastStep(vcf, NULL)) {
       break;
     }
   }
   fclose(vcf);
   fclose(agg);
-
-  // print last step? //{{{
+  // print last step count?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -572,8 +560,8 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stdout, "Last Step: %d\n", count);
   } //}}}
-  //}}}
 
+// TODO check
   // calculate per-size averages? //{{{
   if (per_size_file[0] != '\0') {
     // open file //{{{
@@ -692,13 +680,9 @@ int main(int argc, char *argv[]) {
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
-  free(per_size_file);
   FreeAggregate(Counts, &Aggregate);
   FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   for (int i = 0; i < Counts.Molecules; i++) {
-    free(Rg_sum[i]);
-    free(sqrRg_sum[i]);
-    free(mass_sum[i]);
     free(molecules_sum[i]);
   }
   free(molecules_sum);
@@ -710,9 +694,7 @@ int main(int argc, char *argv[]) {
   free(Acyl_sum);
   free(Aspher_sum);
   free(eigen_sum);
-  free(stuff);
-  free(specific_moltype_for_size);
-  free(only_specific_moltype_aggregates); //}}}
+  free(stuff); //}}}
 
   return 0;
 }

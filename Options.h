@@ -42,10 +42,10 @@ void CommonHelp(bool error); //}}}
  * \param [out] input.vsf    .vsf structure file
  * \param [out] verbose      verbose output?
  * \param [out] silent       no output?
- * \apram [out] script       output to file?
+ * \param [in]  length       maximum name length for files
  */
-void CommonOptions(int argc, char **argv, char **vsf_file,
-                   bool *verbose, bool *silent, bool *script); //}}}
+void CommonOptions(int argc, char **argv, char *vsf_file,
+                   bool *verbose, bool *silent, int length); //}}}
 
 //// VerboseLongOption() //{{{
 /**
@@ -162,7 +162,7 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value);
 
 // MultiIntegerOption() //{{{
 /**
- * \brief Function for any option with two integer arguments.
+ * \brief Function for any option with multiple integer arguments.
  *
  * \param [in]  argc   number of program's arguments
  * \param [in]  argv   program's arguments
@@ -171,12 +171,13 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value);
  * \param [out] values array of integer values of given option
  * \return `true` or `false` for error
  */
-bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *values);
+bool MultiIntegerOption(int argc, char **argv, char *opt,
+                        int *count, int *values);
 // }}}
 
 // MultiDoubleOption() //{{{
 /**
- * \brief Function for any option with two integer arguments.
+ * \brief Function for any option with multiple integer arguments.
  *
  * \param [in]  argc   number of program's arguments
  * \param [in]  argv   program's arguments
@@ -185,7 +186,8 @@ bool MultiIntegerOption(int argc, char **argv, char *opt, int *count, int *value
  * \param [out] values array of double values of given option
  * \return `true` or `false` for error
  */
-bool MultiDoubleOption(int argc, char **argv, char *opt, int *count, double *values);
+bool MultiDoubleOption(int argc, char **argv, char *opt,
+                       int *count, double *values);
 // }}}
 
 // FileIntsOption() //{{{
@@ -201,20 +203,23 @@ bool MultiDoubleOption(int argc, char **argv, char *opt, int *count, double *val
  * \param [out] file   file name (first argument of option)
  * \return `true` or `false` for error
  */
-bool FileIntsOption(int argc, char **argv, char *opt, int *values, int *count, char *file);
+bool FileIntsOption(int argc, char **argv, char *opt, int *values,
+                    int *count, char *file);
  //}}}
 
 // FileOption() //{{{
 /**
  * \brief Function for any option with filename.
  *
- * \param [in]  argc  number of program's arguments
- * \param [in]  argv  program's arguments
- * \param [in]  opt   option switch (e.g. array containing `-n`)
- * \param [out] name  array containing the filename
+ * \param [in]  argc     number of program's arguments
+ * \param [in]  argv     program's arguments
+ * \param [in]  opt      option switch (e.g. array containing `-n`)
+ * \param [out] name     array containing the filename
+ * \param [in]  length   maximum name length
  * \return `true` or `false` for error
  */
-bool FileOption(int argc, char **argv, char *opt, char **name); //}}}
+bool FileOption(int argc, char **argv, char *opt,
+                char *name, int length); //}}}
 
 // MoleculeTypeOption() //{{{
 /**
@@ -243,8 +248,26 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
  * \param [in]  MoleculeType information about molecule types
  * \return `true` or `false` for error
  */
-bool MoleculeTypeOption2(int argc, char **argv, char *opt, int **moltype,
+bool MoleculeTypeOption2(int argc, char **argv, char *opt, int *moltype,
                          COUNTS Counts, MOLECULETYPE **MoleculeType); //}}}
+
+// MoleculeTypeIntOption() //{{{
+/**
+ * \brief Function for any option with molecule name followed by an integer.
+ *
+ * \param [in]  argc         number of program's arguments
+ * \param [in]  i            position in the program command
+ * \param [in]  argv         program's arguments
+ * \param [in]  opt          option switch (e.g. array containing `-n`)
+ * \param [out] moltype      the molecule name
+ * \param [out] value        the value after molecule name
+ * \param [in]  Counts       numbers of beads, molecules, etc.
+ * \param [in]  MoleculeType information about molecule types
+ * \return `true` or `false` for error
+ */
+bool MoleculeTypeIntOption(int argc, int i, char **argv, char *opt,
+                           int *moltype, int *value, COUNTS Counts,
+                           MOLECULETYPE *MoleculeType); //}}}
 
 // StartEndTime() //{{{
 /**

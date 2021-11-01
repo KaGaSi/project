@@ -6,7 +6,7 @@ void Help(char cmd[50], bool error) { //{{{
     ptr = stderr;
   } else {
     ptr = stdout;
-    fprintf(stdout, "\
+    fprintf(ptr, "\
 JoinAggregates removes periodic boundary conditions from aggregates. It is \
 meant as a replacement of '-j' option in Aggregates utility when this option is \
 omitted, but later the joined coordinates are required. Distance and beadtypes \
@@ -17,12 +17,12 @@ with the <input.agg> for further analysis.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <input.agg> <output.vcf> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <input.agg> <output.vcf> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <input.agg>       input agg file\n");
-  fprintf(ptr, "   <output.vcf>      output file with joined coordinates (vcf format)\n");
-  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "   <input>     input coordinate file (either vcf or vtf format)\n");
+  fprintf(ptr, "   <in.agg>    input agg file\n");
+  fprintf(ptr, "   <out.vcf>   output file with joined coordinates (vcf format)\n");
+  fprintf(ptr, "   [options]\n");
   fprintf(ptr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
@@ -45,10 +45,9 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
-
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
@@ -75,10 +74,9 @@ int main(int argc, char *argv[]) {
 
   count = 0; // count mandatory arguments
 
-  // <input.vcf> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  // <input> - input coordinate file //{{{
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -86,18 +84,25 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <input.agg> - filename of input file with aggregate information //{{{
-  char input_agg[LINE];
-  strcpy(input_agg, argv[++count]); //}}}
-
-  // <output.vcf> - filename of output vcf file //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-  // test if <output.vcf> ends with '.vcf' (required by VMD)
+  // <in.agg> - input aggregate file //{{{
+  char input_agg[LINE] = "";
+  snprintf(input_agg, LINE, "%s", argv[++count]);
+  // test if <input.agg> ends with '.agg'
   int ext = 1;
   char extension[2][5];
+  strcpy(extension[0], ".agg");
+  if (ErrorExtension(input_agg, ext, extension) == -1) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <out.vcf> - output vcf file //{{{
+  char output_vcf[LINE] = "";
+  snprintf(output_vcf, LINE, "%s", argv[++count]);
+  // test if <output.vcf> ends with '.vcf'
+  ext = 1;
   strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
+  if (ErrorExtension(output_vcf, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -105,15 +110,12 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
   // number of steps to skip per one used //{{{
   int skip = 0;
   if (IntegerOption(argc, argv, "-sk", &skip)) {
     exit(1);
   } //}}}
-
   int start, end;
   StartEndTime(argc, argv, &start, &end); //}}}
 
@@ -126,16 +128,15 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
-              &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+              &Box, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
   // write all molecules //{{{
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -146,53 +147,47 @@ int main(int argc, char *argv[]) {
   int contacts; // <contacts> parameter from Aggregate command - not used here
   ReadAggCommand(BeadType, Counts, input_coor, input_agg, &distance, &contacts);
 
-  // open input aggregate file and skip the first lines (Aggregate command & blank line) //{{{
+  // TODO: will change when the agg format changes (at least when Byline is
+  //       added to Aggregates*)
+  // open input aggregate file and skip the first two lines
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
     ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
   char line[LINE];
-  fgets(line, sizeof(line), agg);
-  fgets(line, sizeof(line), agg); //}}}
+  fgets(line, sizeof line, agg);
+  fgets(line, sizeof line, agg); //}}}
 
   // write all bead types //{{{
   for (int i = 0; i < Counts.TypesOfBeads; i++) {
     BeadType[i].Write = true;
   } //}}}
 
-  // write pbc to <output.vcf> //{{{
+  // write byline to <output.vcf> //{{{
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
     ErrorFileOpen(output_vcf, 'w');
     exit(1);
   }
-  fprintf(out, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
+  PrintByline(out, argc, argv);
   fclose(out); //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
-
   // allocate Aggregate struct //{{{
-  AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
+  AGGREGATE *Aggregate = calloc(Counts.Molecules, sizeof (AGGREGATE));
   for (int i = 0; i < Counts.Molecules; i++) {
     // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
-    Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
+    Aggregate[i].Monomer = calloc(Counts.Unbonded, sizeof *Aggregate[i].Monomer);
     // assumes all bonded beads can be in one aggregate - memory-heavy, but reliable
-    Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
+    Aggregate[i].Bead = calloc(Counts.Bonded, sizeof *Aggregate[i].Bead);
     // maximum of all molecules can be in one aggregate
-    Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
+    Aggregate[i].Molecule = calloc(Counts.Molecules, sizeof *Aggregate[i].Molecule);
   } //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-
-    fprintf(stdout, "\n   Starting from %d. timestep\n", start);
-    fprintf(stdout, "   Every %d. timestep used\n", skip+1);
-    if (end != -1) {
-      fprintf(stdout, "   Ending with %d. timestep\n", end);
-    }
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
   // open input coordinate file //{{{
@@ -201,13 +196,15 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
-  count = SkipCoorAggSteps(vcf, input_coor, agg, input_agg, Counts, start, silent);
+  count = SkipCoorAggSteps(vcf, input_coor, agg,
+                           input_agg, Counts, start, silent);
 
   // main loop //{{{
   count = 0; // count timesteps in the main loop
   int count_vcf = start - 1; // count timesteps from the beginning
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count++;
     count_vcf++;
@@ -217,12 +214,17 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
-    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
-//  PrintAggregate(Counts, Index, MoleculeType, Molecule, Bead, BeadType, Aggregate);
-    RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-    RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+    // TODO: will change (probably)
+    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead,
+                   MoleculeType, &Molecule, Index);
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
+    // transform coordinates into fractional ones for non-orthogonal box
+    ToFractionalCoor(Counts.Beads, &Bead, Box);
+    RemovePBCMolecules(Counts, Box, BeadType, &Bead, MoleculeType, Molecule);
+    RemovePBCAggregates(distance, Aggregate, Counts, Box.Length,
+                        BeadType, &Bead, MoleculeType, Molecule);
+    FromFractionalCoor(Counts.Beads, &Bead, Box); //}}}
 
     // open output .vcf file for appending //{{{
     if ((out = fopen(output_vcf, "a")) == NULL) {
@@ -230,10 +232,12 @@ int main(int argc, char *argv[]) {
       exit(1);
     } //}}}
 
-    WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
+    WriteCoorIndexed(out, Counts, BeadType, Bead,
+                           MoleculeType, Molecule, stuff, Box);
 
     fclose(out);
 
+    // TODO: redo properly when aggregate reading is done&dusted
     // skip every 'skip' steps //{{{
     for (int i = 0; i < skip; i++) {
       // test whether at vcf's eof or reached end due to -e option //{{{
@@ -255,21 +259,14 @@ int main(int argc, char *argv[]) {
       SkipAgg(agg, input_agg);
     } //}}}
 
-    // -e option - exit main loop if last step is done
-    if (end == count_vcf) {
-      break;
-    }
-    // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    // exit the while loop if there's no more coordinates or -e step was reached
+    if (LastStep(vcf, NULL) || end == count_vcf) {
       break;
     }
   }
-
   fclose(vcf);
   fclose(agg);
-
-  // print last step? //{{{
+  // print last step count?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -277,13 +274,11 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stdout, "Last Step: %d\n", count_vcf);
   } //}}}
-  //}}}
 
   // free memory - to make valgrind happy //{{{
   FreeAggregate(Counts, &Aggregate);
   FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
-  free(stuff);
-  //}}}
+  free(stuff); //}}}
 
   return 0;
 }

@@ -140,13 +140,11 @@ void ErrorOption(char *option) {
  * Error when non-existent bead is used.
  */
 void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType) {
-  RedText(STDERR_FILENO);
   fprintf(stderr, "       Possible bead names: %s\n", BeadType[0].Name);
   for (int i = 1; i < Counts.TypesOfBeads; i++) {
     fprintf(stderr, "                            %s\n", BeadType[i].Name);
   }
   putc('\n', stderr);
-  ResetColour(STDERR_FILENO);
 } //}}}
 
 // ErrorMoleculeType() //{{{
@@ -154,13 +152,11 @@ void ErrorBeadType(COUNTS Counts, BEADTYPE *BeadType) {
  * Error when non-existent molecule is used.
  */
 void ErrorMoleculeType(COUNTS Counts, MOLECULETYPE *MoleculeType) {
-  RedText(STDERR_FILENO);
   fprintf(stderr, "       Possible molecule names: %s\n", MoleculeType[0].Name);
   for (int i = 1; i < Counts.TypesOfMolecules; i++) {
     fprintf(stderr, "                            %s\n", MoleculeType[i].Name);
   }
   putc('\n', stderr);
-  ResetColour(STDERR_FILENO);
 } //}}}
 
 // ErrorPrintLine() //{{{
@@ -170,11 +166,8 @@ void ErrorMoleculeType(COUNTS Counts, MOLECULETYPE *MoleculeType) {
  */
 void ErrorPrintLine(char split[30][100], int words) {
   if (words == 0) {
-    RedText(STDERR_FILENO);
     fprintf(stderr, "       Blank line encountered");
-    ResetColour(STDERR_FILENO);
   } else {
-    RedText(STDERR_FILENO);
     fprintf(stderr, "       Wrong line: ");
     YellowText(STDERR_FILENO);
     for (int i = 0; i < words; i++) {

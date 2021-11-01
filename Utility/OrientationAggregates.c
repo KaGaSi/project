@@ -1,7 +1,5 @@
 #include "../AnalysisTools.h"
 
-// TODO: orientation for aggregates? Is there a point? Well, there is - e.g., under shear...
-
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -22,18 +20,23 @@ only one column for 'A' bead type).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <input.agg> <width> <output> <agg size(s)> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <in.agg> <width> <output> <size(s)> \
+[options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <input.agg>       input agg file\n");
-  fprintf(ptr, "   <width>           width of a single bin of the distribution\n");
-  fprintf(ptr, "   <output>          output file with orientation (automatic '#.txt' ending)\n");
-  fprintf(ptr, "   <agg size(s)>     aggregate size(s) to calculate orientation for\n");
-  fprintf(ptr, "   <options>\n");
+  fprintf(ptr, "   <input>     input coordinate file (vcf or vtf format)\n");
+  fprintf(ptr, "   <in.agg>    input agg file\n");
+  fprintf(ptr, "   <width>     width of a single bin\n");
+  fprintf(ptr, "   <output>    output orientation file \
+(automatic '<size>.txt' ending)\n");
+  fprintf(ptr, "   <size(s)>   aggregate sizes to calculate orientation for\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      --joined       specify that <input> contains joined \
+coordinates\n");
   fprintf(ptr, "      -n <ints>      bead indices (multiple of 2 <ints>; default: 1 2)\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
-  fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
+  fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> \
+molecules in an aggregate\n");
   CommonHelp(error);
 } //}}}
 
@@ -69,10 +72,9 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
-
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
@@ -86,6 +88,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
+        strcmp(argv[i], "--joined") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-n") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
@@ -101,9 +104,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -111,15 +113,14 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <input.agg> - input agg file //{{{
-  char input_agg[LINE];
-  strcpy(input_agg, argv[++count]);
-
-  // test if <input.agg> ends with '.agg'
+  // <in.agg> - input aggregate file //{{{
+  char input_agg[LINE] = "";
+  snprintf(input_agg, LINE, "%s", argv[++count]);
+  // test if <in.agg> ends with '.agg'
   int ext = 1;
   char extension[2][5];
   strcpy(extension[0], ".agg");
-  if (ErrorExtension(input_agg, ext, extension)) {
+  if (ErrorExtension(input_agg, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -133,22 +134,16 @@ int main(int argc, char *argv[]) {
   }
   double width = atof(argv[count]); //}}}
 
-  // <output.txt> - filename with bead densities //{{{
-  char output_rho[LINE];
-  strcpy(output_rho, argv[++count]); //}}}
+  // <output> - file name with orientational parameter distribution
+  char output[LINE];
+  snprintf(output, LINE, "%s", argv[++count]);
 
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
-  // number of bins to average //{{{
-  int avg = 1;
-  if (IntegerOption(argc, argv, "-n", &avg)) {
-    exit(1);
-  } //}}}
-
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
+  // are provided coordinates joined?
+  bool joined = BoolOption(argc, argv, "--joined");
   int start, end;
   StartEndTime(argc, argv, &start, &end); //}}}
 
@@ -161,105 +156,105 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
-              &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+              &Box, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
   // '-m' option //{{{
-  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int));
-  // all are to be used without '-m' option
+  int specific_moltype_for_size[Counts.TypesOfMolecules];
+  // set all to be used when '-m' option is missing
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
   }
-  if (MoleculeTypeOption2(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
+  if (MoleculeTypeOption2(argc, argv, "-m", specific_moltype_for_size,
+                          Counts, &MoleculeType)) {
     exit(1);
   } //}}}
 
   // '-n' option - specify bead ids //{{{
   int bead[100] = {0}, // specified bead indices
-      number_of_angles, // total number of angles to calculate TODO: why is it called this?
-      number_of_beads = 2, // number of parameters to -n
-      beads_per_angle = 2, // the numbers must come in pairs
-      test = 0;
-  bead[0] = 1; // default ids for angle
+      number_of_beads = 0, // number of parameters to -n
+      beads_per_set = 2; // the numbers must come in pairs
+  bead[0] = 1; // default ids
   bead[1] = 2;
-  if (MultiIntegerOption(argc, argv, "-n", &test, bead)) {
+  if (MultiIntegerOption(argc, argv, "-n", &number_of_beads, bead)) {
     exit(1);
   }
-  if (test != 0) { // -n is present
-    number_of_beads = test;
+  for (int i = 0; i < number_of_beads; i++) {
+    bead[i]--; // ids should start with zero
   }
-  number_of_angles = number_of_beads / beads_per_angle;
-
-  // Error: wrong number of integers //{{{
-  if ((number_of_beads%beads_per_angle) != 0) {
+  // errors & warnings //{{{
+  // Error: wrong number of integers
+  if (number_of_beads == 0 || (number_of_beads%beads_per_set) != 0) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
     YellowText(STDERR_FILENO);
     fprintf(stderr, "-n");
     RedText(STDERR_FILENO);
-    fprintf(stderr, " - number of bead ids must be divisible by two\n\n");
+    fprintf(stderr, " - bead ids must be in pairs\n\n");
     ResetColour(STDERR_FILENO);
     exit(1);
-  } //}}}
-
-  for (int i = 0; i < number_of_beads; i++) {
-    // Warning - too high id for specific molecule //{{{
-    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-      if (MoleculeType[j].Use && bead[i] >= MoleculeType[j].nBeads) {
-//      if ((i%2) == 1 || bead[i+1] <= MoleculeType[j].nBeads) { // warning if one is higher
-//        fprintf(stderr, "\033[1;33m");
-//        fprintf(stderr, "\nWarning: '-n' option - %d is larger than the number of beads in %s; using %d instead\n", bead[i], MoleculeType[j].Name, MoleculeType[j].nBeads);
-//        fprintf(stderr, "\033[0m");
-//      } else if ((i%2) == 0 && bead[i+1] > MoleculeType[j].nBeads) {
-//        fprintf(stderr, "\033[1;33m");
-//        fprintf(stderr, "\nWarning: '-n' option - both %d and %d are larger than the number of beads in %s; this pair is ignored\n", bead[i], bead[i+1], MoleculeType[j].Name);
-//        fprintf(stderr, "\033[0m");
-//      }
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
-        YellowText(STDERR_FILENO);
-        fprintf(stderr, "-n");
-        RedText(STDERR_FILENO);
-        fprintf(stderr, " - index ");
-        YellowText(STDERR_FILENO);
-        fprintf(stderr, "%d", bead[i]);
-        RedText(STDERR_FILENO);
-        fprintf(stderr, " is larger than the number of beads in molecule ");
-        YellowText(STDERR_FILENO);
-        fprintf(stderr, "%s", MoleculeType[j].Name);
-        fprintf(stderr, "\n\n");
-        ResetColour(STDERR_FILENO);
-      }
-    } //}}}
-    // Error - two same beads //{{{
-    if ((i%2) == 0 && bead[i] == bead[i+1]) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: \033[1;33m-n\033[1;31m option - each pair must contain two different bead ids (invalid: %d %d)\n", bead[i], bead[i+1]);
-      fprintf(stderr, "\033[0m");
+  }
+  // check all provided ids
+  for (int i = 0; i < number_of_beads; i += beads_per_set) {
+    // Error - two same beads
+    if (bead[i] == bead[i+1]) {
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nWarning: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "-n");
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - two different bead ids are required (invalid pair: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "%d %d", bead[i], bead[i+1]);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, ")\n");
+      ResetColour(STDERR_FILENO);
       Help(argv[0], true);
       exit(1);
-    } //}}}
-    bead[i]--; // ids should start with zero
+    }
+    // Warning - id too high
+    for (int j = 0; j < Counts.TypesOfMolecules; j++) {
+      if (MoleculeType[j].Use && (bead[i] >= MoleculeType[j].nBeads ||
+                                  bead[i+1] >= MoleculeType[j].nBeads)) {
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, "\nWarning: ");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "-n");
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, " - index in ");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "%d %d", bead[i], bead[i+1]);
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, " pair is larger than the number of beads in ");
+        CyanText(STDERR_FILENO);
+        fprintf(stderr, "%s", MoleculeType[j].Name);
+        YellowText(STDERR_FILENO);
+        fprintf(stderr, " molecule;");
+    // TODO: does it really use the highest molecule's id
+        fprintf(stderr, " using %d instead\n", MoleculeType[j].nBeads);
+        ResetColour(STDERR_FILENO);
+      }
+    }
   } //}}}
+  int number_of_pairs = number_of_beads / beads_per_set;
+  //}}}
 
+// TODO: allocation... aaargh
   // <agg sizes> - aggregate sizes for calculation //{{{
-  int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
-  int **agg_mols = malloc(Counts.Molecules*sizeof(int *));
+  int **agg_sizes = malloc(sizeof(int *) * Counts.Molecules);
+  int **agg_mols = malloc(sizeof(int *) * Counts.Molecules);
   for (int i = 0; i < Counts.Molecules; i++) {
-    agg_sizes[i] = calloc(2,sizeof(int));
-    agg_mols[i] = calloc(Counts.TypesOfMolecules, sizeof(int));
+    agg_sizes[i] = calloc(2, sizeof *agg_sizes[i]);
+    agg_mols[i] = calloc(Counts.TypesOfMolecules, sizeof *agg_mols[i]);
   }
-
   int aggs = 0; // number of aggregate sizes
-
   while (++count < argc && argv[count][0] != '-') {
 
     // Error - non-numeric argument //{{{
@@ -267,56 +262,19 @@ int main(int argc, char *argv[]) {
       ErrorNaN("<agg sizes>");
       exit(1);
     } //}}}
-
     agg_sizes[aggs][0] = atoi(argv[count]);
-
-    // write initial stuff to output density file //{{{
-    FILE *out;
-    char str[LINE];
-    strcpy(str, output_rho);
-
-    char str2[1030];
-    sprintf(str2, "%s%d.txt", str, agg_sizes[aggs][0]);
-    strcpy(str, str2);
-    if ((out = fopen(str, "w")) == NULL) {
-      ErrorFileOpen(str, 'w');
-      exit(1);
+    // ensure output string isn't too long for attaching <size>.vcf
+    if (agg_sizes[aggs][0] < 10) {
+      output[LINE-1-4] = '\0';
+    } else if (agg_sizes[aggs][0] < 100) {
+      output[LINE-2-4] = '\0';
+    } else if (agg_sizes[aggs][0] < 1000) {
+      output[LINE-3-4] = '\0';
+    } else if (agg_sizes[aggs][0] < 10000) {
+      output[LINE-4-4] = '\0';
+    } else {
+      output[LINE-100] = '\0';
     }
-
-    // print command to output file
-    putc('#', out);
-    PrintCommand(out, argc, argv);
-
-    // print first lines of output file - molecule names and beadtype pairs //{{{
-    fprintf(out, "# columns: (1) Orientation order parameter");
-    int count_print = 1;
-    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-      fprintf(out, "\n#          %s:", MoleculeType[i].Name);
-      for (int j = 0; j < number_of_beads; j += 2) {
-        // are ids right?
-        switch(test_ids(bead[j], bead[j+1], MoleculeType[i].nBeads)) {
-          case 0: // bead[k] & bead[k+1] too high
-            continue;
-          case 1: // bead[k] too high & bead[k+1] okay
-            if ((bead[j+1]+1) != MoleculeType[i].nBeads) {
-              fprintf(out, " (%d) %d-%d,", ++count_print, MoleculeType[i].nBeads, bead[j+1]+1);
-            }
-            break;
-          case 2: // bead[k] okay & bead[k+1] too high
-            if ((bead[j]+1) != MoleculeType[i].nBeads) {
-              fprintf(out, " (%d) %d-%d,", ++count_print, bead[j]+1, MoleculeType[i].nBeads);
-            }
-            break;
-          case 3: // bead[k] & bead[k+1] okay
-            fprintf(out, " (%d) %d-%d,", ++count_print, bead[j]+1, bead[j+1]+1);
-            break;
-        }
-      }
-    }
-    putc('\n', out); //}}}
-
-    fclose(out); //}}}
-
     aggs++; // number of aggregate sizes
   } //}}}
 
@@ -324,53 +282,48 @@ int main(int argc, char *argv[]) {
   int contacts; // <contacts> parameter from Aggregate command - not used here
   ReadAggCommand(BeadType, Counts, input_coor, input_agg, &distance, &contacts);
 
-  // open input aggregate file and skip the first lines (Aggregate command & blank line) //{{{
+  // open input aggregate file and skip the first lines
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
     ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
   char line[LINE];
-  fgets(line, sizeof(line), agg);
-  fgets(line, sizeof(line), agg); //}}}
+  fgets(line, sizeof line, agg);
+  fgets(line, sizeof line, agg); //}}}
 
   // number of bins
   int bins = 1.5 / width;
 
   // array for distributions //{{{
-  double *orientation[Counts.TypesOfMolecules][number_of_angles][aggs],
-         avg_orientation[Counts.TypesOfMolecules][number_of_angles][aggs];
+  double *orientation[Counts.TypesOfMolecules][number_of_pairs][aggs],
+         avg_orientation[Counts.TypesOfMolecules][number_of_pairs][aggs];
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
-    for (int j = 0; j < number_of_angles; j++) {
+    for (int j = 0; j < number_of_pairs; j++) {
       for (int k = 0; k < aggs; k++) {
-        orientation[i][j][k] = calloc(bins, sizeof(double));
+        orientation[i][j][k] = calloc(bins, sizeof *orientation[i][j][k]);
         avg_orientation[i][j][k] = 0;
       }
     }
   } //}}}
 
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
-
   // allocate Aggregate struct //{{{
-  AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
+  AGGREGATE *Aggregate = calloc(Counts.Molecules, sizeof (AGGREGATE));
   for (int i = 0; i < Counts.Molecules; i++) {
-    // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
-    Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
+    // at most, all molecules can be in one aggregate
+    Aggregate[i].Molecule = calloc(Counts.Molecules,
+                                   sizeof *Aggregate[i].Molecule);
     // assumes all bonded beads can be in one aggregate - memory-heavy, but reliable
-    Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
-    // maximum of all molecules can be in one aggregate
-    Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
+    Aggregate[i].Bead = calloc(Counts.Bonded, sizeof *Aggregate[i].Bead);
+    // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
+    Aggregate[i].Monomer = calloc(Counts.Unbonded,
+                                  sizeof *Aggregate[i].Monomer);
   } //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-    fprintf(stdout, "Chosen aggregate sizes:");
-    for (int i = 0; i < aggs; i++) {
-      fprintf(stdout, " %d", agg_sizes[i][0]);
-    }
-    putchar('\n');
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
   // open input coordinate file //{{{
@@ -379,9 +332,10 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
-  count = SkipCoorAggSteps(vcf, input_coor, agg, input_agg, Counts, start, silent);
+  count = SkipCoorAggSteps(vcf, input_coor, agg,
+                           input_agg, Counts, start, silent);
 
   // use z axis as a normal TODO: option for axis //{{{
   VECTOR normal;
@@ -392,6 +346,7 @@ int main(int argc, char *argv[]) {
   // main loop //{{{
   count = 0; // count timesteps in the main loop
   int count_vcf = start - 1; // count timesteps from the beginning
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count++;
     count_vcf++;
@@ -401,9 +356,21 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
-    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-    RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
+    // TODO: will change (probably)
+    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead,
+                   MoleculeType, &Molecule, Index);
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
+    if (!joined) {
+      // transform coordinates into fractional ones for non-orthogonal box
+      ToFractionalCoor(Counts.Beads, &Bead, Box);
+      RemovePBCMolecules(Counts, Box, BeadType, &Bead,
+                         MoleculeType, Molecule);
+      RemovePBCAggregates(distance, Aggregate, Counts, Box.Length,
+                          BeadType, &Bead, MoleculeType, Molecule);
+      // transform back to 'normal' coordinates for non-orthogonal box
+      FromFractionalCoor(Counts.Beads, &Bead, Box);
+    }
 
     // calculate orientation //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
@@ -481,23 +448,21 @@ int main(int argc, char *argv[]) {
 
         // count mol types in the aggregate
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          agg_mols[correct_size][Molecule[Aggregate[i].Molecule[j]].Type]++;
+          int mol = Aggregate[i].Molecule[j];
+          int mtype = Molecule[mol].Type;
+          agg_mols[correct_size][mtype]++;
         }
       }
     } //}}}
 
-    if (end == count_vcf) {
-      break;
-    }
-    // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    // exit the while loop if there's no more coordinates or -e step was reached
+    if (LastStep(vcf, NULL) || end == count_vcf) {
       break;
     }
   }
   fclose(vcf);
   fclose(agg);
-
+  // print last step count?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -506,19 +471,47 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Last Step: %d\n", count_vcf);
   } //}}}
 
-  // write orientation to output file(s) //{{{
+  // write distribution of orientation parameters //{{{
   for (int temp = 0; temp < aggs; temp++) {
     FILE *out;
     char str[LINE];
-    // assemble correct name
-    sprintf(str, "%s", output_rho);
-    char str2[1030];
-    sprintf(str2, "%s%d.txt", str, agg_sizes[temp][0]);
-    strcpy(str, str2);
+    // assemble correct name & open the file
+    snprintf(str, LINE, "%s%d.txt", output, agg_sizes[temp][0]);
     if ((out = fopen(str, "a")) == NULL) {
       ErrorFileOpen(str, 'a');
       exit(1);
     }
+    // write initial stuff to the file //{{{
+    PrintByline(out, argc, argv);
+    // print first lines of output file - molecule names and beadtype pairs
+    fprintf(out, "# columns: (1) Orientation order parameter");
+    int count_print = 1;
+    for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+      fprintf(out, "\n#          %s:", MoleculeType[i].Name);
+      for (int j = 0; j < number_of_beads; j += 2) {
+        // are ids right?
+        switch(test_ids(bead[j], bead[j+1], MoleculeType[i].nBeads)) {
+          case 0: // bead[k] & bead[k+1] too high
+            continue;
+          case 1: // bead[k] too high & bead[k+1] okay
+            if ((bead[j+1]+1) != MoleculeType[i].nBeads) {
+              fprintf(out, " (%d) %d-%d,", ++count_print, MoleculeType[i].nBeads, bead[j+1]+1);
+            }
+            break;
+          case 2: // bead[k] okay & bead[k+1] too high
+            if ((bead[j]+1) != MoleculeType[i].nBeads) {
+              fprintf(out, " (%d) %d-%d,", ++count_print, bead[j]+1, MoleculeType[i].nBeads);
+            }
+            break;
+          case 3: // bead[k] & bead[k+1] okay
+            fprintf(out, " (%d) %d-%d,", ++count_print, bead[j]+1, bead[j+1]+1);
+            break;
+        }
+      }
+    }
+    putc('\n', out);
+
+    fclose(out); //}}}
 
     // calculate normalisation factor
     long int normalisation[Counts.TypesOfMolecules][number_of_beads/2];
@@ -555,9 +548,8 @@ int main(int argc, char *argv[]) {
       }
       putc('\n', out);
     } //}}}
-
     // write overall averages //{{{
-    // legend line
+    // legend line //{{{
     fprintf(out, "# Average orientation order parameter");
     count = 0;
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -572,7 +564,7 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    putc('\n', out);
+    putc('\n', out); //}}}
     // data line
     putc('#', out);
     for (int i = 0; i < Counts.TypesOfMolecules; i++) {
@@ -583,74 +575,31 @@ int main(int argc, char *argv[]) {
             bead[j+1] >= mbeads) { // both higher than number beads - skip
           continue;
         }
-        fprintf(out, "%10f", avg_orientation[i][j/2][temp]/agg_sizes[temp][1]);
+        fprintf(out, " %10f", avg_orientation[i][j/2][temp]/agg_mols[temp][i]);
       }
     }
     putc('\n', out); //}}}
-
-//  // calculate rdf //{{{
-//  for (int j = 0; j < (bins-avg); j++) {
-
-//    // calculate volume of every shell that will be averaged
-//    double shell[avg];
-//    for (int k = 0; k < avg; k++) {
-//      shell[k] = 4 * PI * CUBE(width) * (CUBE(j+k+1) - CUBE(j+k)) / 3;
-//    }
-
-//    fprintf(out, "%.2f", width*(j+0.5*avg));
-
-//    for (int k = 0; k < Counts.TypesOfBeads; k++) {
-//      double temp_rdp = 0, temp_number = 0,
-//             temp_rdp_err = 0, temp_number_err = 0;
-
-//      // sum up rdfs from all shells to be averaged
-//      for (int l = 0; l < avg; l++) {
-//        temp_rdp += rho[k][i][j+l] / (shell[l] * agg_sizes[i][1]);
-//        temp_rdp_err += rho_2[k][i][j+l] / (shell[l] * agg_sizes[i][1]);
-//        temp_number += rho[k][i][j+l] / agg_sizes[i][1];
-//        temp_number_err += rho_2[k][i][j+l] / agg_sizes[i][1];
-//      }
-
-//      temp_rdp_err = sqrt(temp_rdp_err - temp_rdp);
-//      temp_number_err = sqrt(temp_number_err - temp_number);
-
-//      // print average value to output file
-//      fprintf(out, " %10f %10f", temp_rdp/avg, temp_rdp_err/avg);
-//      fprintf(out, " %10f %10f", temp_number/avg, temp_number_err/avg);
-//    }
-//    putc('\n',out);
-//  } //}}}
-
-//  fprintf(out, "# (1) Number of aggregates; Average numbers of molecules:"); //{{{
-//  count = 2;
-//  for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-//    fprintf(out," (%d) %s", count++, MoleculeType[j].Name);
-//    if (i < (Counts.TypesOfMolecules-1)) {
-//      putc(';', out);
-//    }
-//  }
-//  putc('\n', out);
-//  putc('#', out);
-//  fprintf(out," %d", agg_sizes[i][1]);
-//  for (int j = 0; j < Counts.TypesOfMolecules; j++) {
-//    fprintf(out," %lf", (double)(agg_mols[i][j])/agg_sizes[i][1]);
-//  }
-//  putc('\n', out); //}}}
-
     fclose(out);
   } //}}}
+printf("agg_sizes[0] = (%d, %d)\n", agg_sizes[0][0], agg_sizes[0][1]);
 
   // free memory - to make valgrind happy //{{{
-  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    for (int j = 0; j < number_of_pairs; j++) {
+      for (int k = 0; k < aggs; k++) {
+        free(orientation[i][j][k]);
+      }
+    }
+  }
   FreeAggregate(Counts, &Aggregate);
+  FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(stuff);
   for (int i = 0; i < Counts.Molecules; i++) {
     free(agg_sizes[i]);
     free(agg_mols[i]);
   }
   free(agg_sizes);
-  free(agg_mols);
-  free(specific_moltype_for_size); //}}}
+  free(agg_mols); //}}}
 
   return 0;
 }

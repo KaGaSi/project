@@ -1,5 +1,8 @@
 #include "../AnalysisTools.h"
 
+// TODO: add that it's only for cuboid simulation box
+// TODO add --silent option
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -17,21 +20,19 @@ layer).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <out.vsf> <out.vcf> <options>\n\n", cmd);
-  fprintf(ptr, "   <out.vsf>              output structure file");
-  fprintf(ptr, "(vsf format)\n");
-  fprintf(ptr, "   <out.vcf>              output coordinate file");
-  fprintf(ptr, "(vcf format)\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -s <float> <float>  spacing in x and y directions");
-  fprintf(ptr, "(default: 1 1)\n");
-  fprintf(ptr, "      -nm <int>           total number molecules per side");
-  fprintf(ptr, "(rewrites spacing to fit)\n");
-  fprintf(ptr, "      -g <float>          gap between walls and the layers\n");
-  fprintf(ptr, "      -f <name>           FIELD-like file (default: FIELD)\n");
-  fprintf(ptr, "      -v                  verbose output\n");
-  fprintf(ptr, "      -h                  print this help and exit\n");
-  fprintf(ptr, "      --version           print version number and exit\n");
+  fprintf(ptr, "   %s <out.vsf> <out.vcf> [options]\n\n", cmd);
+  fprintf(ptr, "   <out.vsf>   output structure file (vsf format)\n");
+  fprintf(ptr, "   <out.vcf>   output coordinate file (vcf format)\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      -s <float> <float>   spacing in x and y directions \
+(default: 1 1)\n");
+  fprintf(ptr, "      -nm <int>            total number molecules per side \
+(rewrites spacing to fit)\n");
+  fprintf(ptr, "      -g <float>           gap between walls and the layers\n");
+  fprintf(ptr, "      -f <name>            FIELD-like file (default: FIELD)\n");
+  fprintf(ptr, "      -v                   verbose output\n");
+  fprintf(ptr, "      -h                   print this help and exit\n");
+  fprintf(ptr, "      --version            print version number and exit\n");
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -50,7 +51,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
@@ -77,13 +78,38 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+  count = 0; // count arguments
+
+  // <out.vsf> - output structure file //{{{
+  char output[LINE] = "";
+  snprintf(output, LINE, "%s", argv[++count]);
+  // test if <output.vsf> ends with '.vsf'
+  int ext = 1;
+  char extension[2][5];
+  strcpy(extension[0], ".vsf");
+  if (ErrorExtension(output, ext, extension) == -1) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
+  // <out.vcf> - output vcf file //{{{
+  char output_vcf[LINE] = "";
+  snprintf(output_vcf, LINE, "%s", argv[++count]);
+  // test if <output.vcf> ends with '.vsf'
+  ext = 1;
+  strcpy(extension[0], ".vcf");
+  if (ErrorExtension(output_vcf, ext, extension)) {
+    Help(argv[0], true);
+    exit(1);
+  } //}}}
+
   // print command to stdout
   PrintCommand(stdout, argc, argv);
 
   // options before reading system data //{{{
   // '-s' option - spacing in x and y directions //{{{
   int test = 2;
-  double spacing[2];
+  double spacing[100]; // 100 in case of too many arguments provided
   spacing[0] = 1;
   spacing[1] = 1;
   if (MultiDoubleOption(argc, argv, "-s", &test, spacing)) {
@@ -112,46 +138,15 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // output verbosity
-  bool verbose = BoolOption(argc, argv, "-v");
-
   // FIELD-like file //{{{
-  char *input = calloc(LINE, sizeof(char));
-  if (FileOption(argc, argv, "-f", &input)) {
+  char input[LINE] = "";
+  if (FileOption(argc, argv, "-f", input, LINE)) {
     exit(1);
   }
   if (input[0] == '\0') {
     strcpy(input, "FIELD");
   } //}}}
-  //}}}
-
-  count = 0; // count arguments
-
-  // <out.vsf> - output structure file //{{{
-  char output[LINE];
-  strcpy(output, argv[++count]);
-
-  // test if <output.vsf> filename ends with '.vsf'
-  int ext = 1;
-  char extension[2][5];
-  strcpy(extension[0], ".vsf");
-  if (ErrorExtension(output, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
-
-  // <out.vcf> - output vcf file //{{{
-  char *output_vcf = calloc(LINE, sizeof(char));
-  char stuff[LINE];
-  strcpy(output_vcf, argv[++count]);
-
-  // test if outpuf_vcf has '.vcf' extension //{{{
-  ext = 1;
-  strcpy(extension[0], ".vcf");
-  if (ErrorExtension(output_vcf, ext, extension)) {
-    Help(argv[0], true);
-    exit(1);
-  } //}}}
+  bool verbose = BoolOption(argc, argv, "-v");
   //}}}
 
   // read info from the FIELD file //{{{
@@ -160,13 +155,13 @@ int main(int argc, char *argv[]) {
   MOLECULE *Molecule_field;
   BEAD *Bead_field;
   COUNTS Counts_field = InitCounts;
-  VECTOR BoxLength;
+  BOX Box = InitBox; // triclinic box dimensions and angles
   int *Index_field;
   PARAMS *bond_type_field;
   PARAMS *angle_type_field;
   PARAMS *dihedral_type_field;
 
-  ReadField(input, &BoxLength, &Counts_field, &BeadType_field, &Bead_field,
+  ReadField(input, &Box.Length, &Counts_field, &BeadType_field, &Bead_field,
             &Index_field, &MoleculeType_field, &Molecule_field,
             &bond_type_field, &angle_type_field, &dihedral_type_field); //}}}
 
@@ -184,7 +179,7 @@ int main(int argc, char *argv[]) {
   PARAMS *bond_type;
   PARAMS *angle_type;
   PARAMS *dihedral_type;
-  int *Index; //}}}
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i) //}}}
 
   // find bead types to be used & copy them //{{{
   /*
@@ -228,9 +223,9 @@ int main(int argc, char *argv[]) {
   // copy bonds & count bond types
   Counts.TypesOfBonds = 0;
   MoleculeType[0].nBonds = MoleculeType_field[0].nBonds;
-  MoleculeType[0].Bond = calloc(MoleculeType[0].nBonds, sizeof(int *));
+  MoleculeType[0].Bond = malloc(sizeof *MoleculeType[0].Bond *
+                                MoleculeType[0].nBonds);
   for (int j = 0; j < MoleculeType[0].nBonds; j++) {
-    MoleculeType[0].Bond[j] = calloc(3, sizeof(int));
     MoleculeType[0].Bond[j][0] = MoleculeType_field[0].Bond[j][0];
     MoleculeType[0].Bond[j][1] = MoleculeType_field[0].Bond[j][1];
     MoleculeType[0].Bond[j][2] = MoleculeType_field[0].Bond[j][2];
@@ -242,9 +237,9 @@ int main(int argc, char *argv[]) {
   // copy angles & count angles types
   Counts.TypesOfAngles = 0;
   MoleculeType[0].nAngles = MoleculeType_field[0].nAngles;
-  MoleculeType[0].Angle = calloc(MoleculeType[0].nAngles, sizeof(int *));
+  MoleculeType[0].Angle = malloc(sizeof *MoleculeType[0].Angle *
+                                 MoleculeType[0].nAngles);
   for (int j = 0; j < MoleculeType[0].nAngles; j++) {
-    MoleculeType[0].Angle[j] = calloc(4, sizeof(int));
     MoleculeType[0].Angle[j][0] = MoleculeType_field[0].Angle[j][0];
     MoleculeType[0].Angle[j][1] = MoleculeType_field[0].Angle[j][1];
     MoleculeType[0].Angle[j][2] = MoleculeType_field[0].Angle[j][2];
@@ -257,9 +252,9 @@ int main(int argc, char *argv[]) {
   // copy dihedrals & count dihedrals types
   Counts.TypesOfDihedrals = 0;
   MoleculeType[0].nDihedrals = MoleculeType_field[0].nDihedrals;
-  MoleculeType[0].Dihedral = calloc(MoleculeType[0].nDihedrals, sizeof(int *));
+  MoleculeType[0].Dihedral = malloc(sizeof *MoleculeType[0].Dihedral *
+                                    MoleculeType[0].nDihedrals);
   for (int j = 0; j < MoleculeType[0].nDihedrals; j++) {
-    MoleculeType[0].Dihedral[j] = calloc(5, sizeof(int));
     MoleculeType[0].Dihedral[j][0] = MoleculeType_field[0].Dihedral[j][0];
     MoleculeType[0].Dihedral[j][1] = MoleculeType_field[0].Dihedral[j][1];
     MoleculeType[0].Dihedral[j][2] = MoleculeType_field[0].Dihedral[j][2];
@@ -296,8 +291,8 @@ int main(int argc, char *argv[]) {
   // number of molecules in x and y directions //{{{
   int mols[2]; // maximum number of molecules in x and y directions per wall
   if (number_of_mols == 0) { // if -nm option is not used
-    mols[0] = round(BoxLength.x / spacing[0]);
-    mols[1] = round(BoxLength.y / spacing[1]);
+    mols[0] = round(Box.Length.x / spacing[0]);
+    mols[1] = round(Box.Length.y / spacing[1]);
     Counts.Molecules = mols[0] * mols[1] * 2;
   } else { // if -nm option is used
     double mols_sqrt = sqrt(number_of_mols);
@@ -306,8 +301,8 @@ int main(int argc, char *argv[]) {
     if ((mols[0]*mols[1]-number_of_mols) != 0) {
       mols[0]++;
     }
-    spacing[0] = BoxLength.x / mols[0];
-    spacing[1] = BoxLength.y / mols[1];
+    spacing[0] = Box.Length.x / mols[0];
+    spacing[1] = Box.Length.y / mols[1];
     Counts.Molecules = 2 * number_of_mols;
   }
   MoleculeType[0].Number = Counts.Molecules; //}}}
@@ -376,7 +371,7 @@ int main(int argc, char *argv[]) {
         if (layer == 0) {
           Bead[count].Position.z = 0;
         } else {
-          Bead[count].Position.z = BoxLength.z;
+          Bead[count].Position.z = Box.Length.z;
         }
         Bead[count].Index = count;
         Bead[count].Type = MoleculeType[0].Bead[0];
@@ -423,14 +418,6 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // print the command to output vcf via the timestep preamble //{{{
-  strcpy(stuff, "# Generated by: GenLayers ");
-  for (int i = 1; i < argc; i++) {
-    strcat(stuff, argv[i]);
-    strcat(stuff, " ");
-  }
-  strcat(stuff, "\n"); //}}}
-
   // write output vsf file
   WriteVsf(output, Counts, BeadType, Bead, MoleculeType, Molecule, false);
 
@@ -440,13 +427,10 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(output_vcf, 'w');
     exit(1);
   } //}}}
-
-  // write output vcf file //{{{
-  // pbc
-  fprintf(out, "pbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
-  // coordinates
-  WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
-  fclose(out); //}}}
+  PrintByline(out, argc, argv);
+  WriteCoorIndexed(out, Counts, BeadType, Bead,
+                   MoleculeType, Molecule, "\0", Box);
+  fclose(out);
 
   // print information - verbose option //{{{
   if (verbose) {
@@ -458,7 +442,7 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "(%d molecules) ", number_of_mols);
     }
     fprintf(stdout, "molecules on each wall\n");
-    VerboseOutput("\0", Counts, BoxLength, BeadType, Bead,
+    VerboseOutput("\0", Counts, Box, BeadType, Bead,
                   MoleculeType, Molecule);
     PrintBondTypes2(Counts.TypesOfBonds, bond_type);
     PrintAngleTypes2(Counts.TypesOfAngles, angle_type);
@@ -475,9 +459,7 @@ int main(int argc, char *argv[]) {
   free(dihedral_type_field);
   free(bond_type);
   free(angle_type);
-  free(dihedral_type);
-  free(output_vcf);
-  free(input); //}}}
+  free(dihedral_type); //}}}
 
   return 0;
 }
