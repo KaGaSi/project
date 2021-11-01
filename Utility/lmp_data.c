@@ -1,5 +1,7 @@
 #include "../AnalysisTools.h"
 
+// TODO triclinic box
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -14,14 +16,15 @@ dihedrals are written to the lmp data file as impropers).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <out.data> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <out.data> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <out.data>        output lammps data file\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -f <name>      FIELD-like file (default: FIELD)\n");
-  fprintf(ptr, "      --srp          add one more bead type for srp\n");
-  fprintf(ptr, "      -st <step>     timestep for creating the output file (default: last)\n");
+  fprintf(ptr, "   <input>      input coordinate file (vcf or vtf format)\n");
+  fprintf(ptr, "   <out.data>   output lammps data file\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      -f <name>    FIELD-like file (default: FIELD)\n");
+  fprintf(ptr, "      --srp        add one more bead type for srp\n");
+  fprintf(ptr, "      -st <step>   timestep for creating the output file \
+(default: last)\n");
   CommonHelp(error);
 } //}}}
 
@@ -41,7 +44,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
@@ -72,9 +75,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -82,33 +84,32 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <out.data> - output lammps data file //{{{
-  char output[LINE];
-  strcpy(output, argv[++count]); //}}}
+  // <out.data> - output lammps data file
+  char output[LINE] = "";
+  snprintf(output, LINE, "%s", argv[++count]);
 
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
 
   // custom FIELD file //{{{
-  char *input = calloc(LINE, sizeof(char));
-  if (FileOption(argc, argv, "-f", &input)) {
+  char input[LINE] = "";
+  if (FileOption(argc, argv, "-f", input, LINE)) {
     exit(1);
   }
   if (input[0] == '\0') {
     strcpy(input, "FIELD");
   } //}}}
 
-  // add srp bead type //{{{
-  bool srp = BoolOption(argc, argv, "--srp"); //}}}
+  // add srp bead type
+  bool srp = BoolOption(argc, argv, "--srp");
 
-  // timestep to create CONFIG file from //{{{
+  // timestep to create CONFIG file from
   int timestep = -1;
   if (IntegerOption(argc, argv, "-st", &timestep)) {
     exit(1);
-  } //}}}
+  }
   //}}}
 
   // print command to stdout //{{{
@@ -120,16 +121,15 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType;
   MOLECULETYPE *MoleculeType;
   BEAD *Bead;
-  int *Index;
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule;
   COUNTS Counts = InitCounts;
-  VECTOR BoxLength;
+  BOX Box;
   bool indexed;
   int struct_lines;
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
-              &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+              &Box, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
   // read FIELD to get bond, angle, and dihedral information //{{{
   BEADTYPE *bt_new;
@@ -166,9 +166,9 @@ int main(int argc, char *argv[]) {
       }
       // copy angles - vsf contains no angles
       MoleculeType[i].nAngles = mt_new[mol_field].nAngles;
-      MoleculeType[i].Angle = calloc(MoleculeType[i].nAngles, sizeof(int *));
+      MoleculeType[i].Angle = malloc(sizeof *MoleculeType[i].Angle *
+                                     MoleculeType[i].nAngles);
       for (int j = 0; j < MoleculeType[i].nAngles; j++) {
-        MoleculeType[i].Angle[j] = calloc(4, sizeof(int));
         MoleculeType[i].Angle[j][0] = mt_new[mol_field].Angle[j][0];
         MoleculeType[i].Angle[j][1] = mt_new[mol_field].Angle[j][1];
         MoleculeType[i].Angle[j][2] = mt_new[mol_field].Angle[j][2];
@@ -176,10 +176,9 @@ int main(int argc, char *argv[]) {
       }
       // copy dihedrals - vsf contains no dihedrals
       MoleculeType[i].nDihedrals = mt_new[mol_field].nDihedrals;
-      MoleculeType[i].Dihedral = calloc(MoleculeType[i].nDihedrals,
-                                        sizeof(int *));
+      MoleculeType[i].Dihedral = malloc(sizeof *MoleculeType[i].Dihedral *
+                                        MoleculeType[i].nDihedrals);
       for (int j = 0; j < MoleculeType[i].nDihedrals; j++) {
-        MoleculeType[i].Dihedral[j] = calloc(5, sizeof(int));
         MoleculeType[i].Dihedral[j][0] = mt_new[mol_field].Dihedral[j][0];
         MoleculeType[i].Dihedral[j][1] = mt_new[mol_field].Dihedral[j][1];
         MoleculeType[i].Dihedral[j][2] = mt_new[mol_field].Dihedral[j][2];
@@ -197,22 +196,21 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
+    VerboseOutput("\0", Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
+    // TODO bond & angle & dihedral types into VerboseOutput
     PrintBondTypes2(Counts.TypesOfBonds, bond_type);
     PrintAngleTypes2(Counts.TypesOfAngles, angle_type);
     PrintDihedralTypes2(Counts.TypesOfDihedrals, dihedral_type);
   } //}}}
 
   // warn if not all beads //{{{
+  // TODO proper colours
   if (Counts.Beads != Counts.BeadsInVsf) {
     fprintf(stderr, "\033[1;33m");
     fprintf(stdout, "\nWarning: '%s' does not contain all beads from '%s'\n\n", input_coor, input_vsf);
     fprintf(stderr, "\033[0m");
   } //}}}
-
-  // vsf file is not needed anymore
-
-  char *stuff = calloc(LINE, sizeof(char)); // timestep preamble
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -220,10 +218,11 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
   // main loop //{{{
   count = 0;
+  char *stuff = calloc(LINE, sizeof(char)); // timestep preamble
   while (true) {
     count++;
     if (!silent && isatty(STDOUT_FILENO)) {
@@ -231,23 +230,22 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count);
     }
 
-    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
     // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    if (LastStep(vcf, NULL)) {
       break;
     }
   }
-
+  fclose(vcf);
+  // print last step count?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
       fprintf(stdout, "\r                          \r");
     }
     fprintf(stdout, "Last Step: %d\n", count);
-  }
-
-  fclose(vcf); //}}}
+  } //}}}
 
   // count total number of bonds & angles //{{{
   int count_bonds = 0,
@@ -286,9 +284,9 @@ int main(int argc, char *argv[]) {
   putc('\n', out); //}}}
 
   // print box size //{{{
-  fprintf(out, "0.0 %lf xlo xhi\n", BoxLength.x);
-  fprintf(out, "0.0 %lf ylo yhi\n", BoxLength.y);
-  fprintf(out, "0.0 %lf zlo zhi\n", BoxLength.z);
+  fprintf(out, "0.0 %lf xlo xhi\n", Box.Length.x);
+  fprintf(out, "0.0 %lf ylo yhi\n", Box.Length.y);
+  fprintf(out, "0.0 %lf zlo zhi\n", Box.Length.z);
   putc('\n', out); //}}}
 
   // print masses of bead types //{{{
@@ -343,13 +341,13 @@ int main(int argc, char *argv[]) {
       fprintf(out, "%7d", Bead[i].Molecule+1);
     }
     fprintf(out, "%4d   %lf  ", type+1, BeadType[type].Charge);
-    if (Bead[i].Position.x == BoxLength.x) {
+    if (Bead[i].Position.x == Box.Length.x) {
       Bead[i].Position.x -= 0.00001;
     }
-    if (Bead[i].Position.y == BoxLength.y) {
+    if (Bead[i].Position.y == Box.Length.y) {
       Bead[i].Position.y -= 0.00001;
     }
-    if (Bead[i].Position.z == BoxLength.z) {
+    if (Bead[i].Position.z == Box.Length.z) {
       Bead[i].Position.z -= 0.00001;
     }
     fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
@@ -417,7 +415,6 @@ int main(int argc, char *argv[]) {
   FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   FreeSystemInfo(Counts_new, &mt_new, &Molecule_new, &bt_new, &Bead_new, &Index_new);
   free(stuff);
-  free(input);
   free(bond_type);
   free(angle_type);
   free(dihedral_type);

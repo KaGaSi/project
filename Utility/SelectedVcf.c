@@ -1,6 +1,6 @@
 #include "../AnalysisTools.h"
 
-void Help(char cmd[50], bool error) { //{{{
+void Help(char cmd[50], bool error) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -10,32 +10,34 @@ void Help(char cmd[50], bool error) { //{{{
 SelectedVcf creates new <output.vcf> file (and possibly xyz file) from \
 <input> containing only selected bead types. Periodic boundary conditions \
 can be either stripped away or applied (which happens first if both \
-'--join' and '-w' options are used). Also, specified molecules can be \
+'--join' and '--wrap' options are used). Also, specified molecules can be \
 excluded. However, AnalysisTools utilities can only read coordinate files \
 containing all beads of any given type, so the usefulness is very limited \
 (for, e.g., visualization using vmd).\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> ", cmd);
-  fprintf(ptr, "<output> <type names> <options>\n\n");
+  fprintf(ptr, "   %s <input> <output.vcf> <bead(s)> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input filename (vcf or vtf format)\n");
-  fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
-  fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -r             reverse <type name(s)>, i.e., exclude the specified bead types\n");
+  fprintf(ptr, "   <input>        input coordinate file (vcf or vtf format)\n");
+  fprintf(ptr, "   <output.vcf>   output coordinate file (vcf format)\n");
+  fprintf(ptr, "   <bead(s)>      names of bead types to save \
+(optional if '--reverse' used)\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      --reverse      reverse <bead name(s)>, i.e., exclude \
+the specified bead types (use all if no <bead names> are present)\n");
   fprintf(ptr, "      --join         join molecules (remove pbc)\n");
-  fprintf(ptr, "      -w             wrap coordinates (i.e., apply pbc)\n");
-  fprintf(ptr, "      -st <start>    starting timestep for calculation\n");
+  fprintf(ptr, "      --wrap         wrap coordinates (i.e., apply pbc)\n");
+  fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
   fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
   fprintf(ptr, "      -sk <skip>     leave out every 'skip' steps\n");
   fprintf(ptr, "      -n <int(s)>    save only specified timesteps\n");
   fprintf(ptr, "      -x <name(s)>   exclude specified molecule(s)\n");
   fprintf(ptr, "      -xyz <name>    output xyz file\n");
-  fprintf(ptr, "      --last         use only the last step\n");
+  fprintf(ptr, "      --last         use only the last step \
+(-st/-e/-n options are ignored)\n");
   CommonHelp(error);
-} //}}}
+}
 
 int main(int argc, char *argv[]) {
 
@@ -53,14 +55,14 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
   // reverse bead type selection? ...do now to check correct number of arguments
-  bool reverse = BoolOption(argc, argv, "-r");
+  bool reverse = BoolOption(argc, argv, "--reverse");
 
-  // possible to omit <type name(s)> if '-r' is used
+  // possible to omit <bead name(s)> if '--reverse' is used
   if (count < (req_args-1) || (count == (req_args-1) && !reverse)) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
@@ -75,9 +77,9 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
-        strcmp(argv[i], "-r") != 0 &&
+        strcmp(argv[i], "--reverse") != 0 &&
         strcmp(argv[i], "--join") != 0 &&
-        strcmp(argv[i], "-w") != 0 &&
+        strcmp(argv[i], "--wrap") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-sk") != 0 &&
@@ -85,7 +87,6 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-x") != 0 &&
         strcmp(argv[i], "-xyz") != 0 &&
         strcmp(argv[i], "--last") != 0) {
-
       ErrorOption(argv[i]);
       Help(argv[0], true);
       exit(1);
@@ -95,9 +96,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -105,10 +105,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <output.vcf> - filename of output vcf file (must end with .vcf) //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-  // test if <output.vcf> filename ends with '.vcf' (required by VMD)
+  // <output.vcf> - output vcf file //{{{
+  char output_vcf[LINE] = "";
+  snprintf(output_vcf, LINE, "%s", argv[++count]);
+  // test if <output.vcf> ends with '.vcf'
   int ext = 1;
   char extension[2][5];
   strcpy(extension[0], ".vcf");
@@ -120,38 +120,22 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
-  // should output coordinates be joined?
-  bool join = BoolOption(argc, argv, "--join");
-
-  // should output coordinates be wrapped?
-  bool wrap = BoolOption(argc, argv, "-w");
-
-  // starting & ending timesteps //{{{
-  int start = 1;
-  if (IntegerOption(argc, argv, "-st", &start)) {
-    exit(1);
-  }
-  int end = -1;
-  if (IntegerOption(argc, argv, "-e", &end)) {
-    exit(1);
-  }
-  ErrorStartEnd(start, end); //}}}
-
-  // number of steps to skip per one used //{{{
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
   int skip = 0;
   if (IntegerOption(argc, argv, "-sk", &skip)) {
     exit(1);
-  } //}}}
-
-  // save into xyz file? //{{{
-  char *output_xyz = calloc(LINE,sizeof(char));
-  if (FileOption(argc, argv, "-xyz", &output_xyz)) {
+  }
+  // should output coordinates be joined?
+  bool join = BoolOption(argc, argv, "--join");
+  // should output coordinates be wrapped?
+  bool wrap = BoolOption(argc, argv, "--wrap");
+  int start, end;
+  StartEndTime(argc, argv, &start, &end);
+  // save into xyz file?
+  char output_xyz[LINE] = "";
+  if (FileOption(argc, argv, "-xyz", output_xyz, LINE)) {
     exit(1);
-  } //}}}
-
+  }
   // use only the last step?
   bool last = BoolOption(argc, argv, "--last");
   //}}}
@@ -165,18 +149,20 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
-              &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+              &Box, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
-  // <type names> - names of bead types to save //{{{
+  // <bead names> - names of bead types to save //{{{
+  for (int i = 0; i < Counts.TypesOfBeads; i++) {
+    BeadType[i].Write = false;
+  }
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
     if (type == -1) {
@@ -195,7 +181,7 @@ int main(int argc, char *argv[]) {
     BeadType[type].Write = true;
   } //}}}
 
-  // if '-r' is used, switch Write bools for all bead types //{{{
+  // if '--reverse' is used, switch Write bools for all bead types //{{{
   if (reverse) {
     for (int i = 0; i < Counts.TypesOfBeads; i++) {
       if (BeadType[i].Write) {
@@ -210,46 +196,25 @@ int main(int argc, char *argv[]) {
   if (ExcludeOption(argc, argv, Counts, &MoleculeType)) {
     exit(1);
   }
-
   // copy Use flag to Write (for '-x' option)
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     MoleculeType[i].Write = MoleculeType[i].Use;
   } //}}}
 
   // '-n' option - specify bead ids //{{{
-  int save_step[100] = {0}, number_of_steps = 0, test = 0;
-  if (MultiIntegerOption(argc, argv, "-n", &test, save_step)) {
+  int save_step[100] = {0}, number_of_steps = 0;
+  if (MultiIntegerOption(argc, argv, "-n", &number_of_steps, save_step)) {
     exit(1);
   }
-  if (test != 0) { // -n is present
-    number_of_steps = test;
+  SortArray(save_step, number_of_steps, 0); //}}}
 
-    // sort from lowest to highest
-    for (int i = 0; i < (number_of_steps-1); i++) {
-      for (int j = (i+1); j < number_of_steps; j++) {
-        if (save_step[i] > save_step[j]) {
-          int swap = save_step[i];
-          save_step[i] = save_step[j];
-          save_step[j] = swap;
-        }
-      }
-    }
-  }
-  //}}}
-
-  // print selected bead type names to output .vcf file //{{{
+  // print initial stuff to output vcf file //{{{
   FILE *out;
   if ((out = fopen(output_vcf, "w")) == NULL) {
     ErrorFileOpen(output_vcf, 'w');
     exit(1);
   }
-
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    if (BeadType[i].Write) {
-      fprintf(out, "# %s\n", BeadType[i].Name);
-    }
-  }
-
+  PrintByline(out, argc, argv);
   fclose(out); //}}}
 
   // open input coordinate file //{{{
@@ -258,71 +223,50 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-
-    fprintf(stdout, "\n   Starting from %d. timestep\n", start);
-    fprintf(stdout, "   Every %d. timestep used\n", skip+1);
-    if (end != -1) {
-      fprintf(stdout, "   Ending with %d. timestep\n", end);
-    }
-
-    if (number_of_steps > 0) {
-      fprintf(stdout, "   Save %d timesteps:", number_of_steps);
-      for (int i = 0; i < number_of_steps; i++) {
-        fprintf(stdout, " %d", save_step[i]);
-        if (i != (number_of_steps-1)) {
-          putchar(',');
-        } else {
-          putchar('\n');
-        }
-      }
-    }
-    fprintf(stdout, "   box size: %lf x %lf x %lf\n\n", BoxLength.x, BoxLength.y, BoxLength.z);
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
-  // print pbc to output .vcf file //{{{
-  if ((out = fopen(output_vcf, "a")) == NULL) {
-    ErrorFileOpen(output_vcf, 'a');
-    exit(1);
+  if (!last) { // we don't want to see 'Starting step' message for --last option
+    count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
   }
-
-  fprintf(out, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
-
-  fclose(out); //}}}
-
-  // create array for the timestep preamble
-  char *stuff = calloc(LINE, sizeof(char));
-
-  count = SkipCoorSteps(vcf, input_coor, Counts, start, silent);
-
   // main loop //{{{
   int count_n_opt = 0; // count saved steps if -n option is used
   count = 0; // count timesteps in the main loop
   int count_vcf = start - 1; // count timesteps from the beginning
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count++;
     count_vcf++;
     // print step? //{{{
     if (!silent && isatty(STDOUT_FILENO)) {
       fflush(stdout);
-      fprintf(stdout, "\rStep: %d", count_vcf);
+      if (last) {
+        fprintf(stdout, "\rDiscarding step: %d", count_vcf);
+      } else {
+        fprintf(stdout, "\rStep: %d", count_vcf);
+      }
     } //}}}
-
-    // read coordinates & wrap/join molecules //{{{
-    ReadVcfCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-    // wrap and/or join molecules?
-    if (wrap) {
-      RestorePBC2(Counts.Beads, BoxLength, &Bead);
-    }
-    if (join) {
-      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-    } //}}}
-
-    if (!last) { // save coordinates only if --last option is not used
+    if (!last) { // read and save coordinate only if --last isn't used //{{{
+      // read coordinates & wrap/join molecules //{{{
+      ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                         Counts, Index, &Bead, &stuff);
+      // transform coordinates into fractional ones for non-orthogonal box
+      ToFractionalCoor(Counts.Beads, &Bead, Box);
+      // wrap and/or join molecules?
+      if (wrap) {
+        RestorePBC(Counts.Beads, Box, &Bead);
+      }
+      if (join) {
+        RemovePBCMolecules(Counts, Box, BeadType, &Bead,
+                           MoleculeType, Molecule);
+      }
+      // transform back to 'normal' coordinates for non-orthogonal box
+      FromFractionalCoor(Counts.Beads, &Bead, Box); //}}}
       if (count_n_opt < number_of_steps) { // if -n option is used
         if (save_step[count_n_opt] == count_vcf) {
           // write to output .vcf file //{{{
@@ -330,7 +274,8 @@ int main(int argc, char *argv[]) {
             ErrorFileOpen(output_vcf, 'a');
             exit(1);
           }
-          WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
+          WriteCoorIndexed(out, Counts, BeadType, Bead,
+                           MoleculeType, Molecule, stuff, Box);
           fclose(out); //}}}
           // write to xyz file? //{{{
           if (output_xyz[0] != '\0') {
@@ -343,6 +288,7 @@ int main(int argc, char *argv[]) {
           } //}}}
           count_n_opt++;
         }
+        // exit while loop if all timesteps from -n are processed
         if (count_n_opt == number_of_steps) {
           break;
         }
@@ -352,7 +298,8 @@ int main(int argc, char *argv[]) {
           ErrorFileOpen(output_vcf, 'a');
           exit(1);
         }
-        WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
+        WriteCoorIndexed(out, Counts, BeadType, Bead,
+                         MoleculeType, Molecule, stuff, Box);
         fclose(out); //}}}
         // write to xyz file? //{{{
         if (output_xyz[0] != '\0') {
@@ -365,16 +312,13 @@ int main(int argc, char *argv[]) {
         } //}}}
         // skip every 'skip' steps //{{{
         for (int i = 0; i < skip; i++) {
-          bool rubbish; // not used
-          if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
-            break;
-          }
           count_vcf++;
           count++;
           // -e option
-          if (end == count_vcf) {
+          if (end == count_vcf || LastStep(vcf, NULL)) {
             break;
           }
+          // print step count?
           if (!silent && isatty(STDOUT_FILENO)) {
             fflush(stdout);
             fprintf(stdout, "\rStep: %d", count_vcf);
@@ -382,20 +326,39 @@ int main(int argc, char *argv[]) {
           SkipVcfCoor(vcf, input_coor, Counts, &stuff);
         } //}}}
       }
-    }
-
+    //}}}
+    } else { // skip coordinates if --last is used //{{{
+      fpos_t position;
+      fgetpos(vcf, &position); // get file pointer position
+      SkipVcfCoor(vcf, input_coor, Counts, &stuff);
+      // if this is the last step, restore file pointer and read the coordinates
+      if (LastStep(vcf, NULL)) {
+        fsetpos(vcf, &position); // restore pointer position
+        // read coordinates & wrap/join molecules
+        ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                           Counts, Index, &Bead, &stuff);
+        // transform coordinates into fractional ones for non-orthogonal box
+        ToFractionalCoor(Counts.Beads, &Bead, Box);
+        // wrap and/or join molecules?
+        if (wrap) {
+          RestorePBC(Counts.Beads, Box, &Bead);
+        }
+        if (join) {
+          RemovePBCMolecules(Counts, Box, BeadType, &Bead,
+                             MoleculeType, Molecule);
+        }
+        // transform back to 'normal' coordinates for non-orthogonal box
+        FromFractionalCoor(Counts.Beads, &Bead, Box);
+        break;
+      }
+    } //}}}
     // -e option - exit main loop if last step is done
-    if (end == count_vcf) {
-      break;
-    }
-    // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    if (LastStep(vcf, NULL) || (end == count_vcf && !last)) {
       break;
     }
   }
   fclose(vcf);
-
+  // print last step count?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -403,17 +366,17 @@ int main(int argc, char *argv[]) {
     }
     fprintf(stdout, "Last Step: %d\n", count_vcf);
   } //}}}
-
   // save last step if --last is used //{{{
   if (last) {
-    // write to output .vcf file //{{{
+    // write to output .vcf file
     if ((out = fopen(output_vcf, "a")) == NULL) {
       ErrorFileOpen(output_vcf, 'a');
       exit(1);
     }
-    WriteCoorIndexed(out, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
-    fclose(out); //}}}
-    // write to xyz file? //{{{
+    WriteCoorIndexed(out, Counts, BeadType, Bead,
+                     MoleculeType, Molecule, stuff, Box);
+    fclose(out);
+    // write to xyz file?
     if (output_xyz[0] != '\0') {
       // open output .xyz file for appending
       if ((out = fopen(output_xyz, "a")) == NULL) {
@@ -422,14 +385,11 @@ int main(int argc, char *argv[]) {
       }
       WriteCoorXYZ(out, Counts, BeadType, Bead);
       fclose(out);
-    } //}}}
+    }
   } //}}}
-
-  // free memory - to make valgrind happy //{{{
+  // free memory
   FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
   free(stuff);
-  free(output_xyz);
-  //}}}
 
   return 0;
 }

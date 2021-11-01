@@ -6,11 +6,11 @@
 #ifndef _STRUCTS_H_
 #define _STRUCTS_H_
 
-#define CHARGE 10000 // 'impossible' charge to define a given bead type has charge specified in an input file
-#define MASS 0 // 'impossible' mass to define a given bead type has charge specified in an input file
-#define RADIUS 0 // 'impossible' radius to define a given bead type has charge specified in an input file
-#define MOL_NAME 8 // maximum molecule name length
-#define BEAD_NAME 16 // maximum bead name length
+#define CHARGE 10000.0 // 'impossible' charge to define a given bead type has charge specified in an input file
+#define MASS 0.0 // 'impossible' mass to define a given bead type has charge specified in an input file
+#define RADIUS 0.0 // 'impossible' radius to define a given bead type has charge specified in an input file
+#define MOL_NAME 8 // maximum molecule name length (array size is +1)
+#define BEAD_NAME 16 // maximum bead name length (array size is +1)
 
 // struct Counts //{{{
 /**
@@ -45,13 +45,41 @@ static const COUNTS InitCounts = {
   .TypesOfDihedrals = -1,
 }; //}}}
 
+// struct Box //{{{
+/**
+ * \brief Total numbers of various things.
+ */
+typedef struct Box {
+  VECTOR Length; // side lengths
+  double alpha, beta, gamma; // angles - all 90 for orthogonal box
+  double transform[3][3], // transformation matrix
+         inverse[3][3]; // inverse of the transformation matrix
+} BOX;
+
+// TODO: is that used at all?
+// Initialize Counts
+static const BOX InitBox = {
+  .Length.x = -1,
+  .Length.y = -1,
+  .Length.z = -1,
+  .alpha = 90,
+  .beta = 90,
+  .gamma = 90,
+}; //}}}
+
 // struct Params //{{{
 /**
  * \brief Parameters for various things (bonds and angles for now)
  */
 typedef struct Params {
   double a, b;
-} PARAMS; //}}}
+} PARAMS;
+
+// Initialize Params
+static const PARAMS InitParams = {
+  .a = -1,
+  .b = -1,
+}; //}}}
 
 // struct BeadType //{{{
 /**
@@ -82,7 +110,7 @@ typedef struct Bead {
       Index; // index of the bead according to .vsf file (needed for indexed timesteps)
 
   VECTOR Position; // cartesian coordinates of the bead
-  VECTOR Velocity; ///< velocity of the bead
+  VECTOR Velocity; // velocity of the bead
 
   bool Flag; // some flag for, e.g., use/not use
 } BEAD; //}}}
@@ -98,13 +126,13 @@ typedef struct MoleculeType {
       nBeads, // number of beads in every molecule of given type
       *Bead, // ids of bead types of every molecule bead
       nBonds, // number of bonds in every molecule of given type
-      **Bond, // pair of ids for every bond (with relative bead numbers from 0 to nBeads)
+      (*Bond)[3], // pair of ids for every bond (with relative bead numbers from 0 to nBeads)
                // has to be sorted; size: [MoleculeType[i].Bond[3]
       nAngles, // number of angles in every molecule of given type
-      **Angle, // trio of ids for every angle (with relative bead numbers from 0 to nBeads)
+      (*Angle)[4], // trio of ids for every angle (with relative bead numbers from 0 to nBeads)
                // has to be sorted; size: [MoleculeType[i].Angle[4]
       nDihedrals, // number of dihedrals in every molecule of given type
-      **Dihedral, // fourtet of ids for every dihedral (with relative bead numbers from 0 to nBeads)
+      (*Dihedral)[5], // fourtet of ids for every dihedral (with relative bead numbers from 0 to nBeads)
                // has to be sorted; size: [MoleculeType[i].Dihedral[5]
       nBTypes, // number of bead types in every molecule of given type
       *BType; // ids of bead types in every molecule of given type (corresponds to indices in BeadType struct)

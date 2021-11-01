@@ -17,18 +17,21 @@ because the utility does not use any Ewald sum-based method.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <input.agg> <width> <output.txt> <agg sizes> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <in.agg> <width> <output> <size(s)> \
+[options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input coordinate file (either vcf or vtf format)\n");
-  fprintf(ptr, "   <input.agg>       input agg file\n");
-  fprintf(ptr, "   <width>           width of a single bin\n");
-  fprintf(ptr, "   <output>          output file with electrostatic potential\n");
-  fprintf(ptr, "   <agg size(s)>     aggregate size(s) to calculate density for\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      --joined       specify that <input> contains joined coordinates\n");
+  fprintf(ptr, "   <input>     input coordinate file (vcf or vtf format)\n");
+  fprintf(ptr, "   <in.agg>    input agg file\n");
+  fprintf(ptr, "   <width>     width of a single bin\n");
+  fprintf(ptr, "   <output>    output file with electrostatic potential\n");
+  fprintf(ptr, "   <size(s)>   aggregate size(s) to calculate density for\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      --joined       specify that <input> contains joined \
+coordinates\n");
   fprintf(ptr, "      -st <int>      starting timestep for calculation\n");
-  fprintf(ptr, "      -e <end>       number of timestep to end with\n");
-  fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> molecule types in an aggregate\n");
+  fprintf(ptr, "      -e <end>       ending timestep for calculation\n");
+  fprintf(ptr, "      -m <name(s)>   agg size means number of <name(s)> \
+molecules in an aggregate\n");
   CommonHelp(error);
 } //}}}
 
@@ -48,10 +51,9 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
-
   if (count < req_args) {
     ErrorArgNumber(count, req_args);
     Help(argv[0], true);
@@ -65,8 +67,8 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-v") != 0 &&
         strcmp(argv[i], "--silent") != 0 &&
         strcmp(argv[i], "-h") != 0 &&
-        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "--joined") != 0 &&
+        strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-st") != 0 &&
         strcmp(argv[i], "-e") != 0 &&
         strcmp(argv[i], "-m") != 0) {
@@ -77,6 +79,7 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
+// TODO: all parameters as options
   // elstat parameters
   double bjerrum = 1.1,
          lambda = 0.2,
@@ -89,9 +92,8 @@ int main(int argc, char *argv[]) {
   count = 0; // count mandatory arguments
 
   // <input> - input coordinate file //{{{
-  char input_coor[LINE];
-  char *input_vsf = calloc(LINE,sizeof(char));
-  strcpy(input_coor, argv[++count]);
+  char input_coor[LINE] = "", input_vsf[LINE] = "";
+  snprintf(input_coor, LINE, "%s", argv[++count]);
   // test that <input> filename ends with '.vcf' or '.vtf'
   bool vtf;
   if (!InputCoor(&vtf, input_coor, input_vsf)) {
@@ -99,15 +101,14 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <input.agg> - filename of input file with aggregate information //{{{
-  char input_agg[LINE];
-  strcpy(input_agg, argv[++count]);
-
+  // <in.agg> - input aggregate file //{{{
+  char input_agg[LINE] = "";
+  snprintf(input_agg, LINE, "%s", argv[++count]);
   // test if <input.agg> ends with '.agg'
   int ext = 1;
   char extension[2][5];
   strcpy(extension[0], ".agg");
-  if (ErrorExtension(input_agg, ext, extension)) {
+  if (ErrorExtension(input_agg, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
@@ -121,19 +122,16 @@ int main(int argc, char *argv[]) {
   }
   double width = atof(argv[count]); //}}}
 
-  // <output> - filename with bead densities //{{{
+  // <output> - filename with electrostatic potential
   char output_elstat[LINE];
-  strcpy(output_elstat, argv[++count]); //}}}
+  snprintf(output_elstat, LINE, "%s", argv[++count]);
 
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf, &verbose, &silent, &script);
-
+  CommonOptions(argc, argv, input_vsf, &verbose, &silent, LINE);
   // are provided coordinates joined?
   bool joined = BoolOption(argc, argv, "--joined");
-
   int start, end;
   StartEndTime(argc, argv, &start, &end); //}}}
 
@@ -146,43 +144,41 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType; // structure with info about all bead types
   MOLECULETYPE *MoleculeType; // structure with info about all molecule types
   BEAD *Bead; // structure with info about every bead
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule; // structure with info about every molecule
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
-  VECTOR BoxLength; // couboid box dimensions
+  BOX Box = InitBox; // triclinic box dimensions and angles
   bool indexed; // indexed timestep?
   int struct_lines; // number of structure lines (relevant for vtf)
   FullVtfRead(input_vsf, input_coor, false, vtf, &indexed, &struct_lines,
-              &BoxLength, &Counts, &BeadType, &Bead, &Index,
-              &MoleculeType, &Molecule);
-  free(input_vsf); //}}}
+              &Box, &Counts, &BeadType, &Bead, &Index,
+              &MoleculeType, &Molecule); //}}}
 
   // '-m' option //{{{
-  int *specific_moltype_for_size = malloc(Counts.TypesOfMolecules*sizeof(int));
-  // all are to be used without '-m' option
+  int specific_moltype_for_size[Counts.TypesOfMolecules];
+  // set all to be used when '-m' option is missing
   for (int i = 0; i < Counts.TypesOfMolecules; i++) {
     specific_moltype_for_size[i] = 1;
   }
-  if (MoleculeTypeOption2(argc, argv, "-m", &specific_moltype_for_size, Counts, &MoleculeType)) {
+  if (MoleculeTypeOption2(argc, argv, "-m", specific_moltype_for_size,
+                          Counts, &MoleculeType)) {
     exit(1);
   } //}}}
 
+// TODO: allocation... aaargh
   // <agg sizes> - aggregate sizes for calculation //{{{
   int **agg_sizes = malloc(Counts.Molecules*sizeof(int *));
   for (int i = 0; i < Counts.Molecules; i++) {
     agg_sizes[i] = calloc(2,sizeof(int));
   }
-
   int aggs = 0;
-
   while (++count < argc && argv[count][0] != '-') {
 
     // Error - non-numeric argument //{{{
-    if (!IsInteger(argv[count])) {
+    if (!IsInteger(argv[count]) || atoi(argv[count]) == 0) {
       ErrorNaN("<agg sizes>");
       exit(1);
     } //}}}
-
     agg_sizes[aggs][0] = atoi(argv[count]);
 
     aggs++; // number of aggregate sizes
@@ -192,21 +188,24 @@ int main(int argc, char *argv[]) {
   int contacts; // <contacts> parameter from Aggregate command - not used here
   ReadAggCommand(BeadType, Counts, input_coor, input_agg, &distance, &contacts);
 
-  // open input aggregate file and skip the first lines (Aggregate command & blank line) //{{{
+  // TODO: will change when the agg format changes (at least when Byline is
+  //       added to Aggregates*)
+  // open input aggregate file and skip the first two lines
   FILE *agg;
   if ((agg = fopen(input_agg, "r")) == NULL) {
     ErrorFileOpen(input_agg, 'r');
     exit(1);
   }
   char line[LINE];
-  fgets(line, sizeof(line), agg);
-  fgets(line, sizeof(line), agg); //}}}
+  fgets(line, sizeof line, agg);
+  fgets(line, sizeof line, agg); //}}}
 
   // number of bins
-  int bins = ceil(Min3(BoxLength.x, BoxLength.y, BoxLength.z) / (3 * width));
+  int bins = ceil(Min3(Box.Length.x, Box.Length.y, Box.Length.z) / (3 * width));
+  double max_dist = (0.5 + images) * Min3(Box.Length.x, Box.Length.y,
+                                          Box.Length.z);
 
-  double max_dist = (0.5 + images) * Min3(BoxLength.x, BoxLength.y, BoxLength.z);
-
+  // TODO: allocation... Aaargh!
   // allocate memory for density arrays //{{{
   double **elstat_potential = malloc(aggs*sizeof(double *));
   double **elstat_potential_sqr = malloc(aggs*sizeof(double *));
@@ -214,9 +213,6 @@ int main(int argc, char *argv[]) {
     elstat_potential[i] = calloc(bins,sizeof(double));
     elstat_potential_sqr[i] = calloc(bins,sizeof(double));
   } //}}}
-
-  // create array for the first line of a timestep ('# <number and/or other comment>')
-  char *stuff = calloc(LINE, sizeof(char));
 
   // allocate Aggregate struct //{{{
   AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
@@ -231,13 +227,8 @@ int main(int argc, char *argv[]) {
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput(input_coor, Counts, BoxLength, BeadType, Bead, MoleculeType, Molecule);
-
-    fprintf(stdout, "Chosen aggregate sizes:");
-    for (int i = 0; i < aggs; i++) {
-      fprintf(stdout, " %d", agg_sizes[i][0]);
-    }
-    putchar('\n');
+    VerboseOutput(input_coor, Counts, Box, BeadType, Bead,
+                  MoleculeType, Molecule);
   } //}}}
 
   // open input coordinate file //{{{
@@ -246,9 +237,10 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(input_coor, 'r');
     exit(1);
   }
-  SkipVtfStructure(vtf, vcf, struct_lines); //}}}
+  SkipVtfStructure(vcf, struct_lines); //}}}
 
-  count = SkipCoorAggSteps(vcf, input_coor, agg, input_agg, Counts, start, silent);
+  count = SkipCoorAggSteps(vcf, input_coor, agg,
+                           input_agg, Counts, start, silent);
 
   // create array of bead indices //{{{
   int *index = calloc(Counts.BeadsInVsf,sizeof(int));
@@ -259,6 +251,7 @@ int main(int argc, char *argv[]) {
   // main loop //{{{
   count = 0; // count timesteps in the main loop
   int count_vcf = start - 1; // count timesteps from the beginning
+  char *stuff = calloc(LINE, sizeof *stuff); // array for the timestep preamble
   while (true) {
     count++;
     count_vcf++;
@@ -268,21 +261,25 @@ int main(int argc, char *argv[]) {
       fprintf(stdout, "\rStep: %d", count_vcf);
     } //}}}
 
-    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead, MoleculeType, &Molecule, Index);
-    ReadCoordinates(indexed, input_coor, vcf, Counts, Index, &Bead, &stuff);
-
-    // join agggregates if un-joined coordinates provided //{{{
+    // TODO: will change (probably)
+    // TODO: fractionals - should the calculatio be in fractionals? I guess so.
+    //       why though? The aggregates are joined and that's that
+    ReadAggregates(agg, input_agg, &Counts, &Aggregate, BeadType, &Bead,
+                   MoleculeType, &Molecule, Index);
+    ReadVcfCoordinates(indexed, input_coor, vcf, &Box,
+                       Counts, Index, &Bead, &stuff);
+    // transform coordinates into fractional ones for non-orthogonal box
+    ToFractionalCoor(Counts.Beads, &Bead, Box);
     if (!joined) {
-      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-      RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-    } //}}}
+      RemovePBCMolecules(Counts, Box, BeadType, &Bead,
+                         MoleculeType, Molecule);
+      RemovePBCAggregates(distance, Aggregate, Counts, Box.Length,
+                          BeadType, &Bead, MoleculeType, Molecule);
+    }
 
+    // TODO: check + fractionals
     // calculate potential //{{{
     for (int i = 0; i < Counts.Aggregates; i++) {
-
-      // allocate memory for temporary elstat array
-      double *temp_elstat = calloc(bins,sizeof(double));
-
       // test if aggregate 'i' should be used //{{{
       int size = 0;
       // agg size = number of molecules of type 'specific_moltype_for_size'
@@ -299,15 +296,12 @@ int main(int argc, char *argv[]) {
           correct_size = j;
         }
       } //}}}
-
       if (correct_size != -1) {
-        // zeroize temporary array //{{{
-        for (int j = 0; j < bins; j++) {
-          temp_elstat[j] = 0;
-        } //}}}
-
-        VECTOR com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead, BeadType);
-
+        // allocate memory for temporary elstat array
+        double *temp_elstat = calloc(bins, sizeof *temp_elstat);
+        // TODO: ...com should probably be fine in fractional coordinates, eh?
+        VECTOR com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, Bead,
+                                  BeadType);
         // move beads so that com is in the box's centre
         for (int j = 0; j < Counts.Beads; j++) {
           Bead[j].Position.x -= com.x;
@@ -352,7 +346,7 @@ int main(int argc, char *argv[]) {
                 for (int l = 0; l < Counts.Beads; l++) {
                   if (BeadType[Bead[l].Type].Charge != 0) {
                     VECTOR dist;
-                    dist = Distance(Bead[l].Position, point, BoxLength);
+                    dist = Distance(Bead[l].Position, point, Box.Length);
                     double rij = Length(dist);
                     double coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                     if (rij < r_c) { // short ranged part
@@ -370,9 +364,9 @@ int main(int argc, char *argv[]) {
                     for (int m = 1; m <= images; m++) {
                       // +mz
                       // -mx +my //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.x = dist_orig.x - m * Box.Length.x;
+                      dist.y = dist_orig.y + m * Box.Length.y;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
@@ -380,26 +374,26 @@ int main(int argc, char *argv[]) {
                       } //}}}
                       // +0x +my //{{{
                       dist.x = dist_orig.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.y = dist_orig.y + m * Box.Length.y;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx +my //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.x = dist_orig.x + m * Box.Length.x;
+                      dist.y = dist_orig.y + m * Box.Length.y;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // -mx +0y //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
+                      dist.x = dist_orig.x - m * Box.Length.x;
                       dist.y = dist_orig.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
@@ -408,25 +402,25 @@ int main(int argc, char *argv[]) {
                       // +0x +0y //{{{
                       dist.x = dist_orig.x;
                       dist.y = dist_orig.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx +0y //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
+                      dist.x = dist_orig.x + m * Box.Length.x;
                       dist.y = dist_orig.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // -mx -1y //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.x = dist_orig.x - m * Box.Length.x;
+                      dist.y = dist_orig.y - m * Box.Length.y;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
@@ -434,17 +428,17 @@ int main(int argc, char *argv[]) {
                       } //}}}
                       // +0x -1y //{{{
                       dist.x = dist_orig.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.y = dist_orig.y - m * Box.Length.y;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx -1y //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
-                      dist.z = dist_orig.z + m * BoxLength.z;
+                      dist.x = dist_orig.x + m * Box.Length.x;
+                      dist.y = dist_orig.y - m * Box.Length.y;
+                      dist.z = dist_orig.z + m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
@@ -452,8 +446,8 @@ int main(int argc, char *argv[]) {
                       } //}}}
                       // +0z
                       // -mx +my //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
+                      dist.x = dist_orig.x - m * Box.Length.x;
+                      dist.y = dist_orig.y + m * Box.Length.y;
                       dist.z = dist_orig.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
@@ -462,7 +456,7 @@ int main(int argc, char *argv[]) {
                       } //}}}
                       // +0x +my //{{{
                       dist.x = dist_orig.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
+                      dist.y = dist_orig.y + m * Box.Length.y;
                       dist.z = dist_orig.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
@@ -470,8 +464,8 @@ int main(int argc, char *argv[]) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx +my //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
+                      dist.x = dist_orig.x + m * Box.Length.x;
+                      dist.y = dist_orig.y + m * Box.Length.y;
                       dist.z = dist_orig.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
@@ -479,7 +473,7 @@ int main(int argc, char *argv[]) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // -mx +0y //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
+                      dist.x = dist_orig.x - m * Box.Length.x;
                       dist.y = dist_orig.y;
                       dist.z = dist_orig.z;
                       rij = Length(dist);
@@ -488,7 +482,7 @@ int main(int argc, char *argv[]) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx +0y //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
+                      dist.x = dist_orig.x + m * Box.Length.x;
                       dist.y = dist_orig.y;
                       dist.z = dist_orig.z;
                       rij = Length(dist);
@@ -497,8 +491,8 @@ int main(int argc, char *argv[]) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // -mx -1y //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
+                      dist.x = dist_orig.x - m * Box.Length.x;
+                      dist.y = dist_orig.y - m * Box.Length.y;
                       dist.z = dist_orig.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
@@ -507,7 +501,7 @@ int main(int argc, char *argv[]) {
                       } //}}}
                       // +0x -1y //{{{
                       dist.x = dist_orig.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
+                      dist.y = dist_orig.y - m * Box.Length.y;
                       dist.z = dist_orig.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
@@ -515,8 +509,8 @@ int main(int argc, char *argv[]) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx -1y //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
+                      dist.x = dist_orig.x + m * Box.Length.x;
+                      dist.y = dist_orig.y - m * Box.Length.y;
                       dist.z = dist_orig.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
@@ -525,9 +519,9 @@ int main(int argc, char *argv[]) {
                       } //}}}
                       // -mz
                       // -mx +my //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.x = dist_orig.x - m * Box.Length.x;
+                      dist.y = dist_orig.y + m * Box.Length.y;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
@@ -535,26 +529,26 @@ int main(int argc, char *argv[]) {
                       } //}}}
                       // +0x +my //{{{
                       dist.x = dist_orig.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.y = dist_orig.y + m * Box.Length.y;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx +my //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
-                      dist.y = dist_orig.y + m * BoxLength.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.x = dist_orig.x + m * Box.Length.x;
+                      dist.y = dist_orig.y + m * Box.Length.y;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // -mx +0y //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
+                      dist.x = dist_orig.x - m * Box.Length.x;
                       dist.y = dist_orig.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
@@ -563,25 +557,25 @@ int main(int argc, char *argv[]) {
                       // +0x +0y //{{{
                       dist.x = dist_orig.x;
                       dist.y = dist_orig.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx +0y //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
+                      dist.x = dist_orig.x + m * Box.Length.x;
                       dist.y = dist_orig.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // -mx -my //{{{
-                      dist.x = dist_orig.x - m * BoxLength.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.x = dist_orig.x - m * Box.Length.x;
+                      dist.y = dist_orig.y - m * Box.Length.y;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
@@ -589,17 +583,17 @@ int main(int argc, char *argv[]) {
                       } //}}}
                       // +0x -my //{{{
                       dist.x = dist_orig.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.y = dist_orig.y - m * Box.Length.y;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
                         temp_elstat[j] += coulomb;
                       } //}}}
                       // +mx -my //{{{
-                      dist.x = dist_orig.x + m * BoxLength.x;
-                      dist.y = dist_orig.y - m * BoxLength.y;
-                      dist.z = dist_orig.z - m * BoxLength.z;
+                      dist.x = dist_orig.x + m * Box.Length.x;
+                      dist.y = dist_orig.y - m * Box.Length.y;
+                      dist.z = dist_orig.z - m * Box.Length.z;
                       rij = Length(dist);
                       coulomb = bjerrum * BeadType[Bead[l].Type].Charge / rij;
                       if (rij < max_dist) {
@@ -618,24 +612,18 @@ int main(int argc, char *argv[]) {
         }
 
         agg_sizes[correct_size][1]++;
+        // free temporary elstat array
+        free(temp_elstat);
       }
-
-      // free temporary elstat array
-      free(temp_elstat);
     } //}}}
 
-    if (end == count_vcf) {
-      break;
-    }
-    // if there's no additional timestep, exit the while loop
-    bool rubbish; // not used
-    if (ReadTimestepPreamble(&rubbish, input_coor, vcf, &stuff, false) == -1) {
+    if (LastStep(vcf, NULL) || end == count_vcf) {
       break;
     }
   }
   fclose(vcf);
   fclose(agg);
-
+  // print last step count?
   if (!silent) {
     if (isatty(STDOUT_FILENO)) {
       fflush(stdout);
@@ -644,17 +632,13 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "Last Step: %d\n", count_vcf);
   } //}}}
 
-  // write elstat to output file(s) //{{{
+  // write elstat to output file //{{{
   FILE *out;
   if ((out = fopen(output_elstat, "w")) == NULL) {
     ErrorFileOpen(output_elstat, 'w');
     exit(1);
   }
-
-  // print command to output file
-  putc('#', out);
-  PrintCommand(out, argc, argv);
-
+  PrintByline(out, argc, argv);
   // print aggregate sizes //{{{
   fprintf(out, "# (1) distance;");
   for (int i = 0; i < aggs; i++) {
@@ -692,7 +676,6 @@ int main(int argc, char *argv[]) {
     free(elstat_potential_sqr[i]);
   }
   free(elstat_potential_sqr);
-  free(specific_moltype_for_size);
   free(index); //}}}
 
   return 0;

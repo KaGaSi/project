@@ -16,9 +16,22 @@
 #include <unistd.h>
 
 #define PI 3.141593 ///< value of pi
-#define LINE 1024 ///< maximum length of an array for strings
+#define LINE 1025 ///< maximum length of an array for strings
 #define SQR(x) ((x)*(x)) ///< macro for algebraic square
 #define CUBE(x) ((x)*(x)*(x)) ///< macro for algebraic cube
+
+
+// tell gcc to ignore certain warnings
+// helper macro
+#define DO_PRAGMA(x) _Pragma(#x)
+
+// macro to ignore warning; x='-W...'
+#define P_IGNORE(x) \
+  _Pragma("GCC diagnostic push") \
+  DO_PRAGMA(GCC diagnostic ignored #x) \
+
+// macro to pop back to the 'pushed' diagnostic state
+#define P_POP _Pragma("GCC diagnostic pop")
 
 // struct Vector //{{{
 /**
@@ -149,7 +162,7 @@ void SwapBool(bool *a, bool *b);
  * \param [in]  length  array length
  * \param [in]  mode    0 for ascending order, 1 for descending order
  */
-void SortArray(int **array, int length, int mode); //}}}
+void SortArray(int *array, int length, int mode); //}}}
 
 // SplitLine() //{{{
 /*
@@ -159,7 +172,7 @@ void SortArray(int **array, int length, int mode); //}}}
  * \param [in]  line   string to split
  * \return number of strings in the line
  */
-int SplitLine(char out[30][100], char *line, char delim[8]); //}}}
+int SplitLine(char out[30][100], char *line, const char *delim); //}}}
 
 // TrimLine() //{{{
 /**

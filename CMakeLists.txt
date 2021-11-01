@@ -6,14 +6,16 @@ enable_language (C Fortran)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-#set(CMAKE_BUILD_TYPE "Release")
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+set(CMAKE_BUILD_TYPE "Debug")
+#message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # c compiler flags
 #set(CMAKE_C_FLAGS "-std=c11 -Wall") # only show errors
-set(CMAKE_C_FLAGS "-std=c11 -Wall -Wno-format-truncation -Werror") # only show errors
+set(CMAKE_C_FLAGS "-std=c11 -Wall -Wno-format-truncation -Werror")
 set(CMAKE_C_FLAGS_DEBUG "-ggdb -g") # for -DCMAKE_BUILD_TYPE=Debug
 set(CMAKE_C_FLAGS_RELEASE "-O3") # for -DCMAKE_BUILD_TYPE=Release
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(LIBRARIES Read
               Write
@@ -38,8 +40,8 @@ set(UTILS AddToSystem
           DensityMolecules
           DihedralMolecules
           DistrAgg
-          GenSystem
           GenLayers
+          GenAnglesDihedrals
           GyrationAggregates
           GyrationMolecules
           Info
@@ -48,7 +50,8 @@ set(UTILS AddToSystem
           lmp_data
           lmp_vtf
           NumDeriv
-          Orientation
+          OrientationMolecules
+#         Orientation-2
           OrientationAggregates
           PairCorrel
           PotentialAggregates
@@ -62,16 +65,15 @@ set(UTILS AddToSystem
   target_link_libraries(${utility} ${LIBRARIES} m)
 endforeach(utility)
 
-set(TESTING Coordinates)
-          foreach(utility ${TESTING})
-  add_executable(${utility} Testing/${utility}.c)
-  target_link_libraries(${utility} m ${LIBRARIES})
-endforeach(utility)
+#set(TESTING Coordinates)
+#          foreach(utility ${TESTING})
+#  add_executable(${utility} Testing/${utility}.c)
+#  target_link_libraries(${utility} m ${LIBRARIES})
+#endforeach(utility)
 
 # this somehow specifies fortran compiler
 get_filename_component (Fortran_COMPILER_NAME ${CMAKE_Fortran_COMPILER} NAME)
-set(F_UTILS traject-v2_5
-            traject-v2_6)
+set(F_UTILS traject-v2_7)
 foreach(utility ${F_UTILS})
   add_executable(${utility} Utility/${utility}.f90)
 endforeach(utility)

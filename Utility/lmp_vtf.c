@@ -1,5 +1,7 @@
 #include "../AnalysisTools.h"
 
+// TODO triclinic box
+
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -16,15 +18,15 @@ well as according to molecule connectivity. Angles are disregarded.\n\n");
   }
 
   fprintf(ptr, "Usage:\n");
-  fprintf(ptr, "   %s <input> <out.vsf> <out.vcf> <options>\n\n", cmd);
+  fprintf(ptr, "   %s <input> <out.vsf> <out.vcf> [options]\n\n", cmd);
 
-  fprintf(ptr, "   <input>           input lammps data file\n");
-  fprintf(ptr, "   <out.vsf>         output vsf structure file\n");
-  fprintf(ptr, "   <out.vcf>         output vcf coordinate file\n");
-  fprintf(ptr, "   <options>\n");
-  fprintf(ptr, "      -v             verbose output\n");
-  fprintf(ptr, "      -h             print this help and exit\n");
-  fprintf(ptr, "      --version      print version number and exit\n");
+  fprintf(ptr, "   <input>     input lammps data file\n");
+  fprintf(ptr, "   <out.vsf>   output vsf structure file\n");
+  fprintf(ptr, "   <out.vcf>   output vcf coordinate file\n");
+  fprintf(ptr, "   [options]\n");
+  fprintf(ptr, "      -v          verbose output\n");
+  fprintf(ptr, "      -h          print this help and exit\n");
+  fprintf(ptr, "      --version   print version number and exit\n");
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -43,7 +45,7 @@ int main(int argc, char *argv[]) {
 
   // check if correct number of arguments //{{{
   int count = 0;
-  for (int i = 1; i < argc && argv[count+1][0] != '-'; i++) {
+  while ((count+1) < argc && argv[count+1][0] != '-') {
     count++;
   }
 
@@ -66,39 +68,28 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // verbose output (-v option)
-  bool verbose = BoolOption(argc, argv, "-v");
-
-  // print command to stdout //{{{
-  bool silent = false;
-  if (!silent) {
-    PrintCommand(stdout, argc, argv);
-  } //}}}
-
   count = 0; // count mandatory arguments
 
-  // <input> - input coordinate file //{{{
-  char input[LINE];
-  strcpy(input, argv[++count]); //}}}
+  // <input> - input coordinate file
+  char input[LINE] = "";
+  snprintf(input, LINE, "%s", argv[++count]);
 
   // <out.vsf> - output structure file //{{{
-  char output_vsf[LINE];
-  strcpy(output_vsf, argv[++count]);
-
-  // test if <out.vsf> filename ends with '.vsf' (required by VMD)
+  char output_vsf[LINE] = "";
+  snprintf(output_vsf, LINE, "%s", argv[++count]);
+  // test if <out.vsf> ends with '.vsf'
   int ext = 1;
-  char extension[1][5];
+  char extension[2][5];
   strcpy(extension[0], ".vsf");
-  if (ErrorExtension(output_vsf, ext, extension)) {
+  if (ErrorExtension(output_vsf, ext, extension) == -1) {
     Help(argv[0], true);
     exit(1);
   } //}}}
 
-  // <out.vcf> - output structure file //{{{
-  char output_vcf[LINE];
-  strcpy(output_vcf, argv[++count]);
-
-  // test if <out.vcf> filename ends with '.vcf' (required by VMD)
+  // <out.vcf> - output vcf file //{{{
+  char output_vcf[LINE] = "";
+  snprintf(output_vcf, LINE, "%s", argv[++count]);
+  // test if <out.vcf> ends with '.vsf'
   ext = 1;
   strcpy(extension[0], ".vcf");
   if (ErrorExtension(output_vcf, ext, extension)) {
@@ -106,30 +97,44 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
+  // print command to stdout
+  // TODO add --silent option
+  bool silent = false;
+  if (!silent) {
+    PrintCommand(stdout, argc, argv);
+  }
+
+  // options before reading system data
+  bool verbose = BoolOption(argc, argv, "-v");
+
   // some variables //{{{
   COUNTS Counts = InitCounts; // structure with number of beads, molecules, etc.
   BEAD *Bead;
+
+
   BEADTYPE *BeadType;
   MOLECULE *Molecule;
   MOLECULETYPE *MoleculeType;
-  VECTOR BoxLength;
+  BOX Box;
   VECTOR box_lo; // {x,y,z}lo from data file to place beads in (0, BoxLength>
   int bonds = 0; // total number of bonds
   int angles = 0; // total number of angles
   PARAMS *bond_type; // information about bond types
   PARAMS *angle_type; // information about angle types
-  int *Index; // link between indices in vsf and in program (i.e., opposite of Bead[].Index) //}}}
+  int *Index; // link between indices (i.e., Index[Bead[i].Index]=i)
 
+  // TODO add dihedrals
   ReadLmpData(input, &bonds, &bond_type, &angles, &angle_type,
-              &BoxLength, &box_lo, &Counts, &BeadType, &Bead, &Index,
+              &Box.Length, &box_lo, &Counts, &BeadType, &Bead, &Index,
               &MoleculeType, &Molecule);
 
   // print information - verbose output //{{{
   if (verbose) {
-    VerboseOutput("\0", Counts, BoxLength, BeadType, Bead,
+    VerboseOutput("\0", Counts, Box, BeadType, Bead,
                   MoleculeType, Molecule);
-    PrintBondTypes(Counts, bond_type);
-    PrintAngleTypes(Counts, angle_type);
+    // TODO bond & angle & dihedral types into VerboseOutput
+    PrintBondTypes2(Counts.TypesOfBonds, bond_type);
+    PrintAngleTypes2(Counts.TypesOfAngles, angle_type);
   } //}}}
 
   // write out.vcf file //{{{
@@ -138,18 +143,9 @@ int main(int argc, char *argv[]) {
     ErrorFileOpen(output_vcf, 'w');
     exit(1);
   }
-
-  // print command to output vcf file
-  fprintf(fw, "# Created by:");
-  PrintCommand(fw, argc, argv);
-  fprintf(fw, "# AnalysisTools version %s; https://github.com/KaGaSi/AnalysisTools/releases\n", VERSION);
-
-  fprintf(fw, "\npbc %lf %lf %lf\n", BoxLength.x, BoxLength.y, BoxLength.z);
-
-  char stuff[LINE];
-  strcpy(stuff, "\0");
-  WriteCoorIndexed(fw, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
-
+  PrintByline(fw, argc, argv);
+  WriteCoorIndexed(fw, Counts, BeadType, Bead,
+                   MoleculeType, Molecule, "\0", Box);
   fclose(fw); //}}}
 
   // create & fill output vsf file

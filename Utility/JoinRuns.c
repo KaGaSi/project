@@ -17,9 +17,9 @@ same, but only selected bead types are saved to output.vcf file.\n\n");
   fprintf(ptr, "   %s <1st input.vcf> <2nd input.vsf> <2nd input.vcf> ", cmd);
   fprintf(ptr, "<output.vcf> <type names> <options>\n\n");
 
-  fprintf(ptr, "   <1st input.vcf>   input filename of 1st run (vcf or vtf format)\n");
-  fprintf(ptr, "   <2nd input.vsf>   input filename of 2nd run (vsf or vtf format)\n");
-  fprintf(ptr, "   <2nd input.vcf>   input filename of 2nd run (vcf or vtf format)\n");
+  fprintf(ptr, "   <1st input.vcf>   input coordinate file of 1st run (vcf or vtf format)\n");
+  fprintf(ptr, "   <2nd input.vsf>   input coordinate file of 2nd run (vsf or vtf format)\n");
+  fprintf(ptr, "   <2nd input.vcf>   input coordinate file of 2nd run (vcf or vtf format)\n");
   fprintf(ptr, "   <output.vcf>      output filename (vcf format)\n");
   fprintf(ptr, "   <type names>      names of bead types to save (optional if '-r' used)\n");
   fprintf(ptr, "   <options>\n");
@@ -152,8 +152,7 @@ int main(int argc, char *argv[]) {
   // options before reading system data //{{{
   bool silent;
   bool verbose;
-  bool script;
-  CommonOptions(argc, argv, &input_vsf_1, &verbose, &silent, &script);
+  CommonOptions(argc, argv, &input_vsf_1, &verbose, &silent);
 
   // save coordinates of joined aggregates //{{{
   char joined_vcf[LINE];
@@ -217,7 +216,7 @@ int main(int argc, char *argv[]) {
   BEADTYPE *BeadType1; // structure with info about all bead types
   MOLECULETYPE *MoleculeType1; // structure with info about all molecule types
   BEAD *Bead1; // structure with info about every bead
-  int *Index1; // link between indices in vsf and in program (i.e., opposite of Bead[].Index)
+  int *Index1; // link between indices (i.e., Index[Bead[i].Index]=i)
   MOLECULE *Molecule1; // structure with info about every molecule
   // data from 2nd run
   BEADTYPE *BeadType2; // structure with info about all bead types

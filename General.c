@@ -29,7 +29,6 @@ bool IsDouble(char *a) {
       } else {
         sci_e = true;
       }
-      printf("\n%s %d %ld %lf\n", a, i, strlen(a), atof(a));
       if ((i+1) >= strlen(a)) {
         return false;
       } else if (a[i+1] == '-' || a[i+1] == '+') {
@@ -217,7 +216,7 @@ void SwapBool(bool *a, bool *b) {
  * Sort an array using the bubble sort algorithm. If mode = 0, sort
  * ascendingly; if mode = 1, sort descendingly.
  */
-void SortArray(int **array, int length, int mode) {
+void SortArray(int *array, int length, int mode) {
   if (mode != 0 && mode != 1) {
     fprintf(stderr, "\033[1;31m");
     fprintf(stderr, "\nError - SortArray(): use 0 or 1 for sorting mode\n");
@@ -227,12 +226,12 @@ void SortArray(int **array, int length, int mode) {
   for (int i = 0 ; i < (length-1); i++) {
     bool done = true;
     for (int j = 0 ; j < (length-i-1); j++) {
-      if (mode == 0 && (*array)[j] > (*array)[j+1]) {
-        SwapInt(&(*array)[j], &(*array)[j+1]);
+      if (mode == 0 && array[j] > array[j+1]) {
+        SwapInt(&array[j], &array[j+1]);
         done = false;
       }
-      if (mode == 1 && (*array)[j] < (*array)[j+1]) {
-        SwapInt(&(*array)[j], &(*array)[j+1]);
+      if (mode == 1 && array[j] < array[j+1]) {
+        SwapInt(&array[j], &array[j+1]);
         done = false;
       }
     }
@@ -243,43 +242,33 @@ void SortArray(int **array, int length, int mode) {
 
 // SplitLine() //{{{
 /**
- * Function that splits the provided line into individual strings (using tab,
- * space, and colon as a delimiter) and removes newline character from the end
- * of the last string.
+ * Function that splits the provided line into individual strings.
  */
-int SplitLine(char out[30][100], char *line, char delim[8]) {
+int SplitLine(char out[30][100], char *line, const char *delim) {
   // trim whitespaces at the beginning and end of line
   strcpy(line, TrimLine(line));
   // split into words separated by delimiters in delim array
   char *split[30];
-  split[0] = strtok(line, delim); // first word
   int words = 0;
+  split[words] = strtok(line, delim); // first word
   while (words < 29 && split[words] != NULL) {
     words++; // start from 1, as the first split is already done
     split[words] = strtok(NULL, delim);
   }
-  // if the last word ends with newline, make it into '\0'
-  if (split[words-1][strlen(split[words-1])-1] == '\n') {
-    split[words-1][strlen(split[words-1])-1] = '\0';
-  }
-  // if the last words is just '\0', disregard it
-  if (split[words-1][0] == '\0') {
-    words--;
-  }
-  // copy splits into the output array
-  for (int i = 0; i < words; i++) {
-    strcpy(out[i], split[i]);
-  }
   if (words == 0) {
     out[0][0] = '\0';
+  } else {
+    // copy splits into the output array
+    for (int i = 0; i < words; i++) {
+      snprintf(out[i], 100, "%s", split[i]);
+    }
   }
   return words;
 } //}}}
 
 // TrimLine() //{{{
 /**
- * Function to trim whitespace from the
- * beginning and end of a string.
+ * Function to trim whitespace from the beginning and end of a string.
  */
 char * TrimLine(char *line) {
   int length = strlen(line);
@@ -289,31 +278,28 @@ char * TrimLine(char *line) {
   while (length > 1 &&
          (trimmed[length-1] == ' ' ||
           trimmed[length-1] == '\n' ||
+          trimmed[length-1] == '\r' ||
           trimmed[length-1] == '\t')) {
     trimmed[length-1] = '\0';
-    length--;
+    length = strlen(trimmed);
   }
   // 2) preceding whitespace
-  while (length > 1 &&
+  while (length >= 1 &&
          (trimmed[0] == ' ' ||
           trimmed[0] == '\n' ||
+          trimmed[0] == '\r' ||
           trimmed[0] == '\t')) {
     for (int i = 0; i < length; i++) { // line[length] contains '\0'
       trimmed[i] = trimmed[i+1];
     }
-    length--;
+    length = strlen(trimmed);
   }
-  // 3) if only 1 character remains, make it into newline (otherwise segfault happens)
-  if (length == 1 && (trimmed[0] == ' ' || trimmed[0] == '\t')) {
-    trimmed[0] = '\n';
-  }
-
   return trimmed;
 } //}}}
 
 // PrintCommand() //{{{
 /**
- * Function to print full command.
+ * Function to print the used command (at most 30 words).
  */
 void PrintCommand(FILE *ptr, int argc, char *argv[]) {
   // first argument can contain whole path - remove that
@@ -384,7 +370,8 @@ void ResetColour(int a) {
 // SafeStrcat() //{{{
 /**
  * Function to safely concatenate strings; i.e., if the output array is too
- * small, it first reallocs it.
+ * small, it first reallocs it. The input must be a string (i.e.,
+ * null-terminated array).
  */
 void SafeStrcat(char **out, char *in, int initial_size) {
   int in_length = 0, out_length = 0; // string length, not counting '\0'
@@ -402,10 +389,11 @@ void SafeStrcat(char **out, char *in, int initial_size) {
     }
     out_length++;
   }
-  int out_times_initial = out_length / initial_size + 1; // out array length in units of initial_size
-  int new_length = in_length + out_length; // minimum required length for out array
-  if (new_length > (out_times_initial*initial_size)) { // realloc out arry if too short
-    *out = realloc(*out, (out_times_initial+1)*initial_size*sizeof(char));
+  // out array length in units of initial_size
+  int out_times_initial = out_length / initial_size + 1;
+  int new_length = in_length + out_length; // required length for out array
+  if (new_length > (out_times_initial*initial_size)) { // is out array short?
+    *out = realloc(*out, sizeof **out * (out_times_initial + 1) * initial_size);
   }
   strcat(*out, in);
 } //}}}

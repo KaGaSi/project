@@ -1,19 +1,40 @@
 \chapter{Introdution}
 
-This set of utilities analyses trajectories of particle-based simulations.
-The emphasis is on assembly of molecules such as self-assembly of polymers
-and the properties of the resultant aggregates. Note that throughout the
-utilities and this manual, the term aggregates refers to any supramolecular
-structure (e.g., a bilayer, a micelle, or a vesicle).
+\section{General Information}
+AnalysisTools is a set of utilities to analyse trajectories of
+particle-based simulations. There are currently 37 utilities (including one
+from the \href{https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx}{DL\_MESO
+simulation package} that was slightly adapted).
 
-The package also contains some utilities to generate initial configurations
-(or adapt existing) as well as to create input files for the
-\href{https://lammps.sandia.gov/}{LAMMPS molecular dynamic simulator} and
-the \href{https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx}{DL\_MESO
-simulation package}.
+Their functionality ranges from calculating system-wide properties such as
+pair correlation functions or particle density in the simulation box to
+determining per-molecule and per-aggregate properties (where aggregate
+stands for any supramolecular structure) such as shape descriptors or
+aggregation numbers.
 
-It mainly works with
-\href{https://github.com/olenz/vtfplugin/wiki/VTF-format}{vtf trajectory
-files}, but it can also read \texttt{xyz} or LAMMPS custom format
-coordinate files as well as configuration files for LAMMPS and DL\_MESO
-simulation package.
+There are also several utilities to generate/tweak initial configurations
+for particle based simulations and create configuration files for the
+DL\_MESO simulation package and \href{https://lammps.sandia.gov/}{LAMMPS
+molecular dynamic simulator}.
+
+\section{Installation}
+
+All utilities can be compiled on linux using \texttt{cmake} and subsequently
+running \texttt{make} on the generated \texttt{Makefile}. It requires
+\texttt{C} and \texttt{FORTRAN} compilers.
+
+The compilation should be done in a separate directory, such as
+\texttt{\$ROOT\_DIR/build} (where \texttt{\$ROOT\_DIR} is the
+\texttt{AnalysisTools} root directory). To create the \texttt{Makefile},
+simply run \texttt{cmake \$ROOT\_DIR} in the \texttt{build} directory.  All
+utilities are then compiled by running \texttt{make}.  The binaries will be
+located in \texttt{build/bin} directory.
+
+Following is a one line command to create the \texttt{build} directory and
+compile all utilities (assuming the working directory is AnalysisTools root
+directory):
+
+\texttt{mkdir build; cd build; cmake ../; make}
+
+To compile individual utilities, simply run \texttt{make <utility name>} in
+the \texttt{build} directory.

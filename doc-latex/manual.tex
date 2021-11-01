@@ -47,6 +47,8 @@
 \usepackage[style=british]{csquotes}
 % multi-line comments
 \usepackage{verbatim}
+% numbered code blocks
+\usepackage{listings}
 % clickable links -- hyperref should be the last package listed
 \usepackage{hyperref} %}}}
 
@@ -150,6 +152,19 @@
 \newcommand{\note}[1]{\vspace{-1em}\noindent\footnotesize{#1}}
 \newcommand{\TODO}{\colorbox{yellow}{TODO:}}
 
+% listings setup
+\definecolor{codebackground}{rgb}{0.95, 0.9, 0.95}
+\lstset{
+  numbers=left,
+  numberstyle=\scriptsize,
+  stepnumber=1,
+  numbersep=10pt,
+  backgroundcolor=\color{codebackground},
+  frame=single,                    % just add some bit of color space
+  framesep=5pt,                    % surrounding the code block (i.e., the
+  rulecolor=\color{codebackground} % frame has the same colour as the block)
+}
+
 \begin{document}
 
 % some better(?) word splitting settings %{{{
@@ -164,7 +179,7 @@
 \vfill
 {\Huge\bf AnalysisTools user manual}
 \vfill
-{\Large RNDR. Karel Šindelka, Ph.D.}
+{\Large RNDr. Karel Šindelka, Ph.D.}
 
 {\small k.sindelka@gmail.com}
 \vspace{10pt}
@@ -185,7 +200,6 @@ Version 3.3 (Released August 18, 2020)
 \addcontentsline{toc}{chapter}{Contents}
 
 \include{Introduction}
-\include{Installation}
 \include{InputFiles}
 \include{Utilities}
 \include{ReadData}
