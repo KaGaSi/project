@@ -1,6 +1,8 @@
 test*
 build
 doc
+docs/doxygen
+docs/_build
 cscope*
 OneTime
 Testing
