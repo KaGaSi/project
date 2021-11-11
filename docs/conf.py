@@ -18,8 +18,8 @@
 # -- Project information -----------------------------------------------------
 
 project = 'AnalysisTools'
-copyright = '2021, Karel Gary Šindelka'
-author = 'Karel Gary Šindelka'
+copyright = '2021, Karel (Gary) Šindelka'
+author = 'Karel (Gary) Šindelka'
 
 
 # -- General configuration ---------------------------------------------------
