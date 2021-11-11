@@ -7,7 +7,9 @@ Welcome to AnalysisTools's documentation
 =========================================
 
 AnalysisTools is a suite of utilities to (mainly) analyse particle-based
-simulations. Roughly speaking, there are three types of utilities:
+simulations, including one adapted from the `DL_MESO simulation package
+<https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx>`_. Roughly speaking, there are
+three types of utilities:
 
 * utilities to calculate system-wide properties; e.g., pair correlation
   functions or particle density along a simulation box axis
@@ -18,13 +20,31 @@ simulations. Roughly speaking, there are three types of utilities:
   configuration for a simulation from scratch or by adding molecules to an
   existing one
 
+.. .. image:: ../Examples/GenLayers/Layers.jpg
+   Adding an extra '..' makes it into a comment. Hmm...
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Userguide
 
-Indices and tables
-==================
+   Install.rst
+   InputFiles.rst
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. toctree::
+   :maxdepth: 2
+   :caption: Internals
+
+   Install.rst
+   InputFiles.rst
+
+.. Nor this...
+  Indices and tables
+  ==================
+
+  * :ref:`genindex`
+  * :ref:`modindex`
+  * :ref:`search`
+
+.. note::
+   This project is under active development. With comments and bugs, contact
+   me via k.sindelka@gmail.com.
