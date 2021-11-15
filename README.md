@@ -19,8 +19,8 @@ divided into four types:
 Installation
 ============
 
-Either download the zipped/tarred latest version [here](/tags), or clone
-this repository:
+Either download the zipped/tarred latest version
+[here](https://github.com/KaGaSi/AnalysisTools/tags), or clone this repository:
 
 `git clone https://github.com/KaGaSi/AnalysisTools`
 
