@@ -1,9 +1,20 @@
 # AnalysisTools
 
-A set of utilities to analyse trajectories from particle-based
-molecular simulations. The programs work with [vsf/vcf
-files](https://github.com/olenz/vtfplugin/wiki/VTF-format) coordinate
-files.
+A set of utilities to analyse trajectories from particle-based molecular
+simulations. The 34 utilities (including one from the [DL_MESO simulation
+package](https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx) could be roughly
+divided into four types:
+
+* utilities to calculate system-wide properties; e.g., pair
+  correlation functions or particle densities along a simulation box axis
+* utilities to calculate per-molecule or per-aggregate properties
+  (where aggregate stands for any supramolecular structure); e.g., shape
+  descriptors for individual molecules or whole micelles
+* utilities to manipulate a configuration; e.g., create initial
+  configuration for a simulation from scratch or by adding molecules to
+  an existing one
+* helper utilities to analyse text files; e.g., calculate averages
+  and standard deviations of a data series
 
 Installation
 ============
