@@ -1,40 +1,34 @@
 \chapter{Introdution}
 
 \section{General Information}
-AnalysisTools is a set of utilities to analyse trajectories of
-particle-based simulations. There are currently 37 utilities (including one
+AnalysisTools is a set of utilities to (mainly) analyse trajectories of
+particle-based simulations. The 34 utilities (including one
 from the \href{https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx}{DL\_MESO
-simulation package} that was slightly adapted).
+simulation package} could be roughly divided into four types:
 
-Their functionality ranges from calculating system-wide properties such as
-pair correlation functions or particle density in the simulation box to
-determining per-molecule and per-aggregate properties (where aggregate
-stands for any supramolecular structure) such as shape descriptors or
-aggregation numbers.
-
-There are also several utilities to generate/tweak initial configurations
-for particle based simulations and create configuration files for the
-DL\_MESO simulation package and \href{https://lammps.sandia.gov/}{LAMMPS
-molecular dynamic simulator}.
+\begin{itemize}
+  \item utilities to calculate system-wide properties; e.g., pair
+    correlation functions or particle densities along a simulation box axis
+  \item utilities to calculate per-molecule or per-aggregate properties
+    (where aggregate stands for any supramolecular structure); e.g., shape
+    descriptors for individual molecules or whole micelles
+  \item utilities to manipulate a configuration; e.g., create initial
+    configuration for a simulation from scratch or by adding molecules to
+    an existing one
+  \item helper utilities to analyse text files; e.g., calculate averages
+    and standard deviations of a data series
+\end{itemize}
 
 \section{Installation}
 
-All utilities can be compiled on linux using \texttt{cmake} and subsequently
-running \texttt{make} on the generated \texttt{Makefile}. It requires
-\texttt{C} and \texttt{FORTRAN} compilers.
-
+AnalysisTools requires \tt{C} and \tt{Fortran} compilers and \tt{cmake}.
 The compilation should be done in a separate directory, such as
-\texttt{\$ROOT\_DIR/build} (where \texttt{\$ROOT\_DIR} is the
-\texttt{AnalysisTools} root directory). To create the \texttt{Makefile},
-simply run \texttt{cmake \$ROOT\_DIR} in the \texttt{build} directory.  All
-utilities are then compiled by running \texttt{make}.  The binaries will be
-located in \texttt{build/bin} directory.
+\tt{<root>/build} (where \tt{<root>} is the AnalysisTools root
+directory). The following generates a \tt{Makefile} within \tt{build}:
 
-Following is a one line command to create the \texttt{build} directory and
-compile all utilities (assuming the working directory is AnalysisTools root
-directory):
+\tt{mkdir <root>/build; cd <root>/build; cmake ../}
 
-\texttt{mkdir build; cd build; cmake ../; make}
+Then run \tt{make} to compile all utilities or \tt{make <utility name>} to
+compile a single utility.
 
-To compile individual utilities, simply run \texttt{make <utility name>} in
-the \texttt{build} directory.
+The binaries are located in the \tt{<root>build/bin} directory.
