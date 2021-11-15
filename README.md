@@ -19,6 +19,11 @@ divided into four types:
 Installation
 ============
 
+Either download the zipped/tarred latest version [here](/tags), or clone
+this repository:
+
+`git clone https://github.com/KaGaSi/AnalysisTools`
+
 AnalysisTools requires `C` and `Fortran` compilers and `cmake`.  The
 compilation should be done in a separate directory, such as `<root>/build`
 (where `<root>`} is the AnalysisTools root directory). The following
