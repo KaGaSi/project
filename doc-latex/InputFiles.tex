@@ -17,8 +17,8 @@ simulator}.
 \section{System description} %{{{
 Most of the utilities read system description from the \vtf files
 which can be complemented by a DL\_MESO \field or a LAMMPS \data files. Not
-all valid \vtf files will work with AnalysisTools; see the next sections
-for information about how the files must look.
+all valid \vtf files will work with AnalysisTools; see the following
+sections for information their proper formatting
 
 The \vtf can either be split into a \vsf structure file
 (Section~\ref{ssec:StructureVsf}) and a \vcf coordinate file
@@ -34,10 +34,8 @@ In general, the utilities consider only bead types that are present in a
 \vcf file (i.e., bead types present in a \vsf file but missing from a \vcf
 file are ignored).
 
-The utilities work with orthogonal as well as other paralleloid boxes
-(i.e., triclinic cells).
-
-Chapter~\ref{chap:ReadData} briefly describes how the data are read.
+Some of the utilities work with orthogonal as well as other paralleloid
+boxes (i.e., triclinic cells).
 
 \subsection{\vsf structure file} \label{ssec:StructureVsf} %{{{
 
@@ -46,8 +44,8 @@ The structure file contains all information about all beads and bonds
 type, an \enquote{atom line}, contains a bead definition, while the second
 one, a \enquote{bond line}, defines which beads are connected.
 
-\subsubsection{Bead definitions}
-Each atom line is the description of a single bead following these rules:
+Each atom line describes a single bead (except for the \tt{atom default}
+line, see below) and must follow these rules:
 
 \begin{itemize}[topsep=0pt,itemsep=0pt]
   \item the line starts with \tt{a[tom]} (i.e., \tt{atom} or just \tt{a})
@@ -65,72 +63,94 @@ Each atom line is the description of a single bead following these rules:
   \item other keywords are ignored
 \end{itemize}
 
-Different types of beads are generally defined solely by their name, i.e.,
-should two beads share a name but differ in other characteristics (i.e.,
-mass, charge, or radius), they will be considered as belonging to the same
-type. The mass, charge, and radius of each bead type is equal to that for
-the topmost bead with that name in the \vsf file that contains the
-corresponding keyword (if the keyword is not present in any line of the
-given bead type, that characteristic is undefined). However in some cases,
-beads that share a name but differ in their characteristics, are treated as
-different bead types (with \tt{\_<int>} attached to its name); notably,
-\tt{TransformVsf} does this to produce a new \vsf file with these names.
-For example, the lines
-%
-\begin{lstlisting}
-atom default name A mass 1 q 0
-a 0 name B mass 2 r 1
-a 2 name B m 1 charge -1
-atom 4 name B
-\end{lstlisting}
-%
-would ordinarily lead to two \tt{A} type beads (both with mass 1, charge 0,
-and undefined radius) and three \tt{B} type beads (all with mass 2, charge
--1 and radius 1). However, \tt{TransformVsf} would split the \tt{B} type
-beads into three distinct types: one \tt{B\_1} bead (with mass 2, undefined
-charge, and radius 1), one \tt{B\_2} bead (with mass 1, charge -1, and
-undefined radius), and one \tt{B\_3} bead (with all three characteristics
-undefined).  Note that if line \tt{2} weren't there, the \tt{B} beads would
-always be the same; i.e., if there's only one value for any characteristic,
-all beads sharing the same name will have that value even if it is not
-specified on every atom line.
-
-\subsubsection{Bond definitions}
 Each bond line starts with \tt{b[ond]} followed by two bead indexes
-(corresponding to an atom line) separated by a colon. Note that the colon
-must be right after the first index, i.e., no white space between the
-number and the colon is allowed. The double-colon or comma-separated \vtf
-bond entries are not allowed in \tt{AnalysisTools}.
+(corresponding to their indexes from the atom lines) separated by a colon.
+Note that the colon must be right after the first index, i.e., no white
+space between the number and the colon is allowed.
 
-In general, \tt{AnalysistTools} recognizes types of molecules only by their
-names (taking the connectivity and bead order of the first molecule of
-every type); if two molecules share the same \tt{res[name]}, but differ in
-connectivity or number of beads, the utilities will exit with an error.
-Again, sometimes \tt{AnalysisTools} go to more detail (e.g., the
-\tt{TransformVsf} utility), distinguishing molecule types by all its
-characteristics. For example, the lines
-%
+\tt{AnalysisTools} groups the same beads (and the same molecules) into bead
+(and molecule) types. Generally, types of beads are defined solely by their
+name, i.e., should two beads share a name but differ in other
+characteristics, they will be grouped into the same type with mass, charge,
+and radius each equal to that for the bead type's topmost atom line with
+the corresponding keyword. If the keyword is missing from all atom lines,
+that characteristic is undefined. Similarly, different molecule molecules
+are generally defined based on their names. If two molecules share a name,
+but differ in bead order and/or connectivity, the utility will exit with an
+error.
+
+However, some utilities can distinguish bead and molecule types based on
+other characteristics as well. For example, the \tt{--detailed} option
+forces the \tt{Info} utility (\ref{sec:Info}) to consider mass,
+charge, and radius along with the name for defining bead types and bead
+order and connectivity along with the name for defining molecule types. As
+an example, consider the following \vsf file that contains 11 beads and
+two molecules:
+
+...well, I wish it actually worked.
+
 \begin{lstlisting}
-a 0 A m 1 res Mol resid 1
-a 1 B m 1 res Mol resid 1
-a 2 B res Mol resid 1
-a 3 A res Mol resid 2
-a 4 B res Mol resid 2
-a 5 B m 2 res Mol resid 2
-b 0:1
-b 1:2
-b 3:4
-b 4:5
-b 3:5
+atom default name A mass 1 charge 0
+atom 0 name B mass 2 radius 1
+atom 2 name B mass 1 charge -1
+atom 4 name B
+atom 5 name C resname Mol resid 1 mass 1
+atom 6 name A resname Mol resid 1 mass 1
+atom 7 name A resname Mol resid 1
+atom 8 name C resname Mol resid 2
+atom 9 name D resname Mol resid 2 radius 1.5
+atom 10 name D resname Mol resid 2 mass 2
+bond 5:6
+bond 6:7
+bond 8:9
+bond 9:10
+bond 8:10
 \end{lstlisting}
-%
-would ordinarilly lead to two linear \tt{Mol} type molecules, each
-containing one \tt{A} and two \tt{B} beads and connected \tt{A-B-B}.
-However, \tt{TransformVsf} would split the molecules to one linear
-\tt{Mol\_1} type molecule (with one \tt{A} and two \tt{B\_1} beads,
-connected \tt{A-B\_1-B\_1}) and one ring \tt{Mol\_2} type molecule (with
-one \tt{A}, one \tt{B\_1}, and one \tt{B\_2} beads, connected in a
-triangle); \tt{B\_1} bead has mass 1 and \tt{B\_2} bead mass 2.
+
+Using \tt{Info <vsf>}, bead and molecule types are identified by their name
+only:
+
+\begin{lstlisting}
+Counts = {
+  .TypesOfBeads     = 4,
+  .Bonded           = 6,
+  .Unbonded         = 5,
+  .Beads            = 11,
+  .TypesOfMolecules = 1,
+  .Molecules        = 2
+}
+
+BeadType[0] = {.Name = A, .Number = 4, .Charge = 0.0,
+                                  .Mass = 1.0, .Radius = n/a}
+BeadType[1] = {.Name = B, .Number = 3, .Charge = n/a,
+                                  .Mass = 2.0, .Radius = 1.0}
+BeadType[2] = {.Name = C, .Number = 2, .Charge = n/a,
+                                  .Mass = 1.0, .Radius = n/a}
+BeadType[3] = {.Name = D, .Number = 2, .Charge = n/a,
+                                  .Mass = n/a, .Radius = 1.5}
+
+MoleculeType[ 0] = {
+  .Name       = Mol,
+  .Number     = 2,
+  .nBeads     = 3,
+  .Bead       = {C, A, A},
+  .nBonds     = 2,
+  .Bond       = {1-2, 2-3},
+  .nBTypes    = 2
+  .BType      = {C, A},
+  .Mass       = 3.0,
+  .Charge     = n/a
+}
+\end{lstlisting}
+
+Here, four bead types and a single molecule type are identified. Looking,
+for example, at the mass of the \tt{B} beads, its value is 2 according to
+the second line in the \vsf file (the first atom line containing the name
+\tt{B}) even though the mass of \tt{B} on the next atom line is 1. Looking
+at the single molecule type, it contains bead types \tt{C} and \tt{A}
+connected \tt{C-A-A}; these were taken from the first molecule (\vsf lines
+5-7). However, the second molecule is in the shape of a triangle (see \vsf
+lines 13-15).
 
 The \vsf file can contain any number of blank lines and comments (lines
 beginning with \tt{\#}).
