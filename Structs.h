@@ -17,17 +17,17 @@
  * \brief Total numbers of various things.
  */
 typedef struct Counts {
-  int TypesOfBeads, // number of bead types
-      TypesOfMolecules, // number of molecule types
-      Beads, // total number of beads in all molecules
-      Bonded, // total number of beads in all molecules
-      Unbonded, // total number of monomeric beads
-      BeadsInVsf, // total number of all beads in .vsf file (not necessarily in .vcf)
-      Molecules, // total number of molecules
-      Aggregates, // total number of aggregates
-      TypesOfBonds, // number of bond types; -1 if not read from anywhere
-      TypesOfAngles, // number of bond types; -1 if not read from anywhere
-      TypesOfDihedrals; // number of dihedral types; -1 if not read from anywhere
+  int TypesOfBeads, /// number of bead types
+      TypesOfMolecules, /// number of molecule types
+      Beads, /// total number of beads in all molecules
+      Bonded, /// total number of beads in all molecules
+      Unbonded, /// total number of monomeric beads
+      BeadsInVsf, /// total number of all beads in .vsf file (not necessarily in .vcf)
+      Molecules, /// total number of molecules
+      Aggregates, /// total number of aggregates
+      TypesOfBonds, /// number of bond types; -1 if not read from anywhere
+      TypesOfAngles, /// number of bond types; -1 if not read from anywhere
+      TypesOfDihedrals; /// number of dihedral types; -1 if not read from anywhere
 } COUNTS;
 
 // Initialize Counts
