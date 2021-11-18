@@ -193,6 +193,7 @@ void VerboseOutput_old(char *input_vcf, COUNTS Counts, VECTOR BoxLength,
   PrintMoleculeType2(Counts.TypesOfMolecules, BeadType, MoleculeType);
   putchar('\n');
 } //}}}
+// TODO: print stuff from Counts only if > 0
 // VerboseOutput() //{{{
 /**
  * Function providing standard verbose output (for cases when verbose
@@ -265,30 +266,73 @@ void PrintBeadType(COUNTS Counts, BEADTYPE *BeadType) {
 /**
  * Function printing BeadType structure.
  */
-// TODO length of %lf (for the n/a bits)
 void PrintBeadType2(int number, BEADTYPE *BeadType) {
+  // some stuff to properly align the fields //{{{
+  int precision = 3, // number of decimal digits
+      longest_name = 0, // longest bead type name
+      most_beads = 0, // maximum number of beads
+      max_q_neg = 0, max_q_pos = 0, // maximum charges
+      max_mass = 0; // maximum mass
+  bool negative = false; // extra space for '-' if there's negative charge
   for (int i = 0; i < number; i++) {
-    fprintf(stdout, "BeadType[%2d] = {", i);
-    fprintf(stdout, ".Name =%10s, ", BeadType[i].Name);
-    fprintf(stdout, ".Number =%7d, ", BeadType[i].Number);
-    if (BeadType[i].Charge != CHARGE) {
-      fprintf(stdout, ".Charge = %lf, ", BeadType[i].Charge);
-    } else {
-      fprintf(stdout, ".Charge =    n/a, ");
+    int length = strlen(BeadType[i].Name);
+    if (length > longest_name) {
+      longest_name = length;
     }
+    if (BeadType[i].Number > most_beads) {
+      most_beads = BeadType[i].Number;
+    }
+    if (BeadType[i].Charge < 0) {
+      negative = true;
+    }
+    if (BeadType[i].Charge != CHARGE) {
+      if (BeadType[i].Charge < 0 && fabs(BeadType[i].Charge) > max_q_neg) {
+        max_q_neg = floor(fabs(BeadType[i].Charge));
+      } else if (BeadType[i].Charge > 0 && BeadType[i].Charge < max_q_pos) {
+        max_q_pos = floor(BeadType[i].Charge);
+      }
+    }
+    if (BeadType[i].Mass != MASS && BeadType[i].Mass > max_mass) {
+      max_mass = floor(BeadType[i].Mass);
+    }
+  }
+  // number of digits of the highest_number
+  most_beads = floor(log10(most_beads)) + 1;
+  // number of digits of the charge
+  max_q_neg = floor(log10(-max_q_neg)) + 1;
+  max_q_pos = floor(log10(max_q_pos)) + 1;
+  max_q_neg += 1 + precision; // +1 for the decimal point
+  max_q_pos += 1 + precision;
+  if (negative && max_q_neg >= max_q_pos) {
+    max_q_pos = max_q_neg + 1; // +1 for the missing minus sign
+  }
+  printf("q length: %d %d\n", max_q_neg, max_q_pos);
+  // number of digits of the mass
+  max_mass = floor(log10(max_mass)) + 1 + precision + 1;
+  // number of digits of the number of types
+  int types_digits = floor(log10(number));
+  //}}}
+  // print the information
+  for (int i = 0; i < number; i++) {
+    fprintf(stdout, "BeadType[%*d] = {", types_digits, i);
+    fprintf(stdout, ".Name = %*s, ", longest_name, BeadType[i].Name);
+    fprintf(stdout, ".Number = %*d, ", most_beads, BeadType[i].Number);
+    fprintf(stdout, ".Charge = ");
     if (BeadType[i].Mass != MASS) {
-      fprintf(stdout, ".Mass = %lf, ", BeadType[i].Mass);
+      fprintf(stdout, ".Mass = %*.*f, ", max_mass, precision, BeadType[i].Mass);
     } else {
-      fprintf(stdout, ".Mass =    n/a, ");
+      fprintf(stdout, ".Mass = ");
+      for (int j = 0; j < (max_mass-3); j++) {
+        putchar(' ');
+      }
+      fprintf(stdout, "n/a, ");
     }
     if (BeadType[i].Radius != RADIUS) {
       fprintf(stdout, ".Radius = %lf", BeadType[i].Radius);
     } else {
-      fprintf(stdout, ".Radius =    n/a");
+      fprintf(stdout, ".Radius =      n/a");
     }
     fprintf(stdout, "}\n");
-//  fprintf(stdout, "Use = %3s, ", BeadType[i].Use? "Yes":"No");
-//  fprintf(stdout, "Write = %3s}\n", BeadType[i].Write? "Yes":"No");
   }
   putchar('\n');
 } //}}}
@@ -368,7 +412,7 @@ void PrintMoleculeType(COUNTS Counts, BEADTYPE *BeadType, MOLECULETYPE *Molecule
  */
 void PrintMoleculeType2(int number_of_types, BEADTYPE *BeadType, MOLECULETYPE *MoleculeType) {
   for (int i = 0; i < number_of_types; i++) {
-    fprintf(stdout, "MoleculeType[%2d] = {\n", i);
+    fprintf(stdout, "MoleculeType[%d] = {\n", i);
     fprintf(stdout, "  .Name       = %s,\n", MoleculeType[i].Name);
     fprintf(stdout, "  .Number     = %d,\n", MoleculeType[i].Number);
     // print bead types (list all beads) //{{{
@@ -1283,7 +1327,7 @@ VECTOR Gyration(int n, int *list, COUNTS Counts,
 
   // first root: either 0 or Newton's iterative method to get it //{{{
   long double root0 = 0;
-  if (fabs(d_cube) > 0.0000000001L) {
+  if (fabsl(d_cube) > 0.0000000001L) {
     // derivative of char. polynomial: a_deriv * x^2 + b_deriv * x + c_deriv
     long double a_deriv = 3 * a_cube;
     long double b_deriv = 2 * b_cube;
@@ -1291,7 +1335,7 @@ VECTOR Gyration(int n, int *list, COUNTS Counts,
 
     long double root1 = 1;
 
-    while (fabs(root0-root1) > 0.0000000001L) {
+    while (fabsl(root0-root1) > 0.0000000001L) {
       long double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) + c_cube * root0 + d_cube);
       long double f_deriv_root0 = (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
       root1 = root0 - f_root0 / f_deriv_root0;

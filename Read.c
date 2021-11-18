@@ -4,6 +4,9 @@
 // TODO: what's gonna happen with Counts.Beads & Counts.BeadsInVsf; I guess it
 //       should stay and be used strictly - InVsf means in vsf, the other in
 //       vcf
+/* TODO: PrintBeadType() needs to find the longest name and the most number
+ * of beads and insert white space accordingly
+*/
 
 // GetPBC_old() //{{{
 /*
@@ -1375,6 +1378,7 @@ there must be a line for each atom)\n");
   if (atom[count_atom_lines-1].index == -1) {
     (*Counts).TypesOfBeads = 1;
     strcpy(bt[0].Name, atom_name[atom[count_atom_lines-1].name]);
+    bt[0].Number = 0;
     bt[0].Charge = atom[count_atom_lines-1].charge;
     bt[0].Mass = atom[count_atom_lines-1].mass;
     bt[0].Radius = atom[count_atom_lines-1].radius;
@@ -1457,19 +1461,17 @@ there must be a line for each atom)\n");
                     atom[i].charge, atom[i].mass, atom[i].radius);
         btype = (*Counts).TypesOfBeads - 1;
       }
-      // count number of beads of given type (excluding 'atom default'
-      // type, if there is one)
-      if (default_atom_line == -1 || atom[i].index != (count_atom_lines-1)) {
-        bt[btype].Number++;
-      }
+      bt[btype].Number++;
     } //}}}
+//PrintBeadType2((*Counts).TypesOfBeads, bt);
     // count number of beads of default type if 'atom default' is present //{{{
-    if (atom[count_atom_lines-1].index == -1) {
+    if (default_atom_line != -1) {
       bt[0].Number = (*Counts).BeadsInVsf;
       for (int i = 1; i < (*Counts).TypesOfBeads; i++) {
         bt[0].Number -= bt[i].Number;
       }
     } //}}}
+//PrintBeadType2((*Counts).TypesOfBeads, bt);
     // Merging //{{{
     // 1) count and save unigue names //{{{
     int number_of_names = 0;
