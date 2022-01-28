@@ -22,7 +22,7 @@
 #include "Write.h"
 
 // TransformMatrices()
-void TransformMatrices(BOX *Box);
+void TriclinicCellData(BOX *Box);
 
 void ToFractional(VECTOR *coor, BOX Box);
 void ToFractionalCoor(int number_of_beads, BEAD **Bead, BOX Box);
@@ -321,9 +321,15 @@ void SortBonds(int (*bond)[3], int length); //}}}
 void SortAngles(int (*angle)[4], int length); //}}}
 void SortDihedrals(int (*dihedral)[5], int length);
 
+// CopyBead() //{{{
+/**
+ * Function to copy BEAD structure into a new one.
+ */
+void CopyBead(int number_of_beads, BEAD **b_out, BEAD *b_in, int mode); //}}}
+
 // CopyBeadType() //{{{
 /**
- * Function to copy BEADType structure into a new.
+ * Function to copy BEADTYPE structure into a new one.
  */
 void CopyBeadType(int number_of_types, BEADTYPE **bt_out,
                   BEADTYPE *bt_in, int mode); //}}}

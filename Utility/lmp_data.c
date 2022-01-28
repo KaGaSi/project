@@ -1,7 +1,5 @@
 #include "../AnalysisTools.h"
 
-// TODO triclinic box
-
 void Help(char cmd[50], bool error) { //{{{
   FILE *ptr;
   if (error) {
@@ -23,6 +21,8 @@ dihedrals are written to the lmp data file as impropers).\n\n");
   fprintf(ptr, "   [options]\n");
   fprintf(ptr, "      -f <name>    FIELD-like file (default: FIELD)\n");
   fprintf(ptr, "      --srp        add one more bead type for srp\n");
+  fprintf(ptr, "      --mass       define atom types by mass (printing their\
+different charges in the Atoms section)\n");
   fprintf(ptr, "      -st <step>   timestep for creating the output file \
 (default: last)\n");
   CommonHelp(error);
@@ -63,6 +63,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "-h") != 0 &&
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "--srp") != 0 &&
+        strcmp(argv[i], "--mass") != 0 &&
         strcmp(argv[i], "-f") != 0 &&
         strcmp(argv[i], "-st") != 0) {
 
@@ -104,6 +105,9 @@ int main(int argc, char *argv[]) {
 
   // add srp bead type
   bool srp = BoolOption(argc, argv, "--srp");
+
+  // use mass only for atom type definition
+  bool mass = BoolOption(argc, argv, "--mass");
 
   // timestep to create CONFIG file from
   int timestep = -1;
@@ -268,15 +272,50 @@ int main(int argc, char *argv[]) {
   // print first line that's ignored by lammps
   fprintf(out, "LAMMPS data file via lmp_data (by KaGaSi - https://github.com/KaGaSi/AnalysisTools)\n\n");
 
+  // TODO describe
+  BEADTYPE *bt_print = calloc(Counts.TypesOfBeads, sizeof (BEADTYPE));
+  BEAD *b_print;
+  CopyBead(Counts.BeadsInVsf, &b_print, Bead, 2);
+  int count_types = 0;
+  if (mass) {
+    for (int i = 0; i < Counts.TypesOfBeads; i++) {
+      bool found = false;
+      for (int j = 0; j < count_types; j++) {
+        if (BeadType[i].Mass == bt_print[j].Mass) {
+          bt_print[j].Number += BeadType[i].Number; // not really needed
+          for (int k = 0; k < Counts.BeadsInVsf; k++) {
+            if (Bead[k].Type == i) {
+              b_print[k].Type = j;
+            }
+          }
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        bt_print[count_types] = BeadType[i];
+        for (int j = 0; j < Counts.BeadsInVsf; j++) {
+          if (Bead[j].Type == i) {
+            b_print[j].Type = count_types;
+          }
+        }
+        count_types++;
+      }
+    }
+  } else {
+    count_types = Counts.TypesOfBeads;
+    CopyBeadType(Counts.TypesOfBeads, &bt_print, BeadType, 0);
+  }
+
   // print number of beads, bonds, etc. //{{{
   fprintf(out, "%7d atoms\n", Counts.BeadsInVsf);
   fprintf(out, "%7d bonds\n", count_bonds);
   fprintf(out, "%7d angles\n", count_angles);
   fprintf(out, "%7d impropers\n", count_dihedrals);
-  if (srp) { // an extra srp bead
-    fprintf(out, "%7d atom types\n", Counts.TypesOfBeads+1);
+  if (srp) { // add an extra srp bead
+    fprintf(out, "%7d atom types\n", count_types+1);
   } else {
-    fprintf(out, "%7d atom types\n", Counts.TypesOfBeads);
+    fprintf(out, "%7d atom types\n", count_types);
   }
   fprintf(out, "%7d bond types\n", Counts.TypesOfBonds);
   fprintf(out, "%7d angle types\n", Counts.TypesOfAngles);
@@ -284,26 +323,39 @@ int main(int argc, char *argv[]) {
   putc('\n', out); //}}}
 
   // print box size //{{{
-  fprintf(out, "0.0 %lf xlo xhi\n", Box.Length.x);
-  fprintf(out, "0.0 %lf ylo yhi\n", Box.Length.y);
-  fprintf(out, "0.0 %lf zlo zhi\n", Box.Length.z);
+  // box dimensions - for orthogonal box, Box.Length == Box.TriLength
+  fprintf(out, "0.0 %lf xlo xhi\n", Box.TriLength.x);
+  fprintf(out, "0.0 %lf ylo yhi\n", Box.TriLength.y);
+  fprintf(out, "0.0 %lf zlo zhi\n", Box.TriLength.z);
+  if (Box.TriTilt[0] != 0 || Box.TriTilt[1] != 0 || Box.TriTilt[2] != 0) {
+    fprintf(out, "%lf %lf %lf xy xz yz\n", Box.TriTilt[0],
+                                           Box.TriTilt[1],
+                                           Box.TriTilt[2]);
+  }
   putc('\n', out); //}}}
 
   // print masses of bead types //{{{
   fprintf(out, "Masses\n\n");
-  for (int i = 0; i < Counts.TypesOfBeads; i++) {
-    fprintf(out, "%2d %lf # %s\n", i+1, BeadType[i].Mass, BeadType[i].Name);
+  for (int i = 0; i < count_types; i++) {
+    fprintf(out, "%2d %lf # %s\n", i+1, bt_print[i].Mass, bt_print[i].Name);
   }
   if (srp) {
-    fprintf(out, "%2d %lf # for srp\n", Counts.TypesOfBeads+1, 1.0);
+    fprintf(out, "%2d %lf # for srp\n", count_types+1, 1.0);
   }
-  putc('\n', out); //}}}
+  putc('\n', out);
+//for (int i = 0; i < Counts.TypesOfBeads; i++) {
+//  fprintf(out, "%2d %lf # %s\n", i+1, BeadType[i].Mass, BeadType[i].Name);
+//}
+//if (srp) {
+//  fprintf(out, "%2d %lf # for srp\n", Counts.TypesOfBeads+1, 1.0);
+//}
+//putc('\n', out); //}}}
 
   // print bond coefficients //{{{
   if (Counts.TypesOfBonds > 0) {
     fprintf(out, "Bond Coeffs\n\n");
     for (int i = 0; i < Counts.TypesOfBonds; i++) {
-      // spring strength divided by 2, because dl_meso (FIELD) uses k/2, but lammps uses k
+      // spring strength divided by 2 because lammps uses k/2
       fprintf(out, "%2d %lf %lf\n", i+1, bond_type[i].a/2, bond_type[i].b);
     }
     putc('\n', out);
@@ -319,6 +371,7 @@ int main(int argc, char *argv[]) {
     putc('\n', out);
   } //}}}
 
+  // TODO impropers vs dihedrals
   // print dihedral (impropers in lammps speak) coefficients //{{{
   if (Counts.TypesOfDihedrals > 0) {
     fprintf(out, "Improper Coeffs\n\n");
@@ -331,28 +384,33 @@ int main(int argc, char *argv[]) {
 
   // print bead coordinates //{{{
   fprintf(out, "Atoms\n\n");
-  // coordinates of unbonded beads
   for (int i = 0; i < Counts.BeadsInVsf; i++) {
-    int type = Bead[i].Type;
+    int btype = b_print[i].Type;
+    int qtype = Bead[i].Type; // for charge (qtype != btype when --mass used)
     fprintf(out, "%7d", i+1);
-    if (Bead[i].Molecule == -1) { // bead not in molecule
+    if (b_print[i].Molecule == -1) { // bead not in molecule
       fprintf(out, "%7d", 0);
     } else { // bead in a molecule
       fprintf(out, "%7d", Bead[i].Molecule+1);
     }
-    fprintf(out, "%4d   %lf  ", type+1, BeadType[type].Charge);
-    if (Bead[i].Position.x == Box.Length.x) {
-      Bead[i].Position.x -= 0.00001;
+    fprintf(out, "%4d   %lf  ", btype+1, BeadType[qtype].Charge);
+    /*
+     * Positions that are the same as box length give lammps some trouble; at
+     * least for orthogonal box - so just change the positions slightly enough
+     * that it doesn't affect simulation results
+     */
+    if (b_print[i].Position.x == Box.Length.x) {
+      b_print[i].Position.x -= 0.00001;
     }
-    if (Bead[i].Position.y == Box.Length.y) {
-      Bead[i].Position.y -= 0.00001;
+    if (b_print[i].Position.y == Box.Length.y) {
+      b_print[i].Position.y -= 0.00001;
     }
-    if (Bead[i].Position.z == Box.Length.z) {
-      Bead[i].Position.z -= 0.00001;
+    if (b_print[i].Position.z == Box.Length.z) {
+      b_print[i].Position.z -= 0.00001;
     }
-    fprintf(out, "%lf %lf %lf\n", Bead[i].Position.x,
-                                  Bead[i].Position.y,
-                                  Bead[i].Position.z);
+    fprintf(out, "%lf %lf %lf\n", b_print[i].Position.x,
+                                  b_print[i].Position.y,
+                                  b_print[i].Position.z);
   }
   putc('\n', out); //}}}
 
@@ -404,7 +462,8 @@ int main(int argc, char *argv[]) {
         int id2 = Molecule[i].Bead[MoleculeType[mtype].Dihedral[j][1]];
         int id3 = Molecule[i].Bead[MoleculeType[mtype].Dihedral[j][2]];
         int id4 = Molecule[i].Bead[MoleculeType[mtype].Dihedral[j][3]];
-        fprintf(out, "%7d %3d %7d %7d %7d %7d\n", count, type+1, id1+1, id2+1, id3+1, id4+1);
+        fprintf(out, "%7d %3d %7d %7d %7d %7d\n", count, type+1,
+                                                  id1+1, id2+1, id3+1, id4+1);
       }
     }
     putc('\n', out);
@@ -412,8 +471,11 @@ int main(int argc, char *argv[]) {
   fclose(out); //}}}
 
   // free memory - to make valgrind happy //{{{
+  FreeBead(Counts.Beads, &b_print);
+  free(bt_print);
   FreeSystemInfo(Counts, &MoleculeType, &Molecule, &BeadType, &Bead, &Index);
-  FreeSystemInfo(Counts_new, &mt_new, &Molecule_new, &bt_new, &Bead_new, &Index_new);
+  FreeSystemInfo(Counts_new, &mt_new, &Molecule_new,
+                 &bt_new, &Bead_new, &Index_new);
   free(stuff);
   free(bond_type);
   free(angle_type);

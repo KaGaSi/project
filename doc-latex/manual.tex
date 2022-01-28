@@ -51,6 +51,8 @@
 \usepackage{listings}
 % strike-out text without redefining \emph{}
 \usepackage[normalem]{ulem}
+% pseudocode - part of algorithmix
+\usepackage{pseudocode}
 % clickable links -- hyperref should be the last package listed
 \usepackage{hyperref} %}}}
 
@@ -132,15 +134,16 @@
 % add subsubesctions to toc
 \setcounter{tocdepth}{2}
 
-% more reasonable figure placing
+% more reasonable figure placing %{{{
 \setcounter{topnumber}{2}
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{4}
 \renewcommand{\topfraction}{0.9}
 \renewcommand{\bottomfraction}{0.8}
 \renewcommand{\textfraction}{0.07}
-\renewcommand{\floatpagefraction}{0.7}
+\renewcommand{\floatpagefraction}{0.7} %}}}
 
+% some keywords %{{{
 \let\tt\useless
 \newcommand{\tt}{\texttt}
 \newcommand{\vcf}{\texttt{vcf} }
@@ -149,12 +152,11 @@
 \newcommand{\vtf}{\texttt{vtf} }
 \newcommand{\field}{\texttt{FIELD} }
 \newcommand{\data}{\texttt{data} }
-\newcommand{\ttb}[1]{\textcolor{blue}{\texttt{#1}}}
-
+\newcommand{\ttb}[1]{\textcolor{blue}{\texttt{#1}} }
 \newcommand{\note}[1]{\vspace{-1em}\noindent\footnotesize{#1}}
-\newcommand{\TODO}{\colorbox{yellow}{TODO:}}
+\newcommand{\TODO}{\colorbox{yellow}{TODO:}} %}}}
 
-% listings setup
+% listings setup %{{{
 \definecolor{codebackground}{rgb}{0.95, 0.9, 0.95}
 \lstset{
   numbers=left,
@@ -165,7 +167,7 @@
   frame=single,                    % just add some bit of color space
   framesep=5pt,                    % surrounding the code block (i.e., the
   rulecolor=\color{codebackground} % frame has the same colour as the block)
-}
+} %}}}
 
 \begin{document}
 

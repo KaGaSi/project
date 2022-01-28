@@ -4,6 +4,7 @@
 // TODO: what's gonna happen with Counts.Beads & Counts.BeadsInVsf; I guess it
 //       should stay and be used strictly - InVsf means in vsf, the other in
 //       vcf
+// TODO impropers vs dihedrals - add improper section to FIELD
 /* TODO: PrintBeadType() needs to find the longest name and the most number
  * of beads and insert white space accordingly
 */
@@ -78,14 +79,14 @@ box dimensions (pbc line must be before the first coordinate line)\n");
 // GetPBC() //{{{
 /*
  * Function to get box dimensions from the provided coordinate file, that
- * is search for a 'pbc <float> <float> <float>' line. The provided file
- * can either be a vcf coordinate only file or a full vtf one.
+ * is, search for a 'pbc <x> <y> <z> [<alpha> <beta> <gamma>]' line. The
+ * provided file can either be a vcf coordinate only file or a full vtf one.
  */
-void GetPBC(char *coor_file, BOX *Box) {
+void VtfReadPBC(char *input_vcf, BOX *Box) {
   // open the coordinate file
   FILE *coor;
-  if ((coor = fopen(coor_file, "r")) == NULL) {
-    ErrorFileOpen(coor_file, 'r');
+  if ((coor = fopen(input_vcf, "r")) == NULL) {
+    ErrorFileOpen(input_vcf, 'r');
     exit(1);
   }
   /*
@@ -112,7 +113,7 @@ void GetPBC(char *coor_file, BOX *Box) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
-        fprintf(stderr, "%s", coor_file);
+        fprintf(stderr, "%s", input_vcf);
         RedText(STDERR_FILENO);
         fprintf(stderr, " - incorrect pbc line\n");
         ResetColour(STDERR_FILENO);
@@ -138,7 +139,7 @@ void GetPBC(char *coor_file, BOX *Box) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", coor_file);
+      fprintf(stderr, "%s", input_vcf);
       RedText(STDERR_FILENO);
       fprintf(stderr, " - unrecognised line while searching for \
 box dimensions (pbc line must be before the first coordinate line)\n");
@@ -2244,7 +2245,7 @@ void FullVtfRead(char *struct_file, char *vcf_file, bool detailed, bool vtf,
                    MoleculeType, Molecule);
   // check coordinate file if provided //{{{
   if (vcf_file[0] != '\0') {
-    GetPBC(vcf_file, Box);
+    VtfReadPBC(vcf_file, Box);
     // number of structure lines (or -1 if coordinate file is not vtf)
     *struct_lines = CountVtfStructLines(vtf, vcf_file);
     // get timestep type & contained beads from the first timestep
@@ -2770,7 +2771,7 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file,
   bool test_indexed; // is current timestep ordered or indexed?
   int preamble_lines = ReadVtfTimestepPreamble(&test_indexed, input_coor,
                                                vcf_file, stuff, Box, true);
-  TransformMatrices(Box);
+  TriclinicCellData(Box);
   // error - wrong type of step (indexed vs. ordered) //{{{
   if (test_indexed != indexed) {
     RedText(STDERR_FILENO);

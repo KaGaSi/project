@@ -6,6 +6,8 @@
 #ifndef _STRUCTS_H_
 #define _STRUCTS_H_
 
+#include "General.h"
+
 #define CHARGE 10000.0 // 'impossible' charge to define a given bead type has charge specified in an input file
 #define MASS 0.0 // 'impossible' mass to define a given bead type has charge specified in an input file
 #define RADIUS 0.0 // 'impossible' radius to define a given bead type has charge specified in an input file
@@ -50,7 +52,9 @@ static const COUNTS InitCounts = {
  * \brief Total numbers of various things.
  */
 typedef struct Box {
-  VECTOR Length; // side lengths
+  VECTOR Length; // side lengths (a, b, c for triclinic cell)
+  VECTOR TriLength; // lx, ly, lz for lammps (triclinic cell)
+  double TriTilt[3]; // xy, xz, and yz tilts for triclinic box
   double alpha, beta, gamma; // angles - all 90 for orthogonal box
   double transform[3][3], // transformation matrix
          inverse[3][3]; // inverse of the transformation matrix
@@ -62,6 +66,10 @@ static const BOX InitBox = {
   .Length.x = -1,
   .Length.y = -1,
   .Length.z = -1,
+  .TriLength.x = -1,
+  .TriLength.y = -1,
+  .TriLength.z = -1,
+  .TriTilt = {0},
   .alpha = 90,
   .beta = 90,
   .gamma = 90,
