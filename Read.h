@@ -23,7 +23,7 @@ VECTOR GetPBC_old(char *coor_file); //}}}
  * \param [in]  coor_file   name of the coordinate file
  * \param [out] Box         box dimensions and angles
  */
-void GetPBC(char *coor_file, BOX *Box); //}}}
+void VtfGetPBC(char *coor_file, BOX *Box); //}}}
 
 // ReadAggCommand() //{{{
 /**

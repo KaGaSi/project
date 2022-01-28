@@ -24,7 +24,7 @@
 */ //}}}
 
 // TransformMatrices() //{{{
-void TransformMatrices(BOX *Box) {
+void TriclinicCellData(BOX *Box) {
   if ((*Box).alpha != 90 || (*Box).beta != 90 || (*Box).gamma != 90 ) {
     double a = (*Box).Length.x,
            b = (*Box).Length.y,
@@ -33,8 +33,14 @@ void TransformMatrices(BOX *Box) {
            c_b = cos((*Box).beta * PI / 180),
            c_g = cos((*Box).gamma * PI / 180),
            s_g = sin((*Box).gamma * PI / 180);
-    double vol = a * b * c * sqrt(1 - SQR(c_a) - SQR(c_b) - SQR(c_g) +
-                                  2 * c_a * c_b * c_g);
+    double sqr = 1 - SQR(c_a) - SQR(c_b) - SQR(c_g) + 2 * c_a * c_b * c_g;
+    if (sqr < 0) {
+      //TODO coloured output
+      fprintf(stderr, "Error - wrong dimensions");
+      exit(1);
+    }
+    double vol = a * b * c * sqrt(sqr);
+
     (*Box).transform[0][0] = a;
     (*Box).transform[1][0] = 0;
     (*Box).transform[2][0] = 0;
@@ -55,6 +61,32 @@ void TransformMatrices(BOX *Box) {
                            c_b * s_g / vol);
     (*Box).inverse[1][2] = -a * c * (c_a - c_b * c_g) / (vol * s_g);
     (*Box).inverse[2][2] = a * b * s_g / vol;
+    // tilt for triclinic axes (xy, xz, and yz) & lx, ly, and lz for lammps
+    (*Box).TriLength.x = a;
+    (*Box).TriTilt[0] = b * c_g; // xy
+    (*Box).TriTilt[1] = c * c_b; // xz
+    sqr = SQR(b) - SQR((*Box).TriTilt[0]);
+    if (sqr < 0) {
+      //TODO coloured output
+      fprintf(stderr, "Error - wrong dimensions");
+      exit(1);
+    }
+    (*Box).TriLength.y = sqrt(sqr);
+    (*Box).TriTilt[2] = (b * c_a - (*Box).TriTilt[0] * (*Box).TriTilt[1]) /
+                        (*Box).TriLength.y;
+    sqr = SQR(c) - SQR((*Box).TriTilt[1]) - SQR((*Box).TriTilt[2]);
+    if (sqr < 0) {
+      //TODO coloured output
+      fprintf(stderr, "Error - wrong dimensions");
+      exit(1);
+    }
+    (*Box).TriLength.z = sqrt(sqr);
+    // make tilt component zero if they're close to zero
+    for (int i = 0; i < 3; i++) {
+      if (fabs((*Box).TriTilt[i]) < 0.00001) {
+        (*Box).TriTilt[i] = 0;
+      }
+    }
   } else { // orthogonal box //{{{
     (*Box).transform[0][0] = (*Box).Length.x;
     (*Box).transform[1][0] = 0;
@@ -75,6 +107,12 @@ void TransformMatrices(BOX *Box) {
     (*Box).inverse[0][2] = 0;
     (*Box).inverse[1][2] = 0;
     (*Box).inverse[2][2] = 1 / (*Box).Length.z;
+    // lx, ly, and lz for lammps
+    (*Box).TriLength = (*Box).Length;
+    // tilt for triclinic axes (xy, xz, and yz)
+    (*Box).TriTilt[0] = 0;
+    (*Box).TriTilt[1] = 0;
+    (*Box).TriTilt[2] = 0;
   } //}}}
   // test print the matrices
 //printf("Transformation matrix:\n");
@@ -1685,14 +1723,51 @@ void SortDihedrals(int (*dihedral)[5], int length) {
   }
 } //}}}
 
-// CopyBeadType() //{{{
+// CopyBead() //{{{
 /**
  * Function to copy BEAD structure into a new. Memory for the new one will be
  * reallocated in this function. Memory management for the output structure:
  * sufficient memory is already allocated (mode=0), the structure needs freeing
- * and allocating (mode=1), no memory was yet allocated at all (mode=2), or it
- * just needs reallocating - only for cases when memory only for the structure
- * itself was allocated, not for the arrays within the structure (mode=3).
+ * and allocating (mode=1), no memory wasn't yet allocated at all (mode=2), or
+ * it needs reallocating - only for the case when the BEAD array is allocated,
+ * but not the internal arrays (mode=3).
+ */
+void CopyBead(int number_of_beads, BEAD **b_out, BEAD *b_in, int mode) {
+  // bt_out memory management //{{{
+  switch (mode) {
+    case 1:
+      free(*b_out);
+      *b_out = malloc(sizeof (BEAD) * number_of_beads);
+      break;
+    case 2:
+      *b_out = malloc(sizeof (BEAD) * number_of_beads);
+      break;
+    case 3:
+      *b_out = realloc(*b_out, sizeof (BEAD) * number_of_beads);
+      break;
+    default:
+      RedText(STDERR_FILENO);
+      fprintf(stderr, "\nError: ");
+      YellowText(STDERR_FILENO);
+      fprintf(stderr, "CopyBeadType()");
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " function requires mode=0, 1, 2, or 3\n");
+      ResetColour(STDERR_FILENO);
+      exit(1);
+  } //}}}
+  for (int i = 0; i < number_of_beads; i++) {
+    (*b_out)[i] = b_in[i];
+    (*b_out)[i].Aggregate = calloc(1, sizeof *(*b_out)[i].Aggregate);
+  }
+} //}}}
+
+// CopyBeadType() //{{{
+/**
+ * Function to copy BEADTYPE structure into a new. Memory for the new one will be
+ * reallocated in this function. Memory management for the output structure:
+ * sufficient memory is already allocated (mode=0), the structure needs freeing
+ * and allocating (mode=1), no memory wasn't yet allocated at all (mode=2), or
+ * it needs reallocating (mode=3).
  */
 void CopyBeadType(int number_of_types, BEADTYPE **bt_out,
                   BEADTYPE *bt_in, int mode) {
@@ -1732,6 +1807,8 @@ void CopyBeadType(int number_of_types, BEADTYPE **bt_out,
  * when memory only for the structure itself was allocated, not for the arrays
  * within the structure (mode=3).
  */
+// TODO if mode=0, then there shouldn't be any allocations at all; probably
+//      remove this mode - when do I need straight out copy the arrays?
 void CopyMoleculeType(int number_of_types, MOLECULETYPE **mt_out,
                       MOLECULETYPE *mt_in, int mode) {
   // mt_out memory management //{{{
