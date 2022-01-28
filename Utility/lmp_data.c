@@ -312,7 +312,6 @@ int main(int argc, char *argv[]) {
   fprintf(out, "%7d bonds\n", count_bonds);
   fprintf(out, "%7d angles\n", count_angles);
   fprintf(out, "%7d impropers\n", count_dihedrals);
-  putc('\n', out);
   if (srp) { // add an extra srp bead
     fprintf(out, "%7d atom types\n", count_types+1);
   } else {
