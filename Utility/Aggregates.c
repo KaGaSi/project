@@ -481,7 +481,7 @@ int main(int argc, char *argv[]) {
 
   // <distance> - number of starting timestep //{{{
   // Error - non-numeric argument
-  if (!IsPosDouble(argv[++count])) {
+  if (!IsPosReal(argv[++count])) {
     ErrorNaN("<distance>");
     Help(argv[0], true);
     exit(1);

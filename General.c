@@ -1,10 +1,10 @@
 #include "General.h"
 
-// IsDouble() //{{{
+// IsReal() //{{{
 /**
  * Function to test if provided string is a real number.
  */
-bool IsDouble(char *a) {
+bool IsReal(char *a) {
   // only one dot and scientific e can be present
   bool dot = false,
        sci_e = false;
@@ -44,11 +44,11 @@ bool IsDouble(char *a) {
   return true;
 } //}}}
 
-// IsPosDouble() //{{{
+// IsPosReal() //{{{
 /**
  * Function to test if provided string is a non-negative real number.
  */
-bool IsPosDouble(char *a) {
+bool IsPosReal(char *a) {
   // wrong first character - can be minus, dot, or number
   if (a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
     return false;
@@ -244,14 +244,14 @@ void SortArray(int *array, int length, int mode) {
 /**
  * Function that splits the provided line into individual strings.
  */
-int SplitLine(char out[30][100], char *line, const char *delim) {
+int SplitLine(char out[SPL_STR][SPL_LEN], char *line, const char *delim) {
   // trim whitespaces at the beginning and end of line
   strcpy(line, TrimLine(line));
   // split into words separated by delimiters in delim array
-  char *split[30];
+  char *split[SPL_STR];
   int words = 0;
   split[words] = strtok(line, delim); // first word
-  while (words < 29 && split[words] != NULL) {
+  while (words < (SPL_STR-1) && split[words] != NULL) {
     words++; // start from 1, as the first split is already done
     split[words] = strtok(NULL, delim);
   }
@@ -260,7 +260,7 @@ int SplitLine(char out[30][100], char *line, const char *delim) {
   } else {
     // copy splits into the output array
     for (int i = 0; i < words; i++) {
-      snprintf(out[i], 100, "%s", split[i]);
+      snprintf(out[i], SPL_LEN, "%s", split[i]);
     }
   }
   return words;

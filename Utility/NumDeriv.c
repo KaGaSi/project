@@ -104,7 +104,7 @@ int main ( int argc, char** argv ) {
   int lines = 0; // all lines
   while (true) {
     // get & split line
-    char line[LINE], split[30][100], delim[8];
+    char line[LINE], split[SPL_STR][SPL_LEN], delim[8];
     fgets(line, sizeof(line), fr);
     strcpy(delim, " \t");
     int words = SplitLine(split, line, delim);
@@ -144,7 +144,7 @@ int main ( int argc, char** argv ) {
     data[i] = calloc(2, sizeof(double));
   }
   for (int i = 0; i < lines; i++) {
-    char line[LINE], split[30][100], delim[8];
+    char line[LINE], split[SPL_STR][SPL_LEN], delim[8];
     fgets(line, sizeof(line), fr);
     strcpy(delim, " \t");
     SplitLine(split, line, delim);

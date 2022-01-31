@@ -1,120 +1,39 @@
 \section{Read system data} \label{sec:ReadSystemData}
 
-%\renewcommand{\tabcolsep}{-0pt}
-\tt{void} \textsc{GetPBC}(parameters)\\[-2em]
-\begin{longtable}{m{0.23\textwidth}@{\hspace{-6pt}}
-                  >{\centering\arraybackslash}m{0.2\textwidth}@{\hspace{-6pt}}
-                  m{0.57\textwidth}}
-  \toprule
-  variable           & in/out & explanation \\
-  \midrule
-  \ttb{(char) input_vcf[]} & in  & name of the input \vcf fil \\
-  \ttb{(BOX) Box}          & out & information about simulation box dimensions
-    \TODO add ref\\
-  \bottomrule
-\end{longtable}
-\vspace{-1em}
-\hrule
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
+In the pseudocodes, the following are used:
+\begin{itemize}
+  \item \ttb{blue} \ldots variable that is a parameter of the described
+    function
+  \item $italics$ \ldots \ variable defined within the described function
+  \item \hltt{highlight} \ldots \ literal string
+  \item \textsc{SmallCaps} \ldots \ function call to a function not described
+    within the manual
+  \item \textsc{\textcolor{red}{RedSmallCaps}} \ldots \ function call
+    referencing to a section with the called function
+  \item \textbf{error} keyword \ldots \ exit a program with an error
+  \item the triangle represent a short comment, while comments describing a
+    whole section of the function are line-separated from the pseudocode
+\end{itemize}
+The following are rules for some common actions (unless stated otherwise in the
+pseudocode):
+\begin{itemize}
+  \item reading a line from a file reads at most 1023 characters, the rest is
+    discarded
+  \item splitting a string (generally a line read from a file) into individual
+    strings (usually whitespace-separated) uses \textsc{SplitLine} function from
+    \tt{General} library; at most 31 new strings are generated, each at most 63
+    characters long (the rest of the line is ignored)
+  \item checking if a string is a number---generally written as $string
+    \in$ (or $\notin$) \Real/\RealP/\Int---uses one of these functions from
+    \tt{General} library:
+    \begin{itemize}
+      \item \textsc{IsReal} \ldots \ real number (\Real); that is, any number
+      \item \textsc{IsPosReal} \ldots \ positive real number (\RealP)
+      \item \textsc{IsInteger} \ldots \ integer (\Int)
+    \end{itemize}
+\end{itemize}
+
+\input{VtfGetPbc}
 
 \begin{comment} %{{{
 In general, information about a system can be read from a \vtf file(s),

@@ -15,10 +15,12 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-#define PI 3.141593 ///< value of pi
-#define LINE 1025 ///< maximum length of an array for strings
-#define SQR(x) ((x)*(x)) ///< macro for algebraic square
-#define CUBE(x) ((x)*(x)*(x)) ///< macro for algebraic cube
+#define PI 3.141593 // value of pi
+#define LINE 1024 // maximum length of an array for strings
+#define SPL_STR 32 // maximum number of split strings
+#define SPL_LEN 64 // maximum length of split strings
+#define SQR(x) ((x)*(x)) // macro for algebraic square
+#define CUBE(x) ((x)*(x)*(x)) // macro for algebraic cube
 
 
 // tell gcc to ignore certain warnings
@@ -66,23 +68,23 @@ typedef struct IntVector {
  */
 double Length(VECTOR a); //}}}
 
-// IsDouble() //{{{
+// IsReal() //{{{
 /*
  * \brief Function to test if a string is a real number.
  *
  * \param [in] a   string to test
  * \return 'true' if a is double, 'false' otherwise
  */
-bool IsDouble(char *a); //}}}
+bool IsReal(char *a); //}}}
 
-// IsPosDouble() //{{{
+// IsPosReal() //{{{
 /*
  * \brief Function to test if a string is a non-negative real number.
  *
  * \param [in] a   string to test
  * \return 'true' if a is non-negative double, 'false' otherwise
  */
-bool IsPosDouble(char *a); //}}}
+bool IsPosReal(char *a); //}}}
 
 // IsInteger() //{{{
 /*
@@ -172,7 +174,7 @@ void SortArray(int *array, int length, int mode); //}}}
  * \param [in]  line   string to split
  * \return number of strings in the line
  */
-int SplitLine(char out[30][100], char *line, const char *delim); //}}}
+int SplitLine(char out[SPL_STR][SPL_LEN], char *line, const char *delim); //}}}
 
 // TrimLine() //{{{
 /**

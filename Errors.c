@@ -164,7 +164,7 @@ void ErrorMoleculeType(COUNTS Counts, MOLECULETYPE *MoleculeType) {
  * Print provided strings (array of strings generally created using
  * SplitLine()) to error output.
  */
-void ErrorPrintLine(char split[30][100], int words) {
+void ErrorPrintLine(char split[SPL_STR][SPL_LEN], int words) {
   if (words == 0) {
     fprintf(stderr, "       Blank line encountered");
   } else {

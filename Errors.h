@@ -109,7 +109,7 @@ void ErrorMoleculeType(COUNTS Counts, MOLECULETYPE *MoleculeType); //}}}
  * \param [in] split     array of strings to prints
  * \param [in] words     number of strings in the split array
  */
-void ErrorPrintLine(char split[30][100], int words); //}}}
+void ErrorPrintLine(char split[SPL_STR][SPL_LEN], int words); //}}}
 
 // WarnElNeutrality() //{{{
 /**

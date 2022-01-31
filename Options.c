@@ -308,7 +308,7 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value) {
         return(true);
       }
       // Error - non-numeric
-      if (!IsPosDouble(argv[i+1])) {
+      if (!IsPosReal(argv[i+1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -387,7 +387,7 @@ bool MultiDoubleOption(int argc, char **argv, char *opt,
       // read doubles
       int arg = i+1+n;
 //    while ((arg) < argc && argv[arg][0] != '-') {
-      // A = arg < argc; B = argv[arg][0] == '-'; C = IsDouble(argv[arg])
+      // A = arg < argc; B = argv[arg][0] == '-'; C = IsReal(argv[arg])
       // A B C | we want | A and ((B and C) or (!B and C)) = A and C
       // ----------------|------------------------------------------
       // 1 1 1 | 1       | 1
@@ -396,9 +396,9 @@ bool MultiDoubleOption(int argc, char **argv, char *opt,
       // 0 0 0 | 0       | 0
       // 0 1 1 | 0       | 0
       // 0 1 0 | 0       | 0
-      while (arg < argc && IsDouble(argv[arg])) { // see expression table up
+      while (arg < argc && IsReal(argv[arg])) { // see expression table up
         // Error - non-numeric argument
-//      if (!IsPosDouble(argv[arg])) {
+//      if (!IsPosReal(argv[arg])) {
 //        RedText(STDERR_FILENO);
 //        fprintf(stderr, "\nError: ");
 //        YellowText(STDERR_FILENO);

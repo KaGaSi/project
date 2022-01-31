@@ -52,27 +52,28 @@
 % strike-out text without redefining \emph{}
 \usepackage[normalem]{ulem}
 % pseudocode - part of algorithmix
-\usepackage{pseudocode}
+\usepackage{algpseudocode}
+% highlighting (\hl command)
+\usepackage{soul}
 % clickable links -- hyperref should be the last package listed
 \usepackage{hyperref} %}}}
 
+% highlighting color (soul package) %{{{
+\definecolor{lightgray}{rgb}{0.9,0.9,0.9}
+\sethlcolor{lightgray} %}}}
 % change enumerate numbering from 1. to (1)
 \renewcommand\labelenumi{(\theenumi)}
-
 % makes \cline and \cmidrule work with czech babel
 \preto\tabular{\shorthandoff{-}}
-
 % math commands %{{{
 % shorten math bold command
 \newcommand{\mb}{\mathbf}
 % shorten math roman command
 \newcommand{\mr}{\mathrm} %}}}
-
 % define colors %{{{
 \definecolor{dark-green}{rgb}{0,0.7,0}
 \definecolor{dark-red}{rgb}{0.8,0,0}
 \definecolor{dark-blue}{rgb}{0,0,0.9} %}}}
-
 % blue equation links -- amsmath package %{{{
 \colorlet{linkequation}{dark-blue}
 \newcommand*{\SavedEqref}{}
@@ -86,7 +87,6 @@
     \SavedEqref{#1}%
   \endgroup
 } %}}}
-
 % define headers and footers %{{{
 \newpagestyle{main}{
   \setheadrule{.4pt}% Header rule
@@ -104,9 +104,7 @@
           {\thepage}% even-center
           {}% even-right
         } %}}}
-
 \hypersetup{colorlinks, linkcolor={dark-red}, citecolor={dark-green}}
-
 % chapter headers without too much white space %{{{
 \makeatletter
 \def\@makechapterhead#1{
@@ -128,12 +126,10 @@
 \chapter*{#1}
 \addcontentsline{toc}{chapter}{#1}
 } %}}}
-
 % number subsubsection
 \setcounter{secnumdepth}{2}
 % add subsubesctions to toc
 \setcounter{tocdepth}{2}
-
 % more reasonable figure placing %{{{
 \setcounter{topnumber}{2}
 \setcounter{bottomnumber}{2}
@@ -142,7 +138,6 @@
 \renewcommand{\bottomfraction}{0.8}
 \renewcommand{\textfraction}{0.07}
 \renewcommand{\floatpagefraction}{0.7} %}}}
-
 % some keywords %{{{
 \let\tt\useless
 \newcommand{\tt}{\texttt}
@@ -154,8 +149,9 @@
 \newcommand{\data}{\texttt{data} }
 \newcommand{\ttb}[1]{\textcolor{blue}{\texttt{#1}} }
 \newcommand{\note}[1]{\vspace{-1em}\noindent\footnotesize{#1}}
-\newcommand{\TODO}{\colorbox{yellow}{TODO:}} %}}}
-
+\newcommand{\TODO}{\colorbox{yellow}{TODO:}}
+\newcommand{\hltt}[1]{\tt{\hl{#1}} } % \hl - soul package
+%}}}
 % listings setup %{{{
 \definecolor{codebackground}{rgb}{0.95, 0.9, 0.95}
 \lstset{
@@ -168,6 +164,22 @@
   framesep=5pt,                    % surrounding the code block (i.e., the
   rulecolor=\color{codebackground} % frame has the same colour as the block)
 } %}}}
+% remove spacing between table columns
+\renewcommand{\tabcolsep}{0pt}
+% pseudocode settings
+\newcommand{\St}{\State }
+\renewcommand{\Return}{\St \textbf{return} }
+\newcommand{\Break}{\St \textbf{break} }
+\newcommand{\Error}{\St \textbf{error} }
+\newcommand{\True}{\hltt{true}}
+\newcommand{\False}{\hltt{false}}
+\newcommand{\CallInit}[2]{\vspace{1em}\tt{#1} \
+                          \Call{#2}{parameters}\vspace{-1em}}
+\newcommand{\CallRef}[1]{\Call{\nameref{#1}}{}}
+% keywords for number types
+\newcommand{\Real}{$\mathcal{R}$}
+\newcommand{\RealP}{$\mathcal{R}^+$}
+\newcommand{\Int}{$\mathcal{I}$}
 
 \begin{document}
 

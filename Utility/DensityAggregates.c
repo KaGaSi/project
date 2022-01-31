@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 
   // <width> - width of single bin //{{{
   // Error - non-numeric argument
-  if (!IsPosDouble(argv[++count])) {
+  if (!IsPosReal(argv[++count])) {
     ErrorNaN("<width>");
     Help(argv[0], true);
     exit(1);

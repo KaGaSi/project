@@ -23,7 +23,7 @@
 //printf("dist2 = (%lf, %lf, %lf) = %lf\n", dist.x, dist.y, dist.z, sqrt(SQR(dist.x)+SQR(dist.y)+SQR(dist.z)));
 */ //}}}
 
-// TransformMatrices() //{{{
+// TriclinicCellData() //{{{
 void TriclinicCellData(BOX *Box) {
   if ((*Box).alpha != 90 || (*Box).beta != 90 || (*Box).gamma != 90 ) {
     double a = (*Box).Length.x,
@@ -83,7 +83,7 @@ void TriclinicCellData(BOX *Box) {
     (*Box).TriLength.z = sqrt(sqr);
     // make tilt component zero if they're close to zero
     for (int i = 0; i < 3; i++) {
-      if (fabs((*Box).TriTilt[i]) < 0.00001) {
+      if (fabs((*Box).TriTilt[i]) < 0.001) {
         (*Box).TriTilt[i] = 0;
       }
     }

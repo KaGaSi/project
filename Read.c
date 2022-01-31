@@ -36,14 +36,14 @@ VECTOR GetPBC_old(char *coor_file) {
       while (getc(coor) != '\n')
         ;
     }
-    char split[30][100];
+    char split[SPL_STR][SPL_LEN];
     int words = SplitLine(split, line, " \t");
     // pbc line found
     if (strcasecmp(split[0], "pbc") == 0) {
       // error - pbc line has wrong format //{{{
-      if (!IsPosDouble(split[1]) ||
-          !IsPosDouble(split[2]) ||
-          !IsPosDouble(split[3]) ) {
+      if (!IsPosReal(split[1]) ||
+          !IsPosReal(split[2]) ||
+          !IsPosReal(split[3]) ) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -59,7 +59,7 @@ VECTOR GetPBC_old(char *coor_file) {
       BoxLength.z = atof(split[3]);
       break;
     // error - line starting with a number //{{{
-    } else if (words > 0 && (IsInteger(split[0]) || IsDouble(split[0]))) {
+    } else if (words > 0 && (IsInteger(split[0]) || IsReal(split[0]))) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
@@ -76,7 +76,7 @@ box dimensions (pbc line must be before the first coordinate line)\n");
   return BoxLength;
 } //}}}
 
-// GetPBC() //{{{
+// VtfReadPBC() //{{{
 /*
  * Function to get box dimensions from the provided coordinate file, that
  * is, search for a 'pbc <x> <y> <z> [<alpha> <beta> <gamma>]' line. The
@@ -102,14 +102,14 @@ void VtfReadPBC(char *input_vcf, BOX *Box) {
       while (getc(coor) != '\n')
         ;
     }
-    char split[30][100];
+    char split[SPL_STR][SPL_LEN];
     int words = SplitLine(split, line, " \t");
     // pbc line found
     if (strcasecmp(split[0], "pbc") == 0) {
       // error - pbc line has wrong format //{{{
-      if (!IsPosDouble(split[1]) ||
-          !IsPosDouble(split[2]) ||
-          !IsPosDouble(split[3]) ) {
+      if (!IsPosReal(split[1]) ||
+          !IsPosReal(split[2]) ||
+          !IsPosReal(split[3]) ) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -124,7 +124,7 @@ void VtfReadPBC(char *input_vcf, BOX *Box) {
       (*Box).Length.y = atof(split[2]);
       (*Box).Length.z = atof(split[3]);
       if (words >= 7 &&
-          IsDouble(split[4]) && IsDouble(split[5]) && IsDouble(split[6])) {
+          IsReal(split[4]) && IsReal(split[5]) && IsReal(split[6])) {
         (*Box).alpha = atof(split[4]);
         (*Box).beta = atof(split[5]);
         (*Box).gamma = atof(split[6]);
@@ -135,7 +135,7 @@ void VtfReadPBC(char *input_vcf, BOX *Box) {
       }
       break;
     // error - line starting with a number //{{{
-    } else if (words > 0 && (IsInteger(split[0]) || IsDouble(split[0]))) {
+    } else if (words > 0 && (IsInteger(split[0]) || IsReal(split[0]))) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
@@ -166,7 +166,7 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
     exit(1);
   }
   // read first line (Aggregate command)
-  char line[LINE], split[30][100];
+  char line[LINE], split[SPL_STR][SPL_LEN];
   fgets(line, sizeof line, agg);
   // if the line is too long (which it should never be), skip the rest of it
   if (strcspn(line, "\n") == (LINE-1)) {
@@ -187,7 +187,7 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
     exit(1);
   } //}}}
   // read <distance> argument from Aggregates command //{{{
-  if (!IsPosDouble(split[2])) {
+  if (!IsPosReal(split[2])) {
     RedText(STDERR_FILENO);
     fprintf(stderr, "\nError: ");
     YellowText(STDERR_FILENO);
@@ -270,7 +270,7 @@ int CountVtfStructLines(bool vtf, char *input) {
     int count_lines = 0,
         last_line = -1;
     while(true) {
-      char split[30][100], line[LINE];
+      char split[SPL_STR][SPL_LEN], line[LINE];
       fgets(line, sizeof line, vtf);
       // if the line is too long, skip the rest of it
       if (strcspn(line, "\n") == (LINE-1)) {
@@ -331,7 +331,7 @@ void SkipVtfStructure(FILE *vcf, int struct_lines) {
 /*
  * Function to check if the provided line is a timestep line.
  */
-bool CheckVtfTimestepLine(int words, char split[30][100]) {
+bool CheckVtfTimestepLine(int words, char split[SPL_STR][SPL_LEN]) {
   // there are several possibilities how the timestep line can look
   // 1) 't[imestep]'
   if (words == 1 && strncasecmp(split[0], "timestep", 1) == 0) {
@@ -356,7 +356,7 @@ bool CheckVtfTimestepLine(int words, char split[30][100]) {
 /*
  * Function to check if the provided line is a proper vtf structure atom line.
  */
-bool CheckVtfAtomLine(int words, char split[30][100], char *error) {
+bool CheckVtfAtomLine(int words, char split[SPL_STR][SPL_LEN], char *error) {
   // is there even number of strings?
   if ((words%2) != 0) {
     strcpy(error, "odd number of strings in an atom line");
@@ -416,15 +416,15 @@ bool CheckVtfAtomLine(int words, char split[30][100], char *error) {
   // if resid is present, it must be followed by an <int>
   for (int i = 2; i < words; i+=2) {
     if ((strcmp(split[i], "charge") == 0 || split[i][0] == 'q') &&
-        !IsDouble(split[i+1])) {
+        !IsReal(split[i+1])) {
       strcpy(error, "'charge|q' must be followed by <float>");
       return false;
     } else if (split[i][0] == 'r' && strncmp(split[i], "res", 3) != 0 &&
-               (!IsPosDouble(split[i+1]) || atof(split[i+1]) <= 0)) {
+               (!IsPosReal(split[i+1]) || atof(split[i+1]) <= 0)) {
       strcpy(error, "'radius' must be followed by positive <float>");
       return false;
     } else if (split[i][0] == 'm' &&
-               (!IsPosDouble(split[i+1]) || atof(split[i+1]) <= 0)) {
+               (!IsPosReal(split[i+1]) || atof(split[i+1]) <= 0)) {
       strcpy(error, "'mass' must be followed by positive <float>");
       return false;
     } else if (strcmp(split[i], "resid") == 0 && !IsInteger(split[i+1])) {
@@ -439,7 +439,7 @@ bool CheckVtfAtomLine(int words, char split[30][100], char *error) {
 /*
  * Function to check if the provided line is a proper vtf structure bond line.
  */
-bool CheckVtfBondLine(int words, char split[30][100], char *error) {
+bool CheckVtfBondLine(int words, char split[SPL_STR][SPL_LEN], char *error) {
   // the line must be: b[ond] <id>:<id> (with possible blanks after ':')
   switch(words) {
     case 1: // there must be at least 1 more string after 'bond'
@@ -454,7 +454,7 @@ are allowed (i.e., no comma separated list or 'two-colon' string of bonds)");
           return false;
         }
       }
-      char index[30][100], string[100];
+      char index[SPL_STR][SPL_LEN], string[SPL_LEN];
       strcpy(string, split[1]);
       // split '<int>:<int>' into two strings and test those
       int strings = SplitLine(index, string, ":");
@@ -496,7 +496,7 @@ or 'two-colon' string of bonds)");
 /*
  * Function to check if the provided line is a proper vtf coordinate line.
  */
-bool CheckVtfCoordinateLine(int words, char split[30][100],
+bool CheckVtfCoordinateLine(int words, char split[SPL_STR][SPL_LEN],
                             char *error, bool indexed) {
 // the line must be: <x> <y> <z>, preceded by <int> in case of indexed timestep
   // not enough strings
@@ -507,15 +507,15 @@ bool CheckVtfCoordinateLine(int words, char split[30][100],
   }
   // incorrect string types
   if (indexed && (!IsInteger(split[0]) ||
-                  !IsDouble(split[1]) ||
-                  !IsDouble(split[2]) ||
-                  !IsDouble(split[3]))) {
+                  !IsReal(split[1]) ||
+                  !IsReal(split[2]) ||
+                  !IsReal(split[3]))) {
     strcpy(error, "wrong coordinate line for an indexed timestep");
     return false;
   }
-  if (!indexed && (!IsDouble(split[0]) ||
-                   !IsDouble(split[1]) ||
-                   !IsDouble(split[2]))) {
+  if (!indexed && (!IsReal(split[0]) ||
+                   !IsReal(split[1]) ||
+                   !IsReal(split[2]))) {
     strcpy(error, "wrong coordinate line for an ordered timestep");
     return false;
   }
@@ -662,7 +662,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
   // count beads & save their ids //{{{
   lines = 0;
   while (true) {
-    char split[30][100], line[LINE];
+    char split[SPL_STR][SPL_LEN], line[LINE];
     fgets(line, sizeof line, vcf);
     // if the line is too long, skip the rest of it
     if (strcspn(line, "\n") == (LINE-1)) {
@@ -1099,7 +1099,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
   char (*res_name)[MOL_NAME+1] = malloc(sizeof *res_name * 1);
   while(true) {
     char error[LINE] = {'\0'}, // error message; no error for strlen(error) == 0
-         split[30][100], line[LINE];
+         split[SPL_STR][SPL_LEN], line[LINE];
     fgets(line, sizeof line, vsf);
     if (strcspn(line, "\n") == (LINE-1)) {
       while (getc(vsf) != '\n')
@@ -1279,7 +1279,7 @@ there must be a line for each atom)\n");
   fsetpos(vsf, &pos); // restore file pointer to the beginning of struct_file
   int count_atoms = 0, count_bonds = 0;
   for (int line_no = 0; line_no < total_lines; line_no++) {
-    char split[30][100], line[LINE];
+    char split[SPL_STR][SPL_LEN], line[LINE];
     fgets(line, sizeof line, vsf);
     // if the line is too long, skip the rest of it
     if (strcspn(line, "\n") == (LINE-1)) {
@@ -1337,7 +1337,7 @@ there must be a line for each atom)\n");
         break; //}}}
       case 'b': // save bond line into bond struct //{{{
         if (words == 2) {
-          char index[30][100];
+          char index[SPL_STR][SPL_LEN];
           SplitLine(index, split[1], ":");
           bond[count_bonds].index1 = atoi(index[0]);
           bond[count_bonds].index2 = atoi(index[1]);
@@ -2280,7 +2280,7 @@ int ReadVtfTimestepPreamble_old(bool *indexed, char *input_coor, FILE *vcf_file,
 //fgetpos(vcf_file, &position); // get file pointer position
 //(*stuff)[0] = '\0'; // start with empty string
 //int words, count_lines = 0;
-//char split[30][100];
+//char split[SPL_STR][SPL_LEN];
 //bool timestep = false;
 //// read lines until float-started line is encountered
 //do {
@@ -2314,7 +2314,7 @@ int ReadVtfTimestepPreamble_old(bool *indexed, char *input_coor, FILE *vcf_file,
 //             split[0][0] != 'i' && // 2)
 //             split[0][0] != 'o' && //
 //             strcasecmp(split[0], "pbc") != 0 && // 3)
-//             !IsDouble(split[0])) { // 4)
+//             !IsReal(split[0])) { // 4)
 //    RedText(STDERR_FILENO);
 //    fprintf(stderr, "\nError: ");
 //    YellowText(STDERR_FILENO);
@@ -2327,7 +2327,7 @@ int ReadVtfTimestepPreamble_old(bool *indexed, char *input_coor, FILE *vcf_file,
 //  } //}}}
 //  // change BoxLength, if correct pbc line is present
 //  if (strcasecmp(split[0], "pbc") == 0 &&
-//      IsDouble(split[1]) && IsDouble(split[2]) && IsDouble(split[3])) {
+//      IsReal(split[1]) && IsReal(split[2]) && IsReal(split[3])) {
 //    (*BoxLength).x = atof(split[1]);
 //    (*BoxLength).y = atof(split[2]);
 //    (*BoxLength).z = atof(split[3]);
@@ -2357,7 +2357,7 @@ int ReadVtfTimestepPreamble_old(bool *indexed, char *input_coor, FILE *vcf_file,
 //    *indexed = false; // ordered timestep present
 //  } //}}}
 //  count_lines++;
-//} while (words == 0 || !IsDouble(split[0]));
+//} while (words == 0 || !IsReal(split[0]));
 //count_lines--; // the last counted line contained the first coordinate line
 //// error (as long as we care) - missing timestep line //{{{
 //if (quit && !timestep) {
@@ -2389,7 +2389,7 @@ int ReadVtfTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file,
   fgetpos(vcf_file, &position); // get file pointer position
   (*stuff)[0] = '\0'; // start with empty string
   int words, count_lines = 0;
-  char split[30][100];
+  char split[SPL_STR][SPL_LEN];
   bool timestep = false;
   // read lines until float-started line is encountered
   do {
@@ -2426,7 +2426,7 @@ int ReadVtfTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file,
                split[0][0] != 'i' && // 2)
                split[0][0] != 'o' && //
                strcasecmp(split[0], "pbc") != 0 && // 3)
-               !IsDouble(split[0])) { // 4)
+               !IsReal(split[0])) { // 4)
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
@@ -2439,12 +2439,12 @@ int ReadVtfTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file,
     } //}}}
     // change BoxLength, if correct pbc line is present
     if (strcasecmp(split[0], "pbc") == 0 &&
-        IsDouble(split[1]) && IsDouble(split[2]) && IsDouble(split[3])) {
+        IsReal(split[1]) && IsReal(split[2]) && IsReal(split[3])) {
       (*Box).Length.x = atof(split[1]);
       (*Box).Length.y = atof(split[2]);
       (*Box).Length.z = atof(split[3]);
       if (words > 6 &&
-          IsDouble(split[4]) && IsDouble(split[5]) && IsDouble(split[6])) {
+          IsReal(split[4]) && IsReal(split[5]) && IsReal(split[6])) {
         (*Box).alpha = atof(split[4]);
         (*Box).beta = atof(split[5]);
         (*Box).gamma = atof(split[6]);
@@ -2479,7 +2479,7 @@ int ReadVtfTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file,
       *indexed = false; // ordered timestep present
     } //}}}
     count_lines++;
-  } while (words == 0 || !IsDouble(split[0]));
+  } while (words == 0 || !IsReal(split[0]));
   count_lines--; // the last counted line contained the first coordinate line
   // error (as long as we care) - missing timestep line //{{{
   if (quit && !timestep) {
@@ -2506,7 +2506,7 @@ int ReadVtfTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file,
  */
 bool LastStep(FILE *vcf_file, FILE *agg_file) {
   fpos_t position;
-  char split[30][100];
+  char split[SPL_STR][SPL_LEN];
   int words = 0;
   // check coordinate file //{{{
   /*
@@ -2526,7 +2526,7 @@ bool LastStep(FILE *vcf_file, FILE *agg_file) {
     if (feof(vcf_file)) {
       return true;
     }
-  } while (words == 0 || !IsDouble(split[0]));
+  } while (words == 0 || !IsReal(split[0]));
   fsetpos(vcf_file, &position); // restore coor file pointer position //}}}
   // if aggregate file is provided, check that too //{{{
   if (agg_file != NULL) {
@@ -2573,7 +2573,7 @@ void ReadCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file, COUNTS 
   } //}}}
   if (indexed) { // indexed timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-      char line[LINE], split[30][100];
+      char line[LINE], split[SPL_STR][SPL_LEN];
       fgets(line, sizeof line, vcf_file);
       // if the line is too long, skip the rest of it
       if (strcspn(line, "\n") == (LINE-1)) {
@@ -2594,8 +2594,8 @@ void ReadCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file, COUNTS 
       }
       int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <int> <double> <double> <double>
-      if (words < 4 || !IsInteger(split[0]) || !IsDouble(split[1]) ||
-          !IsDouble(split[2]) || !IsDouble(split[3])) {
+      if (words < 4 || !IsInteger(split[0]) || !IsReal(split[1]) ||
+          !IsReal(split[2]) || !IsReal(split[3])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2614,7 +2614,7 @@ void ReadCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file, COUNTS 
     } //}}}
   } else { // ordered timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-      char line[LINE], split[30][100];
+      char line[LINE], split[SPL_STR][SPL_LEN];
       fgets(line, sizeof line, vcf_file);
       // if the line is too long, skip the rest of it
       if (strcspn(line, "\n") == (LINE-1)) {
@@ -2623,8 +2623,8 @@ void ReadCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file, COUNTS 
       }
       int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <double> <double> <double>
-      if (words < 3 || !IsDouble(split[0]) ||
-          !IsDouble(split[1]) || !IsDouble(split[2])) {
+      if (words < 3 || !IsReal(split[0]) ||
+          !IsReal(split[1]) || !IsReal(split[2])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2678,7 +2678,7 @@ void ReadVcfCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file,
   } //}}}
   if (indexed) { // indexed timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-      char line[LINE], split[30][100];
+      char line[LINE], split[SPL_STR][SPL_LEN];
       fgets(line, sizeof line, vcf_file);
       // if the line is too long, skip the rest of it
       if (strcspn(line, "\n") == (LINE-1)) {
@@ -2701,7 +2701,7 @@ void ReadVcfCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file,
       int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <int> <double> <double> <double> //{{{
       if (words < 4 || !IsInteger(split[0]) ||
-          !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
+          !IsReal(split[1]) || !IsReal(split[2]) || !IsReal(split[3])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2726,7 +2726,7 @@ void ReadVcfCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file,
     } //}}}
   } else { // ordered timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-      char line[LINE], split[30][100];
+      char line[LINE], split[SPL_STR][SPL_LEN];
       fgets(line, sizeof line, vcf_file);
       // if the line is too long, skip the rest of it
       if (strcspn(line, "\n") == (LINE-1)) {
@@ -2736,7 +2736,7 @@ void ReadVcfCoordinates_old(bool indexed, char *input_coor, FILE *vcf_file,
       int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <double> <double> <double> //{{{
       if (words < 3 ||
-          !IsDouble(split[0]) || !IsDouble(split[1]) || !IsDouble(split[2])) {
+          !IsReal(split[0]) || !IsReal(split[1]) || !IsReal(split[2])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2794,7 +2794,7 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file,
   } //}}}
   if (indexed) { // indexed timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-      char line[LINE], split[30][100];
+      char line[LINE], split[SPL_STR][SPL_LEN];
       fgets(line, sizeof line, vcf_file);
       // if the line is too long, skip the rest of it
       if (strcspn(line, "\n") == (LINE-1)) {
@@ -2817,7 +2817,7 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file,
       int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <int> <double> <double> <double> //{{{
       if (words < 4 || !IsInteger(split[0]) ||
-          !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
+          !IsReal(split[1]) || !IsReal(split[2]) || !IsReal(split[3])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2842,7 +2842,7 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file,
     } //}}}
   } else { // ordered timestep //{{{
     for (int i = 0; i < Counts.Beads; i++) {
-      char line[LINE], split[30][100];
+      char line[LINE], split[SPL_STR][SPL_LEN];
       fgets(line, sizeof line, vcf_file);
       // if the line is too long, skip the rest of it
       if (strcspn(line, "\n") == (LINE-1)) {
@@ -2852,7 +2852,7 @@ void ReadVcfCoordinates(bool indexed, char *input_coor, FILE *vcf_file,
       int words = SplitLine(split, line, " \t");
       // error - coordinate line must be <double> <double> <double> //{{{
       if (words < 3 ||
-          !IsDouble(split[0]) || !IsDouble(split[1]) || !IsDouble(split[2])) {
+          !IsReal(split[0]) || !IsReal(split[1]) || !IsReal(split[2])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -2920,7 +2920,7 @@ void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts,
                     AGGREGATE **Aggregate, BEADTYPE *BeadType, BEAD **Bead,
                     MOLECULETYPE *MoleculeType, MOLECULE **Molecule,
                     int *Index) {
-  char line[LINE], split[30][100];
+  char line[LINE], split[SPL_STR][SPL_LEN];
   // read 'Step|Last Step' line
   fgets(line, sizeof line, fr);
   int words = SplitLine(split, line, " \t");
@@ -3063,7 +3063,7 @@ void ReadAggregates(FILE *fr, char *agg_file, COUNTS *Counts,
  * what's happening now...
  */
 void SkipAgg(FILE *agg, char *agg_file) {
-  char line[LINE], split[30][100];
+  char line[LINE], split[SPL_STR][SPL_LEN];
   // read (Last) Step line
   fgets(line, sizeof line, agg);
   int words = SplitLine(split, line, " \t");
@@ -3148,7 +3148,7 @@ bool ReadFieldPbc(char *field, VECTOR *BoxLength) {
     exit(1);
   } //}}}
   // read first line
-  char line[LINE], split[30][100];
+  char line[LINE], split[SPL_STR][SPL_LEN];
   fgets(line, sizeof line, fr);
   int words = SplitLine(split, line, " \t");
   /*
@@ -3159,9 +3159,9 @@ bool ReadFieldPbc(char *field, VECTOR *BoxLength) {
    */
   if (words >= 4 && // 1)
       strcasecmp(split[0], "pbc") == 0 && // 2)
-      IsPosDouble(split[1]) && //
-      IsPosDouble(split[2]) && // 3)
-      IsPosDouble(split[3])) { //
+      IsPosReal(split[1]) && //
+      IsPosReal(split[2]) && // 3)
+      IsPosReal(split[3])) { //
     (*BoxLength).x = atof(split[1]);
     (*BoxLength).y = atof(split[2]);
     (*BoxLength).z = atof(split[3]);
@@ -3183,7 +3183,7 @@ void ReadFieldBeadType(char *field, COUNTS *Counts,
     ErrorFileOpen(field, 'r');
     exit(1);
   } //}}}
-  char line[LINE], split[30][100];
+  char line[LINE], split[SPL_STR][SPL_LEN];
   // read number of bead types //{{{
   bool missing = true; // assume species keyword is missing
   while(fgets(line, sizeof line, fr)) {
@@ -3243,8 +3243,8 @@ void ReadFieldBeadType(char *field, COUNTS *Counts,
       ResetColour(STDERR_FILENO);
       exit(1);
     } else if (words < 4 ||                  // 2)
-               !IsPosDouble(split[1]) ||     // 3)
-               !IsDouble(split[2]) ||        // 4)
+               !IsPosReal(split[1]) ||     // 3)
+               !IsReal(split[2]) ||        // 4)
                !IsInteger(split[3])) {       // 5)
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
@@ -3295,7 +3295,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
     ErrorFileOpen(field, 'r');
     exit(1);
   } //}}}
-  char line[LINE], split[30][100];
+  char line[LINE], split[SPL_STR][SPL_LEN];
   // read number of molecule types //{{{
   bool missing = true; // assume molecule keyword is missing
   while(fgets(line, sizeof line, fr)) {
@@ -3442,7 +3442,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
       words = SplitLine(split, line, " \t");
       // error - bead line must be '<name> <double> <double> <double>' //{{{
       if (words < 4 ||
-          !IsDouble(split[1]) || !IsDouble(split[2]) || !IsDouble(split[3])) {
+          !IsReal(split[1]) || !IsReal(split[2]) || !IsReal(split[3])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -3511,7 +3511,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
         words = SplitLine(split, line, " \t");
         // error - bead line must be '<name> <id1> <id2> <double> <double>' //{{{
         if (words < 5 || !IsInteger(split[1]) || !IsInteger(split[2]) ||
-            !IsPosDouble(split[3]) || !IsPosDouble(split[4])) {
+            !IsPosReal(split[3]) || !IsPosReal(split[4])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError: ");
           YellowText(STDERR_FILENO);
@@ -3594,7 +3594,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
         // '<type> 3x<id> <double> <double>'
         if (words < 6 || !IsInteger(split[1]) ||
             !IsInteger(split[2]) || !IsInteger(split[3]) ||
-            !IsPosDouble(split[4]) || !IsPosDouble(split[5])) {
+            !IsPosReal(split[4]) || !IsPosReal(split[5])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError: ");
           YellowText(STDERR_FILENO);
@@ -3681,7 +3681,7 @@ void ReadFieldMolecules(char *field, COUNTS *Counts,
         // '<type> 4x<id> <double> <double>'
         if (words < 7 || !IsInteger(split[1]) || !IsInteger(split[2]) ||
             !IsInteger(split[3]) || !IsInteger(split[4]) ||
-            !IsPosDouble(split[5]) || !IsPosDouble(split[6])) {
+            !IsPosReal(split[5]) || !IsPosReal(split[6])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError: ");
           YellowText(STDERR_FILENO);
@@ -3928,7 +3928,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
   // read data file header //{{{
   // data file header lines must start with a number (or '#' for comment),
   // therefore read until something else is encountered
-  char split[30][100];
+  char split[SPL_STR][SPL_LEN];
   int words;
   do {
     fgets(line, sizeof line, fr);
@@ -4026,7 +4026,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     } //}}}
     // box length in x //{{{
     if (words > 3 && strcmp(split[2], "xlo") == 0 && strcmp(split[3], "xhi") == 0) {
-      if (!IsDouble(split[0]) || !IsDouble(split[1])) {
+      if (!IsReal(split[0]) || !IsReal(split[1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -4042,7 +4042,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     } //}}}
     // box length in y //{{{
     if (words > 3 && strcmp(split[2], "ylo") == 0 && strcmp(split[3], "yhi") == 0) {
-      if (!IsDouble(split[0]) || !IsDouble(split[1])) {
+      if (!IsReal(split[0]) || !IsReal(split[1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -4058,7 +4058,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     } //}}}
     // box length in x //{{{
     if (words > 3 && strcmp(split[2], "zlo") == 0 && strcmp(split[3], "zhi") == 0) {
-      if (!IsDouble(split[0]) || !IsDouble(split[1])) {
+      if (!IsReal(split[0]) || !IsReal(split[1])) {
         RedText(STDERR_FILENO);
         fprintf(stderr, "\nError: ");
         YellowText(STDERR_FILENO);
@@ -4074,7 +4074,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
     } //}}}
   } while (words == 0 ||
            split[0][0] == '#' ||
-           IsDouble(split[0]) ||
+           IsReal(split[0]) ||
            IsInteger(split[0])); //}}}
 
   // some error checking //{{{
@@ -4162,7 +4162,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // error if incorrect line //{{{
-        if (words < 2 || !IsInteger(split[0]) || !IsPosDouble(split[1])) {
+        if (words < 2 || !IsInteger(split[0]) || !IsPosReal(split[1])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError ");
           YellowText(STDERR_FILENO);
@@ -4199,7 +4199,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // error if incorrect line //{{{
-        if (words < 3 || !IsInteger(split[0]) || !IsPosDouble(split[1]) || !IsPosDouble(split[2])) {
+        if (words < 3 || !IsInteger(split[0]) || !IsPosReal(split[1]) || !IsPosReal(split[2])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError ");
           YellowText(STDERR_FILENO);
@@ -4223,7 +4223,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         fgets(line, sizeof line, fr);
         words = SplitLine(split, line, " \t");
         // error if incorrect line //{{{
-        if (words < 3 || !IsInteger(split[0]) || !IsPosDouble(split[1]) || !IsPosDouble(split[2])) {
+        if (words < 3 || !IsInteger(split[0]) || !IsPosReal(split[1]) || !IsPosReal(split[2])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError ");
           YellowText(STDERR_FILENO);
@@ -4260,7 +4260,7 @@ void ReadLmpData(char *data_file, int *bonds, PARAMS **bond_type,
         // Error - incorrect format //{{{
         if (words < 7 ||
             !IsInteger(split[0]) || !IsInteger(split[1]) || !IsInteger(split[2]) ||
-            !IsDouble(split[3]) || !IsDouble(split[4]) || !IsDouble(split[5]) || !IsDouble(split[6])) {
+            !IsReal(split[3]) || !IsReal(split[4]) || !IsReal(split[5]) || !IsReal(split[6])) {
           RedText(STDERR_FILENO);
           fprintf(stderr, "\nError ");
           YellowText(STDERR_FILENO);

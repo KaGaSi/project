@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < beads; i++) {
     char line[LINE];
     fgets(line, sizeof(line), xyz);
-    char split[30][100], delim[8];
+    char split[SPL_STR][SPL_LEN], delim[8];
     strcpy(delim, " \t");
     int words = SplitLine(split, line, delim);
 
@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
 
     // test if split[1-3] are doubles //{{{
     for (int j = 1; j < 4; j++) {
-      if (!IsDouble(split[j])) {
+      if (!IsReal(split[j])) {
         fprintf(stderr, "\033[1;31m");
         fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_xyz);
         fprintf(stderr, " - non-numeric coordinate in %d. timestep\n\n", count);

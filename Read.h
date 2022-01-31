@@ -42,7 +42,7 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
 
 void SkipVtfStructure(FILE *vcf, int struct_lines);
 int CountVtfStructLines(bool vtf, char *input);
-bool CheckVtfTimestepLine(int words, char split[30][100]);
+bool CheckVtfTimestepLine(int words, char split[SPL_STR][SPL_LEN]);
 bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
                       BEADTYPE **BeadType, BEAD **Bead, int **Index,
                       MOLECULETYPE **MoleculeType, MOLECULE **Molecule);
