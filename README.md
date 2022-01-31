@@ -1,27 +1,19 @@
 # AnalysisTools
 
-A bundle of linux programs to analyse trajectories from particle-based
-molecular simulations. The programs work with [vsf/vcf
-files](https://github.com/olenz/vtfplugin/wiki/VTF-format) coordinate
-files.
+A bundle of utilities to analyse trajectories from particle-based molecular
+simulations. The programs work mainly with [vsf/vcf
+files](https://github.com/olenz/vtfplugin/wiki/VTF-format) trajectory files.
 
 Installation
 ===
 
-All programs can be compiled using cmake, which generates Makefile, and
-subsequently make. It requires C and FORTRAN compilers (I use gcc and
-gcc-fortran). It's better to compile the package in its own directory.
+All programs can be compiled using cmake. It requires C and FORTRAN compilers
+(I use gcc and gcc-fortran). The following is a simple oneliner to compile the
+utilities in its own directory (assuming one is in the AnalysisTools root
+directory):
 
-For example, create directory `build`; `cd` to the directory; and
-to install all the programs, run from the command line this
-command to first create unix makefile and then compile all programs:
+`mkdir build; cd build; cmake ../; make`
 
-`cmake  ../; make`
+The compiled binaries are then in the `build/bin` directory.
 
-Version for debugging is compiled when `-DCMAKE_BUILD_TYPE=Debug` option is
-used with cmake; `../` represent the path to the repository (i.e., one
-directory up from `build`). The binaries will be in `bin` subdirectory of
-`build`. To compile individual utilities, just run `make UTILITY_NAME`
-after running `cmake`.
-
-Reference manual is included in the repository (refman.pdf).
+Reference manual is included in the repository (manual.pdf).
