@@ -1,7 +1,8 @@
 \subsection[VtfReadPBC]{Get simulation box dimensions}\label{ssec:VtfReadPBC}
 
 This function reads an input \vcf file line by line, searching for a valid
-\tt{pbc} line that contains box dimensions and, for triclinic cells, angles.
+\tt{pbc} line that contains box dimensions and, optionally, angles (for
+triclinic cells). The function takes only the first valit \tt{pbc} line.
 
 Valid line: \tt{pbc <x> <y> <x> [<alpha> <beta> <gamme>]}.
 
@@ -19,208 +20,27 @@ Valid line: \tt{pbc <x> <y> <x> [<alpha> <beta> <gamme>]}.
 \end{longtable}
 \vspace{-1em}
 \begin{algorithmic}[1]
-  \St \True
-  \St \False
   \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
-  \St open \ttb{input_vcf}
+  \St $file\_line\_count \gets 0$\Comment{count lines; line number printed in
+    case of an error}
+  \While{$line\gets$ get a line from \ttb{input_vcf}}
+    \St $file\_line\_count\gets file\_line\_count+1$
+    \If{$line$ is \hltt{pbc} line}
+      \St \ttb{Box.Length}$\gets$ 1st to 3rd string from $line$ as box
+        dimensions
+      \St \ttb{Box}$\gets 90^\circ$ as all three angles\Comment{assume
+        orthogonal box}
+      \If{\hltt{pbc} line contains angles}
+        \St \ttb{Box} $\gets$ 4th to 6th string from $line$ as
+          angles\Comment{possibly triclinic box}
+      \EndIf
+      \Break\Comment{box dimensions found, so there's nothing more to do}
+    \ElsIf{$line$ is a coordinate line}
+      \Error missing box dimensions in \ttb{input_vcf}
+    \ElsIf{$line$ is unrecognised}
+      \Error invalid line in \ttb{input_vcf}
+    \EndIf
+  \EndWhile
+  \St close \ttb{input_vcf}
 \end{algorithmic}
-\vspace{0.5em}\hrule
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-test
-
+\algbottomrule

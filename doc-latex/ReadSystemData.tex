@@ -5,7 +5,11 @@ In the pseudocodes, the following are used:
   \item \ttb{blue} \ldots variable that is a parameter of the described
     function
   \item $italics$ \ldots \ variable defined within the described function
-  \item \hltt{highlight} \ldots \ literal string
+  \item square brackets with a variable means the variable is an array (with
+    number of elements corresponding to what is inside the brackets)
+  \item \hltt{high[light]} \ldots \ literal string (square brackets denote
+    optional part of the string, i.e., only \hltt{high} would be looked for in
+    this example)
   \item \textsc{SmallCaps} \ldots \ function call to a function not described
     within the manual
   \item \textsc{\textcolor{red}{RedSmallCaps}} \ldots \ function call
@@ -17,12 +21,15 @@ In the pseudocodes, the following are used:
 The following are rules for some common actions (unless stated otherwise in the
 pseudocode):
 \begin{itemize}
-  \item reading a line from a file reads at most 1023 characters, the rest is
-    discarded
-  \item splitting a string (generally a line read from a file) into individual
-    strings (usually whitespace-separated) uses \textsc{SplitLine} function from
-    \tt{General} library; at most 31 new strings are generated, each at most 63
-    characters long (the rest of the line is ignored)
+  \item reading a line from a file is usually done using
+    \textsc{ReadAndSplitLine} function from \tt{General} library; this function:
+    \begin{enumerate}
+      \item reads at most 1023 characters of line, discarding the rest of the
+        line
+      \item splits the line into individual whitespace-separated strings using
+        the \textsc{SplitLine} function from \tt{General} libreary; at most 31
+        strings are created, each at most 63 characters long
+    \end{enumerate}
   \item checking if a string is a number---generally written as $string
     \in$ (or $\notin$) \Real/\RealP/\Int---uses one of these functions from
     \tt{General} library:
@@ -31,9 +38,13 @@ pseudocode):
       \item \textsc{IsPosReal} \ldots \ positive real number (\RealP)
       \item \textsc{IsInteger} \ldots \ integer (\Int)
     \end{itemize}
+  \item checking what any given line is uses \textsc{CheckVtfLine} function from
+    \tt{Read} library to differentiate between comment, blank, \tt{atom},
+    \tt{bond}, \tt{pbc}, \tt{timestep} or coordinate lines in a \vtf file
 \end{itemize}
 
 \input{VtfGetPbc}
+\input{VtfCountStructLines}
 
 \begin{comment} %{{{
 In general, information about a system can be read from a \vtf file(s),

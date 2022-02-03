@@ -1,0 +1,48 @@
+\subsection[VtfCountStructLines]{Count structure lines in a \vsf
+file}\label{ssec:CountStructLines}
+
+This function counts the number of structure part lines in a full \vtf file,
+i.e., it returns the line number of the last \tt{atom} or \tt{bond} line (or
+returns $-1$ if the input file is \vcf).
+
+\colorbox{red!30}{Wait, this function is no longer used!}
+
+\CallInit{void}{VtfCountStructLines}
+\begin{longtable}{m{0.23\textwidth}
+                  >{\centering}m{0.2\textwidth}
+                  m{0.57\textwidth}}
+  \toprule
+  variable             & in/out & explanation \\
+  \midrule
+  \ttb{(bool) vtf}     & in & \hltt{true} for full \vtf file, \hltt{false}
+                              for \vcf file\\
+  \ttb{(char) input[]} & in & name of the input \vcf file \\
+  \multicolumn{3}{p{\textwidth}}{\Ret line number of the last
+    \hltt{a[tom]}/\hltt{b[ond]} line (or $-1$ if \ttb{input} is not a full \vtf
+    file)}\\
+  \bottomrule
+\end{longtable}
+\vspace{-1em}
+\begin{algorithmic}[1]
+  \If{\ttb{vtf} $=$ \hltt{true}}\Comment{full \vtf file}
+    \St open \ttb{input} file
+    \St $file\_line\_count\gets0$\Comment{count lines in \ttb{input}}
+    \St $last\_line\gets-1$\Comment{line number of the last
+      \hltt{a[tom]}/\hltt{b[ond]} line}
+    \While{$line\gets$ get a line from \ttb{input}}
+      \If{$line$ is \hltt{t[imestep]}}
+        \Break
+      \EndIf
+      \St $file\_line\_count\gets file\_line\_count+1$
+      \If{$line$ is \hltt{a[tom]}/\hltt{b[ond]}}
+        \St $last\_line\gets file\_line\_count$
+      \ElsIf{$line$ is unrecognised}
+        \Error invalid line in \ttb{input}
+      \EndIf
+    \EndWhile
+    \SReturn $last\_line$
+  \Else
+    \SReturn $-1$\Comment{\vcf file---do nothing}
+  \EndIf
+\end{algorithmic}
+\algbottomrule

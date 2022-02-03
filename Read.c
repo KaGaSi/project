@@ -1,4 +1,9 @@
 #include "Read.h"
+// TODO: since VtfCountStructLines is obsolete, we must somehow check for
+//       invalid atom/bond lines in purely vcf file; or do we? It may not
+//       actually matter to me; it will just be skipped - just write a note
+//       into the manual
+// TODO: perror() for file openings
 // TODO test output of snprintf() to get rid of a warning; see https://stackoverflow.com/questions/51534284/how-to-circumvent-format-truncation-warning-in-gcc
 
 // TODO: what's gonna happen with Counts.Beads & Counts.BeadsInVsf; I guess it
@@ -8,73 +13,6 @@
 /* TODO: PrintBeadType() needs to find the longest name and the most number
  * of beads and insert white space accordingly
 */
-
-// GetPBC_old() //{{{
-/*
- * Function to get box dimensions from the provided coordinate file, that
- * is search for a 'pbc <float> <float> <float>' line. The provided file
- * can either be a vcf coordinate only file or a full vtf one.
- */
-VECTOR GetPBC_old(char *coor_file) {
-  VECTOR BoxLength = {-1};
-  // open the coordinate file
-  FILE *coor;
-  if ((coor = fopen(coor_file, "r")) == NULL) {
-    ErrorFileOpen(coor_file, 'r');
-    exit(1);
-  }
-  /*
-   * The pbc line can be embedded inside a vtf's structure block, so
-   * there's no simple skipping of the part. Instead, search for the line
-   * until a line starting with a number (such line must be the first
-   * coordinate line).
-   */
-  char line[LINE];
-  while (fgets(line, sizeof line, coor)) {
-    // if the line is too long, skip the rest of it
-    if (strcspn(line, "\n") == (LINE-1)) {
-      while (getc(coor) != '\n')
-        ;
-    }
-    char split[SPL_STR][SPL_LEN];
-    int words = SplitLine(split, line, " \t");
-    // pbc line found
-    if (strcasecmp(split[0], "pbc") == 0) {
-      // error - pbc line has wrong format //{{{
-      if (!IsPosReal(split[1]) ||
-          !IsPosReal(split[2]) ||
-          !IsPosReal(split[3]) ) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
-        YellowText(STDERR_FILENO);
-        fprintf(stderr, "%s", coor_file);
-        RedText(STDERR_FILENO);
-        fprintf(stderr, " - incorrect pbc line\n");
-        ResetColour(STDERR_FILENO);
-        ErrorPrintLine(split, words);
-        exit(1);
-      } //}}}
-      BoxLength.x = atof(split[1]);
-      BoxLength.y = atof(split[2]);
-      BoxLength.z = atof(split[3]);
-      break;
-    // error - line starting with a number //{{{
-    } else if (words > 0 && (IsInteger(split[0]) || IsReal(split[0]))) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", coor_file);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " - unrecognised line while searching for \
-box dimensions (pbc line must be before the first coordinate line)\n");
-      ResetColour(STDERR_FILENO);
-      ErrorPrintLine(split, words);
-      exit(1); //}}}
-    }
-  };
-  fclose(coor);
-  return BoxLength;
-} //}}}
 
 // VtfReadPBC() //{{{
 /*
@@ -89,66 +27,93 @@ void VtfReadPBC(char *input_vcf, BOX *Box) {
     ErrorFileOpen(input_vcf, 'r');
     exit(1);
   }
-  /*
-   * The pbc line can be embedded inside a vtf's structure block, so
-   * there's no simple skipping of the part. Instead, search for the line
-   * until a line starting with a number (such line must be the first
-   * coordinate line).
-   */
-  char line[LINE];
-  while (fgets(line, sizeof line, coor)) {
-    // if the line is too long, skip the rest of it
-    if (strcspn(line, "\n") == (LINE-1)) {
-      while (getc(coor) != '\n')
-        ;
-    }
-    char split[SPL_STR][SPL_LEN];
-    int words = SplitLine(split, line, " \t");
-    // pbc line found
-    if (strcasecmp(split[0], "pbc") == 0) {
-      // error - pbc line has wrong format //{{{
-      if (!IsPosReal(split[1]) ||
-          !IsPosReal(split[2]) ||
-          !IsPosReal(split[3]) ) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
-        YellowText(STDERR_FILENO);
-        fprintf(stderr, "%s", input_vcf);
-        RedText(STDERR_FILENO);
-        fprintf(stderr, " - incorrect pbc line\n");
-        ResetColour(STDERR_FILENO);
-        ErrorPrintLine(split, words);
-        exit(1);
-      } //}}}
+  int file_line_count = 0;
+  int words;
+  char split[SPL_STR][SPL_LEN];
+  // read input_vcf line by line
+  while (ReadAndSplitLine(coor, &words, split)) {
+    file_line_count++;
+    int pbc = CheckVtLineType(words, split, false, input_vcf, file_line_count);
+    // pbc line //{{{
+    if (pbc == PBC_LINE || pbc == PBC_LINE_ANGLES) {
       (*Box).Length.x = atof(split[1]);
       (*Box).Length.y = atof(split[2]);
       (*Box).Length.z = atof(split[3]);
-      if (words >= 7 &&
-          IsReal(split[4]) && IsReal(split[5]) && IsReal(split[6])) {
+      // assume orthogonal box
+      (*Box).alpha = 90;
+      (*Box).beta = 90;
+      (*Box).gamma = 90;
+      // angles in pbc line; possibly triclinic cell
+      if (pbc == PBC_LINE_ANGLES) {
         (*Box).alpha = atof(split[4]);
         (*Box).beta = atof(split[5]);
         (*Box).gamma = atof(split[6]);
-      } else {
-        (*Box).alpha = 90;
-        (*Box).beta = 90;
-        (*Box).gamma = 90;
       }
-      break;
-    // error - line starting with a number //{{{
-    } else if (words > 0 && (IsInteger(split[0]) || IsReal(split[0]))) {
+      break; //}}}
+    // error - coordinate line //{{{
+    } else if (pbc == COOR_LINE_I || pbc == COOR_LINE_O) {
+      ErrorPrintError();
+      ErrorPrintFileLine(input_vcf, file_line_count);
       RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "%s", input_vcf);
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " - unrecognised line while searching for \
-box dimensions (pbc line must be before the first coordinate line)\n");
+      fprintf(stderr, " - encountered coordinate line before pbc line\n");
       ResetColour(STDERR_FILENO);
       ErrorPrintLine(split, words);
       exit(1); //}}}
-    }
+    // error - unrecognised line //{{{
+    } else if (pbc == ERROR_LINE) {
+      ErrorPrintError();
+      ErrorPrintFileLine(input_vcf, file_line_count);
+      RedText(STDERR_FILENO);
+      fprintf(stderr, " - invalide line\n");
+      ResetColour(STDERR_FILENO);
+      ErrorPrintLine(split, words);
+      exit(1);
+    } //}}}
   };
   fclose(coor);
+} //}}}
+
+// TODO not used anymore
+// CountVtfStructLines() //{{{
+/*
+ * Function to count lines in the structure part of a vtf file (i.e., it
+ * returns the number of the last line containing atom/bond keyword).
+ */
+int VtfCountStructLines(bool vtf, char *input) {
+  if (vtf) {
+    // open input file
+    FILE *vtf;
+    if ((vtf = fopen(input, "r")) == NULL) {
+      ErrorFileOpen(input, 'r');
+      exit(1);
+    }
+    int file_line_count = 0,
+        last_line = -1;
+    char split[SPL_STR][SPL_LEN];
+    int words;
+    while (ReadAndSplitLine(vtf, &words, split)) {
+      int ltype = CheckVtLineType(words, split, false, input, file_line_count);
+      if (ltype == TIME_LINE) {
+        break;
+      }
+      file_line_count++;
+      if (ltype == ATOM_LINE || ltype == BOND_LINE) {
+        last_line = file_line_count;
+      } else if (ltype == ERROR_LINE) {
+        ErrorPrintError();
+        ErrorPrintFileLine(input, file_line_count);
+        RedText(STDERR_FILENO);
+        fprintf(stderr, " - invalide line\n");
+        ResetColour(STDERR_FILENO);
+        ErrorPrintLine(split, words);
+        exit(1);
+      }
+    }
+    fclose(vtf);
+    return last_line;
+  } else {
+    return -1; // if not vtf, the number doesn't matter
+  }
 } //}}}
 
 // ReadAggCommand() //{{{
@@ -176,8 +141,7 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
   int words = SplitLine(split, line, " \t");
   // error - not enough strings for a proper Aggregate command //{{{
   if (words < 6) {
-    RedText(STDERR_FILENO);
-    fprintf(stderr, "\nError: ");
+    ErrorPrintError();
     YellowText(STDERR_FILENO);
     fprintf(stderr, "%s", input_agg);
     RedText(STDERR_FILENO);
@@ -254,67 +218,6 @@ can lead to undefined behaviour.\n");
   fclose(agg);
 } //}}}
 
-// CountVtfStructLines() //{{{
-/*
- * Function to count lines in the structure part of a vtf file (i.e., it
- * returns the number of the last line containing atom/bond keyword).
- */
-int CountVtfStructLines(bool vtf, char *input) {
-  if (vtf) {
-    // open input file
-    FILE *vtf;
-    if ((vtf = fopen(input, "r")) == NULL) {
-      ErrorFileOpen(input, 'r');
-      exit(1);
-    }
-    int count_lines = 0,
-        last_line = -1;
-    while(true) {
-      char split[SPL_STR][SPL_LEN], line[LINE];
-      fgets(line, sizeof line, vtf);
-      // if the line is too long, skip the rest of it
-      if (strcspn(line, "\n") == (LINE-1)) {
-        while (getc(vtf) != '\n')
-          ;
-      }
-      if (feof(vtf)) { // exit while loop on vsf file finish
-        break;
-      }
-      int words = SplitLine(split, line, "\t ");
-      // finish reading at the 'timestep' line
-      if (CheckVtfTimestepLine(words, split)) {
-        break;
-      }
-      count_lines++;
-      // skip blank, comment, and pbc lines
-      if (words == 0 ||
-          split[0][0] == '#' ||
-          strcasecmp(split[0], "pbc") == 0) {
-        continue;
-      }
-      if (strncmp(split[0], "atom", 1) == 0 ||
-          strncmp(split[0], "bond", 1) == 0) {
-        last_line = count_lines;
-      }
-    }
-    fclose(vtf);
-    // error - just pro forma as it's (I think) impossible to trigger //{{{
-    if (last_line == -1) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
-      YellowText(STDERR_FILENO);
-      fprintf(stderr, "CountVtfStructLines()");
-      RedText(STDERR_FILENO);
-      fprintf(stderr, " - something weird\n");
-      ResetColour(STDERR_FILENO);
-      exit(1);
-    } //}}}
-    return last_line;
-  } else {
-    return -1; // if not vtf, the number doesn't matter
-  }
-} //}}}
-
 // SkipVtfStructure() //{{{
 /*
  * Function to skip a structure part of a vtf file (i.e., combined vsf/vcf
@@ -325,202 +228,6 @@ void SkipVtfStructure(FILE *vcf, int struct_lines) {
     while (getc(vcf) != '\n')
       ;
   }
-} //}}}
-
-// CheckVtfTimestepLine() //{{{
-/*
- * Function to check if the provided line is a timestep line.
- */
-bool CheckVtfTimestepLine(int words, char split[SPL_STR][SPL_LEN]) {
-  // there are several possibilities how the timestep line can look
-  // 1) 't[imestep]'
-  if (words == 1 && strncasecmp(split[0], "timestep", 1) == 0) {
-    return true;
-  }
-  // 2) 't[imestep] i[indexed]/o[rdered] any extra stuff'
-  if (words > 1 && strncasecmp(split[0], "timestep", 1) == 0 &&
-      (strncasecmp(split[1], "indexed", 1) == 0 ||
-       strncasecmp(split[1], "ordered", 1) == 0)) {
-    return true;
-  }
-  // 3) 'i[indexed]/o[rdered] any extra stuff'
-  if (words > 0 &&
-      (strncasecmp(split[0], "indexed", 1) == 0 ||
-       strncasecmp(split[0], "ordered", 1) == 0)) {
-    return true;
-  }
-  return false; // not a timestep line
-} //}}}
-
-// CheckVtfAtomLine() //{{{
-/*
- * Function to check if the provided line is a proper vtf structure atom line.
- */
-bool CheckVtfAtomLine(int words, char split[SPL_STR][SPL_LEN], char *error) {
-  // is there even number of strings?
-  if ((words%2) != 0) {
-    strcpy(error, "odd number of strings in an atom line");
-    return false;
-  }
-  // is the line starting with a[tom] <id>/default?
-  if (strcmp(split[1], "default") != 0 && !IsInteger(split[1])) {
-    strcpy(error, "'atom' must be followed by <int> or 'default'");
-    return false;
-  }
-  // is the mandatory n[ame] keyword present?
-  bool exists = false;
-  for (int i = 2; i < words; i+=2) {
-    if (split[i][0] == 'n') {
-      exists = true;
-      break;
-    }
-  }
-  if (!exists) {
-    strcpy(error, "missing 'name' in atom line");
-    return false;
-  }
-  // if res[name] is present, there must be resid as well
-  for (int i = 2; i < words; i+=2) {
-    if (strncmp(split[i], "res", 3) == 0) {
-      if (strcmp(split[i], "resid") == 0) { // search for resname
-        exists = false;
-        for (int j = 2; j < words; j+=2) {
-          if (strncmp(split[j], "resname", 3) == 0 &&
-              strcmp(split[j], "resid") != 0) {
-            exists = true;
-            break;
-          }
-        }
-        if (!exists) {
-          strcpy(error, "if 'resid' is present, 'resname' must be too");
-          return false;
-        }
-        break;
-      } else { // search for resid
-        exists = false;
-        for (int j = 2; j < words; j+=2) {
-          if (strcmp(split[j], "resid") == 0) {
-            exists = true;
-            break;
-          }
-        }
-        if (!exists) {
-          strcpy(error, "if 'resname' is present, 'resid' must be too");
-          return false;
-        }
-        break;
-      }
-    }
-  }
-  // if mass, charge, or radius are present, they must be followed by <float>
-  // if resid is present, it must be followed by an <int>
-  for (int i = 2; i < words; i+=2) {
-    if ((strcmp(split[i], "charge") == 0 || split[i][0] == 'q') &&
-        !IsReal(split[i+1])) {
-      strcpy(error, "'charge|q' must be followed by <float>");
-      return false;
-    } else if (split[i][0] == 'r' && strncmp(split[i], "res", 3) != 0 &&
-               (!IsPosReal(split[i+1]) || atof(split[i+1]) <= 0)) {
-      strcpy(error, "'radius' must be followed by positive <float>");
-      return false;
-    } else if (split[i][0] == 'm' &&
-               (!IsPosReal(split[i+1]) || atof(split[i+1]) <= 0)) {
-      strcpy(error, "'mass' must be followed by positive <float>");
-      return false;
-    } else if (strcmp(split[i], "resid") == 0 && !IsInteger(split[i+1])) {
-      strcpy(error, "'resid' must be followed by a whole number");
-      return false;
-    }
-  }
-  return true;
-} //}}}
-
-// CheckVtfBondLine() //{{{
-/*
- * Function to check if the provided line is a proper vtf structure bond line.
- */
-bool CheckVtfBondLine(int words, char split[SPL_STR][SPL_LEN], char *error) {
-  // the line must be: b[ond] <id>:<id> (with possible blanks after ':')
-  switch(words) {
-    case 1: // there must be at least 1 more string after 'bond'
-      strcpy(error, "missing a string after 'bond'");
-      return false;
-    case 2: // if there's only 1 string after 'bond', it must be '<int>:<int>'
-      for (int i = 1; i < (strlen(split[1])-2); i++) {
-        if ((split[1][i] == ':' && split[1][i+1] == ':') ||
-            split[1][i] == ',' || split[1][i+1] == ',') {
-          strcpy(error, "for now, only bond lines in the format <int>:<int> \
-are allowed (i.e., no comma separated list or 'two-colon' string of bonds)");
-          return false;
-        }
-      }
-      char index[SPL_STR][SPL_LEN], string[SPL_LEN];
-      strcpy(string, split[1]);
-      // split '<int>:<int>' into two strings and test those
-      int strings = SplitLine(index, string, ":");
-      if (strings < 2 || !IsInteger(index[0]) || !IsInteger(index[1]) ||
-          split[1][0] == ':' || split[1][strlen(split[1])-1] == ':') {
-        strcpy(error, "missing two colon separated integers in a bond line");
-        return false;
-      }
-      return true;
-    case 3: // if there are 2 strings after 'bond', they must be '<int>: <int>'
-      if (split[1][strlen(split[1])-1] == ':' && IsInteger(split[2])) {
-        if (split[1][strlen(split[1])-2] == ':') { // two colons aren't allowed
-          strcpy(error, "for now, only bond lines in the format <int>:<int> \
-are allowed (i.e., no comma separated list or 'two-colon' string of bonds)");
-          return false;
-        }
-        // test that <int> preceeds the colon
-        strcpy(string, split[1]);
-        string[strlen(string)-1] = '\0';
-        if (!IsInteger(string)) {
-          strcpy(error, "missing an integer before colon in a bond line");
-          return false;
-        }
-      } else {
-        strcpy(error, "unrecognised bond line (note that whitespace \
-is not allowed before the colon; i.e., '<int> : <int>' is not allowed)");
-        return false;
-      }
-      return true;
-    default: // more then 2 strings after 'bond' isn't allowed (for now)
-      strcpy(error, "unrecognised bond line (note that for now, only \
-the format <int>:<int> is allowed; i.e., no comma separated list \
-or 'two-colon' string of bonds)");
-      return false;
-  }
-} //}}}
-
-// CheckVtfCoordinateLine() //{{{
-/*
- * Function to check if the provided line is a proper vtf coordinate line.
- */
-bool CheckVtfCoordinateLine(int words, char split[SPL_STR][SPL_LEN],
-                            char *error, bool indexed) {
-// the line must be: <x> <y> <z>, preceded by <int> in case of indexed timestep
-  // not enough strings
-  if ((words < 3 && !indexed) ||
-      (words < 4 && indexed)) {
-    strcpy(error, "wrong coordinate line");
-    return false;
-  }
-  // incorrect string types
-  if (indexed && (!IsInteger(split[0]) ||
-                  !IsReal(split[1]) ||
-                  !IsReal(split[2]) ||
-                  !IsReal(split[3]))) {
-    strcpy(error, "wrong coordinate line for an indexed timestep");
-    return false;
-  }
-  if (!indexed && (!IsReal(split[0]) ||
-                   !IsReal(split[1]) ||
-                   !IsReal(split[2]))) {
-    strcpy(error, "wrong coordinate line for an ordered timestep");
-    return false;
-  }
-  // correct line
-  return true;
 } //}}}
 
 // NewBeadType() //{{{
@@ -675,7 +382,7 @@ bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
     }
     int words = SplitLine(split, line, "\t ");
     // break loop if the line isn't a coordinate line
-    if (!CheckVtfCoordinateLine(words, split, line, indexed)) {
+    if (!CheckVtfCoordinateLine_old(words, split, line, indexed)) {
       // only blank, comment, or pbc line can follow the last coordinate line
       if (words == 0 || split[0][0] == '#' ||
           strcasecmp(split[0], "pbc") == 0) {
@@ -1122,7 +829,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
     // check first character of the line for a[tom]/b[ond] line
     switch(split[0][0]) {
       case 'a': // atom line //{{{
-        if (CheckVtfAtomLine(words, split, error)) {
+        if (CheckVtfAtomLine_old(words, split, error)) {
           count_atom_lines++;
           last_struct = count_atom_lines +
                         count_bond_lines +
@@ -1203,7 +910,7 @@ void ReadVtfStructure(char *struct_file, bool detailed, COUNTS *Counts,
         } //}}}
         break; //}}}
       case 'b': // bond line //{{{
-        if (CheckVtfBondLine(words, split, error)) {
+        if (CheckVtfBondLine_old(words, split, error)) {
           count_bond_lines++;
           last_struct = count_atom_lines +
                         count_bond_lines +
@@ -2228,6 +1935,7 @@ there must be a line for each atom)\n");
   free(count_in_mol); //}}}
 } //}}}
 
+// TODO: struct_lines no longer relevant
 // FullVtfRead() //{{{
 /*
  * Function to read vtf structure and (optionally) detect what beads are
@@ -2247,14 +1955,14 @@ void FullVtfRead(char *struct_file, char *vcf_file, bool detailed, bool vtf,
   if (vcf_file[0] != '\0') {
     VtfReadPBC(vcf_file, Box);
     // number of structure lines (or -1 if coordinate file is not vtf)
-    *struct_lines = CountVtfStructLines(vtf, vcf_file);
+//  *struct_lines = VtfCountStructLines(vtf, vcf_file);
     // get timestep type & contained beads from the first timestep
     FILE *vcf;
     if ((vcf = fopen(vcf_file, "r")) == NULL) {
       ErrorFileOpen(vcf_file, 'r');
       exit(1);
     }
-    SkipVtfStructure(vcf, *struct_lines);
+//  SkipVtfStructure(vcf, *struct_lines);
     *indexed = CheckVtfTimestep(vcf, vcf_file, Counts, BeadType, Bead, Index,
                                 MoleculeType, Molecule);
     fclose(vcf);
@@ -2405,68 +2113,39 @@ int ReadVtfTimestepPreamble(bool *indexed, char *input_coor, FILE *vcf_file,
     }
     strcpy(line2, line); // save 'unsplit' line
     words = SplitLine(split, line, " \t");
-    // comment line - copy to stuff array //{{{
-    if (split[0][0] == '#') {
-      // TODO: thoroughly test
-//    P_IGNORE(-Wformat-truncation);
-      strncat(*stuff, line2, LINE-strlen(*stuff)-1);
-//    P_POP;
+    int ltype = CheckVtLineType(words, split, false, input_coor, count_lines);
+    // pbc line - get box dimensions //{{{
+    if (ltype == PBC_LINE || ltype == PBC_LINE_ANGLES) {
+      (*Box).Length.x = atof(split[1]);
+      (*Box).Length.y = atof(split[2]);
+      (*Box).Length.z = atof(split[3]);
+      (*Box).alpha = 90;
+      (*Box).beta = 90;
+      (*Box).gamma = 90;
+      if (ltype == PBC_LINE_ANGLES) {
+        (*Box).alpha = atof(split[4]);
+        (*Box).beta = atof(split[5]);
+        (*Box).gamma = atof(split[6]);
+      } //}}}
+    // timestep line - save the timestep type
+    } else if (ltype == TIME_LINE) {
+      timestep = true;
     //}}}
-    // error (only if we care) - incorrect line //{{{
-    /*
-     * error if not
-     * 1) blank line
-     * 2) timestep line starting with with 't[imestep]|i[ndexed]|o[rdered]',
-     * 3) pbc line starting with 'pbc',
-     * 4) float-initiated line, i.e., first coordinate line
-     */
-    } else if (quit && // should the funciton exit on error?
-               words != 0 && // 1)
-               split[0][0] != 't' && //
-               split[0][0] != 'i' && // 2)
-               split[0][0] != 'o' && //
-               strcasecmp(split[0], "pbc") != 0 && // 3)
-               !IsReal(split[0])) { // 4)
+    // comment line - copy to stuff[] //{{{
+    } else if (ltype == COMMENT_LINE) {
+      // TODO: thoroughly test & and add some stuff to suppress warnings
+      strncat(*stuff, line2, LINE-strlen(*stuff)-1); //}}}
+    // error - only if we care \TODO why would we care? //{{{
+    } else if (quit && ltype == ERROR_LINE) {
       RedText(STDERR_FILENO);
       fprintf(stderr, "\nError: ");
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", input_coor);
       RedText(STDERR_FILENO);
-      fprintf(stderr, " - unrecognised line in the timestep preamble\n");
+      fprintf(stderr, " - unrecognised line in a timestep preamble\n");
       ResetColour(STDERR_FILENO);
       ErrorPrintLine(split, words);
       exit(1);
-    } //}}}
-    // change BoxLength, if correct pbc line is present
-    if (strcasecmp(split[0], "pbc") == 0 &&
-        IsReal(split[1]) && IsReal(split[2]) && IsReal(split[3])) {
-      (*Box).Length.x = atof(split[1]);
-      (*Box).Length.y = atof(split[2]);
-      (*Box).Length.z = atof(split[3]);
-      if (words > 6 &&
-          IsReal(split[4]) && IsReal(split[5]) && IsReal(split[6])) {
-        (*Box).alpha = atof(split[4]);
-        (*Box).beta = atof(split[5]);
-        (*Box).gamma = atof(split[6]);
-      } else {
-        (*Box).alpha = 90;
-        (*Box).beta = 90;
-        (*Box).gamma = 90;
-      }
-    }
-    // if the line is longer than LINE, copy the next part to stuff array //{{{
-    while (strlen(line2) == (LINE-1) && line2[LINE-1] == '\n') {
-      fgets(line2, sizeof line2, vcf_file);
-      // if the line is too long, skip the rest of it
-      if (strcspn(line, "\n") == (LINE-1)) {
-        while (getc(vcf_file) != '\n')
-          ;
-      }
-      if (feof(vcf_file)) {
-        return -1;
-      }
-      strncat(*stuff, line2, LINE-strlen(*stuff)-1);
-      count_lines++;
     } //}}}
     // test for a t(imestep) i(ndexed)/o(rdered) line //{{{
     if ((words > 1 && split[0][0] == 't' && split[1][0] == 'i') ||
@@ -4896,4 +4575,401 @@ int SkipCoorAggSteps(FILE *vcf, char *input_coor, FILE *agg, char *input_agg,
     exit(1);
   } //}}}
   return count;
+} //}}}
+
+// CheckVtfTimestepLine() //{{{
+/*
+ * Function to check if the provided line is a timestep line.
+ *
+ */
+bool CheckVtfTimestepLine(int words, char split[SPL_STR][SPL_LEN]) {
+  // there are several possibilities how the timestep line can look
+  // 1) 't[imestep]' - ordered
+  if (words == 1 && strncasecmp(split[0], "timestep", 1) == 0) {
+    return true;
+  }
+  // 2) 't[imestep] i[indexed]/o[rdered] any extra stuff'
+  if (words > 1 && split[0][0] == 't' &&
+      (split[1][0] == 'i' ||
+       split[1][0] == 'o')) {
+    return true;
+  }
+  // 3) 'i[indexed]/o[rdered] any extra stuff'
+  if (words > 0 &&
+      (split[0][0] == 'i' ||
+       split[0][0] == 'o')) {
+    return true;
+  }
+  return false; // not a timestep line
+} //}}}
+
+// CheckVtfPbcLine() //{{{
+/*
+ * Function to check if the provided line is a pbc line. It returns -1 if not
+ * and 0 or 1 if pbc line without or with angles, respectively.
+ */
+int CheckVtfPbcLine(int words, char split[SPL_STR][SPL_LEN], char *file,
+                    int line_count) {
+  // valid line: pbc <x> <y> <z> [<alpha> <beta> <gamm>]
+  // invalid line
+  if (words < 4 || strcmp(split[0], "pbc") != 0 || !IsPosReal(split[1]) ||
+                                                   !IsPosReal(split[2]) ||
+                                                   !IsPosReal(split[3])) {
+    return ERROR_LINE;
+  }
+  if (words > 6 && IsPosReal(split[4]) &&
+                   IsPosReal(split[5]) &&
+                   IsPosReal(split[6])) {
+    return PBC_LINE_ANGLES;
+  } else {
+    return PBC_LINE;
+  }
+} //}}}
+
+// CheckVtfAtomLine_old() //{{{
+/*
+ * Function to check if the provided line is a proper vtf structure atom line.
+ */
+bool CheckVtfAtomLine_old(int words, char split[SPL_STR][SPL_LEN], char *error) {
+  // is there even number of strings?
+  if ((words%2) != 0) {
+    strcpy(error, "odd number of strings in an atom line");
+    return false;
+  }
+  // is the line starting with a[tom] <id>/default?
+  if (strcmp(split[1], "default") != 0 && !IsInteger(split[1])) {
+    strcpy(error, "'atom' must be followed by <int> or 'default'");
+    return false;
+  }
+  // is the mandatory n[ame] keyword present?
+  bool exists = false;
+  for (int i = 2; i < words; i+=2) {
+    if (split[i][0] == 'n') {
+      exists = true;
+      break;
+    }
+  }
+  if (!exists) {
+    strcpy(error, "missing 'name' in atom line");
+    return false;
+  }
+  // if res[name] is present, there must be resid as well
+  for (int i = 2; i < words; i+=2) {
+    if (strncmp(split[i], "res", 3) == 0) {
+      if (strcmp(split[i], "resid") == 0) { // search for resname
+        exists = false;
+        for (int j = 2; j < words; j+=2) {
+          if (strncmp(split[j], "resname", 3) == 0 &&
+              strcmp(split[j], "resid") != 0) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          strcpy(error, "if 'resid' is present, 'resname' must be too");
+          return false;
+        }
+        break;
+      } else { // search for resid
+        exists = false;
+        for (int j = 2; j < words; j+=2) {
+          if (strcmp(split[j], "resid") == 0) {
+            exists = true;
+            break;
+          }
+        }
+        if (!exists) {
+          strcpy(error, "if 'resname' is present, 'resid' must be too");
+          return false;
+        }
+        break;
+      }
+    }
+  }
+  // if mass, charge, or radius are present, they must be followed by <float>
+  // if resid is present, it must be followed by an <int>
+  for (int i = 2; i < words; i+=2) {
+    if ((strcmp(split[i], "charge") == 0 || split[i][0] == 'q') &&
+        !IsReal(split[i+1])) {
+      strcpy(error, "'charge|q' must be followed by <float>");
+      return false;
+    } else if (split[i][0] == 'r' && strncmp(split[i], "res", 3) != 0 &&
+               (!IsPosReal(split[i+1]) || atof(split[i+1]) <= 0)) {
+      strcpy(error, "'radius' must be followed by positive <float>");
+      return false;
+    } else if (split[i][0] == 'm' &&
+               (!IsPosReal(split[i+1]) || atof(split[i+1]) <= 0)) {
+      strcpy(error, "'mass' must be followed by positive <float>");
+      return false;
+    } else if (strcmp(split[i], "resid") == 0 && !IsInteger(split[i+1])) {
+      strcpy(error, "'resid' must be followed by a whole number");
+      return false;
+    }
+  }
+  return true;
+} //}}}
+
+// TODO check it works
+// CheckVtfAtomLine() //{{{
+/*
+ * Function to check if the provided line is a proper vtf structure atom line.
+ */
+bool CheckVtfAtomLine(int words, char split[SPL_STR][SPL_LEN]) {
+  // error - odd number of strings
+  if ((words%2) != 0) {
+    return false;
+  }
+  // error - line not starting with a[tom] default/<id>
+  if (split[0][0] != 'a' ||
+      (strcmp(split[1], "default") != 0 && !IsInteger(split[1]))) {
+    return false;
+  }
+  // check <keyword> <value> pairs
+  bool name = false, resid = false, resname = false;
+  for (int i = 2; i < words; i+=2) {
+    // is n[ame] keyword present?
+    if (split[i][0] == 'n') {
+      name = true;
+    }
+    int r_id = strcmp(split[i], "resid"); // resid cannot be shortened
+    int r_name = strncmp(split[i], "res", 3); // res[name] can be shortened
+    // is resid keyword present?
+    if (r_id == 0) {
+      resid = true;
+      // resid must be followed by positive integer
+      // TODO check when IsPosInteger/IsNatural exists
+      if (!IsInteger(split[i+1]) && atoi(split[i+1]) > 0) {
+        return false;
+      }
+    }
+    // is res[name] keyword present?
+    if (r_id != 0 && r_name == 0) {
+      resname = true;
+    }
+    // error - charge|q
+    if ((strcmp(split[i], "charge") == 0 || split[i][0] == 'q') &&
+        !IsReal(split[i+1])) {
+      return false;
+    // error - r[adius] not followed by positive number
+    } else if (split[i][0] == 'r' && r_name != 0 &&
+               !IsPosReal(split[i+1])) {
+      return false;
+    // error - m[ass] not followed by positive number
+    } else if (split[i][0] == 'm' && !IsPosReal(split[i+1])) {
+      return false;
+    }
+  }
+  // error - missing the mandatory n[ame] keyword or
+  //         if res[name] is present, there must be resid as well
+  if (!name || (!resid && resname) || (resid && !resname)) {
+    return false;
+  }
+  // valid atom line
+  return true;
+} //}}}
+
+// CheckVtfBondLine_old() //{{{
+/*
+ * Function to check if the provided line is a proper vtf structure bond line.
+ */
+bool CheckVtfBondLine_old(int words, char split[SPL_STR][SPL_LEN], char *error) {
+  // the line must be: b[ond] <id>:<id> (with possible blanks after ':')
+  switch(words) {
+    case 1: // there must be at least 1 more string after 'bond'
+      strcpy(error, "missing a string after 'bond'");
+      return false;
+    case 2: // if there's only 1 string after 'bond', it must be '<int>:<int>'
+      for (int i = 1; i < (strlen(split[1])-2); i++) {
+        if ((split[1][i] == ':' && split[1][i+1] == ':') ||
+            split[1][i] == ',' || split[1][i+1] == ',') {
+          strcpy(error, "for now, only bond lines in the format <int>:<int> \
+are allowed (i.e., no comma separated list or 'two-colon' string of bonds)");
+          return false;
+        }
+      }
+      char index[SPL_STR][SPL_LEN], string[SPL_LEN];
+      strcpy(string, split[1]);
+      // split '<int>:<int>' into two strings and test those
+      int strings = SplitLine(index, string, ":");
+      if (strings < 2 || !IsInteger(index[0]) || !IsInteger(index[1]) ||
+          split[1][0] == ':' || split[1][strlen(split[1])-1] == ':') {
+        strcpy(error, "missing two colon separated integers in a bond line");
+        return false;
+      }
+      return true;
+    case 3: // if there are 2 strings after 'bond', they must be '<int>: <int>'
+      if (split[1][strlen(split[1])-1] == ':' && IsInteger(split[2])) {
+        if (split[1][strlen(split[1])-2] == ':') { // two colons aren't allowed
+          strcpy(error, "for now, only bond lines in the format <int>:<int> \
+are allowed (i.e., no comma separated list or 'two-colon' string of bonds)");
+          return false;
+        }
+        // test that <int> preceeds the colon
+        strcpy(string, split[1]);
+        string[strlen(string)-1] = '\0';
+        if (!IsInteger(string)) {
+          strcpy(error, "missing an integer before colon in a bond line");
+          return false;
+        }
+      } else {
+        strcpy(error, "unrecognised bond line (note that whitespace \
+is not allowed before the colon; i.e., '<int> : <int>' is not allowed)");
+        return false;
+      }
+      return true;
+    default: // more then 2 strings after 'bond' isn't allowed (for now)
+      strcpy(error, "unrecognised bond line (note that for now, only \
+the format <int>:<int> is allowed; i.e., no comma separated list \
+or 'two-colon' string of bonds)");
+      return false;
+  }
+} //}}}
+
+// CheckVtfBondLine() //{{{
+/*
+ * Function to check if the provided line is a proper vtf structure bond line.
+ */
+bool CheckVtfBondLine(int words, char split[SPL_STR][SPL_LEN]) {
+  // valid line b[ond] '<id>:[  ]<id> anything'
+  // error - only one string
+  if (words < 2 || split[0][0] != 'b') {
+    return false;
+  }
+  // two strings - assume '<int>:<int>' and test it
+  if (words == 2) {
+    // ':'-split the second string
+    char index[SPL_STR][SPL_LEN], string[SPL_LEN];
+    strcpy(string, split[1]);
+    int strings = SplitLine(index, string, ":");
+    if (strings != 2 || !IsInteger(index[0]) || !IsInteger(index[1])) {
+      return false;
+    }
+  }
+  return true;
+//    char index[SPL_STR][SPL_LEN], string[SPL_LEN];
+//    strcpy(string, split[1]);
+//    // split '<int>:<int>' into two strings and test those
+//    int strings = SplitLine(index, string, ":");
+//    if (strings < 2 || !IsInteger(index[0]) || !IsInteger(index[1]) ||
+//        split[1][0] == ':' || split[1][strlen(split[1])-1] == ':') {
+//      strcpy(error, "missing two colon separated integers in a bond line");
+//      return false;
+//    }
+//    return true;
+//  case 3: // if there are 2 strings after 'bond', they must be '<int>: <int>'
+//    if (split[1][strlen(split[1])-1] == ':' && IsInteger(split[2])) {
+//      if (split[1][strlen(split[1])-2] == ':') { // two colons aren't allowed
+//        strcpy(error, "for now, only bond lines in the format <int>:<int>
+//are allowed (i.e., no comma separated list or 'two-colon' string of bonds)");
+//        return false;
+//      }
+//      // test that <int> preceeds the colon
+//      strcpy(string, split[1]);
+//      string[strlen(string)-1] = '\0';
+//      if (!IsInteger(string)) {
+//        strcpy(error, "missing an integer before colon in a bond line");
+//        return false;
+//      }
+//    } else {
+//      strcpy(error, "unrecognised bond line (note that whitespace
+//is not allowed before the colon; i.e., '<int> : <int>' is not allowed)");
+//      return false;
+//    }
+//    return true;
+//  default: // more then 2 strings after 'bond' isn't allowed (for now)
+//    strcpy(error, "unrecognised bond line (note that for now, only
+//the format <int>:<int> is allowed; i.e., no comma separated list
+//or 'two-colon' string of bonds)");
+//    return false;
+//}
+} //}}}
+
+// CheckVtfCoordinateLine_old() //{{{
+/*
+ * Function to check if the provided line is a proper vtf coordinate line.
+ */
+bool CheckVtfCoordinateLine_old(int words, char split[SPL_STR][SPL_LEN],
+                                char *error, bool indexed) {
+// the line must be: <x> <y> <z>, preceded by <int> in case of indexed timestep
+  // not enough strings
+  if ((words < 3 && !indexed) ||
+      (words < 4 && indexed)) {
+    strcpy(error, "wrong coordinate line");
+    return false;
+  }
+  // incorrect string types
+  if (indexed && (!IsInteger(split[0]) ||
+                  !IsReal(split[1]) ||
+                  !IsReal(split[2]) ||
+                  !IsReal(split[3]))) {
+    strcpy(error, "wrong coordinate line for an indexed timestep");
+    return false;
+  }
+  if (!indexed && (!IsReal(split[0]) ||
+                   !IsReal(split[1]) ||
+                   !IsReal(split[2]))) {
+    strcpy(error, "wrong coordinate line for an ordered timestep");
+    return false;
+  }
+  // correct line
+  return true;
+} //}}}
+
+// CheckVtfCoordinateLine() //{{{
+/*
+ * Function to check if the provided line is a proper vtf coordinate line. It
+ * returns -1 if not and 0 or 1 if line for indexed or ordered timestep.
+ */
+int CheckVtfCoordinateLine(int words, char split[SPL_STR][SPL_LEN]) {
+  // valid line: [<id>] <x> <y> <z> ... with <id>, it is indexed timestep
+  // indexed timestep
+  if (words >= 4 && IsInteger(split[0]) &&
+      IsReal(split[1]) && IsReal(split[2]) && IsReal(split[3])) {
+    return COOR_LINE_I;
+  }
+  // ordered timestep
+  if (words >= 3 && IsReal(split[0]) && IsReal(split[1]) && IsReal(split[2])) {
+    return COOR_LINE_O;
+  }
+  // non-coordinate line
+  return -1;
+} //}}}
+
+// CheckVtLine() //{{{
+/*
+ * Function to check what line from a vtf file is passed to it.
+ */
+int CheckVtLineType(int words, char split[SPL_STR][SPL_LEN], bool indexed,
+                    char *file, int line_count) {
+  // blank line
+  if (words == 0) {
+    return BLANK_LINE;
+  }
+  // comment line
+  if (split[0][0] == '#') {
+    return COMMENT_LINE;
+  }
+  // pbc line
+  int test = CheckVtfPbcLine(words, split, file, line_count);
+  if (test != ERROR_LINE) {
+    return test;
+  }
+  // coordinate line
+  test = CheckVtfCoordinateLine(words, split);
+  if (test != ERROR_LINE) {
+    return test;
+  }
+  // atom line (vsf)
+  if (CheckVtfAtomLine(words, split)) {
+    return ATOM_LINE;
+  }
+  // bond line (vsf)
+  if (CheckVtfBondLine(words, split)) {
+    return BOND_LINE;
+  }
+  // timestep line (vcf)
+  if (CheckVtfTimestepLine(words, split)) {
+    return TIME_LINE;
+  }
+  return ERROR_LINE;
 } //}}}

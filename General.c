@@ -46,33 +46,17 @@ bool IsReal(char *a) {
 
 // IsPosReal() //{{{
 /**
- * Function to test if provided string is a non-negative real number.
+ * Function to test if provided string is a positive real number.
  */
 bool IsPosReal(char *a) {
-  // wrong first character - can be minus, dot, or number
-  if (a[0] != '.' && (a[0] < '0' || a[0] > '9')) {
+  if (IsReal(a) && atof(a) > 0) {
+    return true;
+  } else {
     return false;
   }
-  // only one dot can be present
-  bool dot = false;
-  if (a[0] == '.') {
-    dot = true;
-  }
-  // test the remaining characters - either digit, or dot (but only 1 in total)
-  for (int i = 1; i < strlen(a); i++) {
-    if (a[i] == '.') {
-      if (dot) { // has there been a dot already?
-        return false;
-      } else {
-        dot = true;
-      }
-    } else if (a[i] < '0' || a[i] > '9') {
-      return false;
-    }
-  }
-  return true;
 } //}}}
 
+// TODO integer can be negative too! Maybe make into natural? https://cz.pinterest.com/pin/417216352965631563/
 // IsInteger() //{{{
 /**
  * Function to test if provided string is a non-negative whole number.
@@ -238,6 +222,23 @@ void SortArray(int *array, int length, int mode) {
     if (done)
       break;
   }
+} //}}}
+
+// ReadAndSplitLine  //{{{
+bool ReadAndSplitLine(FILE *fr, int *words, char split[SPL_STR][SPL_LEN]) {
+  char line[LINE];
+  if (!fgets(line, sizeof line, fr)) {
+    return false; // error
+  }
+  // if the line is too long, skip the rest of it
+  if (strcspn(line, "\n") == (LINE-1)) {
+    char test;
+    do {
+      test = getc(fr);
+    } while (test != '\n' && test != EOF);
+  }
+  *words = SplitLine(split, line, "\t ");
+  return true;
 } //}}}
 
 // SplitLine() //{{{

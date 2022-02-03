@@ -310,7 +310,8 @@ void PrintBeadType2(int number, BEADTYPE *BeadType) {
       longest_name = 0, // longest bead type name
       most_beads = 0, // maximum number of beads
       max_q_neg = 0, max_q_pos = 0, // maximum charges
-      max_mass = 0; // maximum mass
+      max_mass = 0, // maximum mass
+      max_r = 0; // maximum radius
   bool negative = false; // extra space for '-' if there's negative charge
   for (int i = 0; i < number; i++) {
     int length = strlen(BeadType[i].Name);
@@ -324,51 +325,90 @@ void PrintBeadType2(int number, BEADTYPE *BeadType) {
       negative = true;
     }
     if (BeadType[i].Charge != CHARGE) {
-      if (BeadType[i].Charge < 0 && fabs(BeadType[i].Charge) > max_q_neg) {
+      if (BeadType[i].Charge < max_q_neg) {
         max_q_neg = floor(fabs(BeadType[i].Charge));
-      } else if (BeadType[i].Charge > 0 && BeadType[i].Charge < max_q_pos) {
+      } else if (BeadType[i].Charge > max_q_pos) {
         max_q_pos = floor(BeadType[i].Charge);
       }
     }
     if (BeadType[i].Mass != MASS && BeadType[i].Mass > max_mass) {
       max_mass = floor(BeadType[i].Mass);
     }
+    if (BeadType[i].Radius != RADIUS && BeadType[i].Radius > max_r) {
+      max_r = floor(BeadType[i].Radius);
+    }
   }
   // number of digits of the highest_number
   most_beads = floor(log10(most_beads)) + 1;
   // number of digits of the charge
-  max_q_neg = floor(log10(-max_q_neg)) + 1;
-  max_q_pos = floor(log10(max_q_pos)) + 1;
+  if (max_q_neg == 0) {
+    max_q_neg = 1;
+  } else {
+    max_q_neg = floor(log10(-max_q_neg)) + 1;
+  }
+  if (max_q_pos == 0) {
+    max_q_pos = 1;
+  } else {
+    max_q_pos = floor(log10(-max_q_neg)) + 1;
+  }
   max_q_neg += 1 + precision; // +1 for the decimal point
   max_q_pos += 1 + precision;
   if (negative && max_q_neg >= max_q_pos) {
     max_q_pos = max_q_neg + 1; // +1 for the missing minus sign
   }
-  printf("q length: %d %d\n", max_q_neg, max_q_pos);
   // number of digits of the mass
-  max_mass = floor(log10(max_mass)) + 1 + precision + 1;
+  if (max_mass == 0) {
+    max_mass = 1;
+  } else {
+    max_mass = floor(log10(max_mass)) + 1 + precision + 1;
+  }
+  // number of digits of the radius
+  if (max_r == 0) {
+    max_r = 1;
+  } else {
+    max_r = floor(log10(max_mass)) + 1 + precision + 1;
+  }
   // number of digits of the number of types
-  int types_digits = floor(log10(number));
+  int types_digits = floor(log10(number)) + 1;
   //}}}
   // print the information
   for (int i = 0; i < number; i++) {
     fprintf(stdout, "BeadType[%*d] = {", types_digits, i);
     fprintf(stdout, ".Name = %*s, ", longest_name, BeadType[i].Name);
     fprintf(stdout, ".Number = %*d, ", most_beads, BeadType[i].Number);
+    // print charge
     fprintf(stdout, ".Charge = ");
-    if (BeadType[i].Mass != MASS) {
-      fprintf(stdout, ".Mass = %*.*f, ", max_mass, precision, BeadType[i].Mass);
+    if (BeadType[i].Charge != CHARGE) {
+      if (BeadType[i].Charge < 0) {
+        fprintf(stdout, "%*.*f, ", max_q_neg, precision, BeadType[i].Charge);
+      } else {
+        fprintf(stdout, "%*.*f, ", max_q_pos, precision, BeadType[i].Charge);
+      }
     } else {
-      fprintf(stdout, ".Mass = ");
+      for (int j = 0; j < (max_q_neg-3); j++) {
+        putchar(' ');
+      }
+      fprintf(stdout, "n/a, ");
+    }
+    // print mass
+    fprintf(stdout, ".Mass = ");
+    if (BeadType[i].Mass != MASS) {
+      fprintf(stdout, "%*.*f, ", max_mass, precision, BeadType[i].Mass);
+    } else {
       for (int j = 0; j < (max_mass-3); j++) {
         putchar(' ');
       }
       fprintf(stdout, "n/a, ");
     }
+    fprintf(stdout, ".Radius = ");
+    // print radius
     if (BeadType[i].Radius != RADIUS) {
-      fprintf(stdout, ".Radius = %lf", BeadType[i].Radius);
+      fprintf(stdout, ".Radius = %*.*f", max_r, precision, BeadType[i].Radius);
     } else {
-      fprintf(stdout, ".Radius =      n/a");
+      for (int j = 0; j < (max_r-3); j++) {
+        putchar(' ');
+      }
+      fprintf(stdout, "n/a");
     }
     fprintf(stdout, "}\n");
   }
@@ -943,6 +983,11 @@ void RemovePBCMolecules_old(COUNTS Counts, VECTOR BoxLength,
   }
 } //}}}
 
+/* TODO what about if the molecule has bonds, but is in more 'pieces'; should
+ *      it really just try joining it 1000 times when we know it's impossible?
+ *      There should be some check and then the separate pieces should be
+ *      connected (with a warning issued).
+ */
 // RemovePBCMolecules() //{{{
 /**
  * Function to remove periodic boundary conditions from all individual
@@ -952,9 +997,22 @@ void RemovePBCMolecules_old(COUNTS Counts, VECTOR BoxLength,
 void RemovePBCMolecules(COUNTS Counts, BOX Box,
                         BEADTYPE *BeadType, BEAD **Bead,
                         MOLECULETYPE *MoleculeType, MOLECULE *Molecule) {
+  for (int i = 0; i < Counts.TypesOfMolecules; i++) {
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, "\nWarning: molecule type ");
+    CyanText(STDERR_FILENO);
+    fprintf(stderr, "%s", MoleculeType[i].Name);
+    YellowText(STDERR_FILENO);
+    fprintf(stderr, " has no bonds, so it cannot be 'joined'\n");
+    ResetColour(STDERR_FILENO);
+  }
   // go through all molecules
   for (int i = 0; i < Counts.Molecules; i++) {
     int type = Molecule[i].Type;
+    // do nothing if the molecule has no bonds
+    if (MoleculeType[type].nBonds == 0) {
+      continue;
+    }
     for (int j = 0; j < MoleculeType[type].nBeads; j++) {
       (*Bead)[Molecule[i].Bead[j]].Flag = false; // no beads moved yet
     }
@@ -997,7 +1055,7 @@ void RemovePBCMolecules(COUNTS Counts, BOX Box,
     }
     if (test == 1000) {
       YellowText(STDERR_FILENO);
-      fprintf(stderr, "\nWarning: unable to 'join' molecule ");
+      fprintf(stderr, "\nWarning: unable to 'join' molecule");
       CyanText(STDERR_FILENO);
       fprintf(stderr, "%s", MoleculeType[type].Name);
       YellowText(STDERR_FILENO);
@@ -1006,6 +1064,7 @@ void RemovePBCMolecules(COUNTS Counts, BOX Box,
       fprintf(stderr, "%d", i+1);
       YellowText(STDERR_FILENO);
       fprintf(stderr, " )\n");
+      fprintf(stderr, "           Maybe not all beads are connected?\n");
       ResetColour(STDERR_FILENO);
     }
 

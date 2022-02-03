@@ -166,6 +166,9 @@ void SwapBool(bool *a, bool *b);
  */
 void SortArray(int *array, int length, int mode); //}}}
 
+// ReadAndSplitLine  //{{{
+bool ReadAndSplitLine(FILE *fr, int *words, char split[SPL_STR][SPL_LEN]); //}}}
+
 // SplitLine() //{{{
 /*
  * \brief Function to split provided line.

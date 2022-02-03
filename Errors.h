@@ -129,4 +129,16 @@ void WarnElNeutrality(COUNTS Counts, BEADTYPE *BeadType, char *file); //}}}
  * \param [in] end     ending timestep
  */
 void ErrorStartEnd(int start, int end); //}}}
+
+// PrintError() //{{{
+void ErrorPrintError(); //}}}
+
+// PrintWarning() //{{{
+void WarnPrintWarning(); //}}}
+
+// ErrorPrintFile() //{{{
+void ErrorPrintFile(char *file); //}}}
+
+// PrintFileLine() //{{{
+void ErrorPrintFileLine(char *file, int line); //}}}
 #endif

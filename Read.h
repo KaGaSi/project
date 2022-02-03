@@ -8,6 +8,17 @@
 
 #include "AnalysisTools.h"
 
+#define ERROR_LINE -1
+#define BLANK_LINE 0
+#define COMMENT_LINE 1
+#define PBC_LINE 2
+#define PBC_LINE_ANGLES 3
+#define COOR_LINE_I 4
+#define COOR_LINE_O 5
+#define ATOM_LINE 6
+#define BOND_LINE 7
+#define TIME_LINE 8
+
 // GetPBC_old() //{{{
 /*
  * \brief Function to get box dimensions from a vtf coordinate file.
@@ -41,8 +52,7 @@ void ReadAggCommand(BEADTYPE *BeadType, COUNTS Counts,
                     double *distance, int *contacts); //}}}
 
 void SkipVtfStructure(FILE *vcf, int struct_lines);
-int CountVtfStructLines(bool vtf, char *input);
-bool CheckVtfTimestepLine(int words, char split[SPL_STR][SPL_LEN]);
+int VtfCountStructLines(bool vtf, char *input);
 bool CheckVtfTimestep(FILE *vcf, char *vcf_file, COUNTS *Counts,
                       BEADTYPE **BeadType, BEAD **Bead, int **Index,
                       MOLECULETYPE **MoleculeType, MOLECULE **Molecule);
@@ -212,4 +222,21 @@ int SkipCoorSteps(FILE *vcf, char *input_coor, COUNTS Counts, int start, bool si
 
 // SkipCoorAggSteps() { //{{{
 int SkipCoorAggSteps(FILE *vcf, char *input_coor, FILE *agg, char *input_agg, COUNTS Counts, int start, bool silent); //}}}
+
+bool CheckVtfTimestepLine(int words, char split[SPL_STR][SPL_LEN]);
+
+int CheckVtfPbcLine(int words, char split[SPL_STR][SPL_LEN], char *file,
+                    int line_count);
+
+bool CheckVtfAtomLine_old(int words, char split[SPL_STR][SPL_LEN], char *error);
+bool CheckVtfAtomLine(int words, char split[SPL_STR][SPL_LEN]);
+
+bool CheckVtfBondLine_old(int words, char split[SPL_STR][SPL_LEN], char *error);
+bool CheckVtfBondLine(int words, char split[SPL_STR][SPL_LEN]);
+
+bool CheckVtfCoordinateLine_old(int words, char split[SPL_STR][SPL_LEN],
+                            char *error, bool indexed);
+int CheckVtfCoordinateLine(int words, char split[SPL_STR][SPL_LEN]);
+int CheckVtLineType(int words, char split[SPL_STR][SPL_LEN], bool indexed,
+                    char *file, int line_count);
 #endif
