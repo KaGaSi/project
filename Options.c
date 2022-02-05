@@ -109,8 +109,7 @@ bool ExcludeOption(int argc, char **argv, COUNTS Counts,
     if (strcmp(argv[i], "-x") == 0) {
       // wrong argument to -x option //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "-x");
         RedText(STDERR_FILENO);
@@ -123,8 +122,7 @@ bool ExcludeOption(int argc, char **argv, COUNTS Counts,
       while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
         if (type == -1) { // is it in vsf?
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
+          ErrorPrintError();
           YellowText(STDERR_FILENO);
           fprintf(stderr, "-x");
           RedText(STDERR_FILENO);
@@ -160,8 +158,7 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
     if (strcmp(argv[i], "-j") == 0) {
       // wrong argument to -j option //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "-j");
         RedText(STDERR_FILENO);
@@ -174,8 +171,7 @@ bool JoinCoorOption(int argc, char **argv, char *joined_vcf) {
       // test if <joined.vcf> filename ends with '.vcf' //{{{
       char *dot = strrchr(joined_vcf, '.');
       if (!dot || (strcmp(dot, ".vcf") && strcmp(dot, ".vtf"))) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "-j");
         RedText(STDERR_FILENO);
@@ -210,8 +206,7 @@ bool BeadTypeOption(int argc, char **argv, char *opt, bool use,
       while (++types < argc && argv[types][0] != '-') {
         int type = FindBeadType(argv[types], Counts, *BeadType);
         if (type == -1) {
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
+          ErrorPrintError();
           YellowText(STDERR_FILENO);
           fprintf(stderr, "%s", opt);
           RedText(STDERR_FILENO);
@@ -261,8 +256,7 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
     if (strcmp(argv[i], opt) == 0) {
       // Error - missing argument
       if ((i+1) >= argc) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -272,8 +266,7 @@ bool IntegerOption(int argc, char **argv, char *opt, int *value) {
       }
       // Error - non-numeric
       if (!IsInteger(argv[i+1])) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -298,8 +291,7 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value) {
     if (strcmp(argv[i], opt) == 0) {
       // Error - missing argument
       if ((i+1) >= argc) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -309,8 +301,7 @@ bool DoubleOption(int argc, char **argv, char *opt, double *value) {
       }
       // Error - non-numeric
       if (!IsPosReal(argv[i+1])) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -341,8 +332,7 @@ bool MultiIntegerOption(int argc, char **argv, char *opt,
       while ((arg) < argc && argv[arg][0] != '-') {
         // Error - non-numeric or missing argument
         if (!IsInteger(argv[arg])) {
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
+          ErrorPrintError();
           YellowText(STDERR_FILENO);
           fprintf(stderr, "%s", opt);
           RedText(STDERR_FILENO);
@@ -356,8 +346,7 @@ bool MultiIntegerOption(int argc, char **argv, char *opt,
         arg = i+1+n;
         // warning - too many numeric arguments
         if (n == 100) {
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
+          ErrorPrintError();
           YellowText(STDERR_FILENO);
           fprintf(stderr, "%s", opt);
           RedText(STDERR_FILENO);
@@ -413,8 +402,7 @@ bool MultiDoubleOption(int argc, char **argv, char *opt,
         arg = i+1+n;
         // warning - too many numeric arguments
         if (n == 100) {
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
+          ErrorPrintError();
           YellowText(STDERR_FILENO);
           fprintf(stderr, "%s", opt);
           RedText(STDERR_FILENO);
@@ -444,8 +432,7 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values,
     if (strcmp(argv[i], opt) == 0) {
       // Error - no output file name
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -459,8 +446,7 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values,
       while ((i+2+n) < argc && argv[i+2+n][0] != '-') {
         // Error - non-numeric or missing argument
         if (!IsInteger(argv[i+2+n])) {
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
+          ErrorPrintError();
           YellowText(STDERR_FILENO);
           fprintf(stderr, "%s", opt);
           RedText(STDERR_FILENO);
@@ -472,8 +458,7 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values,
         n++;
         // warning - too many numeric arguments
         if (n == 100) {
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
+          ErrorPrintError();
           YellowText(STDERR_FILENO);
           fprintf(stderr, "%s", opt);
           RedText(STDERR_FILENO);
@@ -484,8 +469,7 @@ bool FileIntsOption(int argc, char **argv, char *opt, int *values,
         }
       }
       if (n == 0) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -511,8 +495,7 @@ bool FileOption(int argc, char **argv, char *opt,
     if (strcmp(argv[i], opt) == 0) {
       // wrong argument to the option
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -540,8 +523,7 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
     if (strcmp(argv[i], opt) == 0) {
       // Error - missing or wrong argument //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -552,8 +534,7 @@ bool MoleculeTypeOption(int argc, char **argv, char *opt, int *moltype,
       } //}}}
       *moltype = FindMoleculeType(argv[i+1], Counts, *MoleculeType);
       if (*moltype == -1) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -591,8 +572,7 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int *moltype,
       }
       // Error - missing or wrong argument //{{{
       if ((i+1) >= argc || argv[i+1][0] == '-') {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", opt);
         RedText(STDERR_FILENO);
@@ -607,8 +587,7 @@ bool MoleculeTypeOption2(int argc, char **argv, char *opt, int *moltype,
       while ((i+1+j) < argc && argv[i+1+j][0] != '-') {
         int type = FindMoleculeType(argv[i+1+j], Counts, *MoleculeType);
         if (type == -1) { // is argv[i+1+j] in vsf?
-          RedText(STDERR_FILENO);
-          fprintf(stderr, "\nError: ");
+          ErrorPrintError();
           YellowText(STDERR_FILENO);
           fprintf(stderr, "%s", opt);
           RedText(STDERR_FILENO);
@@ -642,8 +621,7 @@ bool MoleculeTypeIntOption(int argc, int i, char **argv, char *opt,
   if (strcmp(argv[i], opt) == 0) {
     // Error - missing or wrong arguments //{{{
     if ((i+2) >= argc || argv[i+1][0] == '-' || !IsInteger(argv[i+2])) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
+      ErrorPrintError();
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", opt);
       RedText(STDERR_FILENO);
@@ -653,8 +631,7 @@ bool MoleculeTypeIntOption(int argc, int i, char **argv, char *opt,
     } //}}}
     *moltype = FindMoleculeType(argv[i+1], Counts, MoleculeType);
     if (*moltype == -1) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
+      ErrorPrintError();
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", opt);
       RedText(STDERR_FILENO);

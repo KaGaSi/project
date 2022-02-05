@@ -71,6 +71,15 @@ bool IsInteger(char *a) {
   return true;
 } //}}}
 
+// IsNatural()  //{{{
+bool IsNatural(char *a) {
+  if (IsInteger(a) && atof(a) >= 0) {
+    return true;
+  } else {
+    return false;
+  }
+} //}}}
+
 // Length() //{{{
 /**
  * Function to calculate vector length.
@@ -232,7 +241,7 @@ bool ReadAndSplitLine(FILE *fr, int *words, char split[SPL_STR][SPL_LEN]) {
   }
   // if the line is too long, skip the rest of it
   if (strcspn(line, "\n") == (LINE-1)) {
-    char test;
+    int test;
     do {
       test = getc(fr);
     } while (test != '\n' && test != EOF);

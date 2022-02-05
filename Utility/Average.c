@@ -134,9 +134,11 @@ int main ( int argc, char** argv ) {
     if (split[0][0] != '#' &&
         split[0][0] != '\n') {
       // error - insufficient number of columns
+      // TODO: colours
       if (words < column) {
+        ErrorPrintError();
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m - too few columns", input);
+        fprintf(stderr, "\033[1;33m%s\033[1;31m - too few columns", input);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
         exit(1);
@@ -154,9 +156,11 @@ int main ( int argc, char** argv ) {
   fclose(fr); //}}}
 
   // error - <discard> is too large //{{{
+  // TODO colours
   if (discard >= lines) {
+    ErrorPrintError();
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "\nError: \033[1;31m<discard>\033[1;31m - \033[1;33m%d\033[1;31m is too high\n\n", discard);
+    fprintf(stderr, "\033[1;31m<discard>\033[1;31m - \033[1;33m%d\033[1;31m is too high\n\n", discard);
     fprintf(stderr, "\033[0m");
     Help(argv[0], true);
     exit(1);

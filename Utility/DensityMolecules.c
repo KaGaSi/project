@@ -145,8 +145,7 @@ int main(int argc, char *argv[]) {
       int type = FindMoleculeType(argv[count], Counts, MoleculeType);
       // error - nonexistent molecule  //{{{
       if (type == -1) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", input_coor);
         RedText(STDERR_FILENO);

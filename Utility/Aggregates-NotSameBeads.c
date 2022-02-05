@@ -555,8 +555,7 @@ int main(int argc, char *argv[]) {
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
     if (type == -1) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
+      ErrorPrintError();
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", input_coor);
       RedText(STDERR_FILENO);
@@ -732,11 +731,10 @@ int main(int argc, char *argv[]) {
     // are all molecules accounted for? //{{{
   // TODO: change to Warning + colours
     if (test_count != Counts.Molecules) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: not all molecules were assigned to aggregates\n");
+      ErrorPrintError();
+      fprintf(stderr, "not all molecules were assigned to aggregates\n");
       fprintf(stderr, "       Counts.Molecules = \033[1;33m%d\033[1;31m;", Counts.Molecules);
       fprintf(stderr, " Molecules in aggregates: \033[1;33m%d\033[1;31m\n\n", test_count);
-      fprintf(stderr, "\033[0m");
       exit(1);
     } //}}}
 

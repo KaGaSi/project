@@ -137,8 +137,9 @@ int main(int argc, char *argv[]) {
     if (strcmp(argv[i], "-a") == 0) {
       // Error - missing argument //{{{
       if ((i+1) >= argc) {
+        ErrorPrintError();
         RedText(STDERR_FILENO);
-        fprintf(stderr, "Error: missing numeric argument for ");
+        fprintf(stderr, "missing numeric argument for ");
         YellowText(STDERR_FILENO);
         fprintf(stderr, "-a\n\n");
         ResetColour(STDERR_FILENO);
@@ -166,8 +167,7 @@ int main(int argc, char *argv[]) {
       normal.z = 1;
       break;
     default:
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
+      ErrorPrintError();
       YellowText(STDERR_FILENO);
       fprintf(stderr, "-a");
       RedText(STDERR_FILENO);
@@ -202,8 +202,7 @@ int main(int argc, char *argv[]) {
   while (++count < argc && argv[count][0] != '-') {
     int mol_type = FindMoleculeType(argv[count], Counts, MoleculeType);
     if (mol_type == -1) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
+      ErrorPrintError();
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", input_coor);
       RedText(STDERR_FILENO);
@@ -238,8 +237,7 @@ int main(int argc, char *argv[]) {
 
   // Error: wrong number of integers //{{{
   if ((number_of_beads%beads_per_angle) != 0) {
-    RedText(STDERR_FILENO);
-    fprintf(stderr, "\nError: ");
+    ErrorPrintError();
     YellowText(STDERR_FILENO);
     fprintf(stderr, "-n");
     RedText(STDERR_FILENO);

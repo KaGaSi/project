@@ -118,8 +118,7 @@ int main ( int argc, char** argv ) {
         split[0][0] != '\n') {
       // error - insufficient number of columns //{{{
       if (words < x || words < f_x) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", input);
         RedText(STDERR_FILENO);

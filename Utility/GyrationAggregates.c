@@ -160,8 +160,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
   if (test != 2) {
-    RedText(STDERR_FILENO);
-    fprintf(stderr, "\nError: ");
+    ErrorPrintError();
     YellowText(STDERR_FILENO);
     fprintf(stderr, "-n");
     RedText(STDERR_FILENO);

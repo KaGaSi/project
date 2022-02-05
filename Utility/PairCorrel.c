@@ -134,8 +134,7 @@ int main(int argc, char *argv[]) {
       int type = FindBeadType(argv[count], Counts, BeadType);
       // error - nonexistent bead  //{{{
       if (type == -1) {
-        RedText(STDERR_FILENO);
-        fprintf(stderr, "\nError: ");
+        ErrorPrintError();
         YellowText(STDERR_FILENO);
         fprintf(stderr, "%s", input_coor);
         RedText(STDERR_FILENO);

@@ -142,8 +142,7 @@ orthogonal box.\n", argv[0]);
   while (++count < argc && argv[count][0] != '-') {
     int type = FindBeadType(argv[count], Counts, BeadType);
     if (type == -1) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
+      ErrorPrintError();
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", input_coor);
       RedText(STDERR_FILENO);

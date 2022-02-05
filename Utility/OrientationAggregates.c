@@ -192,8 +192,7 @@ int main(int argc, char *argv[]) {
   // errors & warnings //{{{
   // Error: wrong number of integers
   if (number_of_beads == 0 || (number_of_beads%beads_per_set) != 0) {
-    RedText(STDERR_FILENO);
-    fprintf(stderr, "\nError: ");
+    ErrorPrintError();
     YellowText(STDERR_FILENO);
     fprintf(stderr, "-n");
     RedText(STDERR_FILENO);

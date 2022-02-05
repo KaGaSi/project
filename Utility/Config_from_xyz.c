@@ -107,8 +107,9 @@ int main(int argc, char *argv[]) {
   int beads;
   if (fscanf(xyz, "%d", &beads) != 1) {
     // TODO: correct colours etc.
+    ErrorPrintError();
     fprintf(stderr, "\033[1;31m");
-    fprintf(stderr, "Error: cannot read number of beads from \033[1;33m%s\033[1;31m\n\n", input_xyz);
+    fprintf(stderr, "cannot read number of beads from \033[1;33m%s\033[1;31m\n\n", input_xyz);
     fprintf(stderr, "\033[0m");
     exit(1);
   }
@@ -185,8 +186,7 @@ int main(int argc, char *argv[]) {
 
     // error - less then four whitespace-separated strings //{{{
     if (words < 4) {
-      RedText(STDERR_FILENO);
-      fprintf(stderr, "\nError: ");
+      ErrorPrintError();
       YellowText(STDERR_FILENO);
       fprintf(stderr, "%s", input_xyz);
       RedText(STDERR_FILENO);
@@ -199,8 +199,10 @@ int main(int argc, char *argv[]) {
     // test if split[1-3] are doubles //{{{
     for (int j = 1; j < 4; j++) {
       if (!IsReal(split[j])) {
+        // TODO colours
+        ErrorPrintError();
         fprintf(stderr, "\033[1;31m");
-        fprintf(stderr, "\nError: \033[1;33m%s\033[1;31m", input_xyz);
+        fprintf(stderr, "\033[1;33m%s\033[1;31m", input_xyz);
         fprintf(stderr, " - non-numeric coordinate in %d. timestep\n\n", count);
         fprintf(stderr, "\033[0m");
         ErrorPrintLine(split, words);
