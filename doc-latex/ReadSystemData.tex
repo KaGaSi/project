@@ -1,5 +1,11 @@
 \section{Read system data} \label{sec:ReadSystemData}
 
+\input{VtfReadStruct}
+\input{VtfReadTimestep}
+%\input{VtfGetPbc} %not used anymore
+%\input{VtfCheckTimestep} %not used anymore
+
+\begin{comment} %{{{
 In the pseudocodes, the following are used:
 \begin{itemize}
   \item \ttb{blue} \ldots variable that is a parameter of the described
@@ -44,7 +50,9 @@ pseudocode):
 \end{itemize}
 
 \input{VtfGetPbc}
-%\input{VtfCountStructLines}
+\input{VtfReadStruct}
+\end{comment}
+%}}}
 
 \begin{comment} %{{{
 In general, information about a system can be read from a \vtf file(s),
@@ -247,4 +255,5 @@ The procedure to get all information is as follows:
     the sizes of those accordingly
 \end{enumerate}
  %}}}
-\end{comment} %}}}
+\end{comment}
+%}}}

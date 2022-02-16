@@ -1,31 +1,120 @@
-\section{Info} \label{sec:Info}
+\section{Info}\label{sec:Info}
 
-This simple utility just prints information about the system read from the
-provided structure file. If \texttt{-c} option is used, only beads in the
-provided coordinate file are printed. The information is the same as when
-the verbose option (\texttt{-v}) is used with any other utility. Here, the
-\texttt{-v} option prints detailed informations about every bead and every
-molecule -- this information also contains indices as implemented inside
-the \texttt{AnalysisTools} utilities (i.e., not necessarily consistent with
-the structure file).
+This utility prints system information read from an input structure file,
+possibly augmenting it with information from another structure file (\tt{-i
+<file>} option) and/or pruning the system to contain only beads from a provided
+coordinate file (\tt{-c} option).
 
-Usage (\texttt{Info} does not use standard options):
+Note that using LAMMPS \data, \ltrj or \xyz input structure file automatically
+reads coordinates in those files, but using \vtf does not. This is because a
+\vtf timestep does not necessarily contain all beads defined in the \vtf
+structure section. If coordinates should be read from the input \vtf structure
+file (and the system potentially pruned), just use the \tt{-c} option with that
+filename.
+
+For \vtf structure files, the bead (and, consequently, molecule) type
+identification can be enhanced via the \tt{--detailed} option. By default, bead
+types are defined solely based on their name; the other properties (mass,
+charge, and radius) are taken from the first \tt{a[tom]} line with the bead of
+that name that contains the appropriate keyword. For example, lines
+
+\noindent
+\tt{atom default name A m 1}\\
+\tt{atom 1 name B}\\
+\tt{atom 2 name B m 2}\\
+\tt{atom 3 name A m 2}\\
+\tt{atom 4 name A}\\[-1em]
+
+\noindent
+would define two bead type called \tt{A} and \tt{B} with masses equal to 1 and
+2, respectively. Using the \tt{--detailed} option would split the \tt{A} beads
+into three types: two with masses equal to 1 and 2, respectively, and a third
+one with undefined mass (it remains undefined because there is an
+ambiguity---should the last bead have mass 1 or 2?).
+% would define two bead type called \tt{A} and \tt{B} with masses equal to 1 and
+% 2, respectively. Using the \tt{--detailed} option would split the \tt{A} beads
+% into three types (and augment the names): \tt{A} and \tt{A_1} with masses
+% equal to 1 and 2, respectively, and \tt{A_2} with undefined mass (it remains
+% undefined because there is an ambiguity---should the last bead have mass 1 or
+% 2?).
+On the other hand, the \tt{B} beads would be assigned the same bead type with
+mass equal to 2 (there is no ambiguity because only one mass is specified for
+the \tt{B} beads).
+
+Using the \tt{-i} option with an extra structure file assigns bead mass, charge,
+and/or radius from the extra file if the bead types in the original file have
+unspecified values; this is done only for bead types that share names. Also, if
+the two structure files share molecules that have the same bead type order
+(which can be initially checked via individual \tt{Info} runs on the two files),
+bond types, angles, and angle types can be added to the molecule types in the
+original file. Note that to add this extra information, the bead types in the
+bonds/angles/dihedrals/impropers must be the same, i.e., all their parameters
+(name, mass, charge, radius) must be the same.
+
+\tt{Info} can also write this information into a new file (\tt{-o} option) of
+any format. Note that only one timestep is read and, therefore, saved. Also, if
+no coordinates are read (i.e., neither \tt{-c} option nor a structure file with
+coordinates is used), all coordinates in an output file would be 0.
+% Allowed output files are \vtsf file, LAMMPS \data file (either with the
+% extension \tt{.data} or a filename without any recognizable
+% extension), and DL\_MESO FIELD file (called \field or with the extension
+% \tt{.FIELD}).
+
+% Coordinates are printed to output files that support them, i.e., LAMMPS \data or
+% \vtf file. These coordinates are 0 if no coordinate file is specified or the
+% input structure file does not contain them.
+
+There are a few options for the output structure file. For LAMMPS \data file,
+\tt{--mass} can be used to specify LAMMPS atom types by their mass, but print
+different charges in the \tt{Atoms} section (i.e., \tt{Info}-recognized bead
+types which differ only in charge are aggregated into the same LAMMPS atom types
+in the \tt{Mass} section). Furthermore, extra atom types (with mass 1) can be
+added via the \tt{-ebt} option; these atoms do not appear in the \tt{Atoms}
+section of the \data file and can be used as, e.g., extra atom type when srp
+potential (i.e., non-crossing bonds created by adding ghost particles between
+bonded beads) is used. For \vtsf file, \tt{atom default} bead type can be
+specified via the \tt{-def} option; by default, the bead type with the most
+unbonded beads is used as the \tt{atom default} type.
+
+For examples of \tt{Info} usage, see the \tt{Examples/Info} folder.
 
 \vspace{1em}
 \noindent
-\texttt{Info <input> <options>}
-
-\vspace{1em}
+Usage: \tt{Info <input> [options]}
 \noindent
-\begin{longtable}{p{0.22\textwidth}p{0.724\textwidth}}
+\begin{longtable}{p{0.19\textwidth}p{0.754\textwidth}}
   \toprule
-  \multicolumn{2}{l}{Mandatory argument} \\
+  \multicolumn{2}{l}{Mandatory argument}\\
   \midrule
-  \texttt{<input>} & input structure file (either \texttt{.vsf} or
-    \texttt{.vtf} format) \\
-  \multicolumn{2}{l}{Options} \\
-  \texttt{-c} & input coordinate file in either \texttt{.vcf} or
-    \texttt{.vtf} format (default: None) \\
-  \texttt{-h} & print this help and exit \\
+  \tt{<input>} & input structure file\\
+  \midrule
+  \multicolumn{2}{l}{Options for input files}\\
+  \midrule
+  \tt{-i <file>}    & extra input structure file (default: None)\\
+  \tt{-c <file>}    & input coordinate file (default: None)\\
+  \tt{--detailed}   & only \vtf structure file: detailed recognition for bead
+    (and, consequently, molecule) types based on the bead names as well as
+    charges, masses, and radii \\
+  \midrule
+  \multicolumn{2}{l}{Options for output file}\\
+  \midrule
+  \tt{-o <file>}    & output coordinate file (default: None)\\
+  \tt{-def <bead>}  & only \vtf structure file: use bead type \tt{<bead>} for
+    the \enquote{atom default} line (default:bead type with the most unbonded
+    beads)\\
+  \tt{--mass}       & only \data structure file: define LAMMPS atom types by
+    mass but print per-atom charges in the \tt{Atoms} section (default: atom
+    types are the same as \tt{Info}-recognized bead types)\\
+  \tt{-ebt <int>}   & only \data structure file: number of extra atom types
+                      (for, e.g., srp)\\
+  \midrule
+  \multicolumn{2}{l}{Other options (see the beginning of 
+                     Chapter~\ref{chap:Utils})}\\
+  \midrule
+  \multicolumn{2}{l}{\tt{-st},
+                     \tt{--verbose},
+                     \tt{--silent},
+                     \tt{--help},
+                     \tt{--version}}\\
   \bottomrule
 \end{longtable}

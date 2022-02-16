@@ -1,77 +1,43 @@
-/**
- * \file
- * \brief Functions writing to files.
- */
+#ifndef WRITE_H
+#define WRITE_H
 
-#ifndef _WRITE_H_
-#define _WRITE_H_
+#define _POSIX_C_SOURCE 200809L
 
 #include "AnalysisTools.h"
 
-// WriteCoorIndexed //{{{
-/**
- * \brief Function writing indexed coordinates to a .vcf file.
- *
- * \param [in] vcf_file      name of output .vcf coordinate file
- * \param [in] Counts        numbers of beads, molecules, etc.
- * \param [in] BeadType      information about bead types
- * \param [in] Bead          coordinates of individual beads
- * \param [in] MoleculeType  information about molecule types
- * \param [in] Molecule      coordinates of individual molecules
- * \param [in] stuff         array of chars containing comment line to place at the beginning
- */
-void WriteCoorIndexed_old(FILE *vcf_file, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
-                      MOLECULETYPE *MoleculeType, MOLECULE *Molecule, char *stuff, VECTOR BoxLength); //}}}
-void WriteCoorIndexed(FILE *vcf_file, COUNTS Counts,
-                      BEADTYPE *BeadType, BEAD *Bead,
-                      MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
-                      char *stuff, BOX Box);
+void InitCoorFile(FILE_TYPE fout, SYSTEM System, int argc, char *argv[]);
+void WriteOutput(SYSTEM System, const bool write[], FILE_TYPE fw,
+                 bool lmp_mass, int vsf_def, int argc, char *argv[]);
+void WriteOutputAll(SYSTEM System, FILE_TYPE fw, bool lmp_mass,
+                    int vsf_def, int argc, char *argv[]);
+void WriteTimestep(FILE_TYPE f, SYSTEM System, int count_step,
+                   const bool write[], int argc, char *argv[]);
+void WriteTimestepAll(FILE_TYPE f, SYSTEM System, int count_step,
+                      int argc, char *argv[]);
+void WriteStructure(FILE_TYPE f, SYSTEM System, int vsf_def_type,
+                    bool lmp_mass, int argc, char *argv[]);
+void WriteAggregates(int step_count, char *agg_file, SYSTEM System,
+                     AGGREGATE *Aggregate);
 
-// WriteCoorXYZ() //{{{
-/**
- * \brief Function for writing xyz coordinates
- *
- * \param [in] xyz_file      output .xyz coordinate file
- * \param [in] Counts        numbers of beads, molecules, etc.
- * \param [in] BeadType      information about bead types
- * \param [in] Bead          coordinates of individual beads
- */
-void WriteCoorXYZ(FILE *xyz_file, COUNTS Counts,
-                  BEADTYPE *BeadType, BEAD *Bead); //}}}
-
-// WriteVsf() //{{{
-/**
- * \brief Function writing vsf file
- *
- * \param [in] vsf_file      name of output .vsf structure file
- * \param [in] Counts        numbers of beads, molecules, etc.
- * \param [in] BeadType      information about bead types
- * \param [in] Bead          coordinates of individual beads
- * \param [in] MoleculeType  information about molecule types
- * \param [in] Molecule      coordinates of individual molecules
- * \param [in] change        true or false if all molecules of a given type should contain the same beads as the first molecule of its kind in the vsf
- */
-void WriteVsf(char *input_vsf, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
-              MOLECULETYPE *MoleculeType, MOLECULE *Molecule, bool change); //}}}
-
-// WriteAggregates() //{{{
-/**
- * \brief Function writing agg file
- *
- * \param [in] step_count    current timestep
- * \param [in] agg_file      name of output .agg file
- * \param [in] Counts        numbers of beads, molecules, etc.
- * \param [in] MoleculeType  information about molecule types
- * \param [in] Bead          coordinates of individual beads
- * \param [in] Aggregates    information about aggregates
- */
-void WriteAggregates(int step_count, char *agg_file, COUNTS Counts,
-                     MOLECULETYPE *MoleculeType, BEAD *Bead, AGGREGATE *Aggregate); //}}}
-
-void WriteField(char *field, COUNTS Counts, BEADTYPE *BeadType, BEAD *Bead,
-                MOLECULETYPE *MoleculeType, MOLECULE *Molecule,
-                PARAMS *bond_type, PARAMS *angle_type, PARAMS *dihedral_type);
-
-// PrintByline() //{{{
-void PrintByline(FILE *ptr, int argc, char *argv[]);
+// verbose output (print various structures and some such)
+void VerboseOutput(SYSTEM System);
+void PrintCount(COUNT Count);
+void PrintBeadType(SYSTEM System);
+void PrintOneMolType(SYSTEM System, int n);
+void PrintAllMolTypes(SYSTEM System);
+void Print1Molecule(SYSTEM System, int n);
+void PrintMolecules(SYSTEM System);
+void PrintBead(SYSTEM System);
+void PrintBondType(SYSTEM System);
+void PrintAngleType(SYSTEM System);
+void PrintDihedralType(SYSTEM System);
+void PrintImproperType(SYSTEM System);
+// TODO: use SYSTEM
+void PrintBondTypes(COUNT Counts, PARAMS *bond_type);
+// TODO: use SYSTEM
+void PrintAngleTypes(COUNT Counts, PARAMS *angle_type);
+void PrintBox(BOX Box);
+void PrintByline(char *file, int argc, char *argv[]);
+void PrintStep(int *count_coor, int start, bool silent);
+void PrintAggregate(SYSTEM System, AGGREGATE Aggregate[]);
 #endif

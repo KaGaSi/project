@@ -1,10 +1,9 @@
-\chapter{Introdution}
+\chapter{Introduction}
 
-\section{General Information}
 AnalysisTools is a set of utilities to (mainly) analyse trajectories of
-particle-based simulations. The 34 utilities (including one
-from the \href{https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx}{DL\_MESO
-simulation package} could be roughly divided into four types:
+particle-based simulations. The utilities (including one
+from the \href{https://www.scd.stfc.ac.uk/Pages/DL_MESO.aspx}{DLMESO
+simulation package}) can be roughly divided into four types:
 
 \begin{itemize}
   \item utilities to calculate system-wide properties; e.g., pair
@@ -19,16 +18,18 @@ simulation package} could be roughly divided into four types:
     and standard deviations of a data series
 \end{itemize}
 
+The \tt{Examples} directory contains examples showcasing capabilities of
+individual utilities as well as possible workflows chaining several utilities.
+
 \section{Installation}
 
-AnalysisTools requires \tt{C} and \tt{Fortran} compilers and \tt{cmake}.
-The compilation should be done in a separate directory, such as
-\tt{<root>/build} (where \tt{<root>} is the AnalysisTools root
-directory). The following generates a \tt{Makefile} within \tt{build}:
+AnalysisTools requires \tt{C} and \tt{Fortran} compilers and \tt{cmake}. The
+utilities should be compiled in a separate directory, typically
+\tt{<root>/build} (where \tt{<root>} is the AnalysisTools root directory). The
+following generates a \tt{Makefile} within \tt{<root>/build}:
 
 \tt{mkdir <root>/build; cd <root>/build; cmake ../}
 
-Then run \tt{make} to compile all utilities or \tt{make <utility name>} to
-compile a single utility.
-
+To then compile the utilities, simply run \tt{make} (to compile all utilities)
+or \tt{make <utility name>} (to compile a single utility) in \tt{<root>/build}.
 The binaries are located in the \tt{<root>/build/bin} directory.

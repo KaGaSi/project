@@ -1,0 +1,459 @@
+\subsection[VtfReadStruct]{Read \vtf structure file}\label{ssec:VtfReadStruct}
+
+This function reads an input \vsf file line by line, identifying all beads and
+molecules present there. There are two modes that some utilities can use: bead
+types are defined either by name only (the default behaviour), or by name, mass,
+charge, and radius. In the latter case, the bead types that should share a name
+are renamed by appending \tt{_\#} (where \tt{\#} is 1, 2,\ldots, etc.).
+
+\TODO requires splitting into more functions---I guess\ldots
+
+\CallInit{void VtfReadStruct}
+\begin{longtable}{L{0.36\textwidth}Mp{0.49\textwidth}}
+  \toprule
+  parameter          & in/out & explanation \\
+  \midrule
+  \ttb{(char) struct_file[]}         & in  & name of the input \vsf file\\
+  \ttb{(bool) detailed}              & in  & should the bead type determination
+                                             be based on more than just name?\\
+  \ttb{(COUNTS) Counts}              & out & basic system information
+                                             (section \ref{ssec:Counts})\\
+  \ttb{(BEADTYPE) BeadType[]}        & out & information about bead types
+                                             (section \ref{ssec:BeadType})\\
+  \ttb{(BEAD) Bead[]}                & out & information about individual beads
+                                             (section \ref{ssec:Bead})\\
+  \ttb{(int) Index[]}                & out & array connecting internal and  \vtf
+                                             bead indices\\
+  \ttb{(MOLECULETYPE) MoleculeType[]}& out & information about molecule types
+                                             (section \ref{ssec:MoleculeType})\\
+  \ttb{(MOLECULE) Molecule[]}        & out & information about individual
+                                             molecules (section
+                                             \ref{ssec:Molecule})\\
+  \bottomrule
+\end{longtable}
+\begin{enumerate}
+  \item read \ttb{struct_file} line by line
+    \begin{itemize}
+      \item save all information from \tt{atom} and \tt{bond} lines
+        \begin{itemize}
+          \item only the first \tt{atom default} line is saved
+        \end{itemize}
+      \item count
+        \begin{itemize}
+          \item beads (i.e., identify the highest index in \tt{atom <id>}
+            lines), saving into \ttb{Counts.BeadsInVsf}
+          \item molecules, saving into \ttb{Counts.Molecules}
+          \item unique bead and molecule names (and save those names)
+          \item \tt{atom} and \tt{bond} lines (\TODO necessary to mention here?)
+        \end{itemize}
+      \item stop reading when
+        \begin{itemize}
+          \item end of file or \tt{timestep} line encountered
+          \item unrecognised line or coordinate line encounted and exit program
+            with error
+        \end{itemize}
+        \begin{itemize}
+          \item end of file or \tt{timestep} line encountered
+          \item unrecognised line or coordinate line encounted and exit program
+            with error
+        \end{itemize}
+    \end{itemize}
+  \item save number of unbonded and bonded beads into \ttb{Counts.Unbonded} and
+    \ttb{Counts.Bonded}
+  \item identify bead types
+    \begin{itemize}
+      \item save the number of types to \ttb{Counts.TypesOfBeads}
+      \item fill a temporary \nameref{ssec:BeadType} array
+    \end{itemize}
+    \begin{enumerate}
+      \item if \ttb{detailed} is \tt{true}, identify the types based on names,
+        mass, charge, and radius
+        \begin{enumerate}
+          \item create a new bead type for every \tt{atom} line that has a
+            unique combination of name, mass, charge, and radius
+          \item merge some of the bead types, specifically:
+            \begin{itemize}[label=$-$]
+              \item if a keyword is missing in one \tt{atom} line but present
+                in another does not count as a different type; e.g. beads\\
+                \tt{atom 0 n x m 1 q 1}\\
+                \tt{atom 1 n x m 1}\\
+                are of the same type (with charge $+1$)
+              \item however, there can be ambiguities, so e.g., beads\\
+                \tt{atom 0 n x m 1 q 1}\\
+                \tt{atom 1 n x m 1}\\
+                \tt{atom 2 n x m 1 q 0}\\
+                remain as three distinct types (with charges 0, \tt{undefined},
+                and $+1$)
+              \item but only some \tt{atom} lines are ambiguous; e.g., beads\\
+                \tt{atom 0 n x m 1 q 1}\\
+                \tt{atom 1 n x m 1}\\
+                \tt{atom 2 n x m 1 q 0}\\
+                \tt{atom 3 n x q 0}\\
+                are still of three types with the same charges as above and
+                with mass 1 (there is no ambiguity as \tt{atom 3} is the same as
+                \tt{atom 2} except for the undefined mass)
+              \item note that sometimes the charge, mass, and/or radius can
+                remain undefined even though there is exactly one well defined
+                value; e.g., in case of \tt{atom} lines\\
+                \tt{atom 0 n x m 1 q 1}\\
+                \tt{atom 1 n x m 1}\\
+                \tt{atom 2 n x m 1 q 0}\\
+                \tt{atom 3 n x q 0}\\
+                \tt{atom 4 n x m 1 q 0 r 1}\\
+                beads sharing their type with \tt{atom 4} will have well
+                defined radius of 1 (i.e., \tt{atom 2}, \tt{3}, and \tt{4}),
+                while \tt{atom 0} and \tt{1} will have radius undefined as they
+                have different charge to \tt{atom 4}; three bead types are
+                recognized here:
+                  \begin{enumerate}
+                    \item type with $m=1$, $q=1$, and radius \tt{undefined}
+                      (\tt{atom 0})
+                    \item type with $m=1$ and charge and radius \tt{undefined}
+                      (\tt{atom 1})
+                    \item type with $m=1$, $q=0$, and $r=1$ (\tt{atom 2},
+                      \tt{3}, and \tt{4})
+                  \end{enumerate}
+            \end{itemize}
+        \end{enumerate}
+      \item if \ttb{detailed} is \tt{false}, identify the types by name only
+        \begin{itemize}
+          \item mass, charge, and radius for each bead type is taken from the
+            first \tt{atom} line of the given name where the respective
+            parameter is defined
+        \end{itemize}
+    \end{enumerate}
+  \item fill a temporary \nameref{ssec:Bead} array and a temporary associated
+    index (i.e., \ttb{Index}) array
+    \begin{itemize}
+      \item put unbonded beads first and the bonded beads after them
+      \item if \ttb{detailed} is \tt{false}, only bead name is checked to
+        determine its type, otherwise its name, mass, charge, and radius are all
+        checked
+    \end{itemize}
+  \item if \ttb{detailed} is \tt{true}, rename bead types with the same name
+    \begin{itemize}
+      \item when several bead types share a name, the name remains unchanged for
+        the first one, but \tt{_\#} is added to all subsequent ones (\tt{\#}
+        goes from 1 to $N$, where $N$ is the number of bead types with the same
+        name)
+      \item if the bead name would become too long (i.e., over 16 characters),
+        it is shortened before the \tt{_\#} is added
+    \end{itemize}
+  \item identify molecules and molecule types
+    \begin{itemize}
+      \item save the number of types to \ttb{Counts.TypesOfMolecules}
+      \item fill temporary \nameref{ssec:MoleculeType} and
+        \nameref{ssec:Molecule} arrays
+      \item molecules must share all information to be of the same type
+        \begin{itemize}
+          \item molecule name
+          \item numbers of beads and bonds
+          \item connectivity (i.e., the bonds must be identical)
+          \item order of bead types (i.e., the order of the beads' indices in
+            \ttb{struct_file})
+        \end{itemize}
+    \end{itemize}
+  \item copy data from temporary arrays to \ttb{Bead}, \ttb{BeadType},
+    \ttb{Index}, \ttb{Molecule}, and \ttb{MoleculeType}
+\end{enumerate}
+
+% old stuff with full pseudocode %{{{
+\begin{comment}
+This function reads an input \vsf file line by line, identifying all beads and
+molecules present there.
+
+\TODO requires splitting into more functions---I guess\ldots
+
+\CallInit{void}{VtfReadStruct}
+\begin{longtable}{L{0.36\textwidth}Mp{0.51\textwidth}}
+  \toprule
+  variable           & in/out & explanation \\
+  \midrule
+  \ttb{(char) struct_file[]}         & in  & name of the input \vsf file\\
+  \ttb{(bool) detailed}              & in  & should the bead/molecule type
+                                             determination be based on more than
+                                             just name?\\
+  \ttb{(COUNTS) Counts}              & out & basic system information \TODO add
+                                             ref\\
+  \ttb{(BEADTYPE) BeadType[]}        & out & information about bead types \TODO
+                                             add ref\\
+  \ttb{(BEAD) Bead[]}                & out & information about individual beads
+                                             \TODO add ref\\
+  \ttb{(int) Index[]}                & out & array connecting internal and  \vtf
+                                             bead indices\\
+  \ttb{(MOLECULETYPE) MoleculeType[]}& out & information about molecule types
+                                             \TODO add ref\\
+  \ttb{(MOLECULE) Molecule[]}       & out & information about individual
+                                            molecules \TODO add ref\\
+  \bottomrule
+\end{longtable}
+\vspace{-1em}
+\begin{algorithmic}[1]
+  \St initialize empty \ttb{Counts}
+  \St open \ttb{struct_file}
+  \St $file\_line\_count\gets0$\Comment{total number of lines in
+    \ttb{struct_file}}
+  \Stx $count\_atoms\gets0$\Comment{number of \hltt{atom} lines in
+    \ttb{struct_file}}
+  \Stx $default\_atom\gets0$\Comment{line number of the first
+    \hltt{atom default} line (0 if no \hltt{atom default})}
+  \Stx $count\_bonds\gets0$\Comment{number of \hltt{bond} lines in
+    \ttb{struct_file}}
+  \Stx $atom\_names\gets0$\Comment{number of unique bead names in
+    \ttb{struct_file}}
+  \Stx $res\_names\gets0$\Comment{number of unique molecule names in
+    \ttb{struct_file}}
+  \Stx $highest\_resid\gets-1$\Comment{highest molecule index (\hltt{resid
+    <id>}) in the \ttb{struct_file}}
+  \Stx $atom\_name[]$ and $resn\_name[]$\Comment{arrays for the unique
+    names (memory allocated as needed)}
+  \Stx $atom[]$, $atom\_def$, and $bond[]$\Comment{structures with information
+    from \hltt{atom} and \hltt{bond} lines}
+  \Stx $mol\_id[]$\Comment{array for \hltt{resid} numbers in \ttb{struct_file}
+    (memory allocated as needed)}
+
+  \Stx\vspace{-0.6em}\hspace{-17pt}\rule{\textwidth}{0.3pt}
+  \Stx i) get all \hltt{atom} and \hltt{bond} information from
+    \ttb{struct_file}
+  \Stx\vspace{-0.6em}\hspace{-17pt}\rule{\textwidth}{0.3pt}
+  \While{$line\gets$ get a line from \ttb{input_vcf}}
+    \St $file\_line\_count\gets file\_line\_count+1$
+
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.927\textwidth}{0.3pt}
+    \Stx\hspace{6pt} reading \hltt{atom} line
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.927\textwidth}{0.3pt}
+    \If{$line$ is \hltt{atom} line}
+
+      \Stx\vspace{-0.6em}\hspace{14pt}\rule{0.927\textwidth}{0.3pt}
+      \Stx\hspace{12pt} detecting \hltt{atom default} bead
+      \Stx\vspace{-0.6em}\hspace{14pt}\rule{0.927\textwidth}{0.3pt}
+      \If{$line$ is \hltt{atom default} line}
+        \If{not the first \hltt{atom default} line}
+          \St warn that this \hltt{atom default} line is ignored
+        \Else
+          \St $default\_atom\gets file\_line\_count$
+          \If{bead name not in $atom\_name[]$}
+            \St $atom\_name[atom\_names]\gets$ bead name
+            \St $atom\_names\gets atom\_names+1$
+          \EndIf
+          \St $atom\_def\gets$ mass, charge, and radius from the \hltt{atom}
+            line
+        \EndIf
+
+      \Stx\vspace{-0.6em}\hspace{14pt}\rule{0.927\textwidth}{0.3pt}
+      \Stx\hspace{12pt} reading \hltt{atom <id>} line and counting beads and
+        molecules
+      \Stx\vspace{-0.6em}\hspace{14pt}\rule{0.927\textwidth}{0.3pt}
+      \Else
+        \St $count\_atoms\gets count\_atoms+1$
+        \St $id\gets$ bead index from the \hltt{atom} line
+        \If{$id>$ \ttb{Counts.BeadsInVsf}}
+          \For{$i=$ \ttb{Counts.BeadsInVsf}..$id-1$}
+            \St $atom[i]\gets$ \hltt{default} bead\Comment{i.e., assume $i$ has
+              no \hltt{atom} line; may change later}
+          \EndFor
+          \St \ttb{Counts.BeadsInVsf} $\gets$ $id+1$\Comment{$+1$ as
+            \vtf bead indices start from 0}
+        \EndIf
+        \If{bead name not in $atom\_name[]$}
+          \St $atom\_name[atom\_names]\gets$ bead name
+          \St $atom\_names\gets atom\_names+1$
+        \EndIf
+        \St $atom[id]\gets$ mass, charge, and radius from the \hltt{atom} line
+        \If{bead $id$ is in a molecule}
+          \St $resid\gets$ molecule index
+          \St $atom[id]\gets resid$
+          \If{molecule name not in $res\_name[]$}
+            \St $res\_name[res\_names]\gets$ molecule name
+            \St $res\_names\gets res\_names+1$
+          \EndIf
+          \If{$resid > highest\_resid$}
+            \For{$i=highest\_resid+1$..$resid$}
+              \St $mol\_id[i]\gets-1$\Comment{marks index $i$ as not yet
+                detected (discontinuous \hltt{resid} indices)}
+            \EndFor
+            \St $highest\_resid\gets resid$
+          \EndIf
+          \If{$mol\_id[resid]=-1$}\Comment{molecule index $resid$ detected for
+            the first time}
+            \St $mol\_id[resid]\gets$
+              \ttb{Counts.Molecules}
+            \St \ttb{Counts.Molecules} $\gets$ \ttb{Counts.Molecules}$+1$
+          \EndIf
+        \Else\Comment{bead $id$ is not in a molecule}
+          \St $atom[id]\gets$ not in a molecule
+        \EndIf
+      \EndIf
+
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \Stx\hspace{6pt} reading \hltt{bond} line
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \ElsIf{$line$ is \hltt{bond} line}
+      \St $bond[count\_bonds]\gets$ bead indices from the \hltt{bond} file
+      \St $count\_bonds\gets count\_bonds+1$
+
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \Stx\hspace{6pt} \hltt{timestep} line constitutes end of \vsf part of
+      \ttb{struct_file} (for full \vtf file)
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \ElsIf{$line$ is a \hltt{timestep} line}
+      \Break
+
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \Stx\hspace{6pt} exit program with error when unrecognised or coordinate
+      line is encountered
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \ElsIf{$line$ is not recognised}
+      \Error unrecognised line
+    \ElsIf{$line$ is coordinate line}
+      \Error coordinate line encountered inside \vsf file block
+    \EndIf
+  \EndWhile
+  \St close \ttb{struct_file}
+
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \Stx check all beads are defined in \ttb{struct_file}
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \If{$default\_atom=0$ \And $count\_atoms \neq$ \ttb{Counts.BeadsInVsf}}
+    \Error \hltt{atom default} line is omitted, but not every bead is defined
+      in an \hltt{atom <id>} line
+  \EndIf
+
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \Stx create and fill array connecting \ttb{struct_file} molecule indices
+    (\hltt{resid <id>}) with internal ones
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \St allocate memory for $mol\_id\_internal[]$
+  \For{$i=0$..$highest\_resid-1$}
+    \If{$mol\_id[i]\neq-1$}\Comment{is index $i$ defined in \ttb{struct_file}?}
+      \St $mol\_id\_internal[mol\_id[i]]\gets i$
+    \EndIf
+  \EndFor
+
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \Stx assign default values to \hltt{default} beads and count bonded/unbonded
+    beads
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \For{$i=0$..\ttb{Counts.BeadsInVsf}$-1$}
+    \If{$atom[i]$ is \hltt{default} bead}
+      \St $atom[i]\gets atom\_def$
+    \EndIf
+    \St count bead $i$ towards \ttb{Counts.Unbonded} or \ttb{Counts.Bonded}
+  \EndFor
+
+  \Stx\vspace{-0.6em}\hspace{-17pt}\rule{\textwidth}{0.3pt}
+  \Stx ii) identify bead types
+  \Stx\vspace{-0.6em}\hspace{-17pt}\rule{\textwidth}{0.3pt}
+  \St define BEADTYPE (\TODO add ref) array $bt\_tmp[]$\Comment{memory allocated
+    as needed}
+
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \Stx identify bead types by name, mass, charge, and radius
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \If{\ttb{detailed}}
+
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \Stx\hspace{6pt} create a bead type for each \hltt{atom} line with unique
+      name, mass, charge, and radius
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \If{$default\_atom\neq0$}
+      \St $bt\_tmp[0]\gets$ new bead type with \hltt{default} mass, charge, and
+        radius
+      \St \ttb{Counts.TypesOfBeads} $\gets$
+        \ttb{Counts.TypesOfBeads}$+1$\Comment{in a function creating
+        $bt\_tmp[0]$}
+    \EndIf
+    \For{$i=0$..$count\_atoms-1$}
+      \If{$atom[i]$'s name, charge, mass, and radius do not match an existing
+        bead type}
+        \St $bt\_tmp[$\ttb{Counts.TypesOfBeads}$]\gets$ new bead type with
+          $atom[i]$'s mass, charge, and radius
+        \St \ttb{Counts.TypesOfBeads} $\gets$ \ttb{Counts.TypesOfBeads}$+1$
+          \Comment{in a function creating $bt\_tmp[]$}
+      \EndIf
+      \St $bt\_tmp[atom[i]$'s type$]\gets bt\_tmp[atom[i]$'s
+        type$]+1$\Comment{count beads of each type}
+    \EndFor
+    \If{$default\_atom\neq0$}
+      \St $bt\_tmp[0].Number=$ \ttb{Counts.BeadsInVsf}
+      \For{$i=0$..\ttb{Counts.TypesOfBeads}$-1$}
+        \St $bt\_tmp[0].Number\gets bt\_tmp[0]-bt\_tmp[i].Number$
+      \EndFor
+    \EndIf
+
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \Stx\hspace{6pt} merge some of the created bead types (see above for
+      details)
+    \Stx\vspace{-0.6em}\hspace{7pt}\rule{0.943\textwidth}{0.3pt}
+    \St $diff\_q[]\gets bt\_tmp[].Charge$\Comment{copy charge for all bead
+      types}
+    \St $diff\_m[]\gets bt\_tmp[].Mass$\Comment{copy mass for all bead types}
+    \St $diff\_r[]\gets bt\_tmp[].Radius$\Comment{copy radius for all bead
+      types}
+
+    \Stx\vspace{-0.6em}\hspace{14pt}\rule{0.927\textwidth}{0.3pt}
+    \Stx\hspace{12pt} find which bead types with unique names have ambiguous
+      charge, mass, and radius
+    \Stx\vspace{-0.6em}\hspace{14pt}\rule{0.927\textwidth}{0.3pt}
+    \For{$i=0$..$atom\_names-1$}
+      \For{$j=0$..\ttb{Counts.TypesOfBeads}$-1$}
+        \If{$atom\_name[i]=bt\_tmp[j].Name$}
+          \If{$diff\_q[i]\neq bt\_tmp[j].Charge$}
+            \If{both $diff\_q[i]$ and $bt\_tmp[j].Charge$ are well defined}
+              \St $diff\_q[i]\gets$1e6\Comment{more than one well defined value
+                of charge exists}
+            \ElsIf{$diff\_q[i]$ undefined}
+              \St $diff\_q[i]\gets bt\_tmp[j].Charge$
+            \EndIf
+          \EndIf
+          \St similarly for $diff\_m$ and $diff\_r$
+        \EndIf
+      \EndFor
+    \EndFor
+
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \Stx identify bead types only by name
+  \Stx\vspace{-0.6em}\rule{0.96\textwidth}{0.3pt}
+  \Else\Comment{identify bead types by name only}
+    \St $bt\_tmp[]\gets$ new bead type for each name in $atom\_name[]$
+    \For{$i=0$..$atom\_names-1$}
+      \St $bt\_tmp[i]\gets$ new bead type with \hltt{default}/undefined
+        mass, charge, and radius
+      \St \ttb{Counts.TypesOfBeads} $\gets$
+        \ttb{Counts.TypesOfBeads}$+1$\Comment{in a function creating $bt\_tmp[i]$}
+    \EndFor
+    \For{$i=0$..\ttb{Counts.BeadsInVsf}$-1$}
+      \St $btype\gets$ bead type based on $i$'s name\Comment{error when
+        $btype=-1$ (should be impossible)}
+      \If{$bt\_tmp[btype].Mass$ is undefined \And $atom[i]$'s mass is defined}
+        \St $bt\_tmp[btype].Mass\gets atom[i]$'s mass
+      \EndIf
+      \St similarly for charge and radius
+    \EndFor
+  \EndIf
+
+% \St $file\_line\_count \gets 0$\Comment{count lines; line number printed in
+%   case of an error}
+% \While{$line\gets$ get a line from \ttb{input_vcf}}
+%   \St $file\_line\_count\gets file\_line\_count+1$
+%   \If{$line$ is \hltt{pbc} line}
+%     \St \ttb{Box.Length}$\gets$ 1st to 3rd string from $line$ as box
+%       dimensions
+%     \St \ttb{Box}$\gets 90^\circ$ as all three angles\Comment{assume
+%       orthogonal box}
+%     \If{\hltt{pbc} line contains angles}
+%       \St \ttb{Box} $\gets$ 4th to 6th string from $line$ as
+%         angles\Comment{possibly triclinic box}
+%     \EndIf
+%     \Break\Comment{box dimensions found, so there's nothing more to do}
+%   \ElsIf{$line$ is a coordinate line}
+%     \Error missing box dimensions in \ttb{input_vcf}
+%   \ElsIf{$line$ is unrecognised}
+%     \Error invalid line in \ttb{input_vcf}
+%   \EndIf
+% \EndWhile
+% \St close \ttb{input_vcf}
+\end{algorithmic}
+\algbottomrule
+\end{comment}
+ %}}}

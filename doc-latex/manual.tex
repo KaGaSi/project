@@ -6,16 +6,18 @@
 \Publisher{}
 \end{filecontents*} %}}}
 \documentclass[12pt,a4paper]{report}
-%\usepackage{layouts}
 % used packages %{{{
-% create pdf/a-2u
-%\usepackage[a-2u]{pdfx}
 % utf8 encoding
 \usepackage[utf8]{inputenc}
+% bibliography
+% \usepackage[refsection=section,style=chem-angew]{biblatex}
 % paper size
-\usepackage[lmargin=3cm,rmargin=3cm]{geometry}
+% \usepackage[showframe,lmargin=3cm,rmargin=3cm,bmargin=3cm]{geometry}
+\usepackage[showframe,margin=3cm]{geometry}
 % to include images
 \usepackage{graphicx}
+% to draw stuff
+\usepackage{tikz}
 % math stuff
 \usepackage{amsmath}
 % for customizing array fields (such as include \displaystyle in column
@@ -38,11 +40,13 @@
 % custom headers and footers -- replaces fancyhdr
 \usepackage{titleps}
 % to label subfigures
-\usepackage[labelformat=empty]{subcaption}
-% compress citations into [a-z]
-\usepackage{cite}
+% \usepackage[labelformat=empty]{subcaption}
+\usepackage{subcaption}
+\usepackage{tabularx}
+% % compress citations into [a-z]
+% \usepackage{cite}
 % list customization
-\usepackage{enumitem}
+\usepackage[shortlabels]{enumitem}
 % easy quotation marks
 \usepackage[style=british]{csquotes}
 % multi-line comments
@@ -51,12 +55,27 @@
 \usepackage{listings}
 % strike-out text without redefining \emph{}
 \usepackage[normalem]{ulem}
-% pseudocode - part of algorithmix
-\usepackage{algpseudocode}
+%% pseudocode - part of algorithmix
+%\usepackage{algpseudocode}
+% adjust line spacing
+\usepackage{setspace}
+% frame aound text
+\usepackage{mdframed}
 % highlighting (\hl command)
 \usepackage{soul}
 % clickable links -- hyperref should be the last package listed
 \usepackage{hyperref} %}}}
+\usepackage[nameinlink]{cleveref}
+
+\usetikzlibrary{calc}
+
+% \addbibresource{bib.bib}
+% \DefineBibliographyStrings{english}{%
+%   references = {\normalsize References},
+% }
+
+\Crefname{figure}{Figure}{Figures}
+\crefname{figure}{figure}{figures}
 
 % highlighting color (soul package) %{{{
 \definecolor{lightgray}{rgb}{0.9,0.9,0.9}
@@ -128,7 +147,7 @@
 } %}}}
 % number subsubsection
 \setcounter{secnumdepth}{2}
-% add subsubesctions to toc
+% add subsubsections to toc
 \setcounter{tocdepth}{2}
 % more reasonable figure placing %{{{
 \setcounter{topnumber}{2}
@@ -138,21 +157,31 @@
 \renewcommand{\bottomfraction}{0.8}
 \renewcommand{\textfraction}{0.07}
 \renewcommand{\floatpagefraction}{0.7} %}}}
-% some keywords %{{{
+\newcommand*{\fullref}[1]{\nameref*{#1} (\hyperref[{#1}]{\autoref*{#1}})}
+% some keywords
 \let\tt\useless
 \newcommand{\tt}{\texttt}
-\newcommand{\vcf}{\texttt{vcf}}
-\newcommand{\vsf}{\texttt{vsf}}
-\newcommand{\vscf}{\texttt{vsf/vcf}}
-\newcommand{\vtf}{\texttt{vtf}}
-\newcommand{\field}{\texttt{FIELD}}
-\newcommand{\data}{\texttt{data}}
+\newcommand{\vcf}{\texttt{vcf} }
+\newcommand{\vsf}{\texttt{vsf} }
+\newcommand{\vscf}{\texttt{vsf/vcf} }
+\newcommand{\vtsf}{\texttt{vtf/vsf} }
+\newcommand{\vtcf}{\texttt{vtf/vcf} }
+\newcommand{\vtf}{\texttt{vtf} }
+\newcommand{\xyz}{\texttt{xyz} }
+\newcommand{\field}{\texttt{FIELD} }
+\newcommand{\data}{\texttt{data} }
+\newcommand{\ltrj}{\texttt{lammpstrj} }
 \newcommand{\ttb}[1]{\textcolor{blue}{\texttt{#1}}}
 \newcommand{\note}[1]{\vspace{-1em}\noindent\footnotesize{#1}}
-\newcommand{\TODO}{\colorbox{yellow}{TODO:}}
+% yellow highlighting
+\DeclareRobustCommand{\hly}[1]{{\sethlcolor{yellow}\hl{#1}}}
+\soulregister\tt7 % makes it possible to use \tt within hl
+\soulregister\vsf7 % makes it possible to use \vsf within hl
+\soulregister\vcf7 % makes it possible to use \vcf within hl
+\newcommand{\TODO}[1]{\hly{#1}}
 \newcommand{\hltt}[1]{\tt{\hl{#1}}} % \hl - soul package
-\newcommand{\algbottomrule}{\vspace{-0.7em}\rule{\textwidth}{1.0pt}}
-%}}}
+\newcommand{\Ret}{\textbf{return }}
+\newcommand{\CallInit}[1]{\vspace{1em}\tt{#1}\tt{(parameters)}\vspace{-1em}}
 % listings setup %{{{
 \definecolor{codebackground}{rgb}{0.95, 0.9, 0.95}
 \lstset{
@@ -166,23 +195,35 @@
   rulecolor=\color{codebackground} % frame has the same colour as the block)
 } %}}}
 % remove spacing between table columns
-\renewcommand{\tabcolsep}{0pt}
-% pseudocode settings
-\newcommand{\St}{\State }
-\renewcommand{\Return}{\St \textbf{return} }
-\newcommand{\Break}{\St \textbf{break} }
-\newcommand{\Error}{\St \textbf{error} }
-\newcommand{\True}{\hltt{true}}
-\newcommand{\False}{\hltt{false}}
-\newcommand{\Ret}{\textbf{return }}
-\newcommand{\SReturn}{\St \Ret}
-\newcommand{\CallInit}[2]{\vspace{1em}\tt{#1} \
-                          \Call{#2}{parameters}\vspace{-1em}}
-\newcommand{\CallRef}[1]{\Call{\nameref{#1}}{}}
+%\renewcommand{\tabcolsep}{0pt}
+%% pseudocode settings - not used anymore
+%\newcommand{\St}{\State }
+%\newcommand{\Stx}{\Statex }
+%\renewcommand{\Return}{\St \textbf{return} }
+%\newcommand{\Break}{\St \textbf{break} }
+%\newcommand{\Error}{\St \textbf{error} }
+%\newcommand{\True}{\hltt{true}}
+%\newcommand{\False}{\hltt{false}}
+%\newcommand{\SReturn}{\St \Ret}
+%\newcommand{\algbottomrule}{\vspace{-0.7em}\rule{\textwidth}{1.0pt}}
+%\newcommand{\CallRef}[1]{\Call{\nameref{#1}}{}}
+%\newcommand{\Or}{\textbf{or} }
+%\renewcommand{\And}{\textbf{and} }
+%\renewcommand\algorithmicindent{8pt} % reduce indenting
 % keywords for number types
 \newcommand{\Real}{$\mathcal{R}$}
 \newcommand{\RealP}{$\mathcal{R}^+$}
 \newcommand{\Int}{$\mathcal{I}$}
+% new column type
+\newcolumntype{L}[1]{p{#1}@{\hspace{-23pt}}}
+\newcolumntype{M}{>{\centering}p{0.2\textwidth}@{\hspace{-10pt}}}
+% enumerate settings (enumitem package)
+\setenumerate[1]{label={\arabic*)}}
+\setenumerate[2]{label={\alph*)}, leftmargin=14pt}
+\setenumerate[3]{label={\roman*)}, leftmargin=12pt}
+\setenumerate{leftmargin=*, noitemsep}
+\setitemize[3]{label=$\circ$}
+\setitemize{leftmargin=*, noitemsep}
 
 \begin{document}
 
@@ -204,7 +245,7 @@
 \vspace{10pt}
 
 \vfill
-Version 4.0 (Released \sout{August 18, 2020} at some point, it will be...)
+Version 4.0 (Released \sout{August 18, 2020,} at some point, it will be...)
 \vfill
 \vfill
 \vfill
@@ -213,12 +254,12 @@ Version 4.0 (Released \sout{August 18, 2020} at some point, it will be...)
 \end{center}
 \tableofcontents
 \setcounter{page}{1}
-\addcontentsline{toc}{chapter}{Contents}
 \thispagestyle{empty}
 
 \pagestyle{main}
 \include{Introduction}
 \include{InputFiles}
 \include{Utilities}
-\include{ReadData}
+% \include{ReadData}
+
 \end{document}
