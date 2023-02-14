@@ -302,71 +302,72 @@ void RemovePBCMolecules(COUNTS Counts, VECTOR BoxLength,
       (*Bead)[Molecule[i].Bead[j]].Flag = false; // no beads moved yet
     }
     // first bead in the first bond is considered moved
-    (*Bead)[Molecule[i].Bead[MoleculeType[type].Bond[0][0]]].Flag = true;
-    bool done = false;
-    int test = 0; // if too many loops, just leave the loop with error
-    while (!done && test < 1000) {
-      for (int j = 0; j < MoleculeType[type].nBonds; j++) {
-        int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
-        int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
-        // move id1, if id2 is moved already
-        if (!(*Bead)[id1].Flag && (*Bead)[id2].Flag) {
-          VECTOR dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
+    if (MoleculeType[type].nBonds > 0) {
+      (*Bead)[Molecule[i].Bead[MoleculeType[type].Bond[0][0]]].Flag = true;
+      bool done = false;
+      int test = 0; // if too many loops, just leave the loop with error
+      while (!done && test < 1000) {
+        for (int j = 0; j < MoleculeType[type].nBonds; j++) {
+          int id1 = Molecule[i].Bead[MoleculeType[type].Bond[j][0]];
+          int id2 = Molecule[i].Bead[MoleculeType[type].Bond[j][1]];
+          // move id1, if id2 is moved already
+          if (!(*Bead)[id1].Flag && (*Bead)[id2].Flag) {
+            VECTOR dist = Distance((*Bead)[id2].Position, (*Bead)[id1].Position, BoxLength);
+            (*Bead)[id1].Position.x = (*Bead)[id2].Position.x - dist.x;
+            (*Bead)[id1].Position.y = (*Bead)[id2].Position.y - dist.y;
+            (*Bead)[id1].Position.z = (*Bead)[id2].Position.z - dist.z;
+            (*Bead)[id1].Flag = true;
+          // move id2, if id1 was moved already
+          } else if ((*Bead)[id1].Flag && !(*Bead)[id2].Flag) {
+            VECTOR dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
 
-          (*Bead)[id1].Position.x = (*Bead)[id2].Position.x - dist.x;
-          (*Bead)[id1].Position.y = (*Bead)[id2].Position.y - dist.y;
-          (*Bead)[id1].Position.z = (*Bead)[id2].Position.z - dist.z;
-          (*Bead)[id1].Flag = true;
-        // move id2, if id1 was moved already
-        } else if ((*Bead)[id1].Flag && !(*Bead)[id2].Flag) {
-          VECTOR dist = Distance((*Bead)[id1].Position, (*Bead)[id2].Position, BoxLength);
-
-          (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
-          (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
-          (*Bead)[id2].Position.z = (*Bead)[id1].Position.z - dist.z;
-          (*Bead)[id2].Flag = true;
+            (*Bead)[id2].Position.x = (*Bead)[id1].Position.x - dist.x;
+            (*Bead)[id2].Position.y = (*Bead)[id1].Position.y - dist.y;
+            (*Bead)[id2].Position.z = (*Bead)[id1].Position.z - dist.z;
+            (*Bead)[id2].Flag = true;
+          }
         }
+
+        // exit if all beads have moved
+        done = true;
+        for (int j = 1; j < MoleculeType[type].nBeads; j++) {
+          if (!(*Bead)[Molecule[i].Bead[j]].Flag) {
+            done = false;
+            break;
+          }
+        }
+        test++;
+      }
+      if (test == 1000) {
+        fprintf(stderr, "\033[1;33m");
+        fprintf(stderr, "\nWarning: unable connect molecule %s (resid %d)\n\n", MoleculeType[type].Name, i+1);
+        fprintf(stderr, "\033[0m");
       }
 
-      // exit if all beads have moved
-      done = true;
-      for (int j = 1; j < MoleculeType[type].nBeads; j++) {
-        if (!(*Bead)[Molecule[i].Bead[j]].Flag) {
-          done = false;
-          break;
-        }
+      // put molecule's centre of mass into the simulation box //{{{
+      VECTOR com = CentreOfMass(MoleculeType[type].nBeads, Molecule[i].Bead, *Bead, BeadType);
+      // by how many BoxLength's should com be moved?
+      // for distant molecules - it shouldn't happen, but better safe than sorry
+      INTVECTOR move;
+      move.x = com.x / BoxLength.x;
+      move.y = com.y / BoxLength.y;
+      move.z = com.z / BoxLength.z;
+      if (com.x < 0) {
+        move.x--;
       }
-      test++;
+      if (com.y < 0) {
+        move.y--;
+      }
+      if (com.z < 0) {
+        move.z--;
+      }
+      for (int j = 0; j < MoleculeType[type].nBeads; j++) {
+        int bead = Molecule[i].Bead[j];
+        (*Bead)[bead].Position.x -= move.x * BoxLength.x;
+        (*Bead)[bead].Position.y -= move.y * BoxLength.y;
+        (*Bead)[bead].Position.z -= move.z * BoxLength.z;
+      } //}}}
     }
-    if (test == 1000) {
-      fprintf(stderr, "\033[1;33m");
-      fprintf(stderr, "\nWarning: unable connect molecule %s (resid %d)\n\n", MoleculeType[type].Name, i+1);
-      fprintf(stderr, "\033[0m");
-    }
-
-    // put molecule's centre of mass into the simulation box //{{{
-    VECTOR com = CentreOfMass(MoleculeType[type].nBeads, Molecule[i].Bead, *Bead, BeadType);
-    // by how many BoxLength's should com be moved?
-    // for distant molecules - it shouldn't happen, but better safe than sorry
-    INTVECTOR move;
-    move.x = com.x / BoxLength.x;
-    move.y = com.y / BoxLength.y;
-    move.z = com.z / BoxLength.z;
-    if (com.x < 0) {
-      move.x--;
-    }
-    if (com.y < 0) {
-      move.y--;
-    }
-    if (com.z < 0) {
-      move.z--;
-    }
-    for (int j = 0; j < MoleculeType[type].nBeads; j++) {
-      int bead = Molecule[i].Bead[j];
-      (*Bead)[bead].Position.x -= move.x * BoxLength.x;
-      (*Bead)[bead].Position.y -= move.y * BoxLength.y;
-      (*Bead)[bead].Position.z -= move.z * BoxLength.z;
-    } //}}}
   }
 } //}}}
 
@@ -383,7 +384,6 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
 
   // go through all aggregates larger than unimers and put all molecules together //{{{
   for (int i = 0; i < Counts.Aggregates; i++) {
-
     // negate moved array, but the first molecule is not to move //{{{
     for (int j = 1; j < Counts.Molecules; j++) {
       moved[j] = false;
@@ -397,14 +397,13 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
       // go through all molecule pairs
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         for (int k = 0; k < Aggregate[i].nMolecules; k++) {
+          int mol1 = Aggregate[i].Molecule[j],
+              mol2 = Aggregate[i].Molecule[k],
+              mol1_type = Molecule[mol1].Type,
+              mol2_type = Molecule[mol2].Type;
 
           // use only moved molecule 'mol1' and unmoved molecule 'mol2'
           if (moved[j] && !moved[k]) { // automatically follows that j != k
-            int mol1 = Aggregate[i].Molecule[j],
-                mol2 = Aggregate[i].Molecule[k],
-                mol1_type = Molecule[mol1].Type,
-                mol2_type = Molecule[mol2].Type;
-
             // go through all bead pairs in the two molecules
             for (int l = 0; l < MoleculeType[mol1_type].nBeads; l++) {
               for (int m = 0; m < MoleculeType[mol2_type].nBeads; m++) {
@@ -512,7 +511,6 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNTS Counts,
   for (int i = 0; i < Counts.Aggregates; i++) {
     VECTOR com = CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead,
                               *Bead, BeadType);
-
     // by how many BoxLength's should com by moved?
     // for distant aggregates - it shouldn't happen, but better safe than sorry
     INTVECTOR move;
@@ -608,7 +606,198 @@ VECTOR GeomCentre(int n, int *list, BEAD *Bead) {
 /**
  * Function to calculate the principle moments of the gyration tensor.
  */
-VECTOR Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength, BEADTYPE *BeadType, BEAD **Bead) {
+// // jacobi - numerical recipes //{{{
+// #define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);\
+// a[k][l]=h+s*(g-h*tau);
+// void jacobi(float **a, int n, float d[], float **v, int *nrot) {
+// /* Computes all eignvalues and eignvectors of a real symmetric matrix a[1..n][1..n]. On output 
+// elements of a above the diagonal are destroyed. d[1..n] returns the eigenvalues of a v[1..n][1..n] is a matrix whose columns contain, on output, the normalised eigenvectors of a. nrot 
+// returns the number of JUacobi rotations that were required.
+// */
+//   int j, iq, ip, i;
+//   float tresh, theta, tau, t, sm, s, h, g, c;
+//   float b[n], z[n];
+//   /* Initialise to the identity matrix */
+//   for (ip = 0; ip < n; ip++) {
+//     for (iq = 0; iq < n; iq++) {
+//       v[ip][iq] = 0.0;
+//     }
+//     v[ip][ip] = 1.0;
+//   }
+//   for (ip = 0; ip < n; ip++) {
+//     b[ip] = d[ip] = a[ip][ip];
+//     z[ip] = 0.0;
+//   }
+//
+//   *nrot = 0;
+//   for (i = 0; i < 50; i++) {
+//     sm = 0;
+//     for (ip = 0; ip < (n-1); ip++) {
+//       for (ip = (ip+1); iq < n; iq++) {
+//         sm += fabs(a[ip][iq]);
+//       }
+//     }
+//     if (sm == 0.0) {
+//       return;
+//     }
+//     if (i < 4) {
+//       tresh = 0.2 * sm / SQR(n);
+//     } else {
+//       tresh = 0.0;
+//     }
+//     for (ip = 0; ip < (n-1); ip++) {
+//       for (iq = (ip+1); iq < n; iq++) {
+//         g = 100.0 * fabs(a[ip][iq]);
+//         if (i > 4 && (float)(fabs(d[ip]) + g) == (float)fabs(d[ip])
+//           && (float)(fabs(d[iq])+g) == (float)fabs(d[iq])) {
+//           a[ip][iq] = 0.0;
+//         } else if (fabs(a[ip][iq]) > tresh) {
+//           h = d[iq] - d[ip];
+//           if ((float)(fabs(h)+g) == (float)fabs(h))
+//             t = a[ip][iq] / h;
+//           else {
+//             theta = 0.5 * h / a[ip][iq];
+//             t = 1.0 / (fabs(theta) + sqrt(1.0 + SQR(theta)));
+//             if (theta < 0) {
+//               t = -t;
+//             }
+//           }
+//           c = 1.0 / sqrt(1 + SQR(t));
+//           s = t * c;
+//           tau = s / (1.0 + c);
+//           h = t * a[ip][iq];
+//           z[ip] -= h;
+//           z[iq] += h;
+//           d[ip] -= h;
+//           d[iq] += h;
+//           a[ip][iq] = 0.0;
+//           for (j = 0; j < ip; j++) {
+//             ROTATE(a, j, ip, j, iq);
+//           }
+//           for (j = (ip+1); j < iq; j++) {
+//             ROTATE(a, ip, j, j, iq);
+//           }
+//           for (j = (iq+1); j < n; j++) {
+//             ROTATE(a, ip, j, iq, j);
+//           }
+//           for (j = 0; j < n; j++) {
+//             ROTATE(v, j, ip, j, iq);
+//           }
+//           (*nrot)++;
+//         }
+//       }
+//     }
+//     for (ip = 0; ip < n; ip++) {
+//       b[ip] += z[ip];
+//       d[ip] = b[ip];
+//       z[ip] = 0.0;
+//     }
+//   }
+//   printf("Too many iterations in routine Jacobi\n");
+// } //}}}
+// jacobi - ml //{{{
+void jacobi2(double **a, int n, double d[], double **v) {
+  int maxit = 1000;
+  double eps = 1e-6;
+  int r, s;
+  double qt[n][n], amax, tsum, c, sgn_ars, z, omg, rmu, rnu, sgn_mu,
+         temp1, temp2, temp3;
+  for (int it = 0; it < maxit; it++) {
+    amax = 0;
+    tsum = 0;
+
+    for (int i = 0; i < (n-1); i++) {
+      for (int j = (i+1); j < n; j++) {
+        tsum += SQR(a[i][j]);
+        if (fabs(a[i][j]) > amax) {
+          amax = fabs(a[i][j]);
+          r = i;
+          s = j;
+        }
+      }
+    }
+
+    if (tsum < eps) {
+      for (int i = 0; i < 3; i++) {
+        d[i] = a[i][i];
+      }
+      return;
+    }
+
+    if (a[r][r] == a[s][s]) {
+      c = sqrt(2) / 2;
+      sgn_ars = 1;
+      if (a[r][s] < 0) {
+        sgn_ars = -1;
+      }
+      z = sgn_ars * c;
+    } else {
+      omg = -1 * a[r][s];
+      rmu = (a[r][r] - a[s][s]) / 2;
+      rnu = sqrt(SQR(omg) + SQR(rmu));
+      c = sqrt((rnu + fabs(rmu)) / (2 * rnu));
+      sgn_mu = 1;
+      if (rmu < 0) {
+        sgn_mu = -1;
+      }
+      z = sgn_mu * omg / (2 * rnu * c);
+    }
+
+    for (int i = 0; i < n; i++) {
+      if (i == r || i == s) {
+        continue;
+      }
+      temp1 = c * a[i][r] - z * a[i][s];
+      temp2 = c * a[i][s] + z * a[i][r];
+      a[i][r] = temp1;
+      a[r][i] = temp1;
+      a[i][s] = temp2;
+      a[s][i] = temp2;
+    }
+    temp3 = SQR(c) * a[r][r] + SQR(z) * a[s][s] - 2 * c * z * a[r][s];
+    a[s][s] = SQR(c) * a[s][s] + SQR(z) * a[r][r] + 2 * c * z * a[r][s];
+    a[r][r] = temp3;
+    a[r][s] = 0;
+    a[s][r] = 0;
+
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        qt[i][j] = 0;
+      }
+      qt[i][i] = 1;
+    }
+    qt[r][r] = c;
+    qt[s][s] = c;
+    qt[r][s] = z;
+    qt[s][r] = -z;
+    if (it == 0) {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          v[i][j] = qt[i][j];
+        }
+      }
+    } else {
+      double mul[n][n];
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          double sum = 0;
+          for (int k = 0; k < n; k++) {
+            sum += v[i][k] * qt[k][j];
+          }
+          mul[i][j] = sum;
+        }
+      }
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          v[i][j] = mul[i][j];
+        }
+      }
+    }
+  }
+} //}}}
+void Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength,
+              BEADTYPE *BeadType, BEAD **Bead, double **tensor,
+              double eigenvalue[3], double **eigenvector) {
   // gyration tensor (3x3 array)
   // use long double to ensure precision -- previous problem with truncation in short chains
   struct Tensor {
@@ -640,64 +829,345 @@ VECTOR Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength, BEADTYPE *Bea
   GyrationTensor.y.z /= n;
   GyrationTensor.z.z /= n; //}}}
 
-  // char polynomial: a_cube * x^3 + b_cube * x^2 + c_cube * x + d_cube = 0 //{{{
-  long double a_cube = -1;
-  long double b_cube = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z;
-  long double c_cube = - GyrationTensor.x.x * GyrationTensor.y.y
-                  - GyrationTensor.x.x * GyrationTensor.z.z
-                  - GyrationTensor.y.y * GyrationTensor.z.z
-                  + SQR(GyrationTensor.y.z)
-                  + SQR(GyrationTensor.x.y)
-                  + SQR(GyrationTensor.x.z);
-  long double d_cube = + GyrationTensor.x.x * GyrationTensor.y.y * GyrationTensor.z.z
-                  + 2 * GyrationTensor.x.y * GyrationTensor.y.z * GyrationTensor.x.z
-                  - SQR(GyrationTensor.x.z) * GyrationTensor.y.y
-                  - SQR(GyrationTensor.x.y) * GyrationTensor.z.z
-                  - SQR(GyrationTensor.y.z) * GyrationTensor.x.x; //}}}
+  // tensor to pass back
+  tensor[0][0] = GyrationTensor.x.x;
+  tensor[0][1] = GyrationTensor.x.y;
+  tensor[0][2] = GyrationTensor.x.z;
+  tensor[1][0] = tensor[0][1];
+  tensor[1][1] = GyrationTensor.y.y;
+  tensor[1][2] = GyrationTensor.y.z;
+  tensor[2][0] = tensor[0][2];
+  tensor[2][1] = tensor[1][2];
+  tensor[2][2] = GyrationTensor.z.z;
 
-  // first root: either 0 or Newton's iterative method to get it //{{{
-  long double root0 = 0;
-  if (fabs(d_cube) > 0.0000000001L) {
-    // derivative of char. polynomial: a_deriv * x^2 + b_deriv * x + c_deriv
-    long double a_deriv = 3 * a_cube;
-    long double b_deriv = 2 * b_cube;
-    long double c_deriv = c_cube;
+  // Jacobi
+  double **a = malloc(3 * sizeof *a);
+  for (int i = 0; i < 3; i++) {
+    a[i] = calloc(3, sizeof *a);
+  }
+  a[0][0] = GyrationTensor.x.x;
+  a[0][1] = GyrationTensor.x.y;
+  a[0][2] = GyrationTensor.x.z;
+  a[1][0] = a[0][1];
+  a[1][1] = GyrationTensor.y.y;
+  a[1][2] = GyrationTensor.y.z;
+  a[2][0] = a[0][2];
+  a[2][1] = a[1][2];
+  a[2][2] = GyrationTensor.z.z;
 
-    long double root1 = 1;
+  jacobi2(a, 3, eigenvalue, eigenvector);
+  VECTOR eigen;
+  eigen.x = eigenvalue[0];
+  eigen.y = eigenvalue[1];
+  eigen.z = eigenvalue[2];
+  eigen = Sort3(eigen);
+  eigenvalue[0] = eigen.x;
+  eigenvalue[1] = eigen.y;
+  eigenvalue[2] = eigen.z;
 
-    while (fabs(root0-root1) > 0.0000000001L) {
-      long double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) + c_cube * root0 + d_cube);
-      long double f_deriv_root0 = (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
-      root1 = root0 - f_root0 / f_deriv_root0;
+  // sort eigenvalues - TODO
 
-      // swap root0 and root1 for the next iteration
-      long double tmp = root0;
-      root0 = root1;
-      root1 = tmp;
-    }
-  } //}}}
-
-  // determine paremeters of quadratic equation a_quad * x^2 + b_quad * x + c_quad = 0 //{{{
-  // derived by division: (x^3 + (b_cube/a_cube) * x^2 + (c_cube/a_cube) * x + (d_cube/a_cube)):(x - root0)
-  long double a_quad = 1;
-  long double b_quad = b_cube / a_cube + root0;
-  long double c_quad = SQR(root0) + b_cube / a_cube * root0 + c_cube/a_cube; //}}}
-
-  // calculate & sort eigenvalues //{{{
-  LONGVECTOR eigen;
-  eigen.x = root0; // found out by Newton's method
-  // roots of the quadratic equation
-  eigen.y = (-b_quad + sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
-  eigen.z = (-b_quad - sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
-
-  VECTOR eigen2; // change LONGVECTOR to VECTOR
-  eigen2.x = eigen.x;
-  eigen2.y = eigen.y;
-  eigen2.z = eigen.z;
-  eigen2 = Sort3(eigen2); //}}}
-
-  return eigen2;
+  for (int i = 0; i < 3; i++) {
+    free(a[i]);
+  }
+  free(a);
 } //}}}
+#if 0
+// Gyration - backup() //{{{
+/**
+ * Function to calculate the principle moments of the gyration tensor.
+ */
+// jacobi - numerical recipes //{{{
+#define ROTATE(a,i,j,k,l) g=a[i][j];h=a[k][l];a[i][j]=g-s*(h+g*tau);\
+a[k][l]=h+s*(g-h*tau);
+void jacobi(float **a, int n, float d[], float **v, int *nrot) {
+/* Computes all eignvalues and eignvectors of a real symmetric matrix a[1..n][1..n]. On output 
+elements of a above the diagonal are destroyed. d[1..n] returns the eigenvalues of a v[1..n][1..n] is a matrix whose columns contain, on output, the normalised eigenvectors of a. nrot 
+returns the number of JUacobi rotations that were required.
+*/
+  int j, iq, ip, i;
+  float tresh, theta, tau, t, sm, s, h, g, c;
+  float b[n], z[n];
+  /* Initialise to the identity matrix */
+  for (ip = 0; ip < n; ip++) {
+    for (iq = 0; iq < n; iq++) {
+      v[ip][iq] = 0.0;
+    }
+    v[ip][ip] = 1.0;
+  }
+  for (ip = 0; ip < n; ip++) {
+    b[ip] = d[ip] = a[ip][ip];
+    z[ip] = 0.0;
+  }
+
+  *nrot = 0;
+  for (i = 0; i < 50; i++) {
+    sm = 0;
+    for (ip = 0; ip < (n-1); ip++) {
+      for (ip = (ip+1); iq < n; iq++) {
+        sm += fabs(a[ip][iq]);
+      }
+    }
+    if (sm == 0.0) {
+      return;
+    }
+    if (i < 4) {
+      tresh = 0.2 * sm / SQR(n);
+    } else {
+      tresh = 0.0;
+    }
+    for (ip = 0; ip < (n-1); ip++) {
+      for (iq = (ip+1); iq < n; iq++) {
+        g = 100.0 * fabs(a[ip][iq]);
+        if (i > 4 && (float)(fabs(d[ip]) + g) == (float)fabs(d[ip])
+          && (float)(fabs(d[iq])+g) == (float)fabs(d[iq])) {
+          a[ip][iq] = 0.0;
+        } else if (fabs(a[ip][iq]) > tresh) {
+          h = d[iq] - d[ip];
+          if ((float)(fabs(h)+g) == (float)fabs(h))
+            t = a[ip][iq] / h;
+          else {
+            theta = 0.5 * h / a[ip][iq];
+            t = 1.0 / (fabs(theta) + sqrt(1.0 + SQR(theta)));
+            if (theta < 0) {
+              t = -t;
+            }
+          }
+          c = 1.0 / sqrt(1 + SQR(t));
+          s = t * c;
+          tau = s / (1.0 + c);
+          h = t * a[ip][iq];
+          z[ip] -= h;
+          z[iq] += h;
+          d[ip] -= h;
+          d[iq] += h;
+          a[ip][iq] = 0.0;
+          for (j = 0; j < ip; j++) {
+            ROTATE(a, j, ip, j, iq);
+          }
+          for (j = (ip+1); j < iq; j++) {
+            ROTATE(a, ip, j, j, iq);
+          }
+          for (j = (iq+1); j < n; j++) {
+            ROTATE(a, ip, j, iq, j);
+          }
+          for (j = 0; j < n; j++) {
+            ROTATE(v, j, ip, j, iq);
+          }
+          (*nrot)++;
+        }
+      }
+    }
+    for (ip = 0; ip < n; ip++) {
+      b[ip] += z[ip];
+      d[ip] = b[ip];
+      z[ip] = 0.0;
+    }
+  }
+  printf("Too many iterations in routine Jacobi\n");
+} //}}}
+// jacobi - ml //{{{
+void jacobi2(double **a, int n, double d[], double **v) {
+  int maxit = 1000;
+  double eps = 1e-6;
+  int r, s;
+  double qt[n][n], amax, tsum, c, sgn_ars, z, omg, rmu, rnu, sgn_mu,
+         temp1, temp2, temp3;
+  for (int it = 0; it < maxit; it++) {
+    amax = 0;
+    tsum = 0;
+
+    for (int i = 0; i < (n-1); i++) {
+      for (int j = (i+1); j < n; j++) {
+        tsum += SQR(a[i][j]);
+        if (fabs(a[i][j]) > amax) {
+          amax = fabs(a[i][j]);
+          r = i;
+          s = j;
+        }
+      }
+    }
+
+    if (tsum < eps) {
+      for (int i = 0; i < 3; i++) {
+        d[i] = a[i][i];
+      }
+      return;
+    }
+
+    if (a[r][r] == a[s][s]) {
+      c = sqrt(2) / 2;
+      sgn_ars = 1;
+      if (a[r][s] < 0) {
+        sgn_ars = -1;
+      }
+      z = sgn_ars * c;
+    } else {
+      omg = -1 * a[r][s];
+      rmu = (a[r][r] - a[s][s]) / 2;
+      rnu = sqrt(SQR(omg) + SQR(rmu));
+      c = sqrt((rnu + fabs(rmu)) / (2 * rnu));
+      sgn_mu = 1;
+      if (rmu < 0) {
+        sgn_mu = -1;
+      }
+      z = sgn_mu * omg / (2 * rnu * c);
+    }
+
+    for (int i = 0; i < n; i++) {
+      if (i == r || i == s) {
+        continue;
+      }
+      temp1 = c * a[i][r] - z * a[i][s];
+      temp2 = c * a[i][s] + z * a[i][r];
+      a[i][r] = temp1;
+      a[r][i] = temp1;
+      a[i][s] = temp2;
+      a[s][i] = temp2;
+    }
+    temp3 = SQR(c) * a[r][r] + SQR(z) * a[s][s] - 2 * c * z * a[r][s];
+    a[s][s] = SQR(c) * a[s][s] + SQR(z) * a[r][r] + 2 * c * z * a[r][s];
+    a[r][r] = temp3;
+    a[r][s] = 0;
+    a[s][r] = 0;
+
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        qt[i][j] = 0;
+      }
+      qt[i][i] = 1;
+    }
+    qt[r][r] = c;
+    qt[s][s] = c;
+    qt[r][s] = z;
+    qt[s][r] = -z;
+    if (it == 0) {
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          v[i][j] = qt[i][j];
+        }
+      }
+    } else {
+      double mul[n][n];
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          double sum = 0;
+          for (int k = 0; k < n; k++) {
+            sum += v[i][k] * qt[k][j];
+          }
+          mul[i][j] = sum;
+        }
+      }
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          v[i][j] = mul[i][j];
+        }
+      }
+    }
+    printf("%lf %lf %lf\n",   v[0][0], v[0][1], v[0][2]);
+    printf("%lf %lf %lf\n",   v[1][0], v[1][1], v[1][2]);
+    printf("%lf %lf %lf\n\n", v[2][0], v[2][1], v[2][2]);
+  }
+} //}}}
+// VECTOR Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength,
+//                 BEADTYPE *BeadType, BEAD **Bead, double tensor[6]) {
+//   // gyration tensor (3x3 array)
+//   // use long double to ensure precision -- previous problem with truncation in short chains
+//   struct Tensor {
+//     LONGVECTOR x, y, z;
+//   } GyrationTensor = { {0, 0, 0}, {0, 0, 0}, {0, 0, 0} };
+//
+//   VECTOR com = GeomCentre(n, list, *Bead);
+//
+//   // move centre of mass to [0,0,0] //{{{
+//   for (int i = 0; i < n; i++) {
+//     (*Bead)[list[i]].Position.x -= com.x;
+//     (*Bead)[list[i]].Position.y -= com.y;
+//     (*Bead)[list[i]].Position.z -= com.z;
+//   } //}}}
+//
+//   // calculate gyration tensor //{{{
+//   for (int i = 0; i < n; i++) {
+//     GyrationTensor.x.x += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.x;
+//     GyrationTensor.x.y += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.y;
+//     GyrationTensor.x.z += (*Bead)[list[i]].Position.x * (*Bead)[list[i]].Position.z;
+//     GyrationTensor.y.y += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.y;
+//     GyrationTensor.y.z += (*Bead)[list[i]].Position.y * (*Bead)[list[i]].Position.z;
+//     GyrationTensor.z.z += (*Bead)[list[i]].Position.z * (*Bead)[list[i]].Position.z;
+//   }
+//   GyrationTensor.x.x /= n;
+//   GyrationTensor.x.y /= n;
+//   GyrationTensor.x.z /= n;
+//   GyrationTensor.y.y /= n;
+//   GyrationTensor.y.z /= n;
+//   GyrationTensor.z.z /= n; //}}}
+//
+//   tensor[0] = GyrationTensor.x.x;
+//   tensor[1] = GyrationTensor.x.y;
+//   tensor[2] = GyrationTensor.x.z;
+//   tensor[3] = GyrationTensor.y.y;
+//   tensor[4] = GyrationTensor.y.z;
+//   tensor[5] = GyrationTensor.z.z;
+//
+//   // char polynomial: a_cube * x^3 + b_cube * x^2 + c_cube * x + d_cube = 0 //{{{
+//   long double a_cube = -1;
+//   long double b_cube = GyrationTensor.x.x + GyrationTensor.y.y + GyrationTensor.z.z;
+//   long double c_cube = - GyrationTensor.x.x * GyrationTensor.y.y
+//                        - GyrationTensor.x.x * GyrationTensor.z.z
+//                        - GyrationTensor.y.y * GyrationTensor.z.z
+//                        + SQR(GyrationTensor.y.z)
+//                        + SQR(GyrationTensor.x.y)
+//                        + SQR(GyrationTensor.x.z);
+//   long double d_cube = + GyrationTensor.x.x * GyrationTensor.y.y * GyrationTensor.z.z
+//                        + 2 * GyrationTensor.x.y * GyrationTensor.y.z * GyrationTensor.x.z
+//                        - SQR(GyrationTensor.x.z) * GyrationTensor.y.y
+//                        - SQR(GyrationTensor.x.y) * GyrationTensor.z.z
+//                        - SQR(GyrationTensor.y.z) * GyrationTensor.x.x; //}}}
+//
+//   // first root: either 0 or Newton's iterative method to get it //{{{
+//   long double root0 = 0;
+//   if (fabs(d_cube) > 0.0000000001L) {
+//     // derivative of char. polynomial: a_deriv * x^2 + b_deriv * x + c_deriv
+//     long double a_deriv = 3 * a_cube;
+//     long double b_deriv = 2 * b_cube;
+//     long double c_deriv = c_cube;
+//
+//     long double root1 = 1;
+//
+//     while (fabs(root0-root1) > 0.0000000001L) {
+//       long double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) + c_cube * root0 + d_cube);
+//       long double f_deriv_root0 = (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
+//       root1 = root0 - f_root0 / f_deriv_root0;
+//
+//       // swap root0 and root1 for the next iteration
+//       long double tmp = root0;
+//       root0 = root1;
+//       root1 = tmp;
+//     }
+//   } //}}}
+//
+//   // determine paremeters of quadratic equation a_quad * x^2 + b_quad * x + c_quad = 0 //{{{
+//   // derived by division: (x^3 + (b_cube/a_cube) * x^2 + (c_cube/a_cube) * x + (d_cube/a_cube)):(x - root0)
+//   long double a_quad = 1;
+//   long double b_quad = b_cube / a_cube + root0;
+//   long double c_quad = SQR(root0) + b_cube / a_cube * root0 + c_cube/a_cube; //}}}
+//
+//   // calculate & sort eigenvalues //{{{
+//   LONGVECTOR eigen;
+//   eigen.x = root0; // found out by Newton's method
+//   // roots of the quadratic equation
+//   eigen.y = (-b_quad + sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
+//   eigen.z = (-b_quad - sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
+//
+//   VECTOR eigen2; // change LONGVECTOR to VECTOR
+//   eigen2.x = eigen.x;
+//   eigen2.y = eigen.y;
+//   eigen2.z = eigen.z;
+//   eigen2 = Sort3(eigen2); //}}}
+//
+//   return eigen2;
+// } //}}}
+#endif
 
 // EvaluateContacts() //{{{
 /**
@@ -870,8 +1340,8 @@ void LinkedList(VECTOR BoxLength, COUNTS Counts, BEAD *Bead,
                 int **Head, int **Link, double cell_size, INTVECTOR *n_cells,
                 int *Dcx, int *Dcy, int *Dcz) {
 
-  (*n_cells).x = ceil(BoxLength.x/cell_size),
-  (*n_cells).y = ceil(BoxLength.y/cell_size),
+  (*n_cells).x = ceil(BoxLength.x/cell_size);
+  (*n_cells).y = ceil(BoxLength.y/cell_size);
   (*n_cells).z = ceil(BoxLength.z/cell_size);
 
   // allocate arrays

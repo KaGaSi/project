@@ -278,6 +278,13 @@ int main(int argc, char *argv[]) {
   fprintf(out, ", (%d) <eigen.x>_n", count++);
   fprintf(out, ", (%d) <eigen.y>_n", count++);
   fprintf(out, ", (%d) <eigen.z>_n", count++);
+  fprintf(out, ", (%d) <xx>", count++);
+  fprintf(out, ", (%d) <xy>", count++);
+  fprintf(out, ", (%d) <xz>", count++);
+  fprintf(out, ", (%d) <yy>", count++);
+  fprintf(out, ", (%d) <yz>", count++);
+  fprintf(out, ", (%d) <zz>", count++);
+  fprintf(out, ", (%d) <N_agg>", count++);
   putc('\n', out);
 
   fclose(out); //}}}
@@ -312,7 +319,7 @@ int main(int argc, char *argv[]) {
   AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
   for (int i = 0; i < Counts.Molecules; i++) {
     // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
-    Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
+    Aggregate[i].Monomer = calloc(Counts.Beads,sizeof(int));
     // assumes all bonded beads can be in one aggregate - memory-heavy, but reliable
     Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
     // maximum of all molecules can be in one aggregate
@@ -331,6 +338,7 @@ int main(int argc, char *argv[]) {
   double **Rg_sum = malloc(Counts.Molecules*sizeof(double *));
   // total square of radius of gyration: [size][0] normal sum, [size][1] sum of Rg^2*mass, [size][2] Rg^2*mass^2
   double **sqrRg_sum = malloc(Counts.Molecules*sizeof(double *));
+  double **tensor_sum = malloc(Counts.Molecules*sizeof(double *));
   // relative shape anisotropy: only normal sum
   double *Anis_sum = calloc(Counts.Molecules,sizeof(double));
   // acylindricity: only normal sum
@@ -348,6 +356,7 @@ int main(int argc, char *argv[]) {
     sqrRg_sum[i] = calloc(3,sizeof(double));
     mass_sum[i] = calloc(2,sizeof(long int));
     molecules_sum[i] = calloc(Counts.TypesOfMolecules,sizeof(int));
+    tensor_sum[i] = calloc(6,sizeof(double));
   } //}}}
 
   // main loop //{{{
@@ -392,6 +401,7 @@ int main(int argc, char *argv[]) {
     int *agg_counts_step = calloc(Counts.Molecules,sizeof(int));
     double **Rg_step = malloc(Counts.Molecules*sizeof(double *));
     double **sqrRg_step = malloc(Counts.Molecules*sizeof(double *));
+    double **tensor_step = malloc(Counts.Molecules*sizeof(double *));
     double *Anis_step = calloc(Counts.Molecules,sizeof(double));
     double *Acyl_step = calloc(Counts.Molecules,sizeof(double));
     double *Aspher_step = calloc(Counts.Molecules,sizeof(double));
@@ -399,6 +409,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < Counts.Molecules; i++) {
       Rg_step[i] = calloc(3,sizeof(double));
       sqrRg_step[i] = calloc(3,sizeof(double));
+      tensor_step[i] = calloc(6,sizeof(double));
     } //}}}
 
     // calculate shape descriptors //{{{
@@ -465,31 +476,88 @@ int main(int argc, char *argv[]) {
           }
         } //}}}
 
-//        // calcule Rg the 'usual way' -- for testing purposes //{{{
-//        double Rg2 = 0;
-//        VECTOR test_com;
-//        test_com.x = 0;
-//        test_com.y = 0;
-//        test_com.z = 0;
-//        VECTOR com = GeomCentre(n, list, Bead);
-//        for (int j = 0; j < n; j++) {
-//          VECTOR rij = Distance(Bead[list[j]].Position, com, BoxLength);
-//          Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
-//          test_com.x += Bead[list[j]].Position.x;
-//          test_com.y += Bead[list[j]].Position.y;
-//          test_com.z += Bead[list[j]].Position.z;
-//        }
-//        Rg2 /= n; //}}}
+        // // calcule Rg the 'usual way' -- for testing purposes //{{{
+        // double Rg2 = 0;
+        // VECTOR test_com;
+        // test_com.x = 0;
+        // test_com.y = 0;
+        // test_com.z = 0;
+        // VECTOR com = GeomCentre(n, list, Bead);
+        // for (int j = 0; j < n; j++) {
+        //   VECTOR rij = Distance(Bead[list[j]].Position, com, BoxLength);
+        //   Rg2 += SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
+        //   test_com.x += Bead[list[j]].Position.x;
+        //   test_com.y += Bead[list[j]].Position.y;
+        //   test_com.z += Bead[list[j]].Position.z;
+        // }
+        // Rg2 /= n; //}}}
 
-        VECTOR eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+        double eigenvalue[3],
+               **tensor = malloc(3 * sizeof *tensor),
+               **eigenvector = malloc(3 * sizeof *eigenvector);
+        for (int j = 0; j < 3; j++) {
+          tensor[j] = calloc(3, sizeof *tensor[j]);
+          eigenvector[j] = calloc(3, sizeof *eigenvector[j]);
+        }
+        Gyration(n, list, Counts, BoxLength, BeadType, &Bead,
+                 tensor, eigenvalue, eigenvector);
+
+        // printf("Gyration tensor:\n");
+        // printf("A(1,1) = %lf\n", tensor[0][0]);
+        // printf("A(1,2) = %lf\n", tensor[0][1]);
+        // printf("A(1,3) = %lf\n", tensor[0][2]);
+        // printf("A(2,1) = %lf\n", tensor[1][0]);
+        // printf("A(2,2) = %lf\n", tensor[1][1]);
+        // printf("A(2,3) = %lf\n", tensor[1][2]);
+        // printf("A(3,1) = %lf\n", tensor[2][0]);
+        // printf("A(3,2) = %lf\n", tensor[2][1]);
+        // printf("A(3,3) = %lf\n", tensor[2][2]);
+        // printf("eigenvalue: eigen vector\n");
+        // printf("%lf: %lf %lf %lf\n", eigenvalue[0], eigenvector[0][0],
+        //                                             eigenvector[1][0],
+        //                                             eigenvector[2][0]);
+        // printf("%lf: %lf %lf %lf\n", eigenvalue[1], eigenvector[0][1],
+        //                                             eigenvector[1][1],
+        //                                             eigenvector[2][1]);
+        // printf("%lf: %lf %lf %lf\n", eigenvalue[2], eigenvector[0][2],
+        //                                             eigenvector[1][2],
+        //                                             eigenvector[2][2]);
+
+        // print eigenvectors
+        // printf("\nmolecules (%d):\n", Aggregate[i].nMolecules);
+        // for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        //   printf(" %d", Aggregate[i].Molecule[j]+1);
+        // }
+        // printf("\ndraw line {%lf %lf %lf} {%lf %lf %lf}\n", com.x, com.y, com.z,
+        //        com.x+10, com.y, com.z);
+        // printf("draw line {%lf %lf %lf} {%lf %lf %lf}\n", com.x, com.y, com.z,
+        //        com.x, com.y+10, com.z);
+        // printf("draw line {%lf %lf %lf} {%lf %lf %lf}\n\n", com.x, com.y, com.z,
+        //        com.x, com.y, com.z+10);
+        // printf("draw line {%lf %lf %lf} {%lf %lf %lf}\n", com.x, com.y, com.z,
+        //        10*(eigenvector[0][0]) + com.x,
+        //        10*(eigenvector[1][0]) + com.y,
+        //        10*(eigenvector[2][0]) + com.z);
+        // printf("draw line {%lf %lf %lf} {%lf %lf %lf}\n", com.x, com.y, com.z,
+        //        10*(eigenvector[0][1]) + com.x,
+        //        10*(eigenvector[1][1]) + com.y,
+        //        10*(eigenvector[2][1]) + com.z);
+        // printf("draw line {%lf %lf %lf} {%lf %lf %lf}\n", com.x, com.y, com.z,
+        //        10*(eigenvector[0][2]) + com.x,
+        //        10*(eigenvector[1][2]) + com.y,
+        //        10*(eigenvector[2][2]) + com.z);
 
         free(list); // free array of bead ids for gyration calculation
 
-        double Rgi = sqrt(eigen.x + eigen.y + eigen.z);
+        double Rgi = sqrt(eigenvalue[0] + eigenvalue[1] + eigenvalue[2]);
+        // double Rgi2 = sqrt(tensor[0][0] + tensor[1][1] + tensor[2][2]);
+        // if (fabs(sqrt(Rg2)-Rgi) > 0.0001 || fabs(sqrt(Rg2)-Rgi2) > 0.0001) {
+        //   printf("ERROR: %lf %lf %lf\n", sqrt(Rg2), Rgi, Rgi2);
+        // }
 
-        if (eigen.x < 0 || eigen.y < 0 || eigen.z < 0) {
+        if (eigenvalue[0] < 0 || eigenvalue[1] < 0 || eigenvalue[2] < 0) {
           fprintf(stderr, "\033[1;31m");
-          fprintf(stderr, "Error: negative eigenvalues (%lf, %lf, %lf)\n\n", eigen.x, eigen.y, eigen.z);
+          fprintf(stderr, "Error: negative eigenvalues (%lf, %lf, %lf)\n\n", eigenvalue[0], eigenvalue[1], eigenvalue[2]);
           fprintf(stderr, "\033[0m");
         }
         // agg masses
@@ -504,15 +572,24 @@ int main(int argc, char *argv[]) {
         sqrRg_step[correct_size][1] += SQR(Rgi) * agg_mass; // for weight average
         sqrRg_step[correct_size][2] += SQR(Rgi) * SQR(agg_mass); // for z-average
         // relative shape anisotropy
-        Anis_step[correct_size] += 1.5 * (SQR(eigen.x) + SQR(eigen.y) + SQR(eigen.z)) / SQR(eigen.x + eigen.y + eigen.z) - 0.5;
+        Anis_step[correct_size] +=
+          1.5 * (SQR(eigenvalue[0]) + SQR(eigenvalue[1]) + SQR(eigenvalue[2])) /
+          SQR(eigenvalue[0] + eigenvalue[1] + eigenvalue[2]) - 0.5;
         // acylindricity
-        Acyl_step[correct_size] += eigen.y - eigen.x;
+        Acyl_step[correct_size] += eigenvalue[1] - eigenvalue[0];
         // asphericity
-        Aspher_step[correct_size] += eigen.z - 0.5 * (eigen.x + eigen.y);
+        Aspher_step[correct_size] += eigenvalue[2] - 0.5 * (eigenvalue[0] + eigenvalue[1]);
         // gyration vector eigenvalues
-        eigen_step[correct_size].x += eigen.x;
-        eigen_step[correct_size].y += eigen.y;
-        eigen_step[correct_size].z += eigen.z;
+        eigen_step[correct_size].x += eigenvalue[0];
+        eigen_step[correct_size].y += eigenvalue[1];
+        eigen_step[correct_size].z += eigenvalue[2];
+        // tensor
+        tensor_step[correct_size][0] += tensor[0][0];
+        tensor_step[correct_size][1] += tensor[0][1];
+        tensor_step[correct_size][2] += tensor[0][2];
+        tensor_step[correct_size][3] += tensor[1][1];
+        tensor_step[correct_size][4] += tensor[1][2];
+        tensor_step[correct_size][5] += tensor[2][2];
         // aggregate count
         agg_counts_step[correct_size]++;
 
@@ -527,6 +604,12 @@ int main(int argc, char *argv[]) {
             molecules_sum[correct_size][mol_type]++;
           }
         }
+        for (int j = 0; j < 3; j++) {
+          free(eigenvector[j]);
+          free(tensor[j]);
+        }
+        free(eigenvector);
+        free(tensor);
       }
     } //}}}
 
@@ -545,6 +628,12 @@ int main(int argc, char *argv[]) {
         eigen_sum[i].x += eigen_step[i].x;
         eigen_sum[i].y += eigen_step[i].y;
         eigen_sum[i].z += eigen_step[i].z;
+        tensor_sum[i][0] += tensor_step[i][0];
+        tensor_sum[i][1] += tensor_step[i][1];
+        tensor_sum[i][2] += tensor_step[i][2];
+        tensor_sum[i][3] += tensor_step[i][3];
+        tensor_sum[i][4] += tensor_step[i][4];
+        tensor_sum[i][5] += tensor_step[i][5];
       }
     } //}}}
 
@@ -570,6 +659,12 @@ int main(int argc, char *argv[]) {
       eigen_step[0].x += eigen_step[i].x;
       eigen_step[0].y += eigen_step[i].y;
       eigen_step[0].z += eigen_step[i].z;
+      tensor_step[0][0] += tensor_step[i][0];
+      tensor_step[0][1] += tensor_step[i][1];
+      tensor_step[0][2] += tensor_step[i][2];
+      tensor_step[0][3] += tensor_step[i][3];
+      tensor_step[0][4] += tensor_step[i][4];
+      tensor_step[0][5] += tensor_step[i][5];
 
       agg_counts_step[0] += agg_counts_step[i];
     }
@@ -584,7 +679,18 @@ int main(int argc, char *argv[]) {
     // asphericity
     fprintf(out, " %8.5f", Aspher_step[0]/agg_counts_step[0]);
     // eigenvalues
-    fprintf(out, " %8.5f %8.5f %8.5f", eigen_step[0].x/agg_counts_step[0], eigen_step[0].y/agg_counts_step[0], eigen_step[0].z/agg_counts_step[0]);
+    fprintf(out, " %8.5f %8.5f %8.5f", eigen_step[0].x/agg_counts_step[0],
+                                       eigen_step[0].y/agg_counts_step[0],
+                                       eigen_step[0].z/agg_counts_step[0]);
+    fprintf(out, " %8.5f %8.5f %8.5f %8.5f %8.5f %8.5f",
+            tensor_step[0][0]/agg_counts_step[0],
+            tensor_step[0][1]/agg_counts_step[0],
+            tensor_step[0][2]/agg_counts_step[0],
+            tensor_step[0][3]/agg_counts_step[0],
+            tensor_step[0][4]/agg_counts_step[0],
+            tensor_step[0][5]/agg_counts_step[0]);
+    // number of aggregates
+    fprintf(out, " %3d", agg_counts_step[0]);
     putc('\n', out);
 
     fclose(out); //}}}
@@ -594,13 +700,16 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < Counts.Molecules; i++) {
       free(Rg_step[i]);
       free(sqrRg_step[i]);
+      free(tensor_step[i]);
     }
     free(Rg_step);
     free(sqrRg_step);
     free(Anis_step);
     free(Acyl_step);
     free(Aspher_step);
-    free(eigen_step); //}}}
+    free(eigen_step);
+    free(tensor_step);
+    //}}}
   }
   fclose(vcf);
   fclose(agg);
@@ -643,7 +752,13 @@ int main(int argc, char *argv[]) {
     fprintf(out, " (%d) <eigen.x>, ", Counts.TypesOfMolecules+7);
     fprintf(out, " (%d) <eigen.y>, ", Counts.TypesOfMolecules+8);
     fprintf(out, " (%d) <eigen.z>, ", Counts.TypesOfMolecules+9);
-    fprintf(out, " (%d) number of aggs", Counts.TypesOfMolecules+10);
+    fprintf(out, " (%d) <xx>", Counts.TypesOfMolecules+10);
+    fprintf(out, " (%d) <xy>", Counts.TypesOfMolecules+11);
+    fprintf(out, " (%d) <xz>", Counts.TypesOfMolecules+12);
+    fprintf(out, " (%d) <yy>", Counts.TypesOfMolecules+13);
+    fprintf(out, " (%d) <yz>", Counts.TypesOfMolecules+14);
+    fprintf(out, " (%d) <zz>", Counts.TypesOfMolecules+15);
+    fprintf(out, " (%d) number of aggs", Counts.TypesOfMolecules+16);
     putc('\n', out);
     for (int i = 0; i < Counts.Molecules; i++) {
       if (agg_counts_sum[i] > 0) {
@@ -659,6 +774,12 @@ int main(int argc, char *argv[]) {
         fprintf(out, " %7.3f", eigen_sum[i].x/agg_counts_sum[i]);
         fprintf(out, " %7.3f", eigen_sum[i].y/agg_counts_sum[i]);
         fprintf(out, " %7.3f", eigen_sum[i].z/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", tensor_sum[i][0]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", tensor_sum[i][1]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", tensor_sum[i][2]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", tensor_sum[i][3]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", tensor_sum[i][4]/agg_counts_sum[i]);
+        fprintf(out, " %7.3f", tensor_sum[i][5]/agg_counts_sum[i]);
         fprintf(out, " %d", agg_counts_sum[i]);
         putc('\n', out);
       }
@@ -681,6 +802,12 @@ int main(int argc, char *argv[]) {
     eigen_sum[0].x += eigen_sum[i].x;
     eigen_sum[0].y += eigen_sum[i].y;
     eigen_sum[0].z += eigen_sum[i].z;
+    tensor_sum[0][0] += tensor_sum[i][0];
+    tensor_sum[0][1] += tensor_sum[i][1];
+    tensor_sum[0][2] += tensor_sum[i][2];
+    tensor_sum[0][3] += tensor_sum[i][3];
+    tensor_sum[0][4] += tensor_sum[i][4];
+    tensor_sum[0][5] += tensor_sum[i][5];
 
     agg_counts_sum[0] += agg_counts_sum[i];
 
@@ -714,6 +841,12 @@ int main(int argc, char *argv[]) {
   fprintf(out, "(%d) <eigen.x>, ", Counts.TypesOfMolecules+12);
   fprintf(out, "(%d) <eigen.y>, ", Counts.TypesOfMolecules+13);
   fprintf(out, "(%d) <eigen.z>, ", Counts.TypesOfMolecules+14);
+  fprintf(out, "(%d) <xx>, ", Counts.TypesOfMolecules+15);
+  fprintf(out, "(%d) <xy>, ", Counts.TypesOfMolecules+16);
+  fprintf(out, "(%d) <xz>, ", Counts.TypesOfMolecules+17);
+  fprintf(out, "(%d) <yy>, ", Counts.TypesOfMolecules+18);
+  fprintf(out, "(%d) <yz>, ", Counts.TypesOfMolecules+19);
+  fprintf(out, "(%d) <zz>, ", Counts.TypesOfMolecules+20);
   putc('\n', out);
   fprintf(out, "# %lf", (double)(mass_sum[0][0])/agg_counts_sum[0]); //<M_As>_n
   fprintf(out, " %lf", (double)(mass_sum[0][1])/mass_sum[0][0]); //<M_As>_w
@@ -733,6 +866,13 @@ int main(int argc, char *argv[]) {
   fprintf(out, " %lf", eigen_sum[0].x/agg_counts_sum[0]);
   fprintf(out, " %lf", eigen_sum[0].y/agg_counts_sum[0]);
   fprintf(out, " %lf", eigen_sum[0].z/agg_counts_sum[0]);
+  fprintf(out, " %8.5f %8.5f %8.5f %8.5f %8.5f %8.5f",
+          tensor_sum[0][0]/agg_counts_sum[0],
+          tensor_sum[0][1]/agg_counts_sum[0],
+          tensor_sum[0][2]/agg_counts_sum[0],
+          tensor_sum[0][3]/agg_counts_sum[0],
+          tensor_sum[0][4]/agg_counts_sum[0],
+          tensor_sum[0][5]/agg_counts_sum[0]);
   putc('\n', out);
 
   fclose(out); //}}}
@@ -749,6 +889,7 @@ int main(int argc, char *argv[]) {
     free(sqrRg_sum[i]);
     free(mass_sum[i]);
     free(molecules_sum[i]);
+    free(tensor_sum[i]);
   }
   free(molecules_sum);
   free(mass_sum);
@@ -759,9 +900,12 @@ int main(int argc, char *argv[]) {
   free(Acyl_sum);
   free(Aspher_sum);
   free(eigen_sum);
+  free(tensor_sum);
   free(stuff);
   free(specific_moltype_for_size);
-  free(only_specific_moltype_aggregates); //}}}
+  free(only_specific_moltype_aggregates);
+  free(per_size_file);
+  //}}}
 
   return 0;
 }

@@ -31,6 +31,8 @@ can be written to an output '.vcf' file (with indexed timesteps).\n\n");
   fprintf(ptr, "      -x <mol name(s)>   exclude specified molecule(s)\n");
   fprintf(ptr, "      -xm <mol name(s)>  exclude molecules close to specified molecule(s)\n");
   fprintf(ptr, "      -j <output.vcf>    output vcf file with joined coordinates\n");
+  fprintf(ptr, "      -wc <contacts>     number of contacts to distinguish aggregates sitting on the walls \
+(default: <contacts>)\n");
   CommonHelp(error);
 } //}}}
 
@@ -436,6 +438,7 @@ int main(int argc, char *argv[]) {
         strcmp(argv[i], "--version") != 0 &&
         strcmp(argv[i], "-x") != 0 &&
         strcmp(argv[i], "-xm") != 0 &&
+        strcmp(argv[i], "-wc") != 0 &&
         strcmp(argv[i], "-j") != 0) {
 
       ErrorOption(argv[i]);
@@ -517,6 +520,12 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
   } //}}}
+
+  // '-wc' option - number of contacts to distinguish aggregates on the wall //{{{
+  int wall_contacts = contacts;
+  if (IntegerOption(argc, argv, "-wc", &wall_contacts)) {
+    exit(1);
+  } //}}}
   //}}}
 
   // print command to stdout //{{{
@@ -593,6 +602,14 @@ int main(int argc, char *argv[]) {
   }
   PrintCommand(out, argc, argv);
   fclose(out); //}}}
+//// print command to output .agg file //{{{
+//FILE *out2;
+//if ((out2 = fopen("test.agg", "w")) == NULL) {
+//  ErrorFileOpen("test.agg", 'w');
+//  exit(1);
+//}
+//PrintCommand(out2, argc, argv);
+//fclose(out2); //}}}
 
   // open input coordinate file //{{{
   FILE *vcf;
@@ -637,6 +654,7 @@ int main(int argc, char *argv[]) {
 
   // allocate Aggregate struct //{{{
   AGGREGATE *Aggregate = calloc(Counts.Molecules,sizeof(*Aggregate));
+  AGGREGATE *Agg_new = calloc(Counts.Molecules,sizeof(*Agg_new));
   for (int i = 0; i < Counts.Molecules; i++) {
     // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
     Aggregate[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
@@ -644,6 +662,13 @@ int main(int argc, char *argv[]) {
     Aggregate[i].Bead = calloc(Counts.Bonded,sizeof(int));
     // maximum of all molecules can be in one aggregate
     Aggregate[i].Molecule = calloc(Counts.Molecules,sizeof(int));
+
+    // assumes all monomeric beads can be near one aggregate - memory-heavy, but reliable
+    Agg_new[i].Monomer = calloc(Counts.Unbonded,sizeof(int));
+    // assumes all bonded beads can be in one aggregate - memory-heavy, but reliable
+    Agg_new[i].Bead = calloc(Counts.Bonded,sizeof(int));
+    // maximum of all molecules can be in one aggregate
+    Agg_new[i].Molecule = calloc(Counts.Molecules,sizeof(int));
   } //}}}
 
   // print information - verbose output //{{{
@@ -692,54 +717,125 @@ int main(int argc, char *argv[]) {
 
     CalculateAggregates(&Aggregate, &Counts, SQR(distance), contacts, xm_mols, &xm_use_mol, BoxLength, BeadType, &Bead, MoleculeType, &Molecule);
 
-    // calculate & write joined coordinatest to <joined.vcf> if '-j' option is used //{{{
-    if (joined_vcf[0] != '\0') {
-      RemovePBCMolecules(Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-      RemovePBCAggregates(distance, Aggregate, Counts, BoxLength, BeadType, &Bead, MoleculeType, Molecule);
-
-      // open <joined.vcf> file //{{{
-      FILE *joined;
-      if ((joined = fopen(joined_vcf, "a")) == NULL) {
-        ErrorFileOpen(joined_vcf, 'a');
-        exit(1);
-      } //}}}
-
-      WriteCoorIndexed(joined, Counts, BeadType, Bead, MoleculeType, Molecule, stuff);
-
-      fclose(joined);
-    } //}}}
-
-    // find the number of aggregates - remove aggregates only of excluded mols //{{{
-    int no_excluded_aggs = 0;
-    int test_count = 0; // to test that every molecule is in an aggregate
     for (int i = 0; i < Counts.Aggregates; i++) {
-      Aggregate[i].Use = false;
+      Aggregate[i].Use = true;
+    }
+//  WriteAggregates(count, output_agg, Counts, MoleculeType, Bead, Aggregate);
+    int count_agg_old = Counts.Aggregates;
 
-      test_count += Aggregate[i].nMolecules;
+    int *count_contacts[Counts.Molecules]; //{{{
+    for (int i = 0; i < Counts.Molecules; i++) {
+      count_contacts[i] = calloc(i+1, sizeof (int));
+    }
 
-      if (Aggregate[i].nMolecules != 1 || xm_use_mol[Aggregate[i].Molecule[0]]) {
+    for (int i = 0; i < Counts.Aggregates; i++) {
+      int wall[2] = {-1, -1}, w = 0;
+      for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+        int mol_j = Aggregate[i].Molecule[j];
+        int mol_j_type = Molecule[mol_j].Type;
+        if (strncasecmp("WALL", MoleculeType[mol_j_type].Name, 4) == 0) {
+          wall[w] = mol_j;
+          w++;
+          // break;
+        }
+      }
+      // wall is in the aggregate
+      if (wall[0] > -1 || wall[1] > -1) {
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-          int moltype = Molecule[Aggregate[i].Molecule[j]].Type;
-          if (MoleculeType[moltype].Use) {
-            Aggregate[i].Use = true;
-            no_excluded_aggs++;
-            break;
+          for (int k = 0; k < j; k++) {
+            int mol_j = Aggregate[i].Molecule[j];
+            int mol_k = Aggregate[i].Molecule[k];
+            int mol_j_type = Molecule[mol_j].Type;
+            int mol_k_type = Molecule[mol_k].Type;
+            if (j != k && mol_j != wall[0] && mol_k != wall[0] &&
+                          mol_j != wall[1] && mol_k != wall[1]) {
+              for (int l = 0; l < MoleculeType[mol_j_type].nBeads; l++) {
+                for (int m = 0; m < MoleculeType[mol_k_type].nBeads; m++) {
+                  int bead_j = Molecule[mol_j].Bead[l];
+                  int bead_k = Molecule[mol_k].Bead[m];
+                  int bt_j = Bead[bead_j].Type;
+                  int bt_k = Bead[bead_k].Type;
+                  VECTOR rij = Distance(Bead[bead_j].Position,
+                                        Bead[bead_k].Position, BoxLength);
+                  rij.x = SQR(rij.x) + SQR(rij.y) + SQR(rij.z);
+                  if (BeadType[bt_j].Use && BeadType[bt_k].Use &&
+                      rij.x <= SQR(distance)) {
+                    // printf("%s %s\n", BeadType[bt_j].Name, BeadType[bt_k].Name);
+                    if (mol_j > mol_k) {
+                      count_contacts[mol_j][mol_k]++;
+                    } else {
+                      count_contacts[mol_k][mol_j]++;
+                    }
+                  }
+                }
+              }
+            }
           }
         }
       }
     } //}}}
+    // for (int i = 1; i < Counts.Molecules; i++) {
+    //   // second molecule
+    //   for (int j = 0; j < i; j++) {
+    //     if (i == 378 || j == 378 || i == 363 || j == 363) {
+    //       if (count_contacts[i][j] > 0) {
+    //         printf("xxxxxxxx: %d %d: %d\n", i+1, j+1, count_contacts[i][j]);
+    //       }
+    //     }
+    //   }
+    // }
 
-    // are all molecules accounted for? //{{{
-    if (test_count != Counts.Molecules) {
-      fprintf(stderr, "\033[1;31m");
-      fprintf(stderr, "\nError: not all molecules were assigned to aggregates\n");
-      fprintf(stderr, "       Counts.Molecules = \033[1;33m%d\033[1;31m;", Counts.Molecules);
-      fprintf(stderr, " Molecules in aggregates: \033[1;33m%d\033[1;31m\n\n", test_count);
-      fprintf(stderr, "\033[0m");
-      exit(1);
+    Counts.Aggregates = 0;
+    for (int i = 0; i < Counts.Molecules; i++) {
+      Molecule[i].Aggregate = -1;
+    }
+
+    EvaluateContacts(&Counts, &Agg_new, &Molecule, wall_contacts, count_contacts);
+
+    // sort molecules in aggregates according to ascending ids //{{{
+    for (int i = 0; i < Counts.Aggregates; i++) {
+      SortArray(&Agg_new[i].Molecule, Agg_new[i].nMolecules, 0);
     } //}}}
 
-    WriteAggregates(count, output_agg, Counts, MoleculeType, Bead, Aggregate);
+    for (int i = 0; i < Counts.Molecules; i++) {
+      free(count_contacts[i]);
+    }
+
+    for (int i = 0; i < Counts.Aggregates; i++) {
+      Agg_new[i].Use = false;
+    }
+
+    for (int i = 0; i < Counts.Aggregates; i++) {
+      for (int j = 0; j < Agg_new[i].nMolecules; j++) {
+        int mol = Agg_new[i].Molecule[j];
+
+        for (int k = 0; k < count_agg_old; k++) {
+          bool wall = false;
+          bool test_mol = false;
+          for (int l = 0; l < Aggregate[k].nMolecules; l++) {
+            int mol_old_agg = Aggregate[k].Molecule[l];
+            int mtype = Molecule[mol_old_agg].Type;
+            if (strncasecmp("WALL1", MoleculeType[mtype].Name, 4) == 0) {
+              wall = true;
+            }
+            if (mol_old_agg == mol) {
+              test_mol = true;
+            }
+          }
+          if (wall && test_mol) {
+            Agg_new[i].Use = true;
+          }
+        }
+      }
+    }
+    for (int i = 0; i < Counts.Aggregates; i++) {
+      int mtype = Molecule[Agg_new[i].Molecule[0]].Type;
+      if (Agg_new[i].nMolecules == 1 &&
+          strncasecmp("WALL1", MoleculeType[mtype].Name, 4) == 0) {
+        Agg_new[i].Use = false;
+      }
+    }
+    WriteAggregates(count, output_agg, Counts, MoleculeType, Bead, Agg_new);
   }
 
   fclose(vcf);
@@ -764,12 +860,23 @@ int main(int argc, char *argv[]) {
   fprintf(out, "\nLast Step: %d\n", count);
 
   fclose(out); //}}}
+  // print last step number to <output.agg> //{{{
+//// open output .agg file for appending
+//if ((out2 = fopen("test.agg", "a")) == NULL) {
+//  ErrorFileOpen("test.agg", 'a');
+//  exit(1);
+//}
+
+//fprintf(out2, "\nLast Step: %d\n", count);
+
+//fclose(out2); //}}}
 
   // free memory - to make valgrind happy //{{{
   free(xm_use_mol);
   free(xm_mols);
   free(BeadType);
   free(Index);
+  FreeAggregate(Counts, &Agg_new);
   FreeAggregate(Counts, &Aggregate);
   FreeMoleculeType(Counts, &MoleculeType);
   FreeMolecule(Counts, &Molecule);

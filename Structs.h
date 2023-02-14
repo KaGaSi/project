@@ -6,6 +6,8 @@
 #ifndef _STRUCTS_H_
 #define _STRUCTS_H_
 
+#include "General.h"
+
 // struct Counts //{{{
 /**
  * \brief Total numbers of various things.

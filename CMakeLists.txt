@@ -6,9 +6,11 @@ enable_language (C Fortran)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+set(CMAKE_BUILD_TYPE "Release")
+# set(CMAKE_BUILD_TYPE "Debug")
 # c compiler flags
-set(CMAKE_C_FLAGS "-std=c11 -Wall -Werror") # always stop on errors
-#set(CMAKE_C_FLAGS "-std=c11 -Wall") # only show errors
+#set(CMAKE_C_FLAGS "-std=c11 -Wall -Werror") # always stop on errors
+set(CMAKE_C_FLAGS "-std=c11 -Wall") # only show errors
 set(CMAKE_C_FLAGS_DEBUG "-ggdb -g") # for -DCMAKE_BUILD_TYPE=Debug
 set(CMAKE_C_FLAGS_RELEASE "-O3") # for -DCMAKE_BUILD_TYPE=Release
 
@@ -25,11 +27,13 @@ endforeach(library)
 set(UTILS AddToSystem
           Aggregates
           Aggregates-NotSameBeads
+          Aggregates-wall
           AngleMolecules
           Average
           BondLength
           Config
           Config_from_xyz
+          Density2D
           DensityAggregates
           DensityBox
           DensityMolecules

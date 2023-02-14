@@ -277,7 +277,26 @@ int main(int argc, char *argv[]) {
           }
         } //}}}
 
-        VECTOR eigen = Gyration(n, list, Counts, BoxLength, BeadType, &Bead);
+        double eigenvalue[3],
+               **tensor = malloc(3 * sizeof *tensor),
+               **eigenvector = malloc(3 * sizeof *eigenvector);
+        for (int j = 0; j < 3; j++) {
+          tensor[j] = calloc(3, sizeof *tensor[j]);
+          eigenvector[j] = calloc(3, sizeof *eigenvector[j]);
+        }
+        Gyration(n, list, Counts, BoxLength, BeadType, &Bead,
+                 tensor, eigenvalue, eigenvector);
+        for (int j = 0; j < 3; j++) {
+          free(tensor[j]);
+          free(eigenvector[j]);
+        }
+        free(tensor);
+        free(eigenvector);
+        VECTOR eigen;
+        eigen.x = eigenvalue[0];
+        eigen.y = eigenvalue[1];
+        eigen.z = eigenvalue[2];
+        eigen = Sort3(eigen);
 
         free(list); // free array of bead ids for gyration calculation
 
@@ -417,9 +436,11 @@ int main(int argc, char *argv[]) {
   FreeMolecule(Counts, &Molecule);
   FreeBead(Counts, &Bead);
   free(Rg_sum);
+  free(sqrRg_sum);
   free(Anis_sum);
   free(Acyl_sum);
   free(Aspher_sum);
+  free(eigen_sum);
   free(stuff); //}}}
 
   return 0;

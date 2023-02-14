@@ -201,8 +201,23 @@ VECTOR GeomCentre(int n, int *list, BEAD *Bead); //}}}
  * \param [in] Bead          informationn about individual beads
  * \return vector with principal moments of gyration tensor (sorted as x<y<z)
  */
-VECTOR Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength,
-                BEADTYPE *BeadType, BEAD **Bead); //}}}
+void Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength,
+              BEADTYPE *BeadType, BEAD **Bead, double **tensor,
+              double eigenvalue[3], double **eigenvector); //}}}
+// // Gyration - backup() //{{{
+// /*
+//  * \brief Function calculating principal moments of the gyration tensor.
+//  *
+//  * \param [in] n             number of beads
+//  * \param [in] list          array of bead ids
+//  * \param [in] Counts        numbers of beads, molecules, etc.
+//  * \param [in] BoxLength     dimensions of simulation box
+//  * \param [in] BeadType      informationn about bead types
+//  * \param [in] Bead          informationn about individual beads
+//  * \return vector with principal moments of gyration tensor (sorted as x<y<z)
+//  */
+// VECTOR Gyration(int n, int *list, COUNTS Counts, VECTOR BoxLength,
+//                 BEADTYPE *BeadType, BEAD **Bead, double tensor[6]); //}}}
 
 // EvaluateContacts() //{{{
 /**
