@@ -19,6 +19,7 @@ void CountBondAngleDihedralImproper(SYSTEM *System);
 void SortBonds(int (*bond)[3], int n);
 void SortAngles(int (*angle)[4], int n);
 void SortDihImp(int (*dihimp)[5], int n);
+void SortAll(MOLECULETYPE *mt);
 void FillSystemNonessentials(SYSTEM *System);
 void FillInCoor(SYSTEM *System);
 bool CalculateBoxData(BOX *Box, int mode);
@@ -47,11 +48,8 @@ MOLECULETYPE CopyMoleculeTypeEssentials(MOLECULETYPE mt_old);
 SYSTEM CopySystem(SYSTEM S_in);
 
 // cleanse System by removing molecule/bead types with .Number=0, etc.
-void PruneBondTypes(SYSTEM S_old, SYSTEM *System);
-void PruneAngleTypes(SYSTEM S_old, SYSTEM *System);
-void PruneDihedralTypes(SYSTEM S_old, SYSTEM *System);
-void PruneImproperTypes(SYSTEM S_old, SYSTEM *System);
 void PruneSystem(SYSTEM *System);
+// join two systems, possibly pruning it
 void ConcatenateSystems(SYSTEM *S_out, SYSTEM S_in, BOX Box, bool prune);
 
 // check that the System struct doesn't contain an error

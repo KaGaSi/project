@@ -2764,6 +2764,8 @@ static SYSTEM FieldRead(char file[]) { //{{{
     System.Bead = s_realloc(System.Bead, Count->Bead * sizeof *System.Bead);
     System.Unbonded = s_realloc(System.Unbonded,
                                 sizeof *System.Unbonded * Count->Unbonded);
+    System.BeadCoor = s_realloc(System.BeadCoor,
+                                Count->Bead * sizeof *System.BeadCoor);
     int count = 0;
     for (int i = 0; i < Count->BeadType; i++) {
       for (int j = 0; j < System.BeadType[i].Number; j++) {
