@@ -1,9 +1,6 @@
 #include "General.h"
 #include "Errors.h"
 
-char line[LINE], *split[SPL_STR];
-int words;
-
 static bool ReadLine(FILE *fr, char *line);
 
 // convert string into a number if possible //{{{
@@ -16,7 +13,7 @@ static bool ReadLine(FILE *fr, char *line);
  *   IsInteger() on 1) gives val=2 and returns success (i.e., true)
  *   On 2), all functions return failure (i.e., false)
  */
-bool IsRealNumber(char str[], double *val) {
+bool IsRealNumber(const char str[], double *val) {
   char *endptr = NULL;
   *val = strtod(str, &endptr);
   if (endptr == str) {
@@ -24,14 +21,14 @@ bool IsRealNumber(char str[], double *val) {
   }
   return true;
 }
-bool IsPosRealNumber(char str[], double *val) {
+bool IsPosRealNumber(const char str[], double *val) {
   if (IsRealNumber(str, val) && *val > 0) {
     return true;
   } else {
     return false;
   }
 }
-bool IsIntegerNumber(char str[], long *val) {
+bool IsIntegerNumber(const char str[], long *val) {
   char *endptr = NULL;
   *val = strtol(str, &endptr, 0);
   if (endptr == str) {
@@ -39,65 +36,19 @@ bool IsIntegerNumber(char str[], long *val) {
   }
   return true;
 }
-bool IsNaturalNumber(char str[], long *val) {
+bool IsNaturalNumber(const char str[], long *val) {
   if (IsIntegerNumber(str, val) && *val > 0) {
     return true;
   } else {
     return false;
   }
 }
-bool IsWholeNumber(char str[], long *val) {
+bool IsWholeNumber(const char str[], long *val) {
   if (IsIntegerNumber(str, val) && *val >= 0) {
     return true;
   } else {
     return false;
   }
-} //}}}
-double Min3(double x, double y, double z) { //{{{
-  double min;
-  if (x > y) {
-    if (y > z) {
-      min = z;
-    } else {
-      min = y;
-    }
-  } else if (x > z) {
-    min = z;
-  } else {
-    min = x;
-  }
-  return min;
-} //}}}
-double Max3(double x, double y, double z) { //{{{
-  double max;
-  if (x < y) {
-    if (y < z) {
-      max = z;
-    } else {
-      max = y;
-    }
-  } else if (x < z) {
-    max = z;
-  } else {
-    max = x;
-  }
-  return max;
-} //}}}
-// swapping functions //{{{
-void SwapInt(int *a, int *b) {
-  int swap = *a;
-  *a = *b;
-  *b = swap;
-}
-void SwapDouble(double *a, double *b) {
-  double swap = *a;
-  *a = *b;
-  *b = swap;
-}
-void SwapBool(bool *a, bool *b) {
-  bool swap = *a;
-  *a = *b;
-  *b = swap;
 } //}}}
 // Bubble sort an array; mode = 0: ascendingly, mode = 1: descendingly //{{{
 void SortErr(const int mode) {
@@ -107,7 +58,7 @@ void SortErr(const int mode) {
     exit(1);
   }
 }
-void SortArrayInt(int *array, int length, int mode) {
+void SortArrayInt(int *array, const int length, const int mode) {
   SortErr(mode);
   for (int i = 0; i < (length - 1); i++) {
     bool done = true;
@@ -125,7 +76,7 @@ void SortArrayInt(int *array, int length, int mode) {
       break;
   }
 }
-void SortArrayDouble(double *array, int length, int mode) {
+void SortArrayDouble(double *array, const int length, const int mode) {
   SortErr(mode);
   for (int i = 0; i < (length - 1); i++) {
     bool done = true;
@@ -159,7 +110,8 @@ bool ReadLine(FILE *fr, char *line) { //{{{
   }
   return true;
 } //}}}
-int SplitLine(int max_str, char *out[], char line[], const char delim[]) { //{{{
+// SplitLine() //{{{
+int SplitLine(const int max_str, char **out, char *line, const char delim[]) {
   // split into words separated by delimiters in delim array
   int words = 0;
   out[words] = strtok(line, delim); // first word
@@ -169,20 +121,23 @@ int SplitLine(int max_str, char *out[], char line[], const char delim[]) { //{{{
   }
   return words;
 } //}}}
-// ReadAndSplitLine() //{{{
-bool ReadAndSplitLine(FILE *fr, int max_strings, const char delim[]) {
+bool ReadAndSplitLine(FILE *fr, const int max_str, const char delim[]) { //{{{
   if (!ReadLine(fr, line)) {
     return false;
   }
-  words = SplitLine(max_strings, split, line, delim);
+  words = SplitLine(max_str, split, line, delim);
   return true;
 } //}}}
-char * BareCommand(char cmd[]) { //{{{
-  s_strcpy(line, cmd, LINE);
-  int words = SplitLine(SPL_STR, split, line, "/");
-  return split[words - 1];
+const char * BareCommand(const char cmd[]) { //{{{
+  // Find the last occurrence of '/' in the path
+  const char *command = strrchr(cmd, '/');
+  if (command) { // '/' found
+    return command + 1;
+  } else { // '/' not found
+    return cmd;
+  }
 } //}}}
-void PrintCommand(FILE *ptr, int argc, char *argv[]) { //{{{
+void PrintCommand(FILE *ptr, const int argc, char **argv) { //{{{
   fprintf(ptr, "%s%s", Colour(ptr, WHITE), argv[0]);
   // print the rest of the command
   for (int i = 1; i < argc; i++) {
@@ -191,49 +146,7 @@ void PrintCommand(FILE *ptr, int argc, char *argv[]) { //{{{
   fprintf(ptr, "%s\n", Colour(ptr, C_RESET));
 } //}}}
 // changing the text colour (and making it bold) for cli output //{{{
-char *Colour(FILE *f, char colour[]) {
-  if (isatty(fileno(f))) {
-    return colour;
-  } else {
-    return "";
-  }
-}
-// colours for stderr
-char *ErrRed() {
-  return Colour(stderr, RED);
-}
-char *ErrCyan() {
-  return Colour(stderr, CYAN);
-}
-char *ErrYellow() {
-  return Colour(stderr, YELLOW);
-}
-char *ErrColourReset() {
-  return Colour(stderr, C_RESET);
-}
-// colours for stdout
-char *Red() {
-  return Colour(stdout, RED);
-}
-char *Cyan() {
-  return Colour(stdout, CYAN);
-}
-char *Yellow() {
-  return Colour(stdout, YELLOW);
-}
-char *Magenta() {
-  return Colour(stdout, MAGENTA);
-}
-char *Green() {
-  return Colour(stdout, GREEN);
-}
-char *White() {
-  return Colour(stdout, WHITE);
-}
-char *ColourReset() {
-  return Colour(stdout, C_RESET);
-}
-void ColourChange(int a, char *colour) {
+void ColourChange(const int a, const char *colour) {
   if (isatty(a)) {
     FILE *ptr;
     if (a == STDOUT_FILENO) {
@@ -248,7 +161,7 @@ void ColourChange(int a, char *colour) {
     fputs(colour, ptr);
   }
 } //}}}
-FILE *OpenFile(char *file, char *mode) { //{{{
+FILE * OpenFile(const char *file, char *mode) { //{{{
   FILE *ptr = fopen(file, mode);
   if (ptr == NULL) {
     snprintf(ERROR_MSG, LINE, "%sERROR - cannot open file %s%s%s",
@@ -260,43 +173,37 @@ FILE *OpenFile(char *file, char *mode) { //{{{
   return ptr;
 } //}}}
 // initialize arrays to specified value //{{{
-void InitDoubleArray(double array[], int n, double val) {
+void InitDoubleArray(double *array, const int n, const double val) {
   for (int i = 0; i < n; i++) {
     array[i] = val;
   }
 }
-void InitIntArray(int array[], int n, int val) {
+void InitIntArray(int *array, const int n, const int val) {
   for (int i = 0; i < n; i++) {
     array[i] = val;
   }
 }
-void InitBoolArray(bool array[], int n, bool val) {
+void InitBoolArray(bool *array, const int n, const bool val) {
   for (int i = 0; i < n; i++) {
     array[i] = val;
   }
 }
-void InitVecArray(VECTOR array[], int n, bool val) {
-  for (int i = 0; i < n; i++) {
-    array[i].x = val;
-    array[i].y = val;
-    array[i].z = val;
-  }
-}
-void InitLong2DArray(long *array[], int m, int n, long val) {
+void InitLong2DArray(long **array, const int m, const int n, const long val) {
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
       array[i][j] = val;
     }
   }
 }
-void InitDouble2DArray(double *array[], int m, int n, double val) {
+void InitDouble2DArray(double **array, const int m, const int n,
+                       const double val) {
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
       array[i][j] = val;
     }
   }
 } //}}}
-bool SameArrayInt(const int arr_1[], const int arr_2[], int n) { //{{{
+bool SameArrayInt(const int *arr_1, const int *arr_2, const int n) { //{{{
   for (int i = 0; i < n; i++) {
     if (arr_1[i] != arr_2[i]) {
       return false;
@@ -304,7 +211,7 @@ bool SameArrayInt(const int arr_1[], const int arr_2[], int n) { //{{{
   }
   return true;
 } //}}}
-void s_strcpy(char *dest, const char *src, size_t dest_size) { //{{{
+void s_strcpy(char *dest, const char *src, const size_t dest_size) { //{{{
   if (dest == NULL || src == NULL || dest_size == 0) {
     fprintf(stderr, "s_strcpy error...");
     exit(1);

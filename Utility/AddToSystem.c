@@ -1,6 +1,8 @@
 #include "../AnalysisTools.h"
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) { //{{{
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -104,7 +106,7 @@ void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
         int id = S_orig.BondedCoor[i];
         double dist[3];
         Distance(S_orig.Bead[id].Position, random, box, dist);
-        dist[0] = VECTORLENGTH(dist);
+        dist[0] = VectLength(dist);
         if (dist[0] < min_dist) {
           min_dist = dist[0];
         }
@@ -118,7 +120,7 @@ void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
             if (b->InTimestep) {
               double dist[3];
               Distance(b->Position, random, box, dist);
-              dist[0] = VECTORLENGTH(dist);
+              dist[0] = VectLength(dist);
               if (dist[0] < min_dist) {
                 min_dist = dist[0];
               }
@@ -133,7 +135,7 @@ void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
         if (b->InTimestep) {
           double dist[3];
           Distance(b->Position, random, box, dist);
-          dist[0] = VECTORLENGTH(dist);
+          dist[0] = VectLength(dist);
           if (dist[0] < min_dist) {
             min_dist = dist[0];
           }
@@ -152,7 +154,7 @@ void Rotate(SYSTEM System, int number, const int *list,
   for (int dd = 0; dd < 3; dd++) {
     random[dd] = (double)(rand()) / (double)(RAND_MAX) * 2 - 1; // number <-1,1>
   }
-  double dist = VECTORLENGTH(random);
+  double dist = VectLength(random);
   for (int dd = 0; dd < 3; dd++) {
     random[dd] /= dist;
   }
@@ -231,7 +233,7 @@ int main(int argc, char *argv[]) {
   fout.type = CoordinateFileType(fout.name);
 
   // options before reading system data //{{{
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
   if (!opt->c.silent) {
     PrintCommand(stdout, argc, argv);
   }

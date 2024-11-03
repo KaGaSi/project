@@ -1,4 +1,5 @@
 #include "System.h"
+// #include "Constants.h"
 #include "Errors.h"
 #include "General.h"
 #include "Structs.h"
@@ -280,7 +281,7 @@ bool CalculateBoxData(BOX *Box, int mode) {
       c_g = cos(Box->gamma * PI / 180);
       s_g = sin(Box->gamma * PI / 180);
       // cell volume
-      sqr = 1 - SQR(c_a) - SQR(c_b) - SQR(c_g) + 2 * c_a * c_b * c_g;
+      sqr = 1 - Square(c_a) - Square(c_b) - Square(c_g) + 2 * c_a * c_b * c_g;
       if (sqr < 0) {
         err_msg("wrong dimensions for triclinic cell");
         return false;
@@ -289,14 +290,14 @@ bool CalculateBoxData(BOX *Box, int mode) {
       // x direaction
       Box->OrthoLength[0] = a;
       // y direaction
-      sqr = SQR(b) - SQR(Box->transform[0][1]);
+      sqr = Square(b) - Square(Box->transform[0][1]);
       if (sqr < 0) {
         err_msg("wrong dimensions for triclinic cell");
         return false;
       }
       Box->OrthoLength[1] = sqrt(sqr);
       // z direaction
-      sqr = SQR(c) - SQR(Box->transform[0][2]) - SQR(Box->transform[1][2]);
+      sqr = Square(c) - Square(Box->transform[0][2]) - Square(Box->transform[1][2]);
       if (sqr < 0) {
         err_msg("wrong simulation box dimensions");
         PrintError();
@@ -310,10 +311,10 @@ bool CalculateBoxData(BOX *Box, int mode) {
       }
       Box->Volume = Box->Length[0] * Box->Length[1] *  Box->Length[2];
       a = Box->OrthoLength[0];
-      b = sqrt(SQR(Box->OrthoLength[1]) + SQR(Box->transform[0][1]));
-      c = sqrt(SQR(Box->OrthoLength[2]) +
-               SQR(Box->transform[0][2]) +
-               SQR(Box->transform[1][2]));
+      b = sqrt(Square(Box->OrthoLength[1]) + Square(Box->transform[0][1]));
+      c = sqrt(Square(Box->OrthoLength[2]) +
+               Square(Box->transform[0][2]) +
+               Square(Box->transform[1][2]));
       c_a = (Box->transform[0][1] * Box->transform[0][2] +
              Box->OrthoLength[1] * Box->transform[1][2]) /
             (b * c);
@@ -329,7 +330,7 @@ bool CalculateBoxData(BOX *Box, int mode) {
       Box->beta = acos(c_b) / PI * 180;
       Box->gamma = acos(c_g) / PI * 180;
       // cell volume
-      sqr = 1 - SQR(c_a) - SQR(c_b) - SQR(c_g) + 2 * c_a * c_b * c_g;
+      sqr = 1 - Square(c_a) - Square(c_b) - Square(c_g) + 2 * c_a * c_b * c_g;
       if (sqr < 0) {
         err_msg("wrong dimensions for triclinic cell");
         return false;
@@ -936,7 +937,7 @@ void MergeMoleculeTypes(SYSTEM *System) {
   free(old_to_new); //}}}
 } //}}}
 
-// sort a bond/angle/dihedral/improper array in an ascending order
+// sort a bond/angle/dihedral/improper (i.e., Stuff) array in an ascending order
 void SortSingleStuff(int num, int (**arr)[num], int n) { //{{{
   // first, check order of the 1st and last ids
   for (int j = 0; j < n; j++) {
@@ -1406,8 +1407,7 @@ void PruneAllStuffTypes(SYSTEM S_old, SYSTEM *System) {
   }
 } //}}}
 // is bond/angle/etc. in a molecule? //{{{
-bool StuffInTimestep(SYSTEM System, int mol,
-                    int num, int (*arr)[num], int i) {
+bool StuffInTimestep(SYSTEM System, int mol, int num, int (*arr)[num], int i) {
   for (int aa = 0; aa < (num - 1); aa++) {
     int id = arr[i][aa];
     id = System.Molecule[mol].Bead[id];
@@ -1912,8 +1912,8 @@ void ConcatenateSystems(SYSTEM *S_out, SYSTEM S_in, BOX Box, bool prune) {
 
 // TODO: split CheckSystem to CheckCount, CheckBeadType, etc.
 // check that the System struct doesn't contain an error //{{{
-void CheckSystem(SYSTEM System, char file[]) {
-  COUNT *Count = &System.Count;
+void CheckSystem(const SYSTEM System, const char *file) {
+  const COUNT *Count = &System.Count;
   if (Count->Molecule > 0 &&
       Count->Molecule > (Count->HighestResid + 1)) { //{{{
     err_msg("Count.HighestResid is lower than Count.Molecule");

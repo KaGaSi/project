@@ -1,31 +1,22 @@
 #include "Options.h"
 
 // STATIC DECLARATIONs
-static void SilentOption(int argc, char *argv[], bool *verbose, bool *silent);
-static bool VersionOption(int argc, char *argv[]);
+static void SilentOption(const int argc, char **argv,
+                         bool *verbose, bool *silent);
+static bool VersionOption(const int argc, char **argv);
 // some repeated warnings/errors
-static void MissingFilenameError(int argc, char *argv[], char opt[], int i);
-static bool TooManyArgsWarn(int max, int n, char opt[], int *count);
-static void ArgumentNumberErr(int count, int n, char opt[]);
-static void ArgumentMissingErr(int n, char opt[]);
+static void MissingFilenameError(const int argc, char **argv,
+                                 const char *opt, const int i);
+static bool TooManyArgsWarn(const int max, const int n,
+                            const char *opt, int *count);
+static void ArgumentNumberErr(const int count, const int n, const char *opt);
+static void ArgumentMissingErr(const int n, const char *opt);
 
 // THE VISIBLE FUNCTIONS
-// print version or help and exit (--version and --help options) //{{{
-void HelpVersionOption(int argc, char *argv[]) {
-  if (VersionOption(argc, argv)) {
-    exit(0);
-  }
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--help") == 0) {
-      // Help(argv[0], false);
-      exit(0);
-    }
-  }
-} //}}}
-
 // version/help printing and initial check of provided options //{{{
-int OptionCheck(int argc, char *argv[], int req, int common, int all,
-                 bool check_extra, char opt[all][OPT_LENGTH], ...) {
+int OptionCheck(const int argc, char **argv, const int req, const int common,
+                const int all, const bool check_extra,
+                char opt[all][OPT_LENGTH], ...) {
   snprintf(argv[0], LINE, "%s", BareCommand(argv[0]));
   // copy options to an array
   va_list args;
@@ -97,9 +88,9 @@ int OptionCheck(int argc, char *argv[], int req, int common, int all,
   }
   return count;
 } //}}}
-
 // print help for common options //{{{
-void CommonHelp(bool error, int n, char option[n][OPT_LENGTH]) {
+void CommonHelp(const bool error, const int n,
+                const char option[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -137,9 +128,8 @@ void CommonHelp(bool error, int n, char option[n][OPT_LENGTH]) {
     }
   }
 } //}}}
-
 // detect options common for most utilities //{{{
-COMMON_OPT CommonOptions(int argc, char *argv[], int length, SYS_FILES f) {
+COMMON_OPT CommonOptions(const int argc, char **argv, const SYS_FILES f) {
   COMMON_OPT opt;
   opt.start = -1;
   opt.end = -1;
@@ -178,9 +168,8 @@ COMMON_OPT CommonOptions(int argc, char *argv[], int length, SYS_FILES f) {
   }
   return opt;
 } //}}}
-
 // exclude specified molecule names (-x <mol name(s)>) //{{{
-bool ExcludeOption(int argc, char *argv[], SYSTEM *System) {
+bool ExcludeOption(const int argc, char **argv, SYSTEM *System) {
   // set all molecules to use
   for (int i = 0; i < System->Count.MoleculeType; i++) {
     System->MoleculeType[i].Flag = true;
@@ -213,10 +202,9 @@ bool ExcludeOption(int argc, char *argv[], SYSTEM *System) {
   }
   return false;
 } //}}}
-
 // tag bead types with true/false (if missing, set all to opposite) //{{{
-bool BeadTypeOption(int argc, char *argv[], char opt[],
-                    bool use, bool flag[], SYSTEM System) {
+bool BeadTypeOption(const int argc, char **argv, const char opt[],
+                    const bool use, bool *flag, const SYSTEM System) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       int pos = i;
@@ -244,8 +232,8 @@ bool BeadTypeOption(int argc, char *argv[], char opt[],
   return false; // option is not present
 } //}}}
 // tag molecule types with true/false (if missing, set all to opposite) //{{{
-bool MoleculeTypeOption(int argc, char *argv[], char opt[],
-                        bool use, bool flag[], SYSTEM System) {
+bool MoleculeTypeOption(const int argc, char **argv, const char *opt,
+                        const bool use, bool *flag, const SYSTEM System) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       int pos = i;
@@ -272,9 +260,8 @@ bool MoleculeTypeOption(int argc, char *argv[], char opt[],
   }
   return false; // option is not present
 } // }}}
-
 // general boolean option //{{{
-bool BoolOption(int argc, char *argv[], char opt[]) {
+bool BoolOption(const int argc, char **argv, const char *opt) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       return true;
@@ -282,10 +269,9 @@ bool BoolOption(int argc, char *argv[], char opt[]) {
   }
   return false;
 } // }}}
-
 // general option with multiple integer arguments (up to 'max') //{{{
-bool IntegerOption(int argc, char *argv[], int max,
-                   char opt[], int *count, int *values) {
+bool IntegerOption(const int argc, char **argv, const int max,
+                   const char *opt, int *count, int *values) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       int n = 0, // number of arguments
@@ -306,7 +292,7 @@ bool IntegerOption(int argc, char *argv[], int max,
   }
   return false;
 }
-bool IntegerOption1(int argc, char *argv[], char opt[], int *value) {
+bool IntegerOption1(const int argc, char **argv, const char *opt, int *value) {
   int count = 0;
   if (IntegerOption(argc, argv, 1, opt, &count, value)) {
     ArgumentNumberErr(count, 1, opt);
@@ -314,7 +300,8 @@ bool IntegerOption1(int argc, char *argv[], char opt[], int *value) {
   }
   return false; // option not present
 }
-bool IntegerOption2(int argc, char *argv[], char opt[], int value[2]) {
+bool IntegerOption2(const int argc, char **argv,
+                    const char *opt, int value[2]) {
   int count = 0;
   if (IntegerOption(argc, argv, 2, opt, &count, value)) {
     ArgumentNumberErr(count, 2, opt);
@@ -322,10 +309,9 @@ bool IntegerOption2(int argc, char *argv[], char opt[], int value[2]) {
   }
   return false; // option not present
 } //}}}
-
 // general option with multiple double arguments (up to 'max') //{{{
-bool DoubleOption(int argc, char *argv[], int max,
-                  char opt[], int *count, double values[max]) {
+bool DoubleOption(const int argc, char **argv, const int max,
+                  const char *opt, int *count, double values[max]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       int n = 0; // number of arguments
@@ -347,7 +333,8 @@ bool DoubleOption(int argc, char *argv[], int max,
   }
   return false;
 }
-bool DoubleOption1(int argc, char *argv[], char opt[], double *value) {
+bool DoubleOption1(const int argc, char **argv,
+                   const char *opt, double *value) {
   int count = 0;
   if (DoubleOption(argc, argv, 1, opt, &count, value)) {
     ArgumentNumberErr(count, 1, opt);
@@ -355,7 +342,8 @@ bool DoubleOption1(int argc, char *argv[], char opt[], double *value) {
   }
   return false; // option not present
 }
-bool DoubleOption2(int argc, char *argv[], char opt[], double value[2]) {
+bool DoubleOption2(const int argc, char **argv,
+                   const char *opt, double value[2]) {
   int count = 0;
   if (DoubleOption(argc, argv, 2, opt, &count, value)) {
     ArgumentNumberErr(count, 2, opt);
@@ -363,7 +351,8 @@ bool DoubleOption2(int argc, char *argv[], char opt[], double value[2]) {
   }
   return false; // option not present
 }
-bool DoubleOption3(int argc, char *argv[], char opt[], double value[3]) {
+bool DoubleOption3(const int argc, char **argv,
+                   const char *opt, double value[3]) {
   int count = 0;
   if (DoubleOption(argc, argv, 3, opt, &count, value)) {
     if (count != 3) {
@@ -376,10 +365,10 @@ bool DoubleOption3(int argc, char *argv[], char opt[], double value[3]) {
   }
   return false; // option not present
 } //}}}
-
 // general option with filename and integer(s) arguments //{{{
-bool FileIntegerOption(int argc, char *argv[], int min, int max, char opt[],
-                       int *values, int *count, char file[]) {
+bool FileIntegerOption(const int argc, char **argv, const int min,
+                       const int max, const char *opt, int *values,
+                       int *count, char *file) {
   int n = 0;
   *count = 0;
   file[0] = '\0';
@@ -418,17 +407,16 @@ bool FileIntegerOption(int argc, char *argv[], int min, int max, char opt[],
   }
   return false; // option not present
 }
-bool FileOption(int argc, char *argv[], char opt[], char file[]) {
+bool FileOption(const int argc, char **argv, const char *opt, char *file) {
   int trash;
   if (FileIntegerOption(argc, argv, 0, 0, opt, &trash, &trash, file)) {
     return true;
   }
   return false;
 } //}}}
-
 // general option with filename and double(s) arguments //{{{
-bool FileDoubleOption(int argc, char *argv[], int max, char opt[],
-                      double *values, int *count, char file[]) {
+bool FileDoubleOption(const int argc, char **argv, const int max,
+                      const char *opt, double *values, int *count, char *file) {
   int n = 0;
   *count = 0;
   file[0] = '\0';
@@ -466,7 +454,8 @@ bool FileDoubleOption(int argc, char *argv[], int max, char opt[],
 
 // STATIC IMPLEMENTATIONS
 // option for output verbosity (--silent) //{{{
-static void SilentOption(int argc, char *argv[], bool *verbose, bool *silent) {
+static void SilentOption(const int argc, char **argv,
+                         bool *verbose, bool *silent) {
   *silent = false;
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--silent") == 0) {
@@ -477,7 +466,7 @@ static void SilentOption(int argc, char *argv[], bool *verbose, bool *silent) {
   }
 } //}}}
 // print AnalysisTools version number (--version) //{{{
-static bool VersionOption(int argc, char *argv[]) {
+static bool VersionOption(const int argc, char *argv[]) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--version") == 0) {
       fprintf(stdout, "AnalysisTools by Karel Šindelka (KaGaSi), version %s"
@@ -490,7 +479,8 @@ static bool VersionOption(int argc, char *argv[]) {
   return false;
 } //}}}
 // exit if file name is missing in an option where it's required //{{{
-static void MissingFilenameError(int argc, char *argv[], char opt[], int i) {
+static void MissingFilenameError(const int argc, char **argv,
+                                 const char *opt, const int i) {
   // Error - no output file name
   if ((i+1) >= argc || argv[i+1][0] == '-') {
     s_strcpy(ERROR_MSG, "missing file name "
@@ -500,7 +490,8 @@ static void MissingFilenameError(int argc, char *argv[], char opt[], int i) {
   }
 } //}}}
 // warn if too many arguments //{{{
-static bool TooManyArgsWarn(int max, int n, char opt[], int *count) {
+static bool TooManyArgsWarn(const int max, const int n,
+                            const char *opt, int *count) {
   if (n > max) {
     snprintf(ERROR_MSG, LINE, "too many arguments; only the first %d "
              "used", max);
@@ -512,7 +503,7 @@ static bool TooManyArgsWarn(int max, int n, char opt[], int *count) {
   }
 } //}}}
 // exit if wrong number of arguments  //{{{
-static void ArgumentNumberErr(int count, int n, char opt[]) {
+static void ArgumentNumberErr(const int count, const int n, const char *opt) {
   if (count != n) {
     snprintf(ERROR_MSG, LINE, "%d numeric argument(s) required", n);
     PrintErrorOption(opt);
@@ -520,7 +511,7 @@ static void ArgumentNumberErr(int count, int n, char opt[]) {
   }
 } //}}}
 // exit if missing arguments //{{{
-static void ArgumentMissingErr(int n, char opt[]) {
+static void ArgumentMissingErr(const int n, const char *opt) {
   if (n == 0) {
     s_strcpy(ERROR_MSG, "missing numeric argument(s)", LINE);
     PrintErrorOption(opt);

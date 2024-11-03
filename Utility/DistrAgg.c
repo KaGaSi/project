@@ -1,6 +1,8 @@
 #include "../AnalysisTools.h"
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -74,7 +76,7 @@ int main(int argc, char *argv[]) {
   char out_avg[LINE] = "";
   s_strcpy(out_avg, argv[++count], LINE);
   // options before reading system data
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
   // -c option
   int c_sizes[100] = {0}, c_count = 0;
   char c_file[LINE] = "";
@@ -168,7 +170,7 @@ int main(int argc, char *argv[]) {
   long double zdistr[Count->Molecule][2];
   // number of aggregates throughout simulation
   int count_agg[Count->Molecule];
-  // molecule typs in aggregates: [agg size][mol type][number or SQR(number)]
+  // molecule typs in aggregates: [agg size][mol type][number or Square(number)]
   int **molecules_sum = malloc(Count->Molecule * sizeof *molecules_sum);
   for (int i = 0; i < Count->Molecule; i++) {
     molecules_sum[i] = calloc(Count->MoleculeType, sizeof *molecules_sum[i]);
@@ -304,18 +306,18 @@ int main(int argc, char *argv[]) {
       } //}}}
       // average aggregate mass during the step
       avg_mass_n_step[0] += agg_mass;
-      avg_mass_w_step[0] += SQR(agg_mass);
-      avg_mass_z_step[0] += CUBE(agg_mass);
+      avg_mass_w_step[0] += Square(agg_mass);
+      avg_mass_z_step[0] += Cube(agg_mass);
       avg_mass_n_step[1] += Aggregate[i].Mass;
-      avg_mass_w_step[1] += SQR(Aggregate[i].Mass);
-      avg_mass_z_step[1] += CUBE(Aggregate[i].Mass);
+      avg_mass_w_step[1] += Square(Aggregate[i].Mass);
+      avg_mass_z_step[1] += Cube(Aggregate[i].Mass);
       // average aggregation number during the step
       avg_As_n_step[0] += size;
       avg_As_w_step[0] += size * agg_mass;
-      avg_As_z_step[0] += size * SQR(agg_mass);
+      avg_As_z_step[0] += size * Square(agg_mass);
       avg_As_n_step[1] += Aggregate[i].nMolecules;
       avg_As_w_step[1] += Aggregate[i].nMolecules * Aggregate[i].Mass;
-      avg_As_z_step[1] += Aggregate[i].nMolecules * SQR(Aggregate[i].Mass);
+      avg_As_z_step[1] += Aggregate[i].nMolecules * Square(Aggregate[i].Mass);
       // molecule species numbers
       for (int j = 0; j < Aggregate[i].nMolecules; j++) {
         int mtype = System.Molecule[Aggregate[i].Molecule[j]].Type;
@@ -331,22 +333,22 @@ int main(int argc, char *argv[]) {
         ndistr[size-1]++;
         wdistr[size-1][0] += agg_mass;
         wdistr[size-1][1] += Aggregate[i].Mass;
-        zdistr[size-1][0] += SQR(agg_mass);
-        zdistr[size-1][1] += SQR(Aggregate[i].Mass);
+        zdistr[size-1][0] += Square(agg_mass);
+        zdistr[size-1][1] += Square(Aggregate[i].Mass);
         // summed up sizes
         As_sum[0][0] += size;
         As_sum[1][0] += size * agg_mass;
-        As_sum[2][0] += size * SQR(agg_mass);
+        As_sum[2][0] += size * Square(agg_mass);
         As_sum[0][1] += Aggregate[i].nMolecules;
         As_sum[1][1] += Aggregate[i].nMolecules * Aggregate[i].Mass;
-        As_sum[2][1] += Aggregate[i].nMolecules * SQR(Aggregate[i].Mass);
+        As_sum[2][1] += Aggregate[i].nMolecules * Square(Aggregate[i].Mass);
         // summed up masses
         mass_sum[0][0] += agg_mass;
-        mass_sum[1][0] += SQR(agg_mass);
-        mass_sum[2][0] += CUBE(agg_mass);
+        mass_sum[1][0] += Square(agg_mass);
+        mass_sum[2][0] += Cube(agg_mass);
         mass_sum[0][1] += Aggregate[i].Mass;
-        mass_sum[1][1] += SQR(Aggregate[i].Mass);
-        mass_sum[2][1] += CUBE(Aggregate[i].Mass);
+        mass_sum[1][1] += Square(Aggregate[i].Mass);
+        mass_sum[2][1] += Cube(Aggregate[i].Mass);
         // molecule species numbers
         for (int j = 0; j < Aggregate[i].nMolecules; j++) {
           int mol_type = System.Molecule[Aggregate[i].Molecule[j]].Type;

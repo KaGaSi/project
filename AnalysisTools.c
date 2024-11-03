@@ -28,6 +28,13 @@
 static void RemovePBCMolecules(SYSTEM *System);
 // restore pbc by wrapping all coordinates inside the simulation box
 static void RestorePBC(SYSTEM *System);
+// TODO: not sure what I'll do with that - it's kind of not working, plus what's
+//       it useful for? I guess just Selected as it's gonna be for crysal only
+// deal with triclinic box
+static void FractionalCoor(SYSTEM *System, const int mode);
+static int FindFileType(const char *name);
+static int NewAgg(AGGREGATE *Aggregate, SYSTEM *System,
+                  const int i, const int j);
 
 // STATIC IMPLEMENTATIONS
 // TODO: the whole fractional stuff - not sure if it works
@@ -38,7 +45,7 @@ static void RestorePBC(SYSTEM *System);
 //dist[1] = (*Bead)[0].Position[1] - (*Bead)[10].Position[1];
 //dist[2] = (*Bead)[0].Position[2] - (*Bead)[10].Position[2];
 //printf("dist1 = (%lf, %lf, %lf) = %lf\n", dist[0], dist[1], dist[2],
-sqrt(SQR(dist[0])+SQR(dist[1])+SQR(dist[2])));
+sqrt(Square(dist[0])+Square(dist[1])+Square(dist[2])));
 
 //double new[3];
 //new[0] = Box.transform[0][0] * dist[0] +
@@ -54,10 +61,10 @@ sqrt(SQR(dist[0])+SQR(dist[1])+SQR(dist[2])));
 //dist[1] = new[1] / b;
 //dist[2] = new[2] / c;
 //printf("dist2 = (%lf, %lf, %lf) = %lf\n", dist[0], dist[1], dist[2],
-sqrt(SQR(dist[0])+SQR(dist[1])+SQR(dist[2])));
+sqrt(Square(dist[0])+Square(dist[1])+Square(dist[2])));
 */ //}}}
 // mode=0 ... to fractional; mode=1 ... from fractional
-void FractionalCoor(SYSTEM *System, int mode) {
+static void FractionalCoor(SYSTEM *System, const int mode) {
   if (mode != 0 && mode != 1) {
     err_msg("mode in FractionalCoor() must be 0 or 1");
     PrintError();
@@ -227,145 +234,6 @@ static void RemovePBCMolecules(SYSTEM *System) {
     } //}}}
   }
 } //}}}
-// // remove pbc for molecules by joining the molecules //{{{
-// /*
-//  * Create a list of all bonds ('unconnected' array) with beads that are in the
-//  * timestep. Then create a connectivity array by going through the list,
-//  * transferring used bonds into 'connected' array, and finally, use the
-//  * 'connected' array to join the molecule. As long as there are bonds in the
-//  * 'unconnected' array, continue creating a new 'connected' array and joining
-//  * the molecule. This procedure should be able to join molecule of any
-//  * complexity as well as molecule where some beads ar not connected.
-//  */
-// /*
-//  * TODO: maybe split molecule to connected pieces, connect those and place
-//  *       their centres of mass nearest each other
-//  */
-// static void RemovePBCMolecules_old(SYSTEM *System) {
-//   BOX *box = &System->Box;
-//   // go through all molecules
-//   for (int mm = 0; mm < System->Count.Molecule; mm++) {
-//     MOLECULE *mol = &System->Molecule[mm];
-//     if (!mol->InTimestep) {
-//       continue;
-//     }
-//     MOLECULETYPE *mt = &System->MoleculeType[mol->Type];
-//     // skip molecule if it is bond-less
-//     if (mt->nBonds == 0) {
-//       snprintf(ERROR_MSG, LINE, "molecule %s%d%s (%s%s%s) has no bonds ",
-//                ErrYellow(), mol->Index, ErrCyan(),
-//                ErrYellow(), mt->Name, ErrCyan());
-//       PrintWarning();
-//       continue;
-//     }
-//     // arrays holding bonds already connected and yet unconnected
-//     int *connected = calloc(mt->nBonds, sizeof *connected),
-//         *unconnected = calloc(mt->nBonds, sizeof *unconnected),
-//         count_unconnected = 0;
-//     // 1)
-//     for (int i = 0; i < mt->nBonds; i++) {
-//       int id[2] = {mol->Bead[mt->Bond[i][0]], mol->Bead[mt->Bond[i][1]]};
-//       BEAD *b_1 = &System->Bead[id[0]],
-//            *b_2 = &System->Bead[id[1]];
-//       // printf("%d %d\n", id[0], id[1]);
-//       if (b_1->InTimestep && b_2->InTimestep) {
-//         unconnected[count_unconnected] = i;
-//         count_unconnected++;
-//       }
-//     }
-//     // skip molecule if there is no valid bond in the coordinate file //{{{
-//     if (count_unconnected == 0) {
-//       snprintf(ERROR_MSG, LINE, "no bonded beads in the timestep "
-//                " for molecule %s%d%s (%s%s%s) has no bonds ", ErrYellow(),
-//                mol->Index, ErrCyan(), ErrYellow(), mt->Name, ErrCyan());
-//       PrintWarning();
-//       free(connected);
-//       free(unconnected);
-//       continue;
-//     } //}}}
-//     while (count_unconnected > 0) {
-//       int count_connected = 0;
-//       connected[count_connected] = unconnected[0];
-//       count_connected++;
-//       count_unconnected--;
-//       for (int i = 0; i < count_unconnected; i++) {
-//         unconnected[i] = unconnected[i+1];
-//       }
-//       // 2)
-//       for (int i = 0; i < count_connected; i++) {
-//         for (int j = 0; j < count_unconnected; j++) {
-//           int bond[2], // the connected and unconnected bonds
-//               con[2], // beads in the already connected bond (bond[0])
-//               uncon[2]; // beads in the yet unconneced bond (bond[1])
-//           bond[0] = connected[i];
-//           bond[1] = unconnected[j];
-//           con[0] = mt->Bond[bond[0]][0];
-//           con[1] = mt->Bond[bond[0]][1];
-//           uncon[0] = mt->Bond[bond[1]][0];
-//           uncon[1] = mt->Bond[bond[1]][1];
-//           // if a bead is in both bonds, the unconnected bond becomes connected
-//           if (con[0] == uncon[0] || con[0] == uncon[1] ||
-//               con[1] == uncon[0] || con[1] == uncon[1]) {
-//             connected[count_connected] = bond[1];
-//             count_connected++;
-//             count_unconnected--;
-//             // move unconnected bonds to retain continuous array
-//             for (int k = j; k < count_unconnected; k++) {
-//               unconnected[k] = unconnected[k+1];
-//             }
-//             // unconnected[j] is again unconnected, so decremenet 'j'
-//             j--;
-//           }
-//         }
-//       }
-//       // connect the molecule by going through the list of connected bonds 
-//       bool *moved = calloc(mt->nBeads, sizeof *moved);
-//       int first = mt->Bond[connected[0]][0];
-//       moved[first] = true;
-//       for (int i = 0; i < count_connected; i++) {
-//         int bond = connected[i],
-//             id[2] = {mt->Bond[bond][0], mt->Bond[bond][1]};
-//         BEAD *b_1 = &System->Bead[mol->Bead[id[0]]],
-//              *b_2 = &System->Bead[mol->Bead[id[1]]];
-//         double dist[3];
-//         if (!moved[id[0]] && moved[id[1]]) {
-//           Distance(b_2->Position, b_1->Position, box->OrthoLength, dist);
-//           for (int dd = 0; dd < 3; dd++) {
-//             b_1->Position[dd] = b_2->Position[dd] - dist[dd];
-//           }
-//           moved[id[0]] = true;
-//         } else if (moved[id[0]] && !moved[id[1]]) {
-//           Distance(b_1->Position, b_2->Position, box->OrthoLength, dist);
-//           for (int dd = 0; dd < 3; dd++) {
-//             b_2->Position[dd] = b_1->Position[dd] - dist[dd];
-//           }
-//           moved[id[1]] = true;
-//         }
-//       }
-//       // TODO: CENTRE OF MASS
-//       free(moved);
-//     }
-//     free(connected);
-//     free(unconnected);
-//     // put molecule's geometric centre into the simulation box //{{{
-//     double cog[3];
-//     GeomCentre(mt->nBeads, mol->Bead, System->Bead, cog);
-//     // by how many BoxLength's should cog be moved?
-//     int move[3];
-//     for (int dd = 0; dd < 3; dd++) {
-//       move[dd] = cog[dd] / box->OrthoLength[dd];
-//       if (cog[dd] < 0) {
-//         move[dd]--;
-//       }
-//     }
-//     for (int j = 0; j < mt->nBeads; j++) {
-//       int bead = mol->Bead[j];
-//       for (int dd = 0; dd < 3; dd++) {
-//         System->Bead[bead].Position[dd] -= move[dd] * box->OrthoLength[dd];
-//       }
-//     } //}}}
-//   }
-// } //}}}
 // restore pbc by wrapping all coordinates inside the simulation box //{{{
 static void RestorePBC(SYSTEM *System) {
   for (int i = 0; i < System->Count.BeadCoor; i++) {
@@ -385,7 +253,7 @@ static void RestorePBC(SYSTEM *System) {
 
 // Helper functions for identifying bead/molecule types
 // identify bead type based on name //{{{
-int FindBeadType(char name[], SYSTEM System) {
+int FindBeadType(const char *name, const SYSTEM System) {
   int type;
   for (int i = 0; i < System.Count.BeadType; i++) {
     if (strcmp(name, System.BeadType[i].Name) == 0) {
@@ -397,7 +265,7 @@ int FindBeadType(char name[], SYSTEM System) {
   return -1;
 } //}}}
 // identify molecule type based on name //{{{
-int FindMoleculeName(char name[], SYSTEM System) {
+int FindMoleculeName(const char *name, const SYSTEM System) {
   int type = -1;
   for (int i = 0; i < System.Count.MoleculeType; i++) {
     if (strcmp(name, System.MoleculeType[i].Name) == 0) {
@@ -417,30 +285,30 @@ int FindMoleculeName(char name[], SYSTEM System) {
  *   3 - check everything
  * name = true/false for checking/ignoring molecule name
  */
-int FindMoleculeType(SYSTEM Sys1, MOLECULETYPE mt, SYSTEM Sys2, int mode) {
+int FindMoleculeType(const SYSTEM Sys1, const MOLECULETYPE mt_1,
+                     const SYSTEM Sys2, const int mode) {
   // just to be sure the function's mode parameter is correct //{{{
   if (mode < 0 || mode > 3) {
     err_msg("FindMoleculeType() - mode parameter must be <0,3>\n");
     PrintError();
     exit(1);
   } //}}}
-  MOLECULETYPE *mt_1 = &mt;
   // find the same name
   for (int i = 0; i < Sys2.Count.MoleculeType; i++) {
     MOLECULETYPE *mt_2 = &Sys2.MoleculeType[i];
-    if (strcmp(mt_1->Name, mt_2->Name) == 0) {
+    if (strcmp(mt_1.Name, mt_2->Name) == 0) {
       if (mode == 0) { // only name checked
         return i;
       }
       // check number of beads //{{{
-      if (mt_1->nBeads != mt_2->nBeads) {
+      if (mt_1.nBeads != mt_2->nBeads) {
         goto end_loop; // not 'continue;' to avoid break/continue combo later
       } else if (mode == 1) {
         return i;
       } //}}}
       // check bead order //{{{
-      for (int j = 0; j < mt_1->nBeads; j++) {
-        int bt_1 = mt_1->Bead[j],
+      for (int j = 0; j < mt_1.nBeads; j++) {
+        int bt_1 = mt_1.Bead[j],
             bt_2 = mt_2->Bead[j];
         if (!SameBeadType(Sys1.BeadType[bt_1], Sys2.BeadType[bt_2])) {
           goto end_loop;
@@ -450,16 +318,16 @@ int FindMoleculeType(SYSTEM Sys1, MOLECULETYPE mt, SYSTEM Sys2, int mode) {
         return i;
       } //}}}
       // check bonds //{{{
-      if (mt_1->nBonds != mt_2->nBonds) {
+      if (mt_1.nBonds != mt_2->nBonds) {
         goto end_loop;
       }
-      for (int j = 0; j < mt_1->nBonds; j++) {
-        if (!SameArrayInt(mt_1->Bond[j], mt_2->Bond[j], 2)) {
+      for (int j = 0; j < mt_1.nBonds; j++) {
+        if (!SameArrayInt(mt_1.Bond[j], mt_2->Bond[j], 2)) {
           goto end_loop;
         }
-        if (mt_1->Bond[j][2] == mt_2->Bond[j][2]) {
-          if (mt_1->Bond[j][2] != -1) {
-            PARAMS *tbond_1 = &Sys1.BondType[mt_1->Bond[j][2]],
+        if (mt_1.Bond[j][2] == mt_2->Bond[j][2]) {
+          if (mt_1.Bond[j][2] != -1) {
+            PARAMS *tbond_1 = &Sys1.BondType[mt_1.Bond[j][2]],
                    *tbond_2 = &Sys2.BondType[mt_2->Bond[j][2]];
             if (tbond_1->a != tbond_2->a ||
                 tbond_1->b != tbond_2->b ||
@@ -473,15 +341,15 @@ int FindMoleculeType(SYSTEM Sys1, MOLECULETYPE mt, SYSTEM Sys2, int mode) {
         }
       } //}}}
       // check angles //{{{
-      if (mt_1->nAngles != mt_2->nAngles) {
+      if (mt_1.nAngles != mt_2->nAngles) {
         goto end_loop;
       }
-      for (int j = 0; j < mt_1->nAngles; j++) {
-        if (!SameArrayInt(mt_1->Angle[j], mt_2->Angle[j], 3)) {
+      for (int j = 0; j < mt_1.nAngles; j++) {
+        if (!SameArrayInt(mt_1.Angle[j], mt_2->Angle[j], 3)) {
           goto end_loop;
         }
-        if (mt_1->Angle[j][3] != -1 && mt_2->Angle[j][3] != -1) {
-          PARAMS *tangle_1 = &Sys1.AngleType[mt_1->Angle[j][3]],
+        if (mt_1.Angle[j][3] != -1 && mt_2->Angle[j][3] != -1) {
+          PARAMS *tangle_1 = &Sys1.AngleType[mt_1.Angle[j][3]],
                  *tangle_2 = &Sys2.AngleType[mt_2->Angle[j][3]];
           if (tangle_1->a != tangle_2->a ||
               tangle_1->b != tangle_2->b ||
@@ -492,15 +360,15 @@ int FindMoleculeType(SYSTEM Sys1, MOLECULETYPE mt, SYSTEM Sys2, int mode) {
         }
       } //}}}
       // check dihedrals //{{{
-      if (mt_1->nDihedrals != mt_2->nDihedrals) {
+      if (mt_1.nDihedrals != mt_2->nDihedrals) {
         goto end_loop;
       }
-      for (int j = 0; j < mt_1->nDihedrals; j++) {
-        if (!SameArrayInt(mt_1->Dihedral[j], mt_2->Dihedral[j], 4)) {
+      for (int j = 0; j < mt_1.nDihedrals; j++) {
+        if (!SameArrayInt(mt_1.Dihedral[j], mt_2->Dihedral[j], 4)) {
           goto end_loop;
         }
-        if (mt_1->Dihedral[j][4] != -1 && mt_2->Dihedral[j][4] != -1) {
-          PARAMS *tdihed_1 = &Sys1.DihedralType[mt_1->Dihedral[j][4]],
+        if (mt_1.Dihedral[j][4] != -1 && mt_2->Dihedral[j][4] != -1) {
+          PARAMS *tdihed_1 = &Sys1.DihedralType[mt_1.Dihedral[j][4]],
                  *tdihed_2 = &Sys2.DihedralType[mt_2->Dihedral[j][4]];
           if (tdihed_1->a != tdihed_2->a ||
               tdihed_1->b != tdihed_2->b ||
@@ -511,15 +379,15 @@ int FindMoleculeType(SYSTEM Sys1, MOLECULETYPE mt, SYSTEM Sys2, int mode) {
         }
       } //}}}
       // check impropers //{{{
-      if (mt_1->nImpropers != mt_2->nImpropers) {
+      if (mt_1.nImpropers != mt_2->nImpropers) {
         goto end_loop;
       }
-      for (int j = 0; j < mt_1->nImpropers; j++) {
-        if (!SameArrayInt(mt_1->Improper[j], mt_2->Improper[j], 4)) {
+      for (int j = 0; j < mt_1.nImpropers; j++) {
+        if (!SameArrayInt(mt_1.Improper[j], mt_2->Improper[j], 4)) {
           goto end_loop;
         }
-        if (mt_1->Improper[j][4] != -1 && mt_1->Improper[j][4] != -1) {
-          PARAMS *timpro_1 = &Sys1.ImproperType[mt_1->Improper[j][4]],
+        if (mt_1.Improper[j][4] != -1 && mt_1.Improper[j][4] != -1) {
+          PARAMS *timpro_1 = &Sys1.ImproperType[mt_1.Improper[j][4]],
                  *timpro_2 = &Sys2.ImproperType[mt_2->Improper[j][4]];
           if (timpro_1->a != timpro_2->a ||
               timpro_1->b != timpro_2->b ||
@@ -535,10 +403,9 @@ int FindMoleculeType(SYSTEM Sys1, MOLECULETYPE mt, SYSTEM Sys2, int mode) {
   }
   return -1;
 } //}}}
-
 // Helper functions for manipulating coordinates
 // wrap coordinates into simulation box and/or join molecules //{{{
-void WrapJoinCoordinates(SYSTEM *System, bool wrap, bool join) {
+void WrapJoinCoordinates(SYSTEM *System, const bool wrap, const bool join) {
   if (System->Box.Volume != -1 && (wrap || join)) {
     // transform coordinates into fractional ones for non-orthogonal box
     FractionalCoor(System, 0);
@@ -567,7 +434,8 @@ void Distance(const double id1[3], const double id2[3],
   }
 } //}}}
 // calculate centre of mass for a list of beads //{{{
-void CentreOfMass(int n, const int list[], SYSTEM System, double com[3]) {
+void CentreOfMass(const int n, const int *list,
+                  const SYSTEM System, double com[3]) {
   for (int dd = 0; dd < 3; dd++) {
     com[dd] = 0;
   }
@@ -586,7 +454,7 @@ void CentreOfMass(int n, const int list[], SYSTEM System, double com[3]) {
   }
 } //}}}
 // calculate geometric centre for a list of beads //{{{
-void GeomCentre(int n, const int *list, BEAD *Bead, double gc[3]) {
+void GeomCentre(const int n, const int *list, const BEAD *Bead, double gc[3]) {
   InitDoubleArray(gc, 3, 0);
   int count = 0;
   for (int i = 0; i < n; i++) {
@@ -602,8 +470,7 @@ void GeomCentre(int n, const int *list, BEAD *Bead, double gc[3]) {
     gc[dd] /= count;
   }
 } //}}}
-
-int FindFileType(char name[]) { //{{{
+static int FindFileType(const char *name) { //{{{
   // a) check for FIELD/CONFIG file
   if (strcasecmp(name, "FIELD") == 0) {
     return FIELD_FILE;
@@ -626,7 +493,7 @@ int FindFileType(char name[]) { //{{{
   return -1;
 } //}}}
 // identify input coordinate and structure files //{{{
-bool InputCoorStruct(int argc, char *argv[], SYS_FILES *f) {
+bool InputCoorStruct(const int argc, char **argv, SYS_FILES *f) {
   // input structure file (-i option)
   if (FileOption(argc, argv, "-i", f->stru.name)) {
     f->stru.type = StructureFileType(f->stru.name);
@@ -658,7 +525,7 @@ bool InputCoorStruct(int argc, char *argv[], SYS_FILES *f) {
   }
   return true;
 } //}}}
-int StructureFileType(char name[]) { //{{{
+int StructureFileType(const char *name) { //{{{
   int ft = FindFileType(name);
   if (ft == VTF_FILE || ft == VSF_FILE || ft == FIELD_FILE ||
       ft == LDATA_FILE || ft == LTRJ_FILE) {
@@ -669,7 +536,7 @@ int StructureFileType(char name[]) { //{{{
     exit(1);
   }
 } //}}}
-int CoordinateFileType(char name[]) { //{{{
+int CoordinateFileType(const char *name) { //{{{
   int ft = FindFileType(name);
   if (ft == VTF_FILE || ft == VCF_FILE || ft == XYZ_FILE ||
       ft == LDATA_FILE || ft == LTRJ_FILE) {
@@ -680,7 +547,7 @@ int CoordinateFileType(char name[]) { //{{{
     exit(1);
   }
 } //}}}
-int FileType(char name[]) { //{{{
+int FileType(const char *name) { //{{{
   int ft = FindFileType(name);
   if (ft != -1) {
     return ft;
@@ -690,15 +557,14 @@ int FileType(char name[]) { //{{{
     exit(1);
   }
 } //}}}
-
 // create a cell-linked list //{{{
-void LinkedList(SYSTEM System, int **Head, int **Link, double rcut,
-                int n_cells[3], int Dc[14][3]) {
-  double (*box)[3] = &System.Box.Length;
-  COUNT *Count = &System.Count;
+void LinkedList(const SYSTEM System, int **Head, int **Link,
+                const double cell_size, int n_cells[3], int Dc[14][3]) {
+  const double (*box)[3] = &System.Box.Length;
+  const COUNT *Count = &System.Count;
   double rl[3];
   for (int dd = 0; dd < 3; dd++) {
-    rl[dd] = (*box)[dd] / rcut;
+    rl[dd] = (*box)[dd] / cell_size;
     n_cells[dd] = (int)(rl[dd]);
   }
   if (n_cells[0] < 3 || n_cells[1] < 3 || n_cells[2] < 3) {
@@ -760,12 +626,11 @@ int SelectCell2(const int c1[3], const int n_cells[3],
 
   return c2[0] + c2[1] * n_cells[0] + c2[2] * n_cells[0] * n_cells[1];
 } //}}}
-
 // TODO: use Jacobi method
 // TODO: use SYSTEM
 // calculate gyration tensor and various shape descriptors //{{{
-void Gyration(int n, int *list, COUNT Counts, BEADTYPE *BeadType,
-              BEAD **Bead, double eigen[3]) {
+void Gyration(const int n, const int *list, const COUNT Counts,
+              const BEADTYPE *BeadType, BEAD **Bead, double eigen[3]) {
   // gyration tensor (3x3 array)
   // use long double to ensure precision -- previous problem with truncation in
   // short chains
@@ -810,15 +675,15 @@ void Gyration(int n, int *list, COUNT Counts, BEADTYPE *BeadType,
   long double c_cube = -GyrationTensor[0][0] * GyrationTensor[1][1] -
                        GyrationTensor[0][0] * GyrationTensor[2][2] -
                        GyrationTensor[1][1] * GyrationTensor[2][2] +
-                       SQR(GyrationTensor[1][2]) +
-                       SQR(GyrationTensor[0][1]) +
-                       SQR(GyrationTensor[0][2]);
+                       Square(GyrationTensor[1][2]) +
+                       Square(GyrationTensor[0][1]) +
+                       Square(GyrationTensor[0][2]);
   long double d_cube =
       +GyrationTensor[0][0] * GyrationTensor[1][1] * GyrationTensor[2][2] +
       2 * GyrationTensor[0][1] * GyrationTensor[1][2] * GyrationTensor[0][2] -
-      SQR(GyrationTensor[0][2]) * GyrationTensor[1][1] -
-      SQR(GyrationTensor[0][1]) * GyrationTensor[2][2] -
-      SQR(GyrationTensor[1][2]) * GyrationTensor[0][0];
+      Square(GyrationTensor[0][2]) * GyrationTensor[1][1] -
+      Square(GyrationTensor[0][1]) * GyrationTensor[2][2] -
+      Square(GyrationTensor[1][2]) * GyrationTensor[0][0];
 
   // first root: either 0 or Newton's iterative method to get it //{{{
   long double root0 = 0;
@@ -831,10 +696,10 @@ void Gyration(int n, int *list, COUNT Counts, BEADTYPE *BeadType,
     long double root1 = 1;
 
     while (fabsl(root0 - root1) > 0.0000000001L) {
-      long double f_root0 = (a_cube * CUBE(root0) + b_cube * SQR(root0) +
+      long double f_root0 = (a_cube * Cube(root0) + b_cube * Square(root0) +
                              c_cube * root0 + d_cube);
       long double f_deriv_root0 =
-          (a_deriv * SQR(root0) + b_deriv * root0 + c_deriv);
+          (a_deriv * Square(root0) + b_deriv * root0 + c_deriv);
       root1 = root0 - f_root0 / f_deriv_root0;
 
       // swap root0 and root1 for the next iteration
@@ -852,21 +717,21 @@ void Gyration(int n, int *list, COUNT Counts, BEADTYPE *BeadType,
   long double a_quad = 1;
   long double b_quad = b_cube / a_cube + root0;
   long double c_quad =
-      SQR(root0) + b_cube / a_cube * root0 + c_cube / a_cube; //}}}
+      Square(root0) + b_cube / a_cube * root0 + c_cube / a_cube; //}}}
   // calculate & sort eigenvalues
   long double e[3];
   e[0] = root0; // found out by Newton's method
   // roots of the quadratic equation
-  e[1] = (-b_quad + sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
-  e[2] = (-b_quad - sqrt(SQR(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
+  e[1] = (-b_quad + sqrt(Square(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
+  e[2] = (-b_quad - sqrt(Square(b_quad) - 4 * a_quad * c_quad)) / (2 * a_quad);
   for (int dd = 0; dd < 3; dd++) {
     eigen[dd] = e[dd];
   }
   SortArrayDouble(eigen, 3, 0);
 } //}}}
-
 // evaluate contacts between molecules, creating aggregates //{{{
-int NewAgg(AGGREGATE *Aggregate, SYSTEM *System, int i, int j) {
+static int NewAgg(AGGREGATE *Aggregate, SYSTEM *System,
+                  const int i, const int j) {
   int agg_j = System->Count.Aggregate;
   System->Molecule[j].Aggregate = agg_j;
   Aggregate[agg_j].nMolecules = 1;
@@ -875,7 +740,7 @@ int NewAgg(AGGREGATE *Aggregate, SYSTEM *System, int i, int j) {
   return agg_j;
 }
 void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
-                      int contacts, int **contact) {
+                      const int contacts, int **contact) {
   COUNT *Count = &System->Count;
   // go over all pairs of molecules
   for (int i = 1; i < Count->Molecule; i++) {
@@ -953,9 +818,8 @@ void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
     Count->Aggregate++;
   } //}}}
 } //}}}
-
 // RemovePBCAggregates() //{{{
-void RemovePBCAggregates(double distance, AGGREGATE *Aggregate,
+void RemovePBCAggregates(const double distance, const AGGREGATE *Aggregate,
                          SYSTEM *System) {
   COUNT *Count = &System->Count;
 
@@ -996,10 +860,10 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate,
           int k = list_unmoved[kk];
           bool moved = false;
           // use only moved molecule 'mol1' and unmoved molecule 'mol2'
-          int mol1 = Aggregate[i].Molecule[j],
-              mol2 = Aggregate[i].Molecule[k];
-          int mtype1 = System->Molecule[mol1].Type,
-              mtype2 = System->Molecule[mol2].Type;
+          int mol1 = Aggregate[i].Molecule[j];
+          int mol2 = Aggregate[i].Molecule[k];
+          int mtype1 = System->Molecule[mol1].Type;
+          int mtype2 = System->Molecule[mol2].Type;
 
           // go through all bead pairs in the two molecules
           for (int ll = 0; ll < count_eligible_beads[mtype1]; ll++) {
@@ -1013,7 +877,7 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate,
               // calculate distance between 'bead1' and 'bead2'
               double dist[3];
               Distance(b1->Position, b2->Position, *box, dist);
-              dist[0] = VECTORLENGTH(dist);
+              dist[0] = VectLength(dist);
               // move 'mol2' (or 'k') if 'bead1' and 'bead2' are in contact
               if (dist[0] <= distance) {
                 // distance vector between 'bead1' and 'bead2'
@@ -1087,7 +951,7 @@ void RemovePBCAggregates(double distance, AGGREGATE *Aggregate,
 } //}}}
 
 // should given step be used for calculations? //{{{
-bool UseStep(COMMON_OPT opt, int step) {
+bool UseStep(const COMMON_OPT opt, const int step) {
   if (step >= opt.start &&
       (step <= opt.end || opt.end == -1) &&
       ((step - opt.start) % opt.skip) == 0) {

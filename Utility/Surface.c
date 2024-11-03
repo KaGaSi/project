@@ -11,7 +11,9 @@
 // ...assumes probe + bead distance is 1 (i.e., r_c for DPD bead), that is probe
 // radius and bead radius are the same, specifically 0.5
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -85,9 +87,9 @@ double calc_area(const double A[3], const double B[3], const double C[3]) {
   }
   double a = 0, b = 0, c = 0; // triangle's sidelengths
   for (int dd = 0; dd < 3; dd++) {
-    a = VECTORLENGTH(BC);
-    b = VECTORLENGTH(AC);
-    c = VECTORLENGTH(AB);
+    a = VectLength(BC);
+    b = VectLength(AC);
+    c = VectLength(AB);
   }
   double s = (a + b + c) / 2;
   return sqrt(s * (s - a) * (s - b) * (s - c));
@@ -137,7 +139,7 @@ void SurfacePoint(SYSTEM System, int id, const int map[2], int axis,
   coor[1] = bead->Position[map[1]];
   coor[2] = bead->Position[axis];
   // maximum 3D distance between the probe and the bead (well, square of)
-  double max_dist = SQR(System.BeadType[bead->Type].Radius + opt->probe);
+  double max_dist = Square(System.BeadType[bead->Type].Radius + opt->probe);
   // minimum and maximum possible grid point for specified in-surface coordinate
   int min[2], max[2];
   for (int aa = 0; aa < 2; aa++) {
@@ -169,7 +171,7 @@ void SurfacePoint(SYSTEM System, int id, const int map[2], int axis,
         }
       }
       // actual in-surface-plane disance (well, square of)
-      d[0] = SQR(d[0]) + SQR(d[1]);
+      d[0] = Square(d[0]) + Square(d[1]);
       // 2) only use beads close enough to the probe (in surface plane)
       if (d[0] <= max_dist) {
         // 'bottom' surface for bilayers or 'top' surface for brushes
@@ -250,7 +252,7 @@ int main(int argc, char *argv[]) {
   int vals[2];
   FileDoubleOption(argc, argv, 1, "-wd", &distr_width, vals, opt->width_distr);
   FileOption(argc, argv, "-w", opt->width_avg);
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
   opt->in = BoolOption(argc, argv, "--in");
   opt->bonded = BoolOption(argc, argv, "--bonded");
   if (!DoubleOption1(argc, argv, "-r", &opt->probe)) {
@@ -617,7 +619,7 @@ int main(int argc, char *argv[]) {
           area[dd] += avg_triangle[dd] * (n_triangles - triangles[dd]);
         }
         double Length_area = sidelength[0] * sidelength[1];
-        double width_area = (bins_step[0] - 1) * (bins_step[1] - 1) * SQR(width);
+        double width_area = (bins_step[0] - 1) * (bins_step[1] - 1) * Square(width);
         FILE *out = OpenFile(opt->area_file, "a");
         fprintf(out, "%d %lf %lf %lf\n", count_coor,
                                          area[0] * Length_area / width_area,
@@ -801,7 +803,7 @@ int main(int argc, char *argv[]) {
       area[dd] += avg_triangle[dd] * (n_triangles - triangles[dd]);
     }
     double Length_area = System.Box.Length[0] * System.Box.Length[1];
-    double width_area = (max[0] - 1) * (max[1] - 1) * SQR(width);
+    double width_area = (max[0] - 1) * (max[1] - 1) * Square(width);
     FILE *out = OpenFile(opt->area_file, "a");
     fprintf(out, "# average: (1) surface 1");
     fprintf(out, "; (2) surface 2");

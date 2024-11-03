@@ -1,6 +1,8 @@
 #include "../AnalysisTools.h"
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -70,7 +72,7 @@ int main(int argc, char *argv[]) {
   fout.type = CoordinateFileType(fout.name);
 
   // options before reading system data //{{{
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
   opt->reverse = BoolOption(argc, argv, "--reverse");
   opt->join = BoolOption(argc, argv, "--join");
   opt->wrap = BoolOption(argc, argv, "--wrap");

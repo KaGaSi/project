@@ -1,7 +1,9 @@
 #include "../AnalysisTools.h"
 #include <stdio.h>
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -86,7 +88,7 @@ int main ( int argc, char** argv ) {
   }
 
   SYS_FILES trash = InitSysFiles; // unused
-  opt->c = CommonOptions(argc, argv, LINE, trash);
+  opt->c = CommonOptions(argc, argv, trash);
   opt->c.start--; // discarded steps rather than starting step //TODO: change
 
   // -tau option: use block method to get overall average (and stderr and tau)
@@ -200,7 +202,7 @@ int main ( int argc, char** argv ) {
       for (int j = 0; j < data_per_block; j++) {
         for (int col = 0; col < col_count; col++) {
           avg_all[col][0] += data[col][k];
-          avg_all[col][1] += SQR(data[col][k]);
+          avg_all[col][1] += Square(data[col][k]);
           avg_block[col][i] += data[col][k];
         }
         k++;
@@ -220,14 +222,14 @@ int main ( int argc, char** argv ) {
       // standard deviation for block averages
       double block_stdev = 0;
       for (int i = 0; i < opt->tau; i++) {
-        block_stdev += SQR(avg_block[col][i] - avg_all[col][0]);
+        block_stdev += Square(avg_block[col][i] - avg_all[col][0]);
       }
       block_stdev /= opt->tau - 1;
       // statistical error
       error[col] = sqrt(block_stdev / opt->tau);
       // approximate integrated autocorrelation time
       tau_int[col] = 0.5 * data_per_block * block_stdev /
-                     (avg_all[0][1] - SQR(avg_all[0][0]));
+                     (avg_all[0][1] - Square(avg_all[0][0]));
     }
 
     // print number of blocks, average, statistical error, and estimate of tau

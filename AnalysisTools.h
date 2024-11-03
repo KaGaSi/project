@@ -4,63 +4,57 @@
 #define _POSIX_C_SOURCE 200809L
 
 #include "Structs.h"
+#include "Globals.h"
+#include "MathUtils.h"
 #include "System.h"
 #include "Errors.h"
 #include "General.h"
 #include "Options.h"
-#include "Read.h"
+#include "ReadWrite.h"
+#include "ReadWriteVtf.h"
+#include "ReadWriteXyz.h"
 #include "Write.h"
 // #include <dirent.h>
 // #include <sys/stat.h>
 
 // Helper functions for dealing with SYSTEM structure
 // identify bead type based on name
-int FindBeadType(char name[], SYSTEM System);
+int FindBeadType(const char *name, const SYSTEM System);
 // identify molecule type based on name
-int FindMoleculeName(char name[], SYSTEM System);
+int FindMoleculeName(const char *name, const SYSTEM System);
 // identify molecule type based on name only or on other parameters too
-int FindMoleculeType(SYSTEM Sys1, MOLECULETYPE mt, SYSTEM Sys2, int mode);
-
+int FindMoleculeType(const SYSTEM Sys1, const MOLECULETYPE mt,
+                     const SYSTEM Sys2, const int mode);
 // Helper functions for manipulating coordinates
 // wrap coordinates into simulation box and/or join molecules
-void WrapJoinCoordinates(SYSTEM *System, bool wrap, bool join);
+void WrapJoinCoordinates(SYSTEM *System, const bool wrap, const bool join);
 // distance between two beads; in the range <-BoxLength/2,BoxLength/2)
 void Distance(const double id1[3], const double id2[3],
               const double BoxLength[3], double out[3]);
 // calculate centre of mass for a list of beads
-void CentreOfMass(int n, const int list[], SYSTEM System, double gc[3]);
+void CentreOfMass(const int n, const int *list,
+                  const SYSTEM System, double gc[3]);
 // calculate geometric centre for a list of beads
-void GeomCentre(int n, const int *list, BEAD *Bead, double gc[3]);
-
+void GeomCentre(const int n, const int *list, const BEAD *Bead, double gc[3]);
 // identify input coordinate and structure files
-// bool InputCoorStruct(int argc, char *argv[], char coor[], int *coor_type,
-//                      char struc[], int *struc_type);
-bool InputCoorStruct(int argc, char *argv[], SYS_FILES *f);
-// identify type of provided structure file (mode=0: input, mode=1 output file)
-int StructureFileType(char name[]);
-int CoordinateFileType(char name[]);
-int FileType(char name[]);
-
+bool InputCoorStruct(const int argc, char **argv, SYS_FILES *f);
+int StructureFileType(const char *name);
+int CoordinateFileType(const char *name);
+int FileType(const char *name);
 // create a cell-linked list
-void LinkedList(SYSTEM System, int **Head, int **Link, double cell_size,
-                int n_cells[3], int Dc[14][3]);
+void LinkedList(const SYSTEM System, int **Head, int **Link,
+                const double cell_size, int n_cells[3], int Dc[14][3]);
 int SelectCell1(const int c1[3], const int n_cells[3]);
 int SelectCell2(const int c1[3], const int n_cells[3],
                 const int Dc[14][3], const int n);
-
 // calculate gyration tensor and various shape descriptors
-void Gyration(int n, int *list, COUNT Counts, BEADTYPE *BeadType,
-              BEAD **Bead, double eigen[3]);
-
+void Gyration(const int n, const int *list, const COUNT Counts,
+              const BEADTYPE *BeadType, BEAD **Bead, double eigen[3]);
 // TODO: redo
 void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
-                      int contacts, int **contact);
-
-// void RemovePBCAggregates(double distance, AGGREGATE *Aggregate, COUNT Counts,
-//                          VECTOR BoxLength, BEADTYPE *BeadType, BEAD *Bead,
-//                          MOLECULETYPE *MoleculeType, MOLECULE *Molecule);
-void RemovePBCAggregates(double distance, AGGREGATE *Aggregate,
+                      const int contacts, int **contact);
+void RemovePBCAggregates(const double distance, const AGGREGATE *Aggregate,
                          SYSTEM *System);
 
-bool UseStep(COMMON_OPT opt, int step);
+bool UseStep(const COMMON_OPT opt, int step);
 #endif

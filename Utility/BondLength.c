@@ -1,6 +1,8 @@
 #include "../AnalysisTools.h"
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -82,7 +84,7 @@ int main(int argc, char *argv[]) {
   s_strcpy(fout, argv[++count], LINE);
 
   // options before reading system data //{{{
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
   // --joined option //{{{
   if (BoolOption(argc, argv, "--joined")) {
     opt->join = false; // joined coordinates supplied, so no need to join
@@ -234,7 +236,7 @@ int main(int argc, char *argv[]) {
             for (int dd = 0; dd < 3; dd++) {
               bond[dd] = b_1->Position[dd] - b_2->Position[dd];
             }
-            bond[0] = VECTORLENGTH(bond);
+            bond[0] = VectLength(bond);
             // warn if bond is too long //{{{
             if (opt->warn != HIGHNUM && bond[0] > opt->warn) {
               snprintf(ERROR_MSG, LINE, "-w option; too long a bond between "
@@ -307,7 +309,7 @@ int main(int argc, char *argv[]) {
               for (int dd = 0; dd < 3; dd++) {
                 dist[dd] = b_1->Position[dd] - b_2->Position[dd];
               }
-              dist[0] = VECTORLENGTH(dist);
+              dist[0] = VectLength(dist);
 
               // distance mins & maxes & averages //{{{
               if (dist[0] < bond_d_mma[mol_i->Type][j/2][0]) { // minimum

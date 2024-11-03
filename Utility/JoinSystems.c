@@ -2,7 +2,9 @@
 
 // TODO: --real switch for the -b and -off options
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -83,7 +85,7 @@ int main(int argc, char *argv[]) {
     s_strcpy(in[1].stru.name, tmp, LINE);
     in[1].stru.type = StructureFileType(in[1].stru.name);
   } //}}}
-  opt->c = CommonOptions(argc, argv, LINE, in[0]);
+  opt->c = CommonOptions(argc, argv, in[0]);
   // -st option for both input systems; copied from CommonOptions()
   opt->start[0] = 1, opt->start[1] = 1;
   IntegerOption1(argc, argv, "-st1", &opt->start[0]);

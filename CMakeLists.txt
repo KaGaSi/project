@@ -20,10 +20,20 @@ set(CMAKE_C_FLAGS_RELEASE "-O3") # for -DCMAKE_BUILD_TYPE=Release
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# # Ensure PIC is used (this is typically unnecessary for shared libraries)
+# set_target_properties(mylib PROPERTIES POSITION_INDEPENDENT_CODE ON)
+# add_library(AnalysisTools SHARED
 add_library(AnalysisTools
             AnalysisTools.c
-            Read.c
-            Write.c
+            Globals.c
+            MathUtils.h
+            ReadWrite.c
+            ReadWriteVtf.c
+            ReadWriteXyz.c
+            ReadWriteLtrj.c
+            ReadWriteLdata.c
+            ReadWriteField.c
+            ReadWriteConfig.c
             Options.c
             System.c
             Errors.c

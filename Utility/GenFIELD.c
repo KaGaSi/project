@@ -10,7 +10,8 @@ bool file_exists (char *filename) {
   return (stat (filename, &buffer) == 0);
 }
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) { //{{{
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -61,7 +62,7 @@ int main(int argc, char *argv[]) {
   PrintCommand(stdout, argc, argv);
 
   SYS_FILES trash = InitSysFiles;
-  opt->c = CommonOptions(argc, argv, LINE, trash);
+  opt->c = CommonOptions(argc, argv, trash);
 
   SYSTEM System;
   InitSystem(&System);

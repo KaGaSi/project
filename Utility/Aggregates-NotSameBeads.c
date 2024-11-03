@@ -1,9 +1,9 @@
 #include "Aggregates.h"
 #include "../AnalysisTools.h"
 
-// TODO: fractional
-
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -42,7 +42,7 @@ OPT * opt_create(void) {
 
 // CalculateAggregates() //{{{
 void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt) {
-  double sqdist = SQR(opt.distance);
+  double sqdist = Square(opt.distance);
   COUNT *Count = &System->Count;
   Count->Aggregate = 0;
   // zeroize
@@ -100,7 +100,7 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt) {
                   double rij[3];
                   Distance(b_i->Position, b_j->Position,
                            System->Box.Length, rij);
-                  rij[0] = SQR(rij[0]) + SQR(rij[1]) + SQR(rij[2]);
+                  rij[0] = Square(rij[0]) + Square(rij[1]) + Square(rij[2]);
                   // are 'i' and 'j' close enough?
                   if (mol_i != mol_j && rij[0] <= sqdist) {
                     // xm option
@@ -199,7 +199,7 @@ int main(int argc, char *argv[]) {
   } //}}}
 
   // options before reading system data
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
 
   // -j option - save coordinates of joined aggregates //{{{
   opt->fout = InitFile;

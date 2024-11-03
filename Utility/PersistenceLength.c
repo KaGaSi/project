@@ -1,6 +1,8 @@
 #include "../AnalysisTools.h"
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -57,7 +59,7 @@ int main(int argc, char *argv[]) {
   s_strcpy(fout, argv[++count], LINE);
 
   // options before reading system data //{{{
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
   // --joined option
   if (BoolOption(argc, argv, "--joined")) {
     opt->join = false; // joined coordinates supplied, so no need to join
@@ -142,7 +144,7 @@ int main(int argc, char *argv[]) {
                 }
                 // bond lengths
                 double size[2];
-                size[0] = VECTORLENGTH(u);
+                size[0] = VectLength(u);
                 avg_bond[mol_i->Type][0] += size[0];
                 avg_bond[mol_i->Type][1]++;
                 for (int k = (j + 1); k < mt_i->nBonds; k++) {
@@ -155,7 +157,7 @@ int main(int argc, char *argv[]) {
                     v[dd] = bk1->Position[dd] - bk2->Position[dd];
                   }
                   // bond lengths
-                  size[1] = VECTORLENGTH(v);
+                  size[1] = VectLength(v);
                   double scalar = u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
                   // sum of cos(\phi)
                   cos_phi[mol_i->Type][j][k] += scalar / (size[0] * size[1]);

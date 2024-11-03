@@ -53,7 +53,7 @@ void PruneSystem(SYSTEM *System);
 void ConcatenateSystems(SYSTEM *S_out, SYSTEM S_in, BOX Box, bool prune);
 
 // check that the System struct doesn't contain an error
-void CheckSystem(SYSTEM System, char file[]);
+void CheckSystem(const SYSTEM System, const char *file);
 
 // simplify system for vtf output - remove stuff vtf does not support
 void VtfSystem(SYSTEM *System);

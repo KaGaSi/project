@@ -4,7 +4,9 @@
 //       number, and work in relative coordinates (relative to instantaneous
 //       dimensions) throughout the code
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -69,7 +71,7 @@ int main(int argc, char *argv[]) {
   fout_rho[LINE-7] = '\0'; // for adding -<axis>.rho
 
   // options before reading system data
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
 
   if (!opt->c.silent) {
     PrintCommand(stdout, argc, argv);

@@ -2,7 +2,9 @@
 #include <string.h>
 #include <stdarg.h>
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -82,7 +84,7 @@ int main(int argc, char *argv[]) {
   if (FileOption(argc, argv, "-o", opt->fout.name)) {
     opt->fout.type = FileType(opt->fout.name);
   } //}}}
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
   // extra bead types for data output (-ebt option)
   opt->ebt = 0;
   IntegerOption1(argc, argv, "-ebt", &opt->ebt);

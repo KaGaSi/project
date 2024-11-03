@@ -1,6 +1,8 @@
 #include "../AnalysisTools.h"
 
-void Help(char cmd[50], bool error, int n, char opt[n][OPT_LENGTH]) { //{{{
+// Help() //{{{
+void Help(const char cmd[50], const bool error,
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -95,7 +97,7 @@ int main(int argc, char *argv[]) {
   s_strcpy(output_rho, argv[++count], LINE);
 
   // options before reading system data //{{{
-  opt->c = CommonOptions(argc, argv, LINE, in);
+  opt->c = CommonOptions(argc, argv, in);
   // --joined option //{{{
   if (BoolOption(argc, argv, "--joined")) {
     opt->join = false; // joined coordinates supplied, so no need to join
@@ -278,7 +280,7 @@ int main(int argc, char *argv[]) {
             // if (System.MoleculeType[moltype].Flag) {
               double dist[3];
               Distance(System.Bead[bead].Position, com, box, dist);
-              dist[0] = VECTORLENGTH(dist);
+              dist[0] = VectLength(dist);
 
               if (dist[0] < max_dist) {
                 int k = dist[0] / width;
@@ -293,7 +295,7 @@ int main(int argc, char *argv[]) {
             int id = System.Unbonded[j];
             double dist[3];
             Distance(System.Bead[id].Position, com, box, dist);
-            dist[0] = VECTORLENGTH(dist);
+            dist[0] = VectLength(dist);
 
             if (dist[0] < max_dist) {
               int k = dist[0] / width;
@@ -307,7 +309,7 @@ int main(int argc, char *argv[]) {
           for (int j = 0; j < Count->BeadType; j++) {
             for (int k = 0; k < bins; k++) {
               rho[j][correct_size][k] += temp_rho[j][correct_size][k];
-              rho_2[j][correct_size][k] += SQR(temp_rho[j][correct_size][k]);
+              rho_2[j][correct_size][k] += Square(temp_rho[j][correct_size][k]);
             }
           } //}}}
 
@@ -374,7 +376,7 @@ int main(int argc, char *argv[]) {
 
     // calculate rdf
     for (int j = 0; j < bins; j++) {
-      double shell = 4 * PI * CUBE(width) * (CUBE(j+1) - CUBE(j)) / 3;
+      double shell = 4 * PI * Cube(width) * (Cube(j+1) - Cube(j)) / 3;
       fprintf(out, "%.2f", width*(2*j+1)/2);
 
       for (int k = 0; k < Count->BeadType; k++) {
