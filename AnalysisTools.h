@@ -11,9 +11,6 @@
 #include "General.h"
 #include "Options.h"
 #include "ReadWrite.h"
-#include "ReadWriteVtf.h"
-#include "ReadWriteXyz.h"
-#include "Write.h"
 // #include <dirent.h>
 // #include <sys/stat.h>
 

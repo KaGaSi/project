@@ -74,4 +74,10 @@ void FreeSystem(SYSTEM *System);
 void FreeMoleculeType(MOLECULETYPE *MoleculeType);
 void FreeMoleculeTypeEssentials(MOLECULETYPE *MoleculeType);
 void FreeAggregate(COUNT Count, AGGREGATE *Aggregate);
+
+// realloc some System.*{,Coor} arrays
+void ReallocBead(SYSTEM *System);
+void ReallocBonded(SYSTEM *System);
+void ReallocUnbonded(SYSTEM *System);
+void ReallocMolecule(SYSTEM *System);
 #endif

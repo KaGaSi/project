@@ -30,7 +30,9 @@ void CopyMoleculeTypeBeadsToMoleculeBeads(SYSTEM *System) { //{{{
       mol_i->Type = i;
       mol_i->Index = i;
       mol_i->Bead = malloc(sizeof *mol_i->Bead * mt_i->nBeads);
-      memcpy(mol_i->Bead, mt_i->Bead, sizeof *mt_i->Bead * mt_i->nBeads);
+      for (int j = 0; j < mt_i->nBeads; j++) {
+        mol_i->Bead[j] = mt_i->Bead[j];
+      }
     }
   }
 } //}}}
@@ -354,6 +356,18 @@ void FillMoleculeTypeImproper(SYSTEM *System, const int (*improper)[5],
     }
   }
 } //}}}
+void CopyStuff(const int n, const int num,
+               int (**old)[num], int (**new)[num]) {
+  if (n > 0) {
+    *new = malloc(sizeof **new * n);
+    for (int j = 0; j < n; j++) {
+      for (int aa = 0; aa < num; aa++) {
+        (*new)[j][aa] = (*old)[j][aa];
+      }
+    }
+    free(*old);
+  }
+}
 // RemoveExtraTypes() { //{{{
 /*
  * Remove bead and molecule types with .Number=0. It assumes the allocated
@@ -405,33 +419,14 @@ void RemoveExtraTypes(SYSTEM *System) {
         MOLECULETYPE *mt_new = &System->MoleculeType[mt_id];
         *mt_new = *mt_i;
         mt_new->Bead = malloc(sizeof *mt_new->Bead * mt_new->nBeads);
-        memcpy(mt_new->Bead, mt_i->Bead, sizeof *mt_i->Bead * mt_i->nBeads);
+        for (int j = 0; j < mt_new->nBeads; j++) {
+          mt_new->Bead[j] = mt_i->Bead[j];
+        }
         free(mt_i->Bead);
-        if (mt_new->nBonds > 0) {
-          mt_new->Bond = malloc(sizeof *mt_new->Bond * mt_new->nBonds);
-          memcpy(mt_new->Bond, mt_i->Bond, sizeof *mt_i->Bond * mt_i->nBonds);
-          free(mt_i->Bond);
-        }
-        if (mt_new->nAngles > 0) {
-          mt_new->Angle = malloc(sizeof *mt_new->Angle * mt_new->nAngles);
-          memcpy(mt_new->Angle, mt_i->Angle,
-                 sizeof *mt_i->Angle * mt_i->nAngles);
-          free(mt_i->Angle);
-        }
-        if (mt_new->nDihedrals > 0) {
-          mt_new->Dihedral = malloc(sizeof *mt_new->Dihedral *
-                                    mt_new->nDihedrals);
-          memcpy(mt_new->Dihedral, mt_i->Dihedral,
-                 sizeof *mt_i->Dihedral * mt_i->nDihedrals);
-          free(mt_i->Dihedral);
-        }
-        if (mt_new->nImpropers > 0) {
-          mt_new->Improper = malloc(sizeof *mt_new->Improper *
-                                    mt_new->nImpropers);
-          memcpy(mt_new->Improper, mt_i->Improper,
-                 sizeof *mt_i->Improper * mt_i->nImpropers);
-          free(mt_i->Improper);
-        }
+        CopyStuff(mt_new->nBonds, 3, &mt_i->Bond, &mt_new->Bond);
+        CopyStuff(mt_new->nAngles, 4, &mt_i->Angle, &mt_new->Angle);
+        CopyStuff(mt_new->nDihedrals, 5, &mt_i->Dihedral, &mt_new->Dihedral);
+        CopyStuff(mt_new->nImpropers, 5, &mt_i->Improper, &mt_new->Improper);
         // Molecule struct
         MOLECULE *mol_new = &System->Molecule[mt_id];
         mol_new->Type = mt_id;
@@ -637,7 +632,8 @@ int ReadAggregates(FILE *fr, const char *file, SYSTEM *System,
       Aggregate[i].Molecule[j] = mol;
       System->Molecule[mol].Aggregate = i;
     }
-    while (getc(fr) != '\n')
+    int ch;
+    while ((ch = getc(fr)) != '\n' && ch != EOF)
       ;
   }
   // fill the rest of aggregate info
@@ -734,6 +730,9 @@ void WriteTimestep(FILE_TYPE f, SYSTEM System, int count_step,
       break;
     case LDATA_FILE:
       WriteLmpData(System, f.name, false, argc, argv);
+      break;
+    case CONFIG_FILE:
+      WriteConfig(System, f.name);
       break;
     default:
       snprintf(ERROR_MSG, LINE, "no action specified for output coor_type %s%d",

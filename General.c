@@ -1,8 +1,6 @@
 #include "General.h"
 #include "Errors.h"
 
-static bool ReadLine(FILE *fr, char *line);
-
 // convert string into a number if possible //{{{
 /* Functions to test provided string and convert it to a number type. Note that
  * the conversion stops when it encounters an illegal character, so only the
@@ -99,13 +97,11 @@ bool ReadLine(FILE *fr, char *line) { //{{{
     return false; // error/EOF
   }
   // if the line is too long, skip the rest of it
-  if (strcspn(line, "\n") == (LINE-1)) {
-    int test;
-    do {
-      test = getc(fr);
-    } while (test != '\n' && test != EOF);
-    if (test == EOF) {
-      return false;
+  size_t len = strcspn(line, "\n");
+  if (len == (LINE - 1) && line[len] != '\n') {
+    int ch;
+    while ((ch = getc(fr)) != '\n' && ch != EOF) {
+      // No buffer involved; safe to skip characters directly
     }
   }
   return true;

@@ -1,4 +1,5 @@
 #include "ReadWriteField.h"
+#include "General.h"
 
 /*
  * Function to read dl_meso FIELD-like file as a structure file
@@ -98,8 +99,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
   long val;
   if (words < 2 || !IsWholeNumber(split[1], &val)) {
     err_msg("incorrect 'Molecules' keyword line");
-    PrintErrorFileLine(file, line_count);
-    exit(1);
+    goto error;
   } //}}}
   COUNT *Count = &System->Count;
   Count->MoleculeType = val;
@@ -136,11 +136,9 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       } //}}}
       if (words == 0) {
         err_msg("missing molecule name");
-        PrintErrorFileLine(file, line_count);
-        exit(1);
+        goto error;
       }
-      strncpy(mt_i->Name, split[0], MOL_NAME);
-      mt_i->Name[MOL_NAME - 1] = '\0'; // null-terminate! //}}}
+      s_strcpy(mt_i->Name, split[0], MOL_NAME); //}}}
       // 2) number of molecules //{{{
       line_count++;
       // read a line //{{{
@@ -152,8 +150,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
           // !IsNaturalNumber(split[1], &val)) {
           !IsIntegerNumber(split[1], &val) || val < 0) {
         err_msg("incorrect 'nummols' line in a molecule entry");
-        PrintErrorFileLine(file, line_count);
-        exit(1);
+        goto error;
       } else if (val == 0) {
         do {
           line_count++;
@@ -179,8 +176,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       if (words < 2 || strncasecmp(split[0], "beads", 4) != 0 ||
           !IsNaturalNumber(split[1], &val)) {
         err_msg("incorrect 'beads' line in a molecule entry");
-        PrintErrorFileLine(file, line_count);
-        exit(1);
+        goto error;
       }
       mt_i->nBeads = val; //}}}
       mt_i->Bead = malloc(sizeof *mt_i->Bead * mt_i->nBeads);
@@ -199,8 +195,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
             !IsRealNumber(split[2], &coor[j][1]) ||
             !IsRealNumber(split[3], &coor[j][2])) {
           err_msg("incorrect bead coordinate line in a molecule entry");
-          PrintErrorFileLine(file, line_count);
-          exit(1);
+          goto error;
         } //}}}
         int btype = FindBeadType(split[0], *System);
         // error - unknown type //{{{
@@ -294,14 +289,12 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
               !IsNaturalNumber(split[2], &beads[1]) ||
               beads[0] == beads[1]) {
             err_msg("incorrect bond line in a molecule entry");
-            PrintErrorFileLine(file, line_count);
-            exit(1);
+            goto error;
           } //}}}
           // error - bead index is too high //{{{
           if (beads[0] > mt_i->nBeads || beads[1] > mt_i->nBeads) {
             err_msg("bead index in a bond is too high");
-            PrintErrorFileLine(file, line_count);
-            exit(1);
+            goto error;
           }                                //}}}
           mt_i->Bond[j][0] = beads[0] - 1; // in FIELD, indices start from 1
           mt_i->Bond[j][1] = beads[1] - 1; //
@@ -357,8 +350,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       } else {
         snprintf(ERROR_MSG, LINE, "unrecognised line in an entry for "
                  "molecule %s%s", ErrYellow(), mt_i->Name);
-        PrintErrorFileLine(file, line_count);
-        exit(1);
+        goto error;
       } //}}}
       // 5) angles in the molecule (if present) //{{{
       line_count++;
@@ -372,8 +364,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
         if (!IsNaturalNumber(split[1], &val)) {
           snprintf(ERROR_MSG, LINE, "incorrect line in 'angles' line for "
                    "molecule %s%s", ErrYellow(), mt_i->Name);
-          PrintErrorFileLine(file, line_count);
-          exit(1);
+          goto error;
         }
         mt_i->nAngles = val; //}}}
         mt_i->Angle = malloc(sizeof *mt_i->Angle * mt_i->nAngles);
@@ -394,22 +385,16 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
               !IsNaturalNumber(split[2], &beads[1]) ||
               !IsNaturalNumber(split[3], &beads[2]) || beads[0] == beads[1] ||
               beads[0] == beads[2] || beads[1] == beads[2]) {
-            snprintf(ERROR_MSG, LINE,
-                     "incorrect line in an entry for "
-                     "molecule %s%s",
-                     ErrYellow(), mt_i->Name);
-            PrintErrorFileLine(file, line_count);
-            exit(1);
+            snprintf(ERROR_MSG, LINE, "incorrect line in an entry for "
+                     "molecule %s%s", ErrYellow(), mt_i->Name);
+            goto error;
           } //}}}
           // error - bead index is too high //{{{
           if (beads[0] > mt_i->nBeads || beads[1] > mt_i->nBeads ||
               beads[2] > mt_i->nBeads) {
-            snprintf(ERROR_MSG, LINE,
-                     "bead index in an angle is too high in "
-                     "molecule %s%s",
-                     ErrYellow(), mt_i->Name);
-            PrintErrorFileLine(file, line_count);
-            exit(1);
+            snprintf(ERROR_MSG, LINE, "bead index in an angle is too high in "
+                     "molecule %s%s", ErrYellow(), mt_i->Name);
+            goto error;
           } //}}}
           mt_i->Angle[j][0] = beads[0] - 1; // in FIELD, bead indices go from 1
           mt_i->Angle[j][1] = beads[1] - 1; //
@@ -465,12 +450,9 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       } else if (words > 0 && strcasecmp(split[0], "finish") == 0) {
         continue;
       } else {
-        snprintf(ERROR_MSG, LINE,
-                 "unrecognised line in an entry for molecule "
-                 "%s%s",
-                 ErrYellow(), mt_i->Name);
-        PrintErrorFileLine(file, line_count);
-        exit(1);
+        snprintf(ERROR_MSG, LINE, "unrecognised line in an entry for molecule "
+                 "%s%s", ErrYellow(), mt_i->Name);
+        goto error;
       } //}}}
       // 6) dihedrals in the molecule (if present) //{{{
       line_count++;
@@ -519,11 +501,12 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
             exit(1);
           } //}}}
           // error - bead index is too high //{{{
-          if (beads[0] > mt_i->nBeads || beads[1] > mt_i->nBeads ||
-              beads[2] > mt_i->nBeads || beads[3] > mt_i->nBeads) {
+          if (beads[0] > mt_i->nBeads ||
+              beads[1] > mt_i->nBeads ||
+              beads[2] > mt_i->nBeads ||
+              beads[3] > mt_i->nBeads) {
             err_msg("bead index in a improper is too high");
-            PrintErrorFileLine(file, line_count);
-            exit(1);
+            goto error;
           }                                    //}}}
           mt_i->Dihedral[j][0] = beads[0] - 1; // in FIELD, indices start from 1
           mt_i->Dihedral[j][1] = beads[1] - 1; //
@@ -580,8 +563,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       } else {
         snprintf(ERROR_MSG, LINE, "unrecognised line in an entry for molecule "
                  "%s%s", ErrYellow(), mt_i->Name);
-        PrintErrorFileLine(file, line_count);
-        exit(1);
+        goto error;
       } //}}}
       // 7) impropers in the molecule (if present) //{{{
       line_count++;
@@ -634,8 +616,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
           if (beads[0] > mt_i->nBeads || beads[1] > mt_i->nBeads ||
               beads[2] > mt_i->nBeads || beads[3] > mt_i->nBeads) {
             err_msg("bead index in a improper is too high");
-            PrintErrorFileLine(file, line_count);
-            exit(1);
+            goto error;
           }                                    //}}}
           mt_i->Improper[j][0] = beads[0] - 1; // in FIELD, indices start from 1
           mt_i->Improper[j][1] = beads[1] - 1; //
@@ -714,6 +695,9 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
     Count->HighestResid = Count->Molecule;
   }
   fclose(fr);
+error: // unrecognised line //{{{
+  PrintErrorFileLine(file, line_count);
+  exit(1); //}}}
 } //}}}
 SYSTEM FieldRead(const char *file) { //{{{
   SYSTEM System;

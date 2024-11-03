@@ -248,12 +248,12 @@ static int LtrjReadTimestepPreamble(FILE *fr, const char *file, BOX *box,
   }
   return count;
 } //}}}
+// LtrjSkipItemTimestep() //{{{
 static int LtrjSkipItemTimestep(FILE *fr, const char *file,
-                                int *line_count) { //{{{
+                                int *line_count) {
   (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-    // ErrorEOF(file); // proper eof - before the first line of a timestep
-    return -2;
+    return -2; // proper eof - before the first line of a timestep
   }
   if (!LtrjCheckTimestepLine()) {
     err_msg("missing 'ITEM: TIMESTEP' line");
@@ -268,8 +268,9 @@ static int LtrjSkipItemTimestep(FILE *fr, const char *file,
   }
   return 1;
 } //}}}
+// LtrjReadNumberOfAtoms() //{{{
 static int LtrjReadNumberOfAtoms(FILE *fr, const char *file,
-                                 int *line_count) { //{{{
+                                 int *line_count) {
   // read until 'ITEM: NUMBER OF ATOMS' line
   (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {

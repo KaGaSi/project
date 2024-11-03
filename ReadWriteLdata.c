@@ -1,12 +1,10 @@
 #include "ReadWriteLdata.h"
+#include "General.h"
+#include "System.h"
 
 // TODO: LmpDataReadDihedralCoeffs() and LmpDataReadImproperCoeffs() should read
 //       up to three numbers, not assuming any format of the potential
 
-/*
- * Functions to read lammps data file as a structure file (LmpDataReadStruct) or
- * a coordinate file (LmpDataReadTimestep)
- */
 // Helper functions for lmpdata file
 // read header of the lammps data file
 static int LmpDataReadHeader(FILE *fr, const char *file,
@@ -42,6 +40,7 @@ static void LmpDataReadDihedrals(FILE *fr, const char *file, const COUNT Count,
                                  int (*dihedral)[5], int *line_count);
 static void LmpDataReadImpropers(FILE *fr, const char *file, const COUNT Count,
                                  int (*improper)[5], int *line_count);
+static bool ReadPbc(BOX *box);
 
 // read header //{{{
 static int LmpDataReadHeader(FILE *fr, const char *file,
@@ -178,48 +177,13 @@ static int LmpDataReadHeader(FILE *fr, const char *file,
           System->ImproperType[i] = InitParams;
         }
       }
+    }
       //}}}
-    // <double> <double> xlo xhi //{{{
-    } else if (words > 3 && strcmp(split[2], "xlo") == 0 &&
-               strcmp(split[3], "xhi") == 0) {
-      double xlo, xhi;
-      if (!IsRealNumber(split[0], &xlo) || !IsRealNumber(split[1], &xhi)) {
-        goto error;
-      }
-      System->Box.Low[0] = xlo;
-      System->Box.OrthoLength[0] = xhi - xlo; //}}}
-    // <double> <double> ylo yhi //{{{
-    } else if (words > 3 && strcmp(split[2], "ylo") == 0 &&
-               strcmp(split[3], "yhi") == 0) {
-      double ylo, yhi;
-      if (!IsRealNumber(split[0], &ylo) || !IsRealNumber(split[1], &yhi)) {
-        goto error;
-      }
-      System->Box.Low[1] = ylo;
-      System->Box.OrthoLength[1] = yhi - ylo; //}}}
-    // <double> <double> zlo zhi //{{{
-    } else if (words > 3 && strcmp(split[2], "zlo") == 0 &&
-               strcmp(split[3], "zhi") == 0) {
-      double zlo, zhi;
-      if (!IsRealNumber(split[0], &zlo) || !IsRealNumber(split[1], &zhi)) {
-        goto error;
-      }
-      System->Box.Low[2] = zlo;
-      System->Box.OrthoLength[2] = zhi - zlo; //}}}
-    // <double> <double> <double> xy xz yz //{{{
-    } else if (words > 5 && strcmp(split[3], "xy") == 0 &&
-               strcmp(split[4], "xz") == 0 && strcmp(split[5], "yz") == 0) {
-      double xy, xz, yz;
-      if (!IsRealNumber(split[0], &xy) || !IsRealNumber(split[1], &xz) ||
-          !IsRealNumber(split[2], &yz)) {
-        goto error;
-      }
-      System->Box.transform[0][1] = xy;
-      System->Box.transform[0][2] = xz;
-      System->Box.transform[1][2] = yz;
-    }                                                             //}}}
+    if (!ReadPbc(&System->Box)) {
+      goto error;
+    }
   } while (words == 0 || split[0][0] < 'A' || split[0][0] > 'Z'); //}}}
-  //  return file pointer to before the first capital-letter-starting line
+  // return file pointer to before the first capital-letter-starting line
   fsetpos(fr, &position);
   (*line_count)--;
   // check all necessary parts were read //{{{
@@ -345,45 +309,10 @@ int LmpDataReadTimestep(FILE *fr, const char *file,
         PrintErrorFile(file, "\0", "\0");
         exit(1);
       } //}}}
-      // <double> <double> xlo xhi //{{{
-    } else if (words > 3 && strcmp(split[2], "xlo") == 0 &&
-               strcmp(split[3], "xhi") == 0) {
-      double xlo, xhi;
-      if (!IsRealNumber(split[0], &xlo) || !IsRealNumber(split[1], &xhi)) {
-        goto error;
-      }
-      System->Box.Low[0] = xlo;
-      System->Box.OrthoLength[0] = xhi - xlo; //}}}
-      // <double> <double> ylo yhi //{{{
-    } else if (words > 3 && strcmp(split[2], "ylo") == 0 &&
-               strcmp(split[3], "yhi") == 0) {
-      double ylo, yhi;
-      if (!IsRealNumber(split[0], &ylo) || !IsRealNumber(split[1], &yhi)) {
-        goto error;
-      }
-      System->Box.Low[1] = ylo;
-      System->Box.OrthoLength[1] = yhi - ylo; //}}}
-      // <double> <double> zlo zhi //{{{
-    } else if (words > 3 && strcmp(split[2], "zlo") == 0 &&
-               strcmp(split[3], "zhi") == 0) {
-      double zlo, zhi;
-      if (!IsRealNumber(split[0], &zlo) || !IsRealNumber(split[1], &zhi)) {
-        goto error;
-      }
-      System->Box.Low[2] = zlo;
-      System->Box.OrthoLength[2] = zhi - zlo; //}}}
-      // <double> <double> <double> xy xz yz //{{{
-    } else if (words > 5 && strcmp(split[3], "xy") == 0 &&
-               strcmp(split[4], "xz") == 0 && strcmp(split[5], "yz") == 0) {
-      double xy, xz, yz;
-      if (!IsRealNumber(split[0], &xy) || !IsRealNumber(split[1], &xz) ||
-          !IsRealNumber(split[2], &yz)) {
-        goto error;
-      }
-      System->Box.transform[0][1] = xy;
-      System->Box.transform[0][2] = xz;
-      System->Box.transform[1][2] = yz;
-    } //}}}
+    }
+    if (!ReadPbc(&System->Box)) {
+      goto error;
+    }
   } while (words == 0 || split[0][0] < 'A' || split[0][0] > 'Z');
   //  return file pointer to before the first capital-letter-starting line
   fsetpos(fr, &position);
@@ -734,8 +663,7 @@ static void LmpDataReadMasses(FILE *fr, const char *file, BEADTYPE *name_mass,
     }
     // check for bead type name: # <name>
     if (words > 3 && split[2][0] == '#') {
-      strncpy(name_mass[type].Name, split[3], BEAD_NAME);
-      name_mass[type].Name[BEAD_NAME-1] = '\0'; // ensure null-termination
+      s_strcpy(name_mass[type].Name, split[3], BEAD_NAME);
     } else {
       snprintf(name_mass[type].Name, BEAD_NAME, "b%d", i);
     }
@@ -1147,17 +1075,17 @@ static void LmpDataReadBonds(FILE *fr, const char *file, const COUNT Count,
       err_msg("Repeated bond index");
       goto error;
     } //}}}
-    bond[id - 1][0] = b_id[0] - 1;
-    bond[id - 1][1] = b_id[1] - 1;
+    bond[id-1][0] = b_id[0] - 1;
+    bond[id-1][1] = b_id[1] - 1;
     if (strcmp(split[1], "???") == 0) {
       if (!warned) {
         err_msg("undefined bond type (\'???\' in Bonds section)");
         PrintWarnFile(file, "\0", "\0");
         warned = true;
       }
-      bond[id - 1][2] = -1;
+      bond[id-1][2] = -1;
     } else {
-      bond[id - 1][2] = type - 1;
+      bond[id-1][2] = type - 1;
     }
     found[id - 1] = true;
   }
@@ -1214,11 +1142,11 @@ static void LmpDataReadAngles(FILE *fr, const char *file, const COUNT Count,
       err_msg("Repeated angle index");
       goto error;
     } //}}}
-    angle[id - 1][0] = a_id[0] - 1;
-    angle[id - 1][1] = a_id[1] - 1;
-    angle[id - 1][2] = a_id[2] - 1;
-    angle[id - 1][3] = type - 1;
-    found[id - 1] = true;
+    angle[id-1][0] = a_id[0] - 1;
+    angle[id-1][1] = a_id[1] - 1;
+    angle[id-1][2] = a_id[2] - 1;
+    angle[id-1][3] = type - 1;
+    found[id-1] = true;
   }
   free(found);
   return;
@@ -1278,12 +1206,12 @@ static void LmpDataReadDihedrals(FILE *fr, const char *file, const COUNT Count,
       err_msg("Repeated dihedral index");
       goto error;
     } //}}}
-    dihedral[id - 1][0] = d_id[0] - 1;
-    dihedral[id - 1][1] = d_id[1] - 1;
-    dihedral[id - 1][2] = d_id[2] - 1;
-    dihedral[id - 1][3] = d_id[3] - 1;
-    dihedral[id - 1][4] = type - 1;
-    found[id - 1] = true;
+    dihedral[id-1][0] = d_id[0] - 1;
+    dihedral[id-1][1] = d_id[1] - 1;
+    dihedral[id-1][2] = d_id[2] - 1;
+    dihedral[id-1][3] = d_id[3] - 1;
+    dihedral[id-1][4] = type - 1;
+    found[id-1] = true;
   }
   free(found);
   return;
@@ -1341,12 +1269,12 @@ static void LmpDataReadImpropers(FILE *fr, const char *file, const COUNT Count,
       err_msg("Repeated improper index");
       goto error;
     } //}}}
-    improper[id - 1][0] = i_id[0] - 1;
-    improper[id - 1][1] = i_id[1] - 1;
-    improper[id - 1][2] = i_id[2] - 1;
-    improper[id - 1][3] = i_id[3] - 1;
-    improper[id - 1][4] = type - 1;
-    found[id - 1] = true;
+    improper[id-1][0] = i_id[0] - 1;
+    improper[id-1][1] = i_id[1] - 1;
+    improper[id-1][2] = i_id[2] - 1;
+    improper[id-1][3] = i_id[3] - 1;
+    improper[id-1][4] = type - 1;
+    found[id-1] = true;
   }
   free(found);
   return;
@@ -1354,7 +1282,103 @@ error:
   PrintErrorFileLine(file, *line_count);
   exit(1);
 } //}}}
+static bool ReadPbc(BOX *box) { //{{{
+  double lo, hi;
+  char *a[3] = {"xlo", "ylo", "zlo"};
+  char *b[3] = {"xhi", "yhi", "zhi"};
+  for (int i = 0; i < 3; i++) {
+    if (words > 3 && strcmp(split[2], a[i]) == 0 &&
+                     strcmp(split[3], b[i]) == 0) {
+      if (!IsRealNumber(split[0], &lo) || !IsRealNumber(split[1], &hi)) {
+        return false;
+      }
+      box->Low[i] = lo;
+      box->OrthoLength[i] = hi - lo;
+    }
+  }
+  // <double> <double> <double> xy xz yz
+  if (words > 5 && strcmp(split[3], "xy") == 0 &&
+             strcmp(split[4], "xz") == 0 && strcmp(split[5], "yz") == 0) {
+    double xy, xz, yz;
+    if (!IsRealNumber(split[0], &xy) || !IsRealNumber(split[1], &xz) ||
+        !IsRealNumber(split[2], &yz)) {
+      return false;
+    }
+    box->transform[0][1] = xy;
+    box->transform[0][2] = xz;
+    box->transform[1][2] = yz;
+  }
+  return true;
+} //}}}
 
+// write single bond/angle/dihedral/improper 'stuff' //{{{
+void WriteStuff(FILE *fw, const SYSTEM System, const int mol,
+                int *count, const int num, int (**arr)[num], const int n) {
+  (*count)++;
+  bool in = true;
+  for (int aa = 0; aa < (num - 1); aa++) {
+    int id = (*arr)[n][aa];
+    id = System.Molecule[mol].Bead[id];
+    if (!System.Bead[id].InTimestep) {
+      in = false;
+      break;
+    }
+  }
+  if (in) {
+    fprintf(fw, "%7d", *count);
+    if ((*arr)[n][num-1] != -1) {
+      fprintf(fw, " %6d", (*arr)[n][num-1] + 1);
+    } else {
+      fprintf(fw, "   ???");
+    }
+    for (int aa = 0; aa < (num - 1); aa++) {
+      int id = (*arr)[n][aa];
+      id = System.Molecule[mol].Bead[id];
+      fprintf(fw, " %5d", id + 1);
+    }
+    putc('\n', fw);
+  }
+} //}}}
+// write all bond/angle/dihedral/improper 'stuff'
+void WriteAllStuff(FILE *fw, const SYSTEM System, const int type) { //{{{
+  int num = 0;
+  if (type == 0) { // bond
+    num = 3;
+    fprintf(fw, "\nBonds\n\n");
+  } else if (type == 1) { // angle
+    num = 4;
+    fprintf(fw, "\nAngles\n\n");
+  } else if (type == 2) { // dihedral
+    num = 5;
+    fprintf(fw, "\nDihedrals\n\n");
+  } else /* if (type == 0) */ { // improper
+    num = 5;
+    fprintf(fw, "\nImpropers\n\n");
+  }
+  int count = 0;
+  for (int i = 0; i < System.Count.Molecule; i++) {
+    int mtype = System.Molecule[i].Type;
+    MOLECULETYPE *mt_i = &System.MoleculeType[mtype];
+    int (**arr)[num];
+    int *n;
+    if (type == 0) { // bond
+      arr = &mt_i->Bond;
+      n = &mt_i->nBonds;
+    } else if (type == 1) { // angle
+      arr = &mt_i->Angle;
+      n = &mt_i->nAngles;
+    } else if (type == 2) { // dihedral
+      arr = &mt_i->Dihedral;
+      n = &mt_i->nDihedrals;
+    } else /* if (type == 0) */ { // improper
+      arr = &mt_i->Improper;
+      n = &mt_i->nImpropers;
+    }
+    for (int j = 0; j < *n; j++) {
+      WriteStuff(fw, System, i, &count, num, arr, j);
+    }
+  }
+} //}}}
 // WriteLmpData() //{{{
 void WriteLmpData(const SYSTEM System, const char *file, const bool mass,
                   const int argc, char **argv) {
@@ -1543,123 +1567,19 @@ void WriteLmpData(const SYSTEM System, const char *file, const bool mass,
       break;
     }
   } //}}}
-  // print bonds //{{{
+  // print bonds/angles/dihedrals/impropers
   if (Count->Bond > 0) {
-    fprintf(fw, "\nBonds\n\n");
-    int count = 0;
-    for (int i = 0; i < Count->Molecule; i++) {
-      int mtype = System.Molecule[i].Type;
-      MOLECULETYPE *mt_i = &System.MoleculeType[mtype];
-      for (int j = 0; j < mt_i->nBonds; j++) {
-        count++;
-        int id[2];
-        for (int aa = 0; aa < 2; aa++) {
-          id[aa] = System.MoleculeType[mtype].Bond[j][aa];
-          id[aa] = System.Molecule[i].Bead[id[aa]];
-        }
-        if (System.Bead[id[0]].InTimestep &&
-            System.Bead[id[1]].InTimestep) {
-          fprintf(fw, "%7d", count);
-          // if (Count->BondType > 0) {
-          if (mt_i->Bond[j][2] != -1 ) {
-            fprintf(fw, " %6d", mt_i->Bond[j][2] + 1);
-          } else {
-            fprintf(fw, "   ???");
-          }
-          fprintf(fw, " %5d %5d\n", id[0] + 1, id[1] + 1);
-        }
-      }
-    }
-  } //}}}
-  // print angles //{{{
-  if (Count->Angle > 0) {
-    fprintf(fw, "\nAngles\n\n");
-    int count = 0;
-    for (int i = 0; i < Count->Molecule; i++) {
-      int mtype = System.Molecule[i].Type;
-      MOLECULETYPE *mt_i = &System.MoleculeType[mtype];
-      for (int j = 0; j < mt_i->nAngles; j++) {
-        count++;
-        int id[3];
-        for (int aa = 0; aa < 3; aa++) {
-          id[aa] = System.MoleculeType[mtype].Angle[j][aa];
-          id[aa] = System.Molecule[i].Bead[id[aa]];
-        }
-        if (System.Bead[id[0]].InTimestep &&
-            System.Bead[id[1]].InTimestep &&
-            System.Bead[id[2]].InTimestep) {
-          fprintf(fw, "%7d", count);
-          if (Count->AngleType > 0) {
-            fprintf(fw, " %6d", mt_i->Angle[j][3] + 1);
-          } else {
-            fprintf(fw, "   ???");
-          }
-          fprintf(fw, " %5d %5d %5d\n", id[0] + 1, id[1] + 1, id[2] + 1);
-        }
-      }
-    }
+    WriteAllStuff(fw, System, 0);
   }
-  //}}}
-  // print dihedrals //{{{
+  if (Count->Angle > 0) {
+    WriteAllStuff(fw, System, 1);
+  }
   if (Count->Dihedral > 0) {
-    fprintf(fw, "\nDihedrals\n\n");
-    int count = 0;
-    for (int i = 0; i < Count->Molecule; i++) {
-      int mtype = System.Molecule[i].Type;
-      MOLECULETYPE *mt_i = &System.MoleculeType[mtype];
-      for (int j = 0; j < mt_i->nDihedrals; j++) {
-        count++;
-        int id[4];
-        for (int aa = 0; aa < 4; aa++) {
-          id[aa] = System.MoleculeType[mtype].Dihedral[j][aa];
-          id[aa] = System.Molecule[i].Bead[id[aa]];
-        }
-        if (System.Bead[id[0]].InTimestep &&
-            System.Bead[id[1]].InTimestep &&
-            System.Bead[id[2]].InTimestep &&
-            System.Bead[id[3]].InTimestep) {
-          fprintf(fw, "%7d", count);
-          if (Count->DihedralType > 0) {
-            fprintf(fw, " %6d", mt_i->Dihedral[j][4] + 1);
-          } else {
-            fprintf(fw, "   ???");
-          }
-          fprintf(fw, " %5d %5d %5d %5d\n",
-                  id[0] + 1, id[1] + 1, id[2] + 1, id[3] + 1);
-        }
-      }
-    }
-  } //}}}
-  // print impropers //{{{
+    WriteAllStuff(fw, System, 2);
+  }
   if (Count->Improper > 0) {
-    fprintf(fw, "\nImpropers\n\n");
-    int count = 0;
-    for (int i = 0; i < Count->Molecule; i++) {
-      int mtype = System.Molecule[i].Type;
-      MOLECULETYPE *mt_i = &System.MoleculeType[mtype];
-      for (int j = 0; j < mt_i->nImpropers; j++) {
-        count++;
-        int id[4];
-        for (int aa = 0; aa < 4; aa++) {
-          id[aa] = System.MoleculeType[mtype].Improper[j][aa];
-          id[aa] = System.Molecule[i].Bead[id[aa]];
-        }
-        if (System.Bead[id[0]].InTimestep &&
-            System.Bead[id[1]].InTimestep &&
-            System.Bead[id[2]].InTimestep &&
-            System.Bead[id[3]].InTimestep) {
-          fprintf(fw, "%7d", count);
-          if (Count->DihedralType > 0) {
-            fprintf(fw, " %6d", mt_i->Improper[j][4] + 1);
-          } else {
-            fprintf(fw, "   ???");
-          }
-          fprintf(fw, " %5d %5d %5d %5d\n",
-                  id[0] + 1, id[1] + 1, id[2] + 1, id[3] + 1);
-        }
-      }
-    }
-  } //}}}
+    WriteAllStuff(fw, System, 3);
+  }
   free(bt_masstype_to_old);
   free(bt_old_to_masstype);
   fclose(fw);

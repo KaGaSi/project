@@ -1,10 +1,9 @@
 #include "ReadWriteXyz.h"
+#include "General.h"
+#include "System.h"
 
-/*
- * Functions to read xyz file as a coordinate file via XyzReadTimestep() and
- * XyzSkipTimestep() and as a structure file via XyzReadStruct()
- */
 static bool XyzCheckCoorLine(double coor[3]);
+static long ReadFirstLine(const char *f, FILE *fr, int *line_count);
 
 SYSTEM XyzReadStruct(const char *file) { //{{{
   SYSTEM Sys;
@@ -12,24 +11,24 @@ SYSTEM XyzReadStruct(const char *file) { //{{{
   COUNT *Count = &Sys.Count;
   int line_count = 0;
   FILE *fr = OpenFile(file, "r");
-  // read number of beads //{{{
-  line_count++;
-  if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-    ErrorEOF(file, "missing number of beads");
-    exit(1);
-  }
-  long val;
-  if (words == 0 || !IsNaturalNumber(split[0], &val)) {
-    err_msg("wrong first line of an xyz file");
-    PrintErrorFileLine(file, line_count);
-    exit(1);
-  } //}}}
+  // // read number of beads //{{{
+  // line_count++;
+  // if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
+  //   ErrorEOF(file, "missing number of beads");
+  //   exit(1);
+  // }
+  // long val;
+  // if (words == 0 || !IsNaturalNumber(split[0], &val)) {
+  //   err_msg("wrong first line of an xyz file");
+  //   PrintErrorFileLine(file, line_count);
+  //   exit(1);
+  // } //}}}
+  long val = ReadFirstLine(file, fr, &line_count);
   Count->Bead = val;
   Count->BeadCoor = val;
   Count->Unbonded = val;
   Count->UnbondedCoor = val;
-  Sys.Bead = s_realloc(Sys.Bead, sizeof *Sys.Bead * Count->Bead);
-  Sys.BeadCoor = s_realloc(Sys.BeadCoor, sizeof *Sys.BeadCoor * Count->Bead);
+  ReallocBead(&Sys);
   // read next line //{{{
   line_count++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
@@ -87,26 +86,19 @@ SYSTEM XyzReadStruct(const char *file) { //{{{
 int XyzReadTimestep(FILE *fr, const char *file,
                     SYSTEM *System, int *line_count) {
   System->Count.MoleculeCoor = 0;
-  // read number of beads //{{{
-  (*line_count)++;
-  if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-    return -2;
+  long val = ReadFirstLine(file, fr, line_count);
+  if (val == -2) {
+    return -2; // proper eof - before the first line of the timestep
   }
-  long val;
-  if (words == 0 || !IsNaturalNumber(split[0], &val)) {
-    err_msg("wrong first line of an xyz timestep");
-    PrintWarnFileLine(file, *line_count);
-    return -1;
-  } else if (val > System->Count.Bead) {
+  if (val > System->Count.Bead) {
     snprintf(ERROR_MSG, LINE,
              "too many beads in the timestep (maximum number is %s%d%s)",
              ErrYellow(), System->Count.Bead, ErrRed());
     PrintErrorFileLine(file, *line_count);
     return -1;
   }
-  System->Count.BeadCoor = val; //}}}
+  System->Count.BeadCoor = val;
   // ignore next line //{{{
-  (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
     ErrorEOF(file, "missing comment line");
     return -2;
@@ -128,7 +120,6 @@ int XyzReadTimestep(FILE *fr, const char *file,
         System->Bead[i].Position[dd] = coor[dd];
       }
       System->BeadCoor[i] = i;
-      (*line_count)++;
       double vel[3];
       if (words > 6 &&
           IsRealNumber(split[4], &vel[0]) &&
@@ -149,27 +140,18 @@ int XyzReadTimestep(FILE *fr, const char *file,
     }
   } //}}}
   FillInCoor(System);
-  return true;
+  return 1;
 } //}}}
 bool XyzSkipTimestep(FILE *fr, const char *file, int *line_count) { //{{{
-  (*line_count)++;
-  if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-    return -2;
-  }
-  long val;
-  if (words == 0 || !IsNaturalNumber(split[0], &val)) {
-    err_msg("wrong first line of an xyz timestep");
-    PrintWarnFileLine(file, *line_count);
-    return -1;
-  }
+  long val = ReadFirstLine(file, fr, line_count);
   (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
     return -2;
   }
   for (int i = 0; i < val; i++) {
     (*line_count)++;
-    char a;
-    while ((a = getc(fr) != '\n') && a != EOF)
+    int a;
+    while ((a = getc(fr)) != '\n' && a != EOF)
       ;
   }
   return true;
@@ -183,6 +165,21 @@ static bool XyzCheckCoorLine(double coor[3]) { //{{{
   } else {
     return false;
   }
+} //}}}
+static long ReadFirstLine(const char *f, FILE *fr, int *line_count) { //{{{
+  // read a line
+  (*line_count)++;
+  if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
+    return -2; // proper eof - before the first line of a timestep
+  }
+  // get number of beads
+  long val;
+  if (words == 0 || !IsNaturalNumber(split[0], &val)) {
+    err_msg("wrong first line of an xyz file");
+    PrintErrorFileLine(f, *line_count);
+    exit(1);
+  }
+  return val;
 } //}}}
 
 void XyzWriteCoor(FILE *fw, const bool *write, const SYSTEM System) { //{{{

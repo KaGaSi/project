@@ -538,8 +538,12 @@ int StructureFileType(const char *name) { //{{{
 } //}}}
 int CoordinateFileType(const char *name) { //{{{
   int ft = FindFileType(name);
-  if (ft == VTF_FILE || ft == VCF_FILE || ft == XYZ_FILE ||
-      ft == LDATA_FILE || ft == LTRJ_FILE) {
+  if (ft == VTF_FILE ||
+      ft == VCF_FILE ||
+      ft == XYZ_FILE ||
+      ft == LDATA_FILE ||
+      ft == LTRJ_FILE ||
+      ft == CONFIG_FILE) {
     return ft;
   } else {
     err_msg("Not a coordinate file");

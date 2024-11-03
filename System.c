@@ -40,7 +40,6 @@ void ReallocMolecule(SYSTEM *System) {
   }
 }
 //}}}
-
 // fill some System arrays and some such
 void FillMoleculeTypeBType(MOLECULETYPE *MoleculeType) { //{{{
   MoleculeType->nBTypes = 0;

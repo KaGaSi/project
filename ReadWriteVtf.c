@@ -1,4 +1,5 @@
 #include "ReadWriteVtf.h"
+#include "General.h"
 
 // variables defining line types //{{{
 static const int ERROR_LINE = -1;
@@ -225,8 +226,7 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
               s_strcpy(mt_resid->Name, "m", MOL_NAME);
               mt_resid->Flag = false;
             } else {
-              strncpy(mt_resid->Name, split[value[4]], MOL_NAME);
-              mt_resid->Name[MOL_NAME-1] = '\0';
+              s_strcpy(mt_resid->Name, split[value[4]], MOL_NAME);
               mt_resid->Flag = true;
             }
             mt_resid->Name[MOL_NAME-1] = '\0'; // null-terminate!
@@ -241,8 +241,7 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
                                        mt_resid->nBeads);
             mt_resid->Bead[bead] = id; // bead type = bead index
             if (value[4] != -1 && strcmp(mt_resid->Name, "m") == 0) {
-              strncpy(mt_resid->Name, split[value[4]], MOL_NAME);
-              mt_resid->Name[MOL_NAME-1] = '\0';
+              s_strcpy(mt_resid->Name, split[value[4]], MOL_NAME);
               mt_resid->Flag = true;
             }
           }
@@ -836,6 +835,18 @@ int VtfReadNumberOfBeads(const char *file) { //{{{
 } //}}}
 
 // VtfWriteStruct() //{{{
+void PrintBeadTypeInfo(FILE *fw, const BEADTYPE bt) {
+  fprintf(fw, " name %8s", bt.Name);
+  if (bt.Mass != MASS && bt.Mass != HIGHNUM) {
+    fprintf(fw, " mass %12f", bt.Mass);
+  }
+  if (bt.Charge != CHARGE && bt.Charge != HIGHNUM) {
+    fprintf(fw, " charge %12f", bt.Charge);
+  }
+  if (bt.Radius != RADIUS && bt.Radius != HIGHNUM) {
+    fprintf(fw, " radius %12f", bt.Radius);
+  }
+}
 void VtfWriteStruct(char *file, SYSTEM System, int type_def,
                     const int argc, char **argv) {
   SimplifyResid(&System);
@@ -865,17 +876,7 @@ void VtfWriteStruct(char *file, SYSTEM System, int type_def,
   // print default bead type //{{{
   if (type_def != -1) {
     BEADTYPE *bt = &System.BeadType[type_def];
-    fprintf(fw, "atom default");
-    fprintf(fw, " name %8s", bt->Name);
-    if (bt->Mass != MASS && bt->Mass != HIGHNUM) {
-      fprintf(fw, " mass %12f", bt->Mass);
-    }
-    if (bt->Charge != CHARGE && bt->Charge != HIGHNUM) {
-      fprintf(fw, " charge %12f", bt->Charge);
-    }
-    if (bt->Radius != RADIUS && bt->Radius != HIGHNUM) {
-      fprintf(fw, " radius %12f", bt->Radius);
-    }
+    PrintBeadTypeInfo(fw, *bt);
     putc('\n', fw);
   } //}}}
   // print beads //{{{
@@ -890,16 +891,7 @@ void VtfWriteStruct(char *file, SYSTEM System, int type_def,
     BEADTYPE *bt = &System.BeadType[btype];
     if (print) {
       fprintf(fw, "atom %7d", i);
-      fprintf(fw, " name %8s", bt->Name);
-      if (bt->Mass != MASS && bt->Mass != HIGHNUM) {
-        fprintf(fw, " mass %15f ", bt->Mass);
-      }
-      if (bt->Charge != CHARGE && bt->Charge != HIGHNUM) {
-        fprintf(fw, " charge %12f", bt->Charge);
-      }
-      if (bt->Radius != RADIUS && bt->Radius != HIGHNUM) {
-        fprintf(fw, " radius %12f", bt->Radius);
-      }
+      PrintBeadTypeInfo(fw, *bt);
       if (mol != -1) {
         int mtype = System.Molecule[mol].Type;
         int id = System.Molecule[mol].Index;

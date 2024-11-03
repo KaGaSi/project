@@ -110,6 +110,7 @@ bool IsWholeNumber(const char *str, long *val);
 void SortArrayInt(int *array, const int length, const int mode);
 void SortArrayDouble(double *array, const int length, const int mode);
 // line reading and splitting
+bool ReadLine(FILE *fr, char *line);
 int SplitLine(const int max_str, char **out, char *line, const char *delim);
 bool ReadAndSplitLine(FILE *fr, const int max_strings, const char *delim);
 // strip path from command
