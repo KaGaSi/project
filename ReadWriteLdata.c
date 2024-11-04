@@ -1,5 +1,6 @@
 #include "ReadWriteLdata.h"
 #include "General.h"
+#include "ReadWrite.h"
 #include "System.h"
 
 // TODO: LmpDataReadDihedralCoeffs() and LmpDataReadImproperCoeffs() should read
@@ -621,10 +622,11 @@ static void LmpDataReadBody(FILE *fr, const char *file, SYSTEM *System,
     SortArrayInt(mt->Bead, mt->nBeads, 0);
   }
   CopyMoleculeTypeBeadsToMoleculeBeads(System);
-  FillMoleculeTypeBonds(System, bond, Count->Bond);
-  FillMoleculeTypeAngles(System, angle, Count->Angle);
-  FillMoleculeTypeDihedral(System, dihedral, Count->Dihedral);
-  FillMoleculeTypeImproper(System, improper, Count->Improper);
+  FillMTypeStuff(System, 0, 3, bond, Count->Bond);
+  FillMTypeStuff(System, 1, 4, angle, Count->Angle);
+  FillMTypeStuff(System, 2, 5, dihedral, Count->Dihedral);
+  FillMTypeStuff(System, 3, 5, improper, Count->Improper);
+  MinimizeMTypeStuffIds(System);
   free(bond);
   free(angle);
   free(dihedral);

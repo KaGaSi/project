@@ -19,7 +19,7 @@ a part of it (SOME OPTION). Results are printed as \
   fprintf(ptr, "<output>            output file with the persistence length\n");
   fprintf(ptr, "[options]\n");
   fprintf(ptr, "  -m <name(s)>      molecule types to calculate bond lengths "
-          "for (if not present, use all molecule types)");
+          "for (if not present, use all molecule types)\n");
   fprintf(ptr, "      --joined    specify that <input> contains joined "
           "coordinates\n");
   CommonHelp(error, n, opt);

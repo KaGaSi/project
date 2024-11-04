@@ -200,15 +200,7 @@ void XyzWriteCoor(FILE *fw, const bool *write, const SYSTEM System) { //{{{
   }
   // write pbc on the second line
   fprintf(fw, "%d\n", count);
-  const BOX *box = &System.Box;
-  if (box->Volume != -1) {
-    fprintf(fw, "%.3f %.3f %.3f", box->Length[0],
-                                  box->Length[1],
-                                  box->Length[2]);
-    if (box->alpha != 90 || box->beta != 90 || box->gamma != 90) {
-      fprintf(fw, " %lf %lf %lf", box->alpha, box->beta, box->gamma);
-    }
-  }
+  WriteBoxLengthAngles(fw, System.Box);
   putc('\n', fw);
   // write the coodinates
   // for (int i = 0; i < System.Count.BeadCoor; i++) {

@@ -1,5 +1,6 @@
 #include "ReadWriteVtf.h"
 #include "General.h"
+#include "ReadWrite.h"
 
 // variables defining line types //{{{
 static const int ERROR_LINE = -1;
@@ -14,13 +15,7 @@ static const int BOND_LINE = 7;
 static const int TIME_LINE = 8;
 static const int TIME_LINE_O = 9; //}}}
 
-/*
- * Functions to read vsf/vtf file as a structure file via VtfReadStruct() and
- * vcf/vtf file as a coordinate file via VtfReadTimestep() and VtfSkipTimestep()
- */
-// identify type of a line
 static int VtfCheckLineType(const char *file, const int line_count);
-// functions to check if a line is of a specific type
 static int VtfCheckCoorOrderedLine(double coor[3]);
 static int VtfCheckCoorIndexedLine(double coor[3], long *index);
 static int VtfCheckCoordinateLine(double coor[3], long *index);
@@ -124,8 +119,8 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
   if (default_atom == 0 && count_atoms != Count->Bead) {
     int undefined = Count->Bead - count_atoms;
     snprintf(ERROR_MSG, LINE, "not all beads defined ('atom default' line is "
-             "omitted); %s%d%s bead(s) undefined", ErrYellow(), undefined,
-             ErrRed());
+             "omitted); %s%d%s bead(s) undefined",
+             ErrYellow(), undefined, ErrRed());
     PrintErrorFile(file, "\0", "\0");
     exit(1);
   } //}}}
@@ -306,7 +301,8 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
     exit(1);
   } //}}}
   CopyMoleculeTypeBeadsToMoleculeBeads(&Sys);
-  FillMoleculeTypeBonds(&Sys, bond, count_bonds);
+  FillMTypeStuff(&Sys, 0, 3, bond, count_bonds);
+  MinimizeMTypeStuffIds(&Sys);
   if (count_bonds != 0) {
     free(bond);
   }
@@ -758,8 +754,7 @@ static int VtfReadCoorBlockOrdered(FILE *fr, const char *file,
   for (int i = 0; i < Count->Bead; i++) {
     (*line_count)++;
     if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-      snprintf(ERROR_MSG, LINE,
-               "premature end of ordered "
+      snprintf(ERROR_MSG, LINE, "premature end of ordered "
                "coordinate block (%s%d%s lines instead of %s%d%s)",
                ErrYellow(), i, ErrRed(), ErrYellow(), Count->Bead, ErrRed());
       PrintErrorFile(file, "\0", "\0");
@@ -853,7 +848,6 @@ void VtfWriteStruct(char *file, SYSTEM System, int type_def,
   PrintByline(file, argc, argv);
   FILE *fw = OpenFile(file, "a");
   COUNT *Count = &System.Count;
-  BOX *box = &System.Box;
   // default bead type //{{{
   if (type_def == -1) {
     // find most common type of bead and make it default
@@ -876,6 +870,7 @@ void VtfWriteStruct(char *file, SYSTEM System, int type_def,
   // print default bead type //{{{
   if (type_def != -1) {
     BEADTYPE *bt = &System.BeadType[type_def];
+    fprintf(fw, "atom default");
     PrintBeadTypeInfo(fw, *bt);
     putc('\n', fw);
   } //}}}
@@ -922,16 +917,8 @@ void VtfWriteStruct(char *file, SYSTEM System, int type_def,
       }
     }
   } //}}}
-  // print box size, if present //{{{
-  if (box->Volume != -1 && StructureFileType(file) == VSF_FILE) {
-    fprintf(fw, "pbc %.3f %.3f %.3f",
-            box->Length[0], box->Length[1], box->Length[2]);
-    if (box->alpha != 90 || box->beta != 90 || box->gamma != 90) {
-      fprintf(fw, " %lf %lf %lf", box->alpha, box->beta, box->gamma);
-    }
-    putc('\n', fw);
-  } //}}}
-  // close structure file
+  WriteBoxLengthAngles(fw, System.Box);
+  putc('\n', fw);
   fclose(fw);
 } //}}}
 // VtfWriteCoorIndexed() //{{{

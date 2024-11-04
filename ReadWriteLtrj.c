@@ -31,6 +31,7 @@ static int LtrjReadCoorLine(FILE *fr, BEAD *b, int b_count,
                             const int *var, int cols);
 // fill a helper array with possible variables in 'ITEM: ATOMS ...' line
 static void LtrjFillAtomVariables(const int n, char var[n][10]);
+static void AssignPosVelF(const BEAD in, BEAD *b);
 
 // Use the first lammpstrj timestep as a definition of system composition //{{{
 SYSTEM LtrjReadStruct(const char *file) {
@@ -77,11 +78,7 @@ SYSTEM LtrjReadStruct(const char *file) {
     int id = line.Type - 1;
     BEAD *b = &Sys.Bead[id];
     InitBead(b);
-    for (int dd = 0; dd < 3; dd++) {
-      b->Position[dd] = line.Position[dd];
-      b->Velocity[dd] = line.Velocity[dd];
-      b->Force[dd] = line.Force[dd];
-    }
+    AssignPosVelF(line, b);
     if (b->InTimestep == true) {
       err_msg("multiple atoms with the same id");
       PrintErrorFileLine(file, line_count);
@@ -158,11 +155,7 @@ int LtrjReadTimestep(FILE *fr, const char *file, SYSTEM *System,
     }
     int id = line.Type - 1;
     BEAD *b = &System->Bead[id];
-    for (int dd = 0; dd < 3; dd++) {
-      b->Position[dd] = line.Position[dd];
-      b->Velocity[dd] = line.Velocity[dd];
-      b->Force[dd] = line.Force[dd];
-    }
+    AssignPosVelF(line, b);
     if (b->InTimestep) {
       err_msg("multiple atoms with the same id");
       PrintErrorFileLine(file, *line_count);
@@ -333,7 +326,8 @@ static int LtrjReadPBCSection(FILE *fr, const char *file, BOX *box,
     }
     CalculateBoxData(box, 1);
   } else if (strcmp(split[3], "xy") == 0) { // triclinic box
-    double bounds[2][3], tilt[3];
+    double bounds[2][3];
+    double tilt[3];
     for (int dd = 0; dd < 3; dd++) {
       (*line_count)++;
       if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
@@ -481,6 +475,13 @@ static void LtrjFillAtomVariables(const int n, char var[n][10]) { //{{{
   s_strcpy(var[8], "fx", 10);
   s_strcpy(var[9], "fy", 10);
   s_strcpy(var[10], "fz", 10);
+} //}}}
+static void AssignPosVelF(const BEAD in, BEAD *b) { //{{{
+  for (int dd = 0; dd < 3; dd++) {
+    b->Position[dd] = in.Position[dd];
+    b->Velocity[dd] = in.Velocity[dd];
+    b->Force[dd] = in.Force[dd];
+  }
 } //}}}
 
 // LtrjWriteCoor() //{{{

@@ -1,31 +1,91 @@
 #include "ReadWriteField.h"
 #include "General.h"
 
-/*
- * Function to read dl_meso FIELD-like file as a structure file
- */
-// Helper functions for FIELD-like file
-// read Species section
 static void FieldReadSpecies(const char *file, SYSTEM *System);
-// read Molecules section
 static void FieldReadMolecules(const char *file, SYSTEM *System);
+static void SkipTilKeyword(FILE *f, const char *file,
+                           const char *keyword, int *line_count);
+// static void ReadBeadIds(const int num, const int n,
+//                         long id[num], MOLECULETYPE mt);
+// ReadBeadIds() //{{{
+static bool ReadBeadIds(const int num, long id[num], MOLECULETYPE mt_i) {
+  bool err = false;
+  for (int aa = 0; aa < (num - 1); aa++) {
+    if (words < num ||
+        !IsNaturalNumber(split[aa+1], &id[aa])) {
+      err = true;
+      break;
+    }
+  }
+  if (err) {
+    snprintf(ERROR_MSG, LINE, "incorrect line for molecule %s%s",
+             ErrYellow(), mt_i.Name);
+    return false;
+  }
+  // error - bead index is too high
+  err = false;
+  for (int aa = 0; aa < (num - 1); aa++) {
+    if (id[aa] > mt_i.nBeads) {
+      err = true;
+      break;
+    }
+  }
+  if (err) {
+    err_msg("bead index in a improper is too high");
+    snprintf(ERROR_MSG, LINE, "bead index in molecule %s%s is too high",
+             ErrYellow(), mt_i.Name);
+    return false;
+  }
+  return true;
+} //}}}
+// ReadParams() //{{{
+static PARAMS ReadParams(const char *file, const int num,
+                         const MOLECULETYPE mt, bool *warned) {
+  PARAMS values = InitParams;
+  for (int k = num; k < (num + 3); k++) {
+    double *ptr = NULL;
+    if (k == num) {
+      ptr = &values.a;
+    } else if (k == (num + 1)) {
+      ptr = &values.b;
+    } else {
+      ptr = &values.c;
+    }
+    if (words > k) {
+      if (strcmp(split[k], "???") == 0 && !(*warned)) {
+        snprintf(ERROR_MSG, LINE, "undefined parameter (\'???\') "
+                 "in molecule %s%s", ErrYellow(), mt.Name);
+        PrintWarnFile(file, "\0", "\0");
+        *warned = true;
+      } else if (!IsRealNumber(split[k], ptr)) {
+        break;
+      }
+    }
+  }
+  return values;
+} //}}}
 
-static void FieldReadSpecies(const char *file, SYSTEM *System) { //{{{
-  int line_count = 0;
-  FILE *fr = OpenFile(file, "r");
-  // skip till line starting with 'Species' keyword //{{{
+// static void SkipTilKeyword() //{{{
+static void SkipTilKeyword(FILE *f, const char *file,
+                           const char *keyword, int *line_count) {
   bool test;
-  while ((test = ReadAndSplitLine(fr, SPL_STR, " \t\n"))) {
-    line_count++;
-    if (words > 0 && strncasecmp(split[0], "species", 6) == 0) {
+  while ((test = ReadAndSplitLine(f, SPL_STR, " \t\n"))) {
+    (*line_count)++;
+    if (words > 0 && strncasecmp(split[0], keyword, 6) == 0) {
       break;
     }
   }
   // error - missing 'Species' line
   if (!test) {
-    ErrorEOF(file, "missing 'Species' line");
+    snprintf(ERROR_MSG, LINE, "missing '%s' line", keyword);
+    ErrorEOF(file, ERROR_MSG);
     exit(1);
-  } //}}}
+  }
+} //}}}
+static void FieldReadSpecies(const char *file, SYSTEM *System) { //{{{
+  int line_count = 0;
+  FILE *fr = OpenFile(file, "r");
+  SkipTilKeyword(fr, file, "Species", &line_count);
   COUNT *Count = &System->Count;
   // read number of bead types //{{{
   long types;
@@ -82,19 +142,7 @@ static void FieldReadSpecies(const char *file, SYSTEM *System) { //{{{
 static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
   int line_count = 0;
   FILE *fr = OpenFile(file, "r");
-  // skip till line starting with 'Molecule' keyword //{{{
-  bool test;
-  while ((test = ReadAndSplitLine(fr, SPL_STR, " \t\n"))) {
-    line_count++;
-    if (words > 0 && strncasecmp(split[0], "molecules", 7) == 0) {
-      break;
-    }
-  }
-  // error - missing 'Species' line
-  if (!test) {
-    ErrorEOF(file, "missing 'Molecules' line");
-    exit(1);
-  } //}}}
+  SkipTilKeyword(fr, file, "Molecules", &line_count);
   // read number of types //{{{
   long val;
   if (words < 2 || !IsWholeNumber(split[1], &val)) {
@@ -281,43 +329,14 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
             ErrorEOF(file, "incomplete 'Molecules' section");
             exit(1);
           } //}}}
-          long beads[2];
-          PARAMS values = InitParams;
-          // error - incorrect line //{{{
-          if (words < 3 ||
-              !IsNaturalNumber(split[1], &beads[0]) ||
-              !IsNaturalNumber(split[2], &beads[1]) ||
-              beads[0] == beads[1]) {
-            err_msg("incorrect bond line in a molecule entry");
+          int num = 3;
+          long beads[num];
+          if (!ReadBeadIds(num, beads, *mt_i)) {
             goto error;
-          } //}}}
-          // error - bead index is too high //{{{
-          if (beads[0] > mt_i->nBeads || beads[1] > mt_i->nBeads) {
-            err_msg("bead index in a bond is too high");
-            goto error;
-          }                                //}}}
-          mt_i->Bond[j][0] = beads[0] - 1; // in FIELD, indices start from 1
-          mt_i->Bond[j][1] = beads[1] - 1; //
-          // read up to three values for bond type
-          for (int k = 3; k <= 5; k++) {
-            double *ptr = NULL;
-            if (k == 3) {
-              ptr = &values.a;
-            } else if (k == 4) {
-              ptr = &values.b;
-            } else {
-              ptr = &values.c;
-            }
-            if (words > k) {
-              if (strcmp(split[k], "???") == 0 && !warned) {
-                snprintf(ERROR_MSG, LINE, "undefined bond parameter (\'???\') "
-                         "in molecule %s%s", ErrYellow(), mt_i->Name);
-                PrintWarnFile(file, "\0", "\0");
-                warned = true;
-              } else if (!IsRealNumber(split[k], ptr)) {
-                break;
-              }
-            }
+          }
+          PARAMS values = ReadParams(file, num, *mt_i, &warned);
+          for (int aa = 0; aa < (num - 1); aa++) {
+            mt_i->Bond[j][aa] = beads[aa] - 1; // FIELD bead indices go from 1
           }
           // assign bond type //{{{
           int bond_type = -1;
@@ -342,8 +361,8 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
               System->BondType[bond_type].b = values.b;
               System->BondType[bond_type].c = values.c;
             }
-          } //}}}
-          mt_i->Bond[j][2] = bond_type;
+          }
+          mt_i->Bond[j][2] = bond_type; //}}}
         } //}}}
       } else if (words > 0 && strcasecmp(split[0], "finish") == 0) {
         continue;
@@ -378,47 +397,14 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
             ErrorEOF(file, "incomplete 'Molecules' section");
             exit(1);
           } //}}}
-          long beads[3];
-          PARAMS values = InitParams;
-          // error - incorrect line //{{{
-          if (words < 4 || !IsNaturalNumber(split[1], &beads[0]) ||
-              !IsNaturalNumber(split[2], &beads[1]) ||
-              !IsNaturalNumber(split[3], &beads[2]) || beads[0] == beads[1] ||
-              beads[0] == beads[2] || beads[1] == beads[2]) {
-            snprintf(ERROR_MSG, LINE, "incorrect line in an entry for "
-                     "molecule %s%s", ErrYellow(), mt_i->Name);
+          int num = 4;
+          long beads[num];
+          if (!ReadBeadIds(num, beads, *mt_i)) {
             goto error;
-          } //}}}
-          // error - bead index is too high //{{{
-          if (beads[0] > mt_i->nBeads || beads[1] > mt_i->nBeads ||
-              beads[2] > mt_i->nBeads) {
-            snprintf(ERROR_MSG, LINE, "bead index in an angle is too high in "
-                     "molecule %s%s", ErrYellow(), mt_i->Name);
-            goto error;
-          } //}}}
-          mt_i->Angle[j][0] = beads[0] - 1; // in FIELD, bead indices go from 1
-          mt_i->Angle[j][1] = beads[1] - 1; //
-          mt_i->Angle[j][2] = beads[2] - 1; //
-          // read up to three values for angle type
-          for (int k = 4; k <= 6; k++) {
-            double *ptr = NULL;
-            if (k == 4) {
-              ptr = &values.a;
-            } else if (k == 5) {
-              ptr = &values.b;
-            } else {
-              ptr = &values.c;
-            }
-            if (words > k) {
-              if (strcmp(split[k], "???") == 0 && !warned) {
-                snprintf(ERROR_MSG, LINE, "undefined angle parameter (\'???\') "
-                         " for molecule %s%s", ErrYellow(), mt_i->Name);
-                PrintWarnFile(file, "\0", "\0");
-                warned = true;
-              } else if (!IsRealNumber(split[k], ptr)) {
-                break;
-              }
-            }
+          }
+          PARAMS values = ReadParams(file, num, *mt_i, &warned);
+          for (int aa = 0; aa < (num - 1); aa++) {
+            mt_i->Angle[j][aa] = beads[aa] - 1; // FIELD bead indices go from 1
           }
           // assign angle type //{{{
           int angle_type = -1;
@@ -444,8 +430,8 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
               System->AngleType[angle_type].b = values.b;
               System->AngleType[angle_type].c = values.c;
             }
-          } //}}}
-          mt_i->Angle[j][3] = angle_type;
+          }
+          mt_i->Angle[j][3] = angle_type; //}}}
         } //}}}
       } else if (words > 0 && strcasecmp(split[0], "finish") == 0) {
         continue;
@@ -481,58 +467,15 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
             ErrorEOF(file, "incomplete 'Molecules' section");
             exit(1);
           } //}}}
-          long beads[4];
-          PARAMS values = InitParams;
-          // error - incorrect line //{{{
-          if (words < 5 ||
-              !IsNaturalNumber(split[1], &beads[0]) ||
-              !IsNaturalNumber(split[2], &beads[1]) ||
-              !IsNaturalNumber(split[3], &beads[2]) ||
-              !IsNaturalNumber(split[4], &beads[3]) ||
-              beads[0] == beads[1] ||
-              beads[0] == beads[2] ||
-              beads[0] == beads[3] ||
-              beads[1] == beads[2] ||
-              beads[1] == beads[3] ||
-              beads[2] == beads[3]) {
-            snprintf(ERROR_MSG, LINE, "incorrect dihedral line for molecule "
-                     "%s%s", ErrYellow(), mt_i->Name);
-            PrintErrorFileLine(file, line_count);
-            exit(1);
-          } //}}}
-          // error - bead index is too high //{{{
-          if (beads[0] > mt_i->nBeads ||
-              beads[1] > mt_i->nBeads ||
-              beads[2] > mt_i->nBeads ||
-              beads[3] > mt_i->nBeads) {
-            err_msg("bead index in a improper is too high");
+          int num = 5;
+          long beads[num];
+          if (!ReadBeadIds(num, beads, *mt_i)) {
             goto error;
-          }                                    //}}}
-          mt_i->Dihedral[j][0] = beads[0] - 1; // in FIELD, indices start from 1
-          mt_i->Dihedral[j][1] = beads[1] - 1; //
-          mt_i->Dihedral[j][2] = beads[2] - 1; //
-          mt_i->Dihedral[j][3] = beads[3] - 1; //
-          // read up to three values for dihedral type //{{{
-          for (int k = 5; k <= 7; k++) {
-            double *ptr = NULL;
-            if (k == 5) {
-              ptr = &values.a;
-            } else if (k == 6) {
-              ptr = &values.b;
-            } else {
-              ptr = &values.c;
-            }
-            if (words > k) {
-              if (strcmp(split[k], "???") == 0 && !warned) {
-                snprintf(ERROR_MSG, LINE, "undefined dihedral paramter "
-                         "(\'???\') in molecule %s%s", ErrYellow(), mt_i->Name);
-                PrintWarnFile(file, "\0", "\0");
-                warned = true;
-              } else if (!IsRealNumber(split[k], ptr)) {
-                break;
-              }
-            }
-          } //}}}
+          }
+          PARAMS values = ReadParams(file, num, *mt_i, &warned);
+          for (int aa = 0; aa < (num - 1); aa++) {
+            mt_i->Dihedral[j][aa] = beads[aa] - 1; // FIELD indices go from 1
+          }
           // assign dihedral type //{{{
           int dihedral_type = -1;
           if (values.a != 0 || values.b != 0 || values.c != 0) {
@@ -590,59 +533,15 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
           line_count++;
           // read a line //{{{
           if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-            ErrorEOF(file, "incomplete 'Molecules' section");
-            exit(1);
-          } //}}}
-          long beads[4];
-          PARAMS values = InitParams;
-          // error - incorrect line //{{{
-          if (words < 5 ||
-              !IsNaturalNumber(split[1], &beads[0]) ||
-              !IsNaturalNumber(split[2], &beads[1]) ||
-              !IsNaturalNumber(split[3], &beads[2]) ||
-              !IsNaturalNumber(split[4], &beads[3]) ||
-              beads[0] == beads[1] ||
-              beads[0] == beads[2] ||
-              beads[0] == beads[3] ||
-              beads[1] == beads[2] ||
-              beads[1] == beads[3] ||
-              beads[2] == beads[3]) {
-            snprintf(ERROR_MSG, LINE, "incorrect improper line for molecule "
-                     "%s%s", ErrYellow(), mt_i->Name);
-            PrintErrorFileLine(file, line_count);
-            exit(1);
-          } //}}}
-          // error - bead index is too high //{{{
-          if (beads[0] > mt_i->nBeads || beads[1] > mt_i->nBeads ||
-              beads[2] > mt_i->nBeads || beads[3] > mt_i->nBeads) {
-            err_msg("bead index in a improper is too high");
+            err_msg("incomplete 'Molecules' section (showing last line)");
             goto error;
-          }                                    //}}}
-          mt_i->Improper[j][0] = beads[0] - 1; // in FIELD, indices start from 1
-          mt_i->Improper[j][1] = beads[1] - 1; //
-          mt_i->Improper[j][2] = beads[2] - 1; //
-          mt_i->Improper[j][3] = beads[3] - 1; //
-          // read up to three values for improper type //{{{
-          for (int k = 5; k <= 7; k++) {
-            double *ptr = NULL;
-            if (k == 5) {
-              ptr = &values.a;
-            } else if (k == 6) {
-              ptr = &values.b;
-            } else {
-              ptr = &values.c;
-            }
-            if (words > k) {
-              if (strcmp(split[k], "???") == 0 && !warned) {
-                snprintf(ERROR_MSG, LINE, "undefined improper parameter "
-                         "(\'???\') in molecule %s%s", ErrYellow(), mt_i->Name);
-                PrintWarnFile(file, "\0", "\0");
-                warned = true;
-              } else if (!IsRealNumber(split[k], ptr)) {
-                break;
-              }
-            }
           } //}}}
+          int num = 5;
+          long beads[num];
+          if (!ReadBeadIds(num, beads, *mt_i)) {
+            goto error;
+          }
+          PARAMS values = ReadParams(file, num, *mt_i, &warned);
           // assign improper type //{{{
           int improper_type = -1;
           if (values.a != 0 || values.b != 0 || values.c != 0) {
@@ -667,6 +566,9 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
             }
           }
           mt_i->Improper[j][4] = improper_type; //}}}
+          for (int aa = 0; aa < (num - 1); aa++) {
+            mt_i->Improper[j][aa] = beads[aa] - 1; // FIELD indices go from 1
+          }
         }                                       //}}}
       } else if (words > 0 && strcasecmp(split[0], "finish") == 0) {
         continue;
@@ -695,10 +597,12 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
     Count->HighestResid = Count->Molecule;
   }
   fclose(fr);
+  return;
 error: // unrecognised line //{{{
   PrintErrorFileLine(file, line_count);
   exit(1); //}}}
 } //}}}
+
 SYSTEM FieldRead(const char *file) { //{{{
   SYSTEM System;
   InitSystem(&System);

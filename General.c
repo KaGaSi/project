@@ -100,9 +100,8 @@ bool ReadLine(FILE *fr, char *line) { //{{{
   size_t len = strcspn(line, "\n");
   if (len == (LINE - 1) && line[len] != '\n') {
     int ch;
-    while ((ch = getc(fr)) != '\n' && ch != EOF) {
-      // No buffer involved; safe to skip characters directly
-    }
+    while ((ch = getc(fr)) != '\n' && ch != EOF)
+      ;
   }
   return true;
 } //}}}

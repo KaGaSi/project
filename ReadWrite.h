@@ -5,31 +5,23 @@
 
 #include "AnalysisTools.h"
 
-// reading functions
+// General helper functions
+void InitCoorFile(FILE_TYPE fout, SYSTEM System, int argc, char **argv);
 void CopyMoleculeTypeBeadsToMoleculeBeads(SYSTEM *System);
-// fill MoleculeType[].Bond arrays with data from a separate bond array
-void FillMoleculeTypeBonds(SYSTEM *System, const int (*bond)[3],
-                           const int n);
-// remove molecule/bead types with 0 molecules/beads
+void FillMTypeStuff(SYSTEM *System, const int type, const int size,
+                    const int (*all)[size], const int n);
+void MinimizeMTypeStuffIds(SYSTEM *System);
 void RemoveExtraTypes(SYSTEM *System);
-// SYSTEM ReadStructure(int struct_type, char struct_file[], int coor_type,
-//                      char coor_file[], bool detailed);
+void WriteBoxLengthAngles(FILE *fw, const BOX box);
+
+// Reading functions
 SYSTEM ReadStructure(SYS_FILES f, bool detailed);
 bool ReadTimestep(SYS_FILES f, FILE *fr, SYSTEM *System, int *line_count);
 bool SkipTimestep(SYS_FILES f, FILE *fr, int *line_count);
 int ReadAggregates(FILE *fr, const char *file, SYSTEM *System,
                    AGGREGATE *Aggregate, int *line_count);
-// fill MoleculeType[].Angle arrays with data from a separate angle array
-void FillMoleculeTypeAngles(SYSTEM *System, const int (*angle)[4],
-                            const int n);
-// fill MoleculeType[].Dihedral arrays with data from a separate dihedral array
-void FillMoleculeTypeDihedral(SYSTEM *System, const int (*dihedral)[5],
-                              const int n);
-// fill MoleculeType[].Improper arrays with data from a separate improper array
-void FillMoleculeTypeImproper(SYSTEM *System, const int (*improper)[5],
-                              const int n);
+
 // writing functions
-void InitCoorFile(FILE_TYPE fout, SYSTEM System, int argc, char **argv);
 void WriteOutput(SYSTEM System, const bool *write, FILE_TYPE fw,
                  bool lmp_mass, int vsf_def, int argc, char **argv);
 void WriteOutputAll(SYSTEM System, FILE_TYPE fw, bool lmp_mass,

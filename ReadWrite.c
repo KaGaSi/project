@@ -9,11 +9,28 @@
 #include "Errors.h"
 #include "Structs.h"
 #include "System.h"
+#include <stdio.h>
 #include <string.h>
 
+static void CopyStuff(const int n, const int num,
+                      int (**old)[num], int (**new)[num]);
+static void CopyAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new);
+static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[num],
+                                     const int n, const int *link_bead_ids);
+
 // TODO: renumber molecules so that the lowest id is 1 while creating new output
-//       structure files
-// General helper functions //{{{
+//       structure files - huh? What's this for?
+// General helper functions
+void InitCoorFile(FILE_TYPE file, SYSTEM System, int argc, char **argv) { //{{{
+  if (file.type == VCF_FILE) {
+    PrintByline(file.name, argc, argv);
+  } else if (file.type == VTF_FILE) {
+    WriteStructure(file, System, -1, false, argc, argv);
+  } else {
+    FILE *out = OpenFile(file.name, "w");
+    fclose(out);
+  }
+} //}}}
 void CopyMoleculeTypeBeadsToMoleculeBeads(SYSTEM *System) { //{{{
   COUNT *Count = &System->Count;
   for (int i = 0; i < Count->Molecule; i++) {
@@ -36,328 +53,106 @@ void CopyMoleculeTypeBeadsToMoleculeBeads(SYSTEM *System) { //{{{
     }
   }
 } //}}}
-// FillMoleculeTypeBonds() //{{{
-void FillMoleculeTypeBonds(SYSTEM *System, const int (*bond)[3],
-                           const int num) {
-  COUNT *Count = &System->Count;
-  // fill MoleculeType[].Bond array with bead indices
-  for (int i = 0; i < num; i++) {
-    int id[2];
-    id[0] = bond[i][0];
-    id[1] = bond[i][1];
-    int bond_type = bond[i][2], mol = System->Bead[id[0]].Molecule;
-    // warning - bonded beads in different molecules (skip the bond)  //{{{
-    if (mol != System->Bead[id[1]].Molecule || mol == -1) {
-      err_msg("bonded beads not in the same molecule; discarding this bond");
-      PrintWarning();
-      fprintf(stderr, "%sBead (molecule):", ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[0], ErrCyan(),
-              ErrYellow(), System->Bead[id[0]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s)%s\n", ErrYellow(), id[1], ErrCyan(),
-              ErrYellow(), System->Bead[id[1]].Molecule, ErrCyan(),
-              ErrColourReset());
-      continue;
-    } //}}}
-    MOLECULETYPE *mt_mol = &System->MoleculeType[mol];
-    int n_bond = mt_mol->nBonds;
-    mt_mol->nBonds++;
-    if (n_bond == 0) { // first bond in a molecule - allocate one memory space
-      mt_mol->Bond = malloc(sizeof *mt_mol->Bond);
-    } else { // subsequent bonds - add one memory space
-      mt_mol->Bond = s_realloc(mt_mol->Bond,
-                               sizeof *mt_mol->Bond * mt_mol->nBonds);
-    }
-    mt_mol->Bond[n_bond][0] = id[0];
-    mt_mol->Bond[n_bond][1] = id[1];
-    mt_mol->Bond[n_bond][2] = bond_type;
-  }
-  // make the MoleculeType[].Bond bead indices go from 0 to nBeads //{{{
-  for (int i = 0; i < Count->MoleculeType; i++) {
+// make the MoleculeType[].Stuff bead indices be between 0 and nBeads //{{{
+// Assumes that there's one Molecule per MoleculeType
+void MinimizeMTypeStuffIds(SYSTEM *System) {
+  /*
+   * Allocate memory for linking bead indices in the molecule (i.e., bead
+   * indices in the input structure file) to bead indices in the molecule
+   * type (i.e., indices 0 to nBeads).
+   */
+  int *link_ids = calloc(System->Count.Bead, sizeof *link_ids);
+  for (int i = 0; i < System->Count.MoleculeType; i++) {
     MOLECULETYPE *mt_i = &System->MoleculeType[i];
-    // 1) find lowest and highest index in the bond
-    if (mt_i->nBonds) {
-      int lowest = 1e9, highest = 0;
-      for (int j = 0; j < mt_i->nBonds; j++) {
-        if (mt_i->Bond[j][0] < lowest) {
-          lowest = mt_i->Bond[j][0];
-        }
-        if (mt_i->Bond[j][1] < lowest) {
-          lowest = mt_i->Bond[j][1];
-        }
-        if (mt_i->Bond[j][1] > highest) {
-          highest = mt_i->Bond[j][1] + 1;
-        }
-      }
-      // 2) a) make lowest index of Bond[][] 0
-      //    b) find which indices are present to detect dicontinuities
-      int diff = highest - lowest + 1; // +1 to count both highest & lowest ids
-      if (diff < 0) { // never triggers; just to get rid of compiler warning
-        err_msg("something went worng with bond indices!");
-        PrintError();
-        exit(1);
-      }
-      bool *present = calloc(diff, sizeof *present);
-      for (int j = 0; j < mt_i->nBonds; j++) {
-        int *id0 = &mt_i->Bond[j][0], *id1 = &mt_i->Bond[j][1];
-        *id0 -= lowest;       // a)
-        *id1 -= lowest;       // a)
-        present[*id0] = true; // b)
-        present[*id1] = true; // b)
-      }
-      // 3) find by how much to decrease indices (in case of discontinuities)
-      int *decrease = calloc(diff, sizeof *decrease);
-      for (int j = 0; j < diff; j++) {
-        if (!present[j]) {
-          for (int k = j; k < diff; k++) {
-            decrease[k]++;
-          }
-        }
-      }
-      // 4) remove the discontinuities
-      for (int j = 0; j < mt_i->nBonds; j++) {
-        int *id0 = &mt_i->Bond[j][0], *id1 = &mt_i->Bond[j][1];
-        mt_i->Bond[j][0] -= decrease[*id0];
-        mt_i->Bond[j][1] -= decrease[*id1];
-      }
-      free(present);
-      free(decrease);
-      // 5) warning - index is too high; shouldn't happen
-      for (int j = 0; j < mt_i->nBonds; j++) {
-        if (mt_i->Bond[j][0] >= mt_i->nBeads ||
-            mt_i->Bond[j][1] >= mt_i->nBeads) {
-          err_msg("something is wrong in bond indices; should never happen!");
-          PrintError();
-        }
+    int count_bead = 0;
+    for (int j = 0; j < mt_i->nBeads; j++) {
+      int id = System->Molecule[i].Bead[j];
+      link_ids[id] = count_bead;
+      count_bead++;
+    }
+    MinimizeOneMtypeStuffIds(3, &mt_i->Bond, mt_i->nBonds, link_ids);
+    MinimizeOneMtypeStuffIds(4, &mt_i->Angle, mt_i->nAngles, link_ids);
+    MinimizeOneMtypeStuffIds(5, &mt_i->Dihedral, mt_i->nDihedrals, link_ids);
+    MinimizeOneMtypeStuffIds(5, &mt_i->Improper, mt_i->nImpropers, link_ids);
+  }
+  free(link_ids);
+}
+static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[num],
+                                     const int n, const int *link_bead_ids) {
+  if (n > 0) { // only for the molecule types with that stuff
+    // use the linking array to assign proper bead ids
+    for (int j = 0; j < n; j++) {
+      for (int aa = 0; aa < (num - 1); aa++) {
+        (*arr)[j][aa] = link_bead_ids[(*arr)[j][aa]];
       }
     }
-  } //}}}
+  }
 } //}}}
-// FillMoleculeTypeAngles() //{{{
-void FillMoleculeTypeAngles(SYSTEM *System, const int (*angle)[4],
-                            const int num) {
-  COUNT *Count = &System->Count;
-  // fill MoleculeType[].Bond array with bead indices
-  for (int i = 0; i < num; i++) {
-    int id[3];
-    id[0] = angle[i][0];
-    id[1] = angle[i][1];
-    id[2] = angle[i][2];
-    int angle_type = angle[i][3], mol = System->Bead[id[0]].Molecule;
+// FillMTypeStuff() //{{{
+void FillMTypeStuff(SYSTEM *System, const int type, const int size,
+                    const int (*all)[size], const int n) {
+  // fill MoleculeType[].Stuff array with bead indices
+  for (int i = 0; i < n; i++) {
+    int id[size];
+    for (int aa = 0; aa < size; aa++) {
+      id[aa] = all[i][aa];
+    }
+    int mol = System->Bead[id[0]].Molecule;
     // warning - beads in different molecules (skip the bond)  //{{{
-    if (mol != System->Bead[id[1]].Molecule ||
-        mol != System->Bead[id[2]].Molecule || mol == -1) {
-      err_msg("Beads in angle not in the same molecule; discarding this bond");
-      PrintWarning();
-      fprintf(stderr, "%sBead (molecule):", ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[0], ErrCyan(),
-              ErrYellow(), System->Bead[id[0]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[1], ErrCyan(),
-              ErrYellow(), System->Bead[id[1]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s)\n", ErrYellow(), id[2], ErrCyan(),
-              ErrYellow(), System->Bead[id[2]].Molecule, ErrColourReset());
+    bool err = false;
+    for (int aa = 1; aa < (size - 1); aa++) {
+      if (mol != System->Bead[id[aa]].Molecule || mol == -1) {
+        err_msg("Discarding bond/angle/dihedral/improper with beads that"
+                " do not share a molecule");
+        PrintWarning();
+        fprintf(stderr, "%sBead (molecule):", ErrCyan());
+        for (int bb = 1; bb < (size - 1); bb++) {
+          fprintf(stderr, " %s%d%s (%s%d%s)", ErrYellow(), id[bb], ErrCyan(),
+                  ErrYellow(), System->Bead[id[bb]].Molecule, ErrCyan());
+        }
+        putc('\n', stderr);
+        err = true;
+        break;
+      }
+    }
+    if (err) {
       continue;
     } //}}}
     MOLECULETYPE *mt_mol = &System->MoleculeType[mol];
-    int angle = mt_mol->nAngles;
-    mt_mol->nAngles++;
-    if (angle == 0) {
-      mt_mol->Angle = malloc(sizeof *mt_mol->Angle);
+    int (**arr)[size] = NULL;
+    int n_stuff = 0;
+    int *count = NULL;
+    if (type == 0) {
+      arr = &mt_mol->Bond;
+      n_stuff = mt_mol->nBonds;
+      count = &mt_mol->nBonds;
+    } else if (type == 1) {
+      arr = &mt_mol->Angle;
+      n_stuff = mt_mol->nAngles;
+      count = &mt_mol->nAngles;
+    } else if (type == 2) {
+      arr = &mt_mol->Dihedral;
+      n_stuff = mt_mol->nDihedrals;
+      count = &mt_mol->nDihedrals;
+    } else if (type == 3) {
+      arr = &mt_mol->Dihedral;
+      n_stuff = mt_mol->nDihedrals;
+      count = &mt_mol->nDihedrals;
+    }
+    (*count)++;
+    if (n_stuff == 0) {
+      *arr = malloc(sizeof **arr);
     } else {
-      mt_mol->Angle = s_realloc(mt_mol->Angle,
-                                sizeof *mt_mol->Angle * mt_mol->nAngles);
+      *arr = s_realloc(*arr, sizeof **arr * *count);
     }
-    mt_mol->Angle[angle][0] = id[0];
-    mt_mol->Angle[angle][1] = id[1];
-    mt_mol->Angle[angle][2] = id[2];
-    mt_mol->Angle[angle][3] = angle_type;
-  }
-  // make the MoleculeType[].Bond bead indices go from 0 to nBeads
-  for (int i = 0; i < Count->MoleculeType; i++) {
-    int lowest = 1e9;
-    MOLECULETYPE *mt_i = &System->MoleculeType[i];
-    for (int j = 0; j < mt_i->nAngles; j++) {
-      if (mt_i->Angle[j][0] < lowest) {
-        lowest = mt_i->Angle[j][0];
-      }
-      if (mt_i->Angle[j][1] < lowest) {
-        lowest = mt_i->Angle[j][1];
-      }
-      if (mt_i->Angle[j][2] < lowest) {
-        lowest = mt_i->Angle[j][2];
-      }
-    }
-    for (int j = 0; j < mt_i->nAngles; j++) {
-      mt_i->Angle[j][0] -= lowest;
-      mt_i->Angle[j][1] -= lowest;
-      mt_i->Angle[j][2] -= lowest;
-      // warning - too high an intramolecular bead index; shouldn't happen //{{{
-      if (mt_i->Angle[j][0] > mt_i->nBeads ||
-          mt_i->Angle[j][1] > mt_i->nBeads ||
-          mt_i->Angle[j][2] > mt_i->nBeads) {
-        err_msg("error in angle's bead indices; should never happen!");
-        PrintWarning();
-      } //}}}
+    for (int aa = 0; aa < size; aa++) {
+      (*arr)[n_stuff][aa] = id[aa];
     }
   }
 } //}}}
-// FillMoleculeTypeDihedral() //{{{
-void FillMoleculeTypeDihedral(SYSTEM *System, const int (*dihedral)[5],
-                              const int num) {
-  COUNT *Count = &System->Count;
-  // fill MoleculeType[].Bond array with bead indices
-  for (int i = 0; i < num; i++) {
-    int id[4];
-    id[0] = dihedral[i][0];
-    id[1] = dihedral[i][1];
-    id[2] = dihedral[i][2];
-    id[3] = dihedral[i][3];
-    int angle_type = dihedral[i][4], mol = System->Bead[id[0]].Molecule;
-    // warning - beads in different molecules (skip the bond)  //{{{
-    if (mol != System->Bead[id[1]].Molecule ||
-        mol != System->Bead[id[2]].Molecule ||
-        mol != System->Bead[id[3]].Molecule || mol == -1) {
-      err_msg("Beads in dihedral do not share molecule; discarding this angle");
-      PrintWarning();
-      fprintf(stderr, "%sBead (molecule):", ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[0], ErrCyan(),
-              ErrYellow(), System->Bead[id[0]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[1], ErrCyan(),
-              ErrYellow(), System->Bead[id[1]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[2], ErrCyan(),
-              ErrYellow(), System->Bead[id[2]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s)\n", ErrYellow(), id[3], ErrCyan(),
-              ErrYellow(), System->Bead[id[3]].Molecule, ErrColourReset());
-      continue;
-    } //}}}
-    MOLECULETYPE *mt_mol = &System->MoleculeType[mol];
-    int angle = mt_mol->nDihedrals;
-    mt_mol->nDihedrals++;
-    if (angle == 0) {
-      mt_mol->Dihedral = malloc(sizeof *mt_mol->Dihedral);
-    } else {
-      mt_mol->Dihedral = s_realloc(mt_mol->Dihedral, sizeof *mt_mol->Dihedral *
-                                   mt_mol->nDihedrals);
-    }
-    mt_mol->Dihedral[angle][0] = id[0];
-    mt_mol->Dihedral[angle][1] = id[1];
-    mt_mol->Dihedral[angle][2] = id[2];
-    mt_mol->Dihedral[angle][3] = id[3];
-    mt_mol->Dihedral[angle][4] = angle_type;
-  }
-  // make the MoleculeType[].Bond bead indices go from 0 to nBeads
-  for (int i = 0; i < Count->MoleculeType; i++) {
-    int lowest = 1e9;
-    MOLECULETYPE *mt_i = &System->MoleculeType[i];
-    for (int j = 0; j < mt_i->nDihedrals; j++) {
-      if (mt_i->Dihedral[j][0] < lowest) {
-        lowest = mt_i->Dihedral[j][0];
-      }
-      if (mt_i->Dihedral[j][1] < lowest) {
-        lowest = mt_i->Dihedral[j][1];
-      }
-      if (mt_i->Dihedral[j][2] < lowest) {
-        lowest = mt_i->Dihedral[j][2];
-      }
-      if (mt_i->Dihedral[j][3] < lowest) {
-        lowest = mt_i->Dihedral[j][3];
-      }
-    }
-    for (int j = 0; j < mt_i->nDihedrals; j++) {
-      mt_i->Dihedral[j][0] -= lowest;
-      mt_i->Dihedral[j][1] -= lowest;
-      mt_i->Dihedral[j][2] -= lowest;
-      mt_i->Dihedral[j][3] -= lowest;
-      // warning - too high an intramolecular bead index; shouldn't happen //{{{
-      if (mt_i->Dihedral[j][0] > mt_i->nBeads ||
-          mt_i->Dihedral[j][1] > mt_i->nBeads ||
-          mt_i->Dihedral[j][2] > mt_i->nBeads ||
-          mt_i->Dihedral[j][3] > mt_i->nBeads) {
-        err_msg("error with dihedral bead indices; should never happen!");
-        PrintWarning();
-      } //}}}
-    }
-  }
-} //}}}
-// FillMoleculeTypeImproper() //{{{
-void FillMoleculeTypeImproper(SYSTEM *System, const int (*improper)[5],
-                              const int num) {
-  COUNT *Count = &System->Count;
-  // fill MoleculeType[].Bond array with bead indices
-  for (int i = 0; i < num; i++) {
-    int id[4];
-    id[0] = improper[i][0];
-    id[1] = improper[i][1];
-    id[2] = improper[i][2];
-    id[3] = improper[i][3];
-    int angle_type = improper[i][4], mol = System->Bead[id[0]].Molecule;
-    // warning - beads in different molecules (skip the bond)  //{{{
-    if (mol != System->Bead[id[1]].Molecule ||
-        mol != System->Bead[id[2]].Molecule ||
-        mol != System->Bead[id[3]].Molecule || mol == -1) {
-      err_msg("Beads in improper do not share molecule; discarding this angle");
-      PrintWarning();
-      fprintf(stderr, "%sBead (molecule):", ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[0], ErrCyan(),
-              ErrYellow(), System->Bead[id[0]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[1], ErrCyan(),
-              ErrYellow(), System->Bead[id[1]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s);", ErrYellow(), id[2], ErrCyan(),
-              ErrYellow(), System->Bead[id[2]].Molecule, ErrCyan());
-      fprintf(stderr, " %s%d%s (%s%d%s)\n", ErrYellow(), id[3], ErrCyan(),
-              ErrYellow(), System->Bead[id[3]].Molecule, ErrColourReset());
-      continue;
-    } //}}}
-    MOLECULETYPE *mt_mol = &System->MoleculeType[mol];
-    int angle = mt_mol->nImpropers;
-    mt_mol->nImpropers++;
-    if (angle == 0) {
-      mt_mol->Improper = malloc(sizeof *mt_mol->Improper);
-    } else {
-      mt_mol->Improper = s_realloc(mt_mol->Improper, sizeof *mt_mol->Improper *
-                                   mt_mol->nImpropers);
-    }
-    mt_mol->Improper[angle][0] = id[0];
-    mt_mol->Improper[angle][1] = id[1];
-    mt_mol->Improper[angle][2] = id[2];
-    mt_mol->Improper[angle][3] = id[3];
-    mt_mol->Improper[angle][4] = angle_type;
-  }
-  // make the MoleculeType[].Bond bead indices go from 0 to nBeads
-  for (int i = 0; i < Count->MoleculeType; i++) {
-    int lowest = 1e9;
-    MOLECULETYPE *mt_i = &System->MoleculeType[i];
-    for (int j = 0; j < mt_i->nImpropers; j++) {
-      if (mt_i->Improper[j][0] < lowest) {
-        lowest = mt_i->Improper[j][0];
-      }
-      if (mt_i->Improper[j][1] < lowest) {
-        lowest = mt_i->Improper[j][1];
-      }
-      if (mt_i->Improper[j][2] < lowest) {
-        lowest = mt_i->Improper[j][2];
-      }
-      if (mt_i->Improper[j][3] < lowest) {
-        lowest = mt_i->Improper[j][3];
-      }
-    }
-    for (int j = 0; j < mt_i->nImpropers; j++) {
-      mt_i->Improper[j][0] -= lowest;
-      mt_i->Improper[j][1] -= lowest;
-      mt_i->Improper[j][2] -= lowest;
-      mt_i->Improper[j][3] -= lowest;
-      // warning - too high an intramolecular bead index; shouldn't happen //{{{
-      if (mt_i->Improper[j][0] > mt_i->nBeads ||
-          mt_i->Improper[j][1] > mt_i->nBeads ||
-          mt_i->Improper[j][2] > mt_i->nBeads ||
-          mt_i->Improper[j][3] > mt_i->nBeads) {
-        err_msg("error with improper bead indices; should never happen!");
-        PrintWarning();
-      } //}}}
-    }
-  }
-} //}}}
-void CopyStuff(const int n, const int num,
-               int (**old)[num], int (**new)[num]) {
+// copy bonds/angles/dihedrals/impropers to a new molecule type //{{{
+static void CopyStuff(const int n, const int num,
+                      int (**old)[num], int (**new)[num]) {
   if (n > 0) {
     *new = malloc(sizeof **new * n);
     for (int j = 0; j < n; j++) {
@@ -368,6 +163,12 @@ void CopyStuff(const int n, const int num,
     free(*old);
   }
 }
+static void CopyAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new) {
+  CopyStuff(mt_new->nBonds, 3, &mt_old->Bond, &mt_new->Bond);
+  CopyStuff(mt_new->nAngles, 4, &mt_old->Angle, &mt_new->Angle);
+  CopyStuff(mt_new->nDihedrals, 5, &mt_old->Dihedral, &mt_new->Dihedral);
+  CopyStuff(mt_new->nImpropers, 5, &mt_old->Improper, &mt_new->Improper);
+} //}}}
 // RemoveExtraTypes() { //{{{
 /*
  * Remove bead and molecule types with .Number=0. It assumes the allocated
@@ -423,10 +224,10 @@ void RemoveExtraTypes(SYSTEM *System) {
           mt_new->Bead[j] = mt_i->Bead[j];
         }
         free(mt_i->Bead);
-        CopyStuff(mt_new->nBonds, 3, &mt_i->Bond, &mt_new->Bond);
-        CopyStuff(mt_new->nAngles, 4, &mt_i->Angle, &mt_new->Angle);
-        CopyStuff(mt_new->nDihedrals, 5, &mt_i->Dihedral, &mt_new->Dihedral);
-        CopyStuff(mt_new->nImpropers, 5, &mt_i->Improper, &mt_new->Improper);
+        CopyAllStuff(mt_i, mt_new);
+        // CopyStuff(mt_new->nBonds, 3, &mt_i->Bond, &mt_new->Bond);
+        // CopyStuff(mt_new->nAngles, 4, &mt_i->Angle, &mt_new->Angle);
+        // CopyStuff(mt_new->nDihedrals, 5, &mt_i->Dihedral, &mt_new->Dihedral); CopyStuff(mt_new->nImpropers, 5, &mt_i->Improper, &mt_new->Improper);
         // Molecule struct
         MOLECULE *mol_new = &System->Molecule[mt_id];
         mol_new->Type = mt_id;
@@ -443,11 +244,18 @@ void RemoveExtraTypes(SYSTEM *System) {
   }
   Count->MoleculeType = count;
 } //}}}
-  //}}}
-/*
- * Read the provided structure file and extra info from the
- * provided coordinate file if necessary.
- */ //{{{
+void WriteBoxLengthAngles(FILE *fw, const BOX box) { //{{{
+  if (box.Volume != -1) {
+    fprintf(fw, "pbc %.3f %.3f %.3f", box.Length[0],
+                                      box.Length[1],
+                                      box.Length[2]);
+    if (box.alpha != 90 || box.beta != 90 || box.gamma != 90) {
+      fprintf(fw, " %lf %lf %lf", box.alpha, box.beta, box.gamma);
+    }
+  }
+} //}}}
+
+// Read a structure file and extra info from coordinate file if necessary //{{{
 SYSTEM ReadStructure(SYS_FILES f, bool detailed) {
   SYSTEM System;
   switch (f.stru.type) {
@@ -494,9 +302,7 @@ SYSTEM ReadStructure(SYS_FILES f, bool detailed) {
   }
   return System;
 } //}}} //}}}
-/*
- * Read a single timestep from the provided coordinate file.
- */ //{{{
+// Read a single timestep from the provided coordinate file //{{{
 bool ReadTimestep(SYS_FILES f, FILE *fr, SYSTEM *System, int *line_count) {
   switch (f.coor.type) {
     case VTF_FILE:
@@ -546,9 +352,7 @@ bool ReadTimestep(SYS_FILES f, FILE *fr, SYSTEM *System, int *line_count) {
   }
   return true;
 } //}}}
-/*
- * Skip a single timestep from the provided coordinate file.
- */ //{{{
+// Skip a single timestep from the provided coordinate file //{{{
 bool SkipTimestep(SYS_FILES f, FILE *fr, int *line_count) {
   switch (f.coor.type) {
     case VTF_FILE:
@@ -664,18 +468,6 @@ int ReadAggregates(FILE *fr, const char *file, SYSTEM *System,
   return 1;
 } //}}}
 
-// InitCoorFile() //{{{
-void InitCoorFile(FILE_TYPE file, SYSTEM System, int argc, char **argv) {
-  if (file.type == VCF_FILE) {
-    PrintByline(file.name, argc, argv);
-  } else if (file.type == VTF_FILE) {
-    WriteStructure(file, System, -1, false, argc, argv);
-  } else {
-    FILE *out = OpenFile(file.name, "w");
-    fclose(out);
-  }
-} //}}}
-
 // write structure and/or coordinates to a new file (can be any format) //{{{
 void WriteOutput(SYSTEM System, const bool *write, FILE_TYPE fw,
                  bool lmp_mass, int vsf_def, int argc, char **argv) {
@@ -787,7 +579,6 @@ void WriteStructure(FILE_TYPE f, SYSTEM System, int vsf_def_type,
       exit(1);
   }
 } //}}}
-
 // WriteAggregates() //{{{
 void WriteAggregates(int step_count, char *agg_file, SYSTEM System,
                      AGGREGATE *Aggregate) {
@@ -1145,32 +936,51 @@ void PrintBead(SYSTEM System) { //{{{
     putchar('\n');
   }
 } //}}}
+// find highest values from {Bond,Angle,Dihedral,Improper}Type params //{{{
+int * HighestParam(const SYSTEM System, const int type) {
+  int num = 0;
+  PARAMS *param;
+  if (type == 0) {
+    num = System.Count.BondType;
+    param = System.BondType;
+  } else if (type == 1) {
+    num = System.Count.AngleType;
+    param = System.AngleType;
+  } else if (type == 2) {
+    num = System.Count.DihedralType;
+    param = System.DihedralType;
+  } else if (type == 3) {
+    num = System.Count.ImproperType;
+    param = System.ImproperType;
+  } else {
+    err_msg("Highest(): 'type' must be 0 to 3");
+  }
+  PARAMS high = InitParams;
+  for (int i = 0; i < num; i++) {
+    if (param->a > high.a) {
+      high.a = param->a;
+    }
+    if (param->b > high.b) {
+      high.b = param->b;
+    }
+    if (param->c > high.c) {
+      high.c = param->c;
+    }
+    if (param->d > high.d) {
+      high.d = param->d;
+    }
+  }
+  static int width[4];
+  width[0] = snprintf(NULL, 0, "%.5f", high.a);
+  width[1] = snprintf(NULL, 0, "%.0f", high.b);
+  width[2] = snprintf(NULL, 0, "%.0f", high.c);
+  width[3] = snprintf(NULL, 0, "%.0f", high.d);
+  return width;
+} //}}}
 void PrintBondType(SYSTEM System) { //{{{
   if (System.Count.BondType > 0) {
-    // TODO: eventually, there should be more than cvff
-    // find highest value to get proper width //{{{
-    PARAMS high = InitParams;
-    for (int i = 0; i < System.Count.BondType; i++) {
-      PARAMS *b = &System.BondType[i];
-      if (b->a > high.a) {
-        high.a = b->a;
-      }
-      if (b->b > high.b) {
-        high.b = b->b;
-      }
-      if (b->c > high.c) {
-        high.c = b->c;
-      }
-      if (b->d > high.d) {
-        high.d = b->d;
-      }
-    }
-    int wid[4];
-    wid[0] = snprintf(NULL, 0, "%.5f", high.a);
-    wid[1] = snprintf(NULL, 0, "%.0f", high.b);
-    wid[2] = snprintf(NULL, 0, "%.0f", high.c);
-    wid[3] = snprintf(NULL, 0, "%.0f", high.d);
-    //}}}
+    // TODO: eventually, there should be more than harm
+    int *wid = HighestParam(System, 0);
     fprintf(stdout, "Bond types");
     fprintf(stdout, " (lammps style 'harm')\n");
     for (int i = 0; i < System.Count.BondType; i++) {
@@ -1183,29 +993,7 @@ void PrintBondType(SYSTEM System) { //{{{
 void PrintAngleType(SYSTEM System) { //{{{
   if (System.Count.AngleType > 0) {
     // TODO: eventually, there should be more than cvff
-    // find highest value to get proper width //{{{
-    PARAMS high = InitParams;
-    for (int i = 0; i < System.Count.AngleType; i++) {
-      PARAMS *ang = &System.AngleType[i];
-      if (ang->a > high.a) {
-        high.a = ang->a;
-      }
-      if (ang->b > high.b) {
-        high.b = ang->b;
-      }
-      if (ang->c > high.c) {
-        high.c = ang->c;
-      }
-      if (ang->d > high.d) {
-        high.d = ang->d;
-      }
-    }
-    int wid[4];
-    wid[0] = snprintf(NULL, 0, "%.5f", high.a);
-    wid[1] = snprintf(NULL, 0, "%.0f", high.b);
-    wid[2] = snprintf(NULL, 0, "%.0f", high.c);
-    wid[3] = snprintf(NULL, 0, "%.0f", high.d);
-    //}}}
+    int *wid = HighestParam(System, 1);
     fprintf(stdout, "Angle types");
     fprintf(stdout, " (lammps style 'harm')\n");
     for (int i = 0; i < System.Count.AngleType; i++) {
@@ -1218,29 +1006,7 @@ void PrintAngleType(SYSTEM System) { //{{{
 void PrintDihedralType(SYSTEM System) { //{{{
   if (System.Count.DihedralType > 0) {
     // TODO: eventually, there should be more than harm
-    // find highest value to get proper width //{{{
-    PARAMS high = InitParams;
-    for (int i = 0; i < System.Count.DihedralType; i++) {
-      PARAMS *dih = &System.DihedralType[i];
-      if (dih->a > high.a) {
-        high.a = dih->a;
-      }
-      if (dih->b > high.b) {
-        high.b = dih->b;
-      }
-      if (dih->c > high.c) {
-        high.c = dih->c;
-      }
-      if (dih->d > high.d) {
-        high.d = dih->d;
-      }
-    }
-    int wid[4];
-    wid[0] = snprintf(NULL, 0, "%.5f", high.a);
-    wid[1] = snprintf(NULL, 0, "%.0f", high.b);
-    wid[2] = snprintf(NULL, 0, "%.0f", high.c);
-    wid[3] = snprintf(NULL, 0, "%.0f", high.d);
-    //}}}
+    int *wid = HighestParam(System, 2);
     fprintf(stdout, "Dihedral types");
     // TODO: eventually, there should be more
     fprintf(stdout, " (lammps style 'harm')\n");
@@ -1255,29 +1021,7 @@ void PrintDihedralType(SYSTEM System) { //{{{
 void PrintImproperType(SYSTEM System) { //{{{
   if (System.Count.ImproperType > 0) {
     // TODO: eventually, there should be more than cvff
-    // find highest value to get proper width //{{{
-    PARAMS high = InitParams;
-    for (int i = 0; i < System.Count.ImproperType; i++) {
-      PARAMS *imp = &System.ImproperType[i];
-      if (imp->a > high.a) {
-        high.a = imp->a;
-      }
-      if (imp->b > high.b) {
-        high.b = imp->b;
-      }
-      if (imp->c > high.c) {
-        high.c = imp->c;
-      }
-      if (imp->d > high.d) {
-        high.d = imp->d;
-      }
-    }
-    int wid[4];
-    wid[0] = snprintf(NULL, 0, "%.5f", high.a);
-    wid[1] = snprintf(NULL, 0, "%.0f", high.b);
-    wid[2] = snprintf(NULL, 0, "%.0f", high.c);
-    wid[3] = snprintf(NULL, 0, "%.0f", high.d);
-    //}}}
+    int *wid = HighestParam(System, 2);
     fprintf(stdout, "Improper types");
     fprintf(stdout, " (lammps style 'cvff')\n");
     for (int i = 0; i < System.Count.ImproperType; i++) {
