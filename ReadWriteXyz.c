@@ -11,18 +11,6 @@ SYSTEM XyzReadStruct(const char *file) { //{{{
   COUNT *Count = &Sys.Count;
   int line_count = 0;
   FILE *fr = OpenFile(file, "r");
-  // // read number of beads //{{{
-  // line_count++;
-  // if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-  //   ErrorEOF(file, "missing number of beads");
-  //   exit(1);
-  // }
-  // long val;
-  // if (words == 0 || !IsNaturalNumber(split[0], &val)) {
-  //   err_msg("wrong first line of an xyz file");
-  //   PrintErrorFileLine(file, line_count);
-  //   exit(1);
-  // } //}}}
   long val = ReadFirstLine(file, fr, &line_count);
   Count->Bead = val;
   Count->BeadCoor = val;

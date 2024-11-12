@@ -34,14 +34,16 @@ static void LmpDataReadAtoms(FILE *fr, const char *file, SYSTEM *System,
 static void LmpDataReadVelocities(FILE *fr, const char *file,
                                   SYSTEM *System, int *line_count);
 static void LmpDataReadBonds(FILE *fr, const char *file, const COUNT Count,
-                             int (*bond)[3], int *line_count);
+                             int (*bond)[5], int *line_count);
 static void LmpDataReadAngles(FILE *fr, const char *file, const COUNT Count,
-                              int (*angle)[4], int *line_count);
+                              int (*angle)[5], int *line_count);
 static void LmpDataReadDihedrals(FILE *fr, const char *file, const COUNT Count,
                                  int (*dihedral)[5], int *line_count);
 static void LmpDataReadImpropers(FILE *fr, const char *file, const COUNT Count,
                                  int (*improper)[5], int *line_count);
 static bool ReadPbc(BOX *box);
+static void WriteStuff(FILE *fw, const SYSTEM System, const int mol,
+                       int *count, const int num, int (**arr)[5], const int n);
 
 // read header //{{{
 static int LmpDataReadHeader(FILE *fr, const char *file,
@@ -454,7 +456,7 @@ static void LmpDataReadBody(FILE *fr, const char *file, SYSTEM *System,
   COUNT *Count = &System->Count;
   BEADTYPE *name_mass = calloc(atom_types, sizeof *name_mass);
   // create arrays for bonds/angles/dihedrals/impropers //{{{
-  int(*bond)[3], (*angle)[4], (*dihedral)[5], (*improper)[5];
+  int(*bond)[5], (*angle)[5], (*dihedral)[5], (*improper)[5];
   if (Count->Bond > 0) {
     bond = calloc(Count->Bond, sizeof *bond);
   } else {
@@ -972,7 +974,7 @@ static void LmpDataReadAtoms(FILE *fr, const char *file, SYSTEM *System,
       if (mt_resid->Number == 0) { // no, create new type
         char name[MOL_NAME] = "m";
         for (int j = 0; j < words; j++) {
-          if (split[j][0] == '#' && words > j) {
+          if (split[j][0] == '#') {
             snprintf(name, MOL_NAME, "%s", split[j+1]);
             mt_resid->Flag = true;
             break;
@@ -1032,7 +1034,7 @@ static void LmpDataReadVelocities(FILE *fr, const char *file,
 } //}}}
 // read Bonds section //{{{
 static void LmpDataReadBonds(FILE *fr, const char *file, const COUNT Count,
-                             int (*bond)[3], int *line_count) {
+                             int (*bond)[5], int *line_count) {
   bool *found = calloc(Count.Bond, sizeof *found);
   // skip one line
   (*line_count)++;
@@ -1099,7 +1101,7 @@ error:
 } //}}}
 // read Angles section //{{{
 static void LmpDataReadAngles(FILE *fr, const char *file, const COUNT Count,
-                              int (*angle)[4], int *line_count) {
+                              int (*angle)[5], int *line_count) {
   bool *found = calloc(Count.Angle, sizeof *found);
   // skip one line
   (*line_count)++;
@@ -1314,8 +1316,8 @@ static bool ReadPbc(BOX *box) { //{{{
 } //}}}
 
 // write single bond/angle/dihedral/improper 'stuff' //{{{
-void WriteStuff(FILE *fw, const SYSTEM System, const int mol,
-                int *count, const int num, int (**arr)[num], const int n) {
+static void WriteStuff(FILE *fw, const SYSTEM System, const int mol,
+                       int *count, const int num, int (**arr)[5], const int n) {
   (*count)++;
   bool in = true;
   for (int aa = 0; aa < (num - 1); aa++) {

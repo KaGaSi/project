@@ -1,14 +1,19 @@
 #include "ReadWriteField.h"
+#include "Errors.h"
 #include "General.h"
 
 static void FieldReadSpecies(const char *file, SYSTEM *System);
 static void FieldReadMolecules(const char *file, SYSTEM *System);
 static void SkipTilKeyword(FILE *f, const char *file,
                            const char *keyword, int *line_count);
-// static void ReadBeadIds(const int num, const int n,
-//                         long id[num], MOLECULETYPE mt);
-// ReadBeadIds() //{{{
-static bool ReadBeadIds(const int num, long id[num], MOLECULETYPE mt_i) {
+static bool GetBeadIds(const int num, long id[num], MOLECULETYPE mt_i);
+static PARAMS GetParams(const char *file, const int num,
+                        const MOLECULETYPE mt, bool *warned);
+static bool ReadStuff(const char *file, FILE *fr, int *line_count,
+                      const int type, const int mtype, SYSTEM *System);
+
+// GetBeadIds() //{{{
+static bool GetBeadIds(const int num, long id[num], MOLECULETYPE mt_i) {
   bool err = false;
   for (int aa = 0; aa < (num - 1); aa++) {
     if (words < num ||
@@ -38,9 +43,9 @@ static bool ReadBeadIds(const int num, long id[num], MOLECULETYPE mt_i) {
   }
   return true;
 } //}}}
-// ReadParams() //{{{
-static PARAMS ReadParams(const char *file, const int num,
-                         const MOLECULETYPE mt, bool *warned) {
+// GetParams() //{{{
+static PARAMS GetParams(const char *file, const int num,
+                        const MOLECULETYPE mt, bool *warned) {
   PARAMS values = InitParams;
   for (int k = num; k < (num + 3); k++) {
     double *ptr = NULL;
@@ -63,6 +68,88 @@ static PARAMS ReadParams(const char *file, const int num,
     }
   }
   return values;
+} //}}}
+// ReadStuff() //{{{
+static bool ReadStuff(const char *file, FILE *fr, int *line_count,
+                      const int type, const int mtype, SYSTEM *System) {
+  // assign arrays to pointers based on bond/angle/dihedral/improper //{{{
+  PARAMS **StuffType;
+  COUNT *Count = &System->Count;
+  int *CountStuff;
+  int *n_stuff;
+  MOLECULETYPE *mt = &System->MoleculeType[mtype];
+  int (**Stuff)[5];
+  int num = 0;
+  if (type == 0) { // bonds
+    num = 3;
+    n_stuff = &mt->nBonds;
+    StuffType = &System->BondType;
+    CountStuff = &Count->BondType;
+    Stuff = &mt->Bond;
+  } else if (type == 1) { // angles
+    num = 4;
+    n_stuff = &mt->nAngles;
+    StuffType = &System->AngleType;
+    CountStuff = &Count->AngleType;
+    Stuff = &mt->Angle;
+  } else if (type == 2) { // dihedreals
+    num = 5;
+    n_stuff = &mt->nDihedrals;
+    StuffType = &System->DihedralType;
+    CountStuff = &Count->DihedralType;
+    Stuff = &mt->Dihedral;
+  } else if (type == 3) { // impropers
+    num = 5;
+    n_stuff = &mt->nImpropers;
+    StuffType = &System->ImproperType;
+    CountStuff = &Count->ImproperType;
+    Stuff = &mt->Improper;
+  } else { // error
+    err_msg("ReadStuff(): type must be 0 to 3");
+    PrintError();
+    exit(1);
+  } //}}}
+  *Stuff = malloc(sizeof **Stuff * *n_stuff);
+  bool warned = false;
+  for (int j = 0; j < *n_stuff; j++) {
+    (*line_count)++;
+    // read a line //{{{
+    if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
+      ErrorEOF(file, "incomplete 'Molecules' section");
+      exit(1);
+    } //}}}
+    long beads[num];
+    if (!GetBeadIds(num, beads, *mt)) {
+      return false;
+    }
+    // assign bead ids to proper 'stuff'
+    for (int aa = 0; aa < (num - 1); aa++) {
+      (*Stuff)[j][aa] = beads[aa] - 1;
+    }
+    PARAMS values = GetParams(file, num, *mt, &warned);
+    // assign stuff type
+    int n_type = -1;
+    if (values.a != 0 || values.b != 0 || values.c != 0) {
+      // find if this bond type already exists
+      for (int k = 0; k < *CountStuff; k++) {
+        if ((*StuffType)[k].a == values.a &&
+            (*StuffType)[k].b == values.b &&
+            (*StuffType)[k].c == values.c) {
+          n_type = k;
+          break;
+        }
+      }
+      // create a new bond type if necessary
+      if (n_type == -1) {
+        n_type = *CountStuff;
+        (*CountStuff)++;
+        *StuffType = s_realloc(*StuffType, *CountStuff * sizeof **StuffType);
+        (*StuffType)[n_type] = values;
+      }
+    }
+    (*Stuff)[j][num-1] = n_type;
+  }
+  return true;
 } //}}}
 
 // static void SkipTilKeyword() //{{{
@@ -313,57 +400,15 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       if (words > 1 && strncasecmp(split[0], "bonds", 4) == 0) {
         // a) number of bonds //{{{
         if (!IsNaturalNumber(split[1], &val)) {
-          err_msg("incorrect 'bonds' line in a molecule entry");
-          PrintErrorFileLine(file, line_count);
-          exit(1);
+          err_msg("incorrect 'bond' line in a molecule entry");
+          goto error;
         }
         mt_i->nBonds = val; //}}}
-        mt_i->Bond = malloc(sizeof *mt_i->Bond * mt_i->nBonds);
-        // b) bonds themselves & bond types //{{{
+        // b) bonds themselves & bond types
         // TODO: for now, only harmonic bonds are considered
-        bool warned = false;
-        for (int j = 0; j < mt_i->nBonds; j++) {
-          line_count++;
-          // read a line //{{{
-          if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-            ErrorEOF(file, "incomplete 'Molecules' section");
-            exit(1);
-          } //}}}
-          int num = 3;
-          long beads[num];
-          if (!ReadBeadIds(num, beads, *mt_i)) {
-            goto error;
-          }
-          PARAMS values = ReadParams(file, num, *mt_i, &warned);
-          for (int aa = 0; aa < (num - 1); aa++) {
-            mt_i->Bond[j][aa] = beads[aa] - 1; // FIELD bead indices go from 1
-          }
-          // assign bond type //{{{
-          int bond_type = -1;
-          if (values.a != 0 || values.b != 0 || values.c != 0) {
-            // find if this bond type already exists
-            for (int k = 0; k < Count->BondType; k++) {
-              if (System->BondType[k].a == values.a &&
-                  System->BondType[k].b == values.b &&
-                  System->BondType[k].c == values.c) {
-                bond_type = k;
-                break;
-              }
-            }
-            // create a new bond type if necessary
-            if (bond_type == -1) {
-              bond_type = Count->BondType;
-              Count->BondType++;
-              System->BondType = s_realloc(System->BondType, Count->BondType *
-                                           sizeof *System->BondType);
-              System->BondType[bond_type] = InitParams;
-              System->BondType[bond_type].a = values.a;
-              System->BondType[bond_type].b = values.b;
-              System->BondType[bond_type].c = values.c;
-            }
-          }
-          mt_i->Bond[j][2] = bond_type; //}}}
-        } //}}}
+        if (!ReadStuff(file, fr, &line_count, 0, i, System)) {
+          goto error;
+        }
       } else if (words > 0 && strcasecmp(split[0], "finish") == 0) {
         continue;
       } else {
@@ -381,58 +426,15 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       if (words > 1 && strncasecmp(split[0], "angles", 4) == 0) {
         // a) number of angles //{{{
         if (!IsNaturalNumber(split[1], &val)) {
-          snprintf(ERROR_MSG, LINE, "incorrect line in 'angles' line for "
-                   "molecule %s%s", ErrYellow(), mt_i->Name);
+          err_msg("incorrect 'angle' line in a molecule entry");
           goto error;
         }
         mt_i->nAngles = val; //}}}
-        mt_i->Angle = malloc(sizeof *mt_i->Angle * mt_i->nAngles);
-        // b) angles themselves & angle types //{{{
+        // b) angles themselves & angle types
         // TODO: for now, only harmonic angles are considered
-        bool warned = false; // to warn of undefined angle type only once
-        for (int j = 0; j < mt_i->nAngles; j++) {
-          line_count++;
-          // read a line //{{{
-          if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-            ErrorEOF(file, "incomplete 'Molecules' section");
-            exit(1);
-          } //}}}
-          int num = 4;
-          long beads[num];
-          if (!ReadBeadIds(num, beads, *mt_i)) {
-            goto error;
-          }
-          PARAMS values = ReadParams(file, num, *mt_i, &warned);
-          for (int aa = 0; aa < (num - 1); aa++) {
-            mt_i->Angle[j][aa] = beads[aa] - 1; // FIELD bead indices go from 1
-          }
-          // assign angle type //{{{
-          int angle_type = -1;
-          if (values.a != 0 || values.b != 0 || values.c != 0) {
-            // find if this angle type already exists
-            for (int k = 0; k < Count->AngleType; k++) {
-              if (System->AngleType[k].a == values.a &&
-                  System->AngleType[k].b == values.b &&
-                  System->AngleType[k].c == values.c) {
-                angle_type = k;
-                break;
-              }
-            }
-            // create a new angle type if necessary
-            if (angle_type == -1) {
-              angle_type = Count->AngleType;
-              Count->AngleType++;
-              System->AngleType = s_realloc(System->AngleType,
-                                            Count->AngleType *
-                                            sizeof *System->AngleType);
-              System->AngleType[angle_type] = InitParams;
-              System->AngleType[angle_type].a = values.a;
-              System->AngleType[angle_type].b = values.b;
-              System->AngleType[angle_type].c = values.c;
-            }
-          }
-          mt_i->Angle[j][3] = angle_type; //}}}
-        } //}}}
+        if (!ReadStuff(file, fr, &line_count, 1, i, System)) {
+          goto error;
+        }
       } else if (words > 0 && strcasecmp(split[0], "finish") == 0) {
         continue;
       } else {
@@ -450,57 +452,15 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       if (words > 1 && strncasecmp(split[0], "dihedrals", 5) == 0) {
         // a) number of dihedrals //{{{
         if (!IsNaturalNumber(split[1], &val)) {
-          snprintf(ERROR_MSG, LINE, "incorrect 'dihedrals' line for molecule "
-                   "%s%s", ErrYellow(), mt_i->Name);
-          PrintErrorFileLine(file, line_count);
-          exit(1);
+          err_msg("incorrect 'dihedral' line in a molecule entry");
+          goto error;
         }
         mt_i->nDihedrals = val; //}}}
-        mt_i->Dihedral = malloc(sizeof *mt_i->Dihedral * mt_i->nDihedrals);
-        // b) dihedrals themselves & dihedral types //{{{
+        // b) dihedrals themselves & dihedral types
         // TODO: for now, only harmonic dihedrals are considered
-        bool warned = false; // to warn of undefined type only once
-        for (int j = 0; j < mt_i->nDihedrals; j++) {
-          line_count++;
-          // read a line //{{{
-          if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-            ErrorEOF(file, "incomplete 'Molecules' section");
-            exit(1);
-          } //}}}
-          int num = 5;
-          long beads[num];
-          if (!ReadBeadIds(num, beads, *mt_i)) {
-            goto error;
-          }
-          PARAMS values = ReadParams(file, num, *mt_i, &warned);
-          for (int aa = 0; aa < (num - 1); aa++) {
-            mt_i->Dihedral[j][aa] = beads[aa] - 1; // FIELD indices go from 1
-          }
-          // assign dihedral type //{{{
-          int dihedral_type = -1;
-          if (values.a != 0 || values.b != 0 || values.c != 0) {
-            // find if this dihedral type already exists
-            for (int k = 0; k < Count->DihedralType; k++) {
-              if (System->DihedralType[k].a == values.a &&
-                  System->DihedralType[k].b == values.b &&
-                  System->DihedralType[k].c == values.c) {
-                dihedral_type = k;
-                break;
-              }
-            }
-            // create a new dihedral type if necessary
-            if (dihedral_type == -1) {
-              dihedral_type = Count->DihedralType;
-              Count->DihedralType++;
-              System->DihedralType = s_realloc(System->DihedralType,
-                                               Count->DihedralType *
-                                               sizeof *System->DihedralType);
-              System->DihedralType[dihedral_type] = InitParams;
-              System->DihedralType[dihedral_type] = values;
-            }
-          }
-          mt_i->Dihedral[j][4] = dihedral_type; //}}}
-        }                                       //}}}
+        if (!ReadStuff(file, fr, &line_count, 2, i, System)) {
+          goto error;
+        }
       } else if (words > 0 && strcasecmp(split[0], "finish") == 0) {
         continue;
       } else {
@@ -518,58 +478,15 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
       if (words > 1 && strncasecmp(split[0], "impropers", 6) == 0) {
         // a) number of impropers //{{{
         if (!IsNaturalNumber(split[1], &val)) {
-          snprintf(ERROR_MSG, LINE,
-                   "incorrect 'impropers' line in an entry "
-                   "for molecule %s%s",
-                   ErrYellow(), mt_i->Name);
-          PrintErrorFileLine(file, line_count);
-          exit(1);
+          err_msg("incorrect 'improper' line in a molecule entry");
+          goto error;
         }
         mt_i->nImpropers = val; //}}}
-        mt_i->Improper = malloc(sizeof *mt_i->Improper * mt_i->nImpropers);
-        // b) impropers themselves & improper types //{{{
-        bool warned = false; // to warn of undefined type only once
-        for (int j = 0; j < mt_i->nImpropers; j++) {
-          line_count++;
-          // read a line //{{{
-          if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
-            err_msg("incomplete 'Molecules' section (showing last line)");
-            goto error;
-          } //}}}
-          int num = 5;
-          long beads[num];
-          if (!ReadBeadIds(num, beads, *mt_i)) {
-            goto error;
-          }
-          PARAMS values = ReadParams(file, num, *mt_i, &warned);
-          // assign improper type //{{{
-          int improper_type = -1;
-          if (values.a != 0 || values.b != 0 || values.c != 0) {
-            // find if this improper type already exists
-            for (int k = 0; k < Count->ImproperType; k++) {
-              if (System->ImproperType[k].a == values.a &&
-                  System->ImproperType[k].b == values.b &&
-                  System->ImproperType[k].c == values.c) {
-                improper_type = k;
-                break;
-              }
-            }
-            // create a new improper type if necessary
-            if (improper_type == -1) {
-              improper_type = Count->ImproperType;
-              Count->ImproperType++;
-              System->ImproperType = s_realloc(System->ImproperType,
-                                               Count->ImproperType *
-                                               sizeof *System->ImproperType);
-              System->ImproperType[improper_type] = InitParams;
-              System->ImproperType[improper_type] = values;
-            }
-          }
-          mt_i->Improper[j][4] = improper_type; //}}}
-          for (int aa = 0; aa < (num - 1); aa++) {
-            mt_i->Improper[j][aa] = beads[aa] - 1; // FIELD indices go from 1
-          }
-        }                                       //}}}
+        // b) impropers themselves & improper types
+        // TODO: for now, only lammps' cvff impropers are considered
+        if (!ReadStuff(file, fr, &line_count, 3, i, System)) {
+          goto error;
+        }
       } else if (words > 0 && strcasecmp(split[0], "finish") == 0) {
         continue;
       } else {
@@ -598,9 +515,9 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
   }
   fclose(fr);
   return;
-error: // unrecognised line //{{{
+error: // unrecognised line
   PrintErrorFileLine(file, line_count);
-  exit(1); //}}}
+  exit(1);
 } //}}}
 
 SYSTEM FieldRead(const char *file) { //{{{

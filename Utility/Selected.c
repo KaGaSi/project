@@ -259,7 +259,6 @@ int main(int argc, char *argv[]) {
       fsetpos(fr, &position[i]);
       line_count = bkp_line_count[i];
       if (ReadTimestep(in, fr, &System, &line_count)) {
-        count_saved++;
         WrapJoinCoordinates(&System, opt->wrap, opt->join);
         WriteTimestep(fout, System, count_coor, write, argc, argv);
         if (!opt->c.silent) {

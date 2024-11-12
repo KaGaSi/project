@@ -17,3 +17,9 @@ const char *MAGENTA = "\033[1;35m";
 const char *CYAN =    "\033[1;36m";
 const char *WHITE =   "\033[1;37m";
 const char *C_RESET = "\033[0m";
+
+// 'impossible' values
+const double CHARGE = 10000.0;
+const double MASS = 0.0;
+const double RADIUS = 0.0;
+const double HIGHNUM = 1000000;

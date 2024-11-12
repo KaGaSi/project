@@ -146,7 +146,7 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
     InitBead(&Sys.Bead[i]);
   } //}}}
   // array to save bonds - if there are any //{{{
-  int (*bond)[3] = NULL;
+  int (*bond)[5] = NULL;
   if (count_bonds != 0) {
     bond = calloc(count_bonds, sizeof *bond);
     bond[0][2] = -1; // no bond types in a vtf file

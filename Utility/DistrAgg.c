@@ -472,11 +472,7 @@ int main(int argc, char *argv[]) {
       fprintf(fw, " %6d", count_agg[i]); // number of aggregates
       // print average number of molecule types in aggregates
       for (int j = 0; j < Count->MoleculeType; j++) {
-        if (count_agg[i] == 0) {
-          fprintf(fw, "%8s", "?");
-        } else {
-          fprintf(fw, " %10.5f", (double)(molecules_sum[i][j])/count_agg[i]);
-        }
+        fprintf(fw, " %10.5f", (double)(molecules_sum[i][j])/count_agg[i]);
       }
       putc('\n', fw);
     }

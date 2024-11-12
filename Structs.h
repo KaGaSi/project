@@ -9,52 +9,23 @@
 #define DATE "TBD"
 #define OPT_LENGTH 15
 
-#define CHARGE 10000.0 // 'impossible' charge
-#define MASS 0.0 // 'impossible' mass
-#define RADIUS 0.0 // 'impossible' radius
-#define HIGHNUM 1000000 // high number to use in various checks
-#define MOL_NAME 21 // maximum molecule name length (with null terminator)
-#define BEAD_NAME 21 // maximum bead name length (with null terminator)
+// #define CHARGE 10000.0 // 'impossible' charge
+// #define MASS 0.0 // 'impossible' mass
+// #define RADIUS 0.0 // 'impossible' radius
+// #define HIGHNUM 1000000 // high number to use in various checks
+// #define MOL_NAME 21 // maximum molecule name length (with null terminator)
+// #define BEAD_NAME 21 // maximum bead name length (with null terminator)
+//
+// #define EXTENSION 16 // maximum length of filename extension
 
-#define EXTENSION 16 // maximum length of filename extension
-// filetypes' ids
-#define VTF_FILE 0
-#define VSF_FILE 1
-#define VCF_FILE 2
-#define XYZ_FILE 3
-#define LDATA_FILE 4
-#define LTRJ_FILE 5
-#define FIELD_FILE 6
-#define CONFIG_FILE 7
-
-typedef struct file_type_extensions {
-  int number;
-  int vtf, vsf, vcf, xyz, ldata, ltrj, field, config;
-  char *file_extension[8];
-} FTYPE_EXTS;
-static const FTYPE_EXTS InitFTypeExt = {
-  .number = 8,
-  .vtf = 0,
-  .vsf = 1,
-  .vcf = 2,
-  .xyz = 3,
-  .ldata = 4,
-  .ltrj = 5,
-  .field = 6,
-  .config = 7,
-  .file_extension[0] = ".vtf",
-  .file_extension[1] = ".vsf",
-  .file_extension[2] = ".vcf",
-  .file_extension[3] = ".xyz",
-  .file_extension[4] = ".data",
-  .file_extension[5] = ".lammpstrj",
-  .file_extension[6] = ".field",
-  .file_extension[7] = ".config",
-};
-
+// structures for options //{{{
 typedef struct OPT OPT;
 OPT * opt_create(void);
-
+typedef struct common_opt {
+  bool verbose, silent;
+  int start, end, skip;
+} COMMON_OPT; //}}}
+// structures for file names and types //{{{
 typedef struct file_type {
   char name[LINE];
   int type;
@@ -63,20 +34,13 @@ static const FILE_TYPE InitFile = {
   .name = "",
   .type = -1,
 };
-
 typedef struct sys_files {
   FILE_TYPE coor, stru;
 } SYS_FILES;
 static const SYS_FILES InitSysFiles = {
   .coor = InitFile,
   .stru = InitFile,
-};
-
-typedef struct common_opt {
-  bool verbose, silent;
-  int start, end, skip;
-} COMMON_OPT;
-
+}; //}}}
 typedef struct Box { //{{{
   double Length[3],
          OrthoLength[3],
@@ -178,10 +142,10 @@ typedef struct MoleculeType { //{{{
       nBeads, // number of beads in every molecule of given type
       *Bead, // ids of bead types of every molecule bead
       nBonds, // number of bonds in every molecule of given type
-      (*Bond)[3], // pair of ids for every bond (with relative bead numbers from 0 to nBeads-1)
+      (*Bond)[5], // pair of ids for every bond (with relative bead numbers from 0 to nBeads-1)
                   // has to be sorted; size: [MoleculeType[i].Bond[3]
       nAngles, // number of angles in every molecule of given type
-      (*Angle)[4], // trio of ids for every angle (with relative bead numbers from 0 to nBeads-1)
+      (*Angle)[5], // trio of ids for every angle (with relative bead numbers from 0 to nBeads-1)
                   // has to be sorted; size: [MoleculeType[i].Angle[4]
       nDihedrals, // number of dihedrals in every molecule of given type
       (*Dihedral)[5], // fourtet of ids for every dihedral (with relative bead numbers from 0 to nBeads-1)

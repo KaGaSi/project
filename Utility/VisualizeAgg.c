@@ -481,11 +481,10 @@ int main(int argc, char *argv[]) {
   // open input coordinate file
   FILE *coor = OpenFile(in.coor.name, "r");
   // main loop //{{{
-  count = 0; // count timesteps in the main loop
-  int count_step = 0,  // count timesteps from the beginning
-      count_saved = 0, // count steps (i.e., aggregates) in output file
-      coor_line_count = 0,  // count lines in the coor file
-      count_agg_lines = 0;  // count lines in the agg file
+  int count_step = 0;  // count timesteps from the beginning
+  int count_saved = 0; // count timesteps (i.e., aggregates) in output file
+  int coor_line_count = 0; // count lines in the coor file
+  int count_agg_lines = 0; // count lines in the agg file
   while (true) {
     PrintStep(&count_step, opt->c.start, opt->c.silent);
     if (ReadAggregates(agg, in_agg, &System, Aggregate, &count_agg_lines) < 0) {

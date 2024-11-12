@@ -3,6 +3,14 @@
 #include "General.h"
 #include "Structs.h"
 
+static void SortSingleStuff(int num, int (**arr)[5], int n);
+static int CopyMTypeStuff(int num, int (*old)[5], int (**new)[5],
+                          int n_stuff, int old_to_new[]);
+static bool StuffInTimestep(SYSTEM System, int mol, int num,
+                            int (*arr)[5], int i);
+static void MTypeStuffNewIDs(SYSTEM System, int mol, int n_stuff, int num,
+                             int (*old)[5], int (**new)[5], int old_to_new[]);
+
 // realloc some System.*{,Coor} arrays //{{{
 void ReallocBead(SYSTEM *System) {
   COUNT *Count = &System->Count;
@@ -868,16 +876,14 @@ void MergeMoleculeTypes(SYSTEM *System) {
         if (!same_mol) {
           continue;
         }
-        // are molecule types i and j the same?
-        if (same_mol) {
-          if (i != j) {
-            mt_j->Number += mt_i->Number;
-            FreeMoleculeTypeEssentials(mt_i);
-          }
-          old_to_new[i] = j;
-          new = false;
-          break;
+        // i and j molecules are the same ('continue' used above otherwise)
+        if (i != j) {
+          mt_j->Number += mt_i->Number;
+          FreeMoleculeTypeEssentials(mt_i);
         }
+        old_to_new[i] = j;
+        new = false;
+        break;
       }
     }
     if (new) {      // create new type...
@@ -936,7 +942,7 @@ void MergeMoleculeTypes(SYSTEM *System) {
 } //}}}
 
 // sort a bond/angle/dihedral/improper (i.e., Stuff) array in an ascending order
-void SortSingleStuff(int num, int (**arr)[num], int n) { //{{{
+static void SortSingleStuff(int num, int (**arr)[5], int n) { //{{{
   // first, check order of the 1st and last ids
   for (int j = 0; j < n; j++) {
     if ((*arr)[j][0] > (*arr)[j][num-2]) {
@@ -1405,7 +1411,8 @@ void PruneAllStuffTypes(SYSTEM S_old, SYSTEM *System) {
   }
 } //}}}
 // is bond/angle/etc. in a molecule? //{{{
-bool StuffInTimestep(SYSTEM System, int mol, int num, int (*arr)[num], int i) {
+static bool StuffInTimestep(SYSTEM System, int mol, int num,
+                            int (*arr)[5], int i) {
   for (int aa = 0; aa < (num - 1); aa++) {
     int id = arr[i][aa];
     id = System.Molecule[mol].Bead[id];
@@ -1416,8 +1423,8 @@ bool StuffInTimestep(SYSTEM System, int mol, int num, int (*arr)[num], int i) {
   return true;
 } //}}}
 // replace bead ids for molecule type stuff with new ones //{{{
-void MTypeStuffNewIDs(SYSTEM System, int mol, int n_stuff, int num,
-                      int (*old)[num], int (**new)[num], int old_to_new[]) {
+static void MTypeStuffNewIDs(SYSTEM System, int mol, int n_stuff, int num,
+                             int (*old)[5], int (**new)[5], int old_to_new[]) {
   int count = 0;
   for (int i = 0; i < n_stuff; i++) {
     if (StuffInTimestep(System, mol, num, old, i)) {
@@ -1462,8 +1469,8 @@ void CountAllMTypeStuff(SYSTEM System, int mol, int num[4]) {
   num[3] = CountMTypeStuff(System, mol, 5, mt->Improper, mt->nImpropers);
 } //}}}
 // copy bonds/angles/dihedrals/impropers to a new molecule type //{{{
-int CopyMTypeStuff(int num, int (*old)[num], int (**new)[num],
-                   int n_stuff, int old_to_new[]) {
+static int CopyMTypeStuff(int num, int (*old)[5], int (**new)[5],
+                          int n_stuff, int old_to_new[]) {
   int count = 0;
   if (n_stuff > 0) {
     *new = malloc(sizeof **new * n_stuff);

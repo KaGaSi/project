@@ -225,7 +225,7 @@ int main(int argc, char *argv[]) {
   SYSTEM System = ReadStructure(in, false);
   COUNT *Count = &System.Count;
 
-  // <bead names> - names of bead types to use for closeness calculation //{{{
+  // <bead(s)> - names of bead types to use for closeness calculation //{{{
   // TODO: necessary to assign false?
   for (int i = 0; i < Count->BeadType; i++) {
     System.BeadType[i].Flag = false;

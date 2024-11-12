@@ -386,7 +386,7 @@ int FindMoleculeType(const SYSTEM Sys1, const MOLECULETYPE mt_1,
         if (!SameArrayInt(mt_1.Improper[j], mt_2->Improper[j], 4)) {
           goto end_loop;
         }
-        if (mt_1.Improper[j][4] != -1 && mt_1.Improper[j][4] != -1) {
+        if (mt_1.Improper[j][4] != -1 && mt_2->Improper[j][4] != -1) {
           PARAMS *timpro_1 = &Sys1.ImproperType[mt_1.Improper[j][4]],
                  *timpro_2 = &Sys2.ImproperType[mt_2->Improper[j][4]];
           if (timpro_1->a != timpro_2->a ||

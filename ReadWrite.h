@@ -9,7 +9,7 @@
 void InitCoorFile(FILE_TYPE fout, SYSTEM System, int argc, char **argv);
 void CopyMoleculeTypeBeadsToMoleculeBeads(SYSTEM *System);
 void FillMTypeStuff(SYSTEM *System, const int type, const int size,
-                    const int (*all)[size], const int n);
+                    const int (*all)[5], const int n);
 void MinimizeMTypeStuffIds(SYSTEM *System);
 void RemoveExtraTypes(SYSTEM *System);
 void WriteBoxLengthAngles(FILE *fw, const BOX box);
@@ -44,6 +44,7 @@ void PrintAllMolTypes(SYSTEM System);
 void Print1Molecule(SYSTEM System, int n);
 void PrintMolecules(SYSTEM System);
 void PrintBead(SYSTEM System);
+void PrintBeadCoor(SYSTEM System);
 void PrintBondType(SYSTEM System);
 void PrintAngleType(SYSTEM System);
 void PrintDihedralType(SYSTEM System);

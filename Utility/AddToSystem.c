@@ -2,7 +2,7 @@
 
 // Help() //{{{
 void Help(const char cmd[50], const bool error,
-          const int n, const char opt[n][OPT_LENGTH]) { //{{{
+          const int n, const char opt[n][OPT_LENGTH]) {
   FILE *ptr;
   if (error) {
     ptr = stderr;
@@ -94,14 +94,15 @@ void RandomCoordinate(BOX box, double random[3]) {
  */
 void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
                            OPT opt, double random[3]) {
+  if (mode == 0) { // no distance check
+    return;
+  }
   COUNT *C_orig = &S_orig.Count;
   double min_dist = 0;
   do {
     RandomCoordinate(opt.box, random);
     min_dist = 1e6;  // simply a high number
-    if (mode == 0) { // no distance check
-      break;
-    } else if (mode == 1) { // use all bonded beads
+    if (mode == 1) { // use all bonded beads
       for (int i = 0; i < C_orig->BondedCoor; i++) {
         int id = S_orig.BondedCoor[i];
         double dist[3];
@@ -128,6 +129,7 @@ void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
           }
         }
       }
+    // TODO: this is not yet implemented - I think...
     } else if (mode == 3) { // use first bead of each molecule
       for (int i = 0; i < C_orig->Molecule; i++) {
         int id = S_orig.Molecule[i].Bead[0];
@@ -141,6 +143,10 @@ void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
           }
         }
       }
+    } else {
+      err_msg("RandomConstrainedCoor(): mode must be 0 to 3");
+      PrintError();
+      exit(1);
     }
   } while ((opt.ld && opt.ldist >= min_dist) ||
            (opt.hd && opt.hdist <= min_dist));
@@ -149,15 +155,6 @@ void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
 // rotate randomly given collection of beads (e.g., a molecule) //{{{
 void Rotate(SYSTEM System, int number, const int *list,
             const double rot_angle[3], double (*new)[3]) {
-  // random rotation axis
-  double random[3];
-  for (int dd = 0; dd < 3; dd++) {
-    random[dd] = (double)(rand()) / (double)(RAND_MAX) * 2 - 1; // number <-1,1>
-  }
-  double dist = VectLength(random);
-  for (int dd = 0; dd < 3; dd++) {
-    random[dd] /= dist;
-  }
   // rotation angles around x-, y-, and z-axes
   double alpha, beta, gamma;
   // specified by -a option...

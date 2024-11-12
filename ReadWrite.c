@@ -12,10 +12,9 @@
 #include <stdio.h>
 #include <string.h>
 
-static void CopyStuff(const int n, const int num,
-                      int (**old)[num], int (**new)[num]);
+static void CopyStuff(const int n, int (**old)[5], int (**new)[5]);
 static void CopyAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new);
-static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[num],
+static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[5],
                                      const int n, const int *link_bead_ids);
 
 // TODO: renumber molecules so that the lowest id is 1 while creating new output
@@ -70,19 +69,19 @@ void MinimizeMTypeStuffIds(SYSTEM *System) {
       link_ids[id] = count_bead;
       count_bead++;
     }
-    MinimizeOneMtypeStuffIds(3, &mt_i->Bond, mt_i->nBonds, link_ids);
-    MinimizeOneMtypeStuffIds(4, &mt_i->Angle, mt_i->nAngles, link_ids);
-    MinimizeOneMtypeStuffIds(5, &mt_i->Dihedral, mt_i->nDihedrals, link_ids);
-    MinimizeOneMtypeStuffIds(5, &mt_i->Improper, mt_i->nImpropers, link_ids);
+    MinimizeOneMtypeStuffIds(2, &mt_i->Bond, mt_i->nBonds, link_ids);
+    MinimizeOneMtypeStuffIds(3, &mt_i->Angle, mt_i->nAngles, link_ids);
+    MinimizeOneMtypeStuffIds(4, &mt_i->Dihedral, mt_i->nDihedrals, link_ids);
+    MinimizeOneMtypeStuffIds(4, &mt_i->Improper, mt_i->nImpropers, link_ids);
   }
   free(link_ids);
 }
-static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[num],
+static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[5],
                                      const int n, const int *link_bead_ids) {
   if (n > 0) { // only for the molecule types with that stuff
     // use the linking array to assign proper bead ids
     for (int j = 0; j < n; j++) {
-      for (int aa = 0; aa < (num - 1); aa++) {
+      for (int aa = 0; aa < num; aa++) {
         (*arr)[j][aa] = link_bead_ids[(*arr)[j][aa]];
       }
     }
@@ -90,7 +89,7 @@ static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[num],
 } //}}}
 // FillMTypeStuff() //{{{
 void FillMTypeStuff(SYSTEM *System, const int type, const int size,
-                    const int (*all)[size], const int n) {
+                    const int (*all)[5], const int n) {
   // fill MoleculeType[].Stuff array with bead indices
   for (int i = 0; i < n; i++) {
     int id[size];
@@ -119,7 +118,7 @@ void FillMTypeStuff(SYSTEM *System, const int type, const int size,
       continue;
     } //}}}
     MOLECULETYPE *mt_mol = &System->MoleculeType[mol];
-    int (**arr)[size] = NULL;
+    int (**arr)[5] = NULL;
     int n_stuff = 0;
     int *count = NULL;
     if (type == 0) {
@@ -151,12 +150,11 @@ void FillMTypeStuff(SYSTEM *System, const int type, const int size,
   }
 } //}}}
 // copy bonds/angles/dihedrals/impropers to a new molecule type //{{{
-static void CopyStuff(const int n, const int num,
-                      int (**old)[num], int (**new)[num]) {
+static void CopyStuff(const int n, int (**old)[5], int (**new)[5]) {
   if (n > 0) {
     *new = malloc(sizeof **new * n);
     for (int j = 0; j < n; j++) {
-      for (int aa = 0; aa < num; aa++) {
+      for (int aa = 0; aa < 5; aa++) {
         (*new)[j][aa] = (*old)[j][aa];
       }
     }
@@ -164,10 +162,10 @@ static void CopyStuff(const int n, const int num,
   }
 }
 static void CopyAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new) {
-  CopyStuff(mt_new->nBonds, 3, &mt_old->Bond, &mt_new->Bond);
-  CopyStuff(mt_new->nAngles, 4, &mt_old->Angle, &mt_new->Angle);
-  CopyStuff(mt_new->nDihedrals, 5, &mt_old->Dihedral, &mt_new->Dihedral);
-  CopyStuff(mt_new->nImpropers, 5, &mt_old->Improper, &mt_new->Improper);
+  CopyStuff(mt_new->nBonds, &mt_old->Bond, &mt_new->Bond);
+  CopyStuff(mt_new->nAngles, &mt_old->Angle, &mt_new->Angle);
+  CopyStuff(mt_new->nDihedrals, &mt_old->Dihedral, &mt_new->Dihedral);
+  CopyStuff(mt_new->nImpropers, &mt_old->Improper, &mt_new->Improper);
 } //}}}
 // RemoveExtraTypes() { //{{{
 /*
@@ -225,9 +223,6 @@ void RemoveExtraTypes(SYSTEM *System) {
         }
         free(mt_i->Bead);
         CopyAllStuff(mt_i, mt_new);
-        // CopyStuff(mt_new->nBonds, 3, &mt_i->Bond, &mt_new->Bond);
-        // CopyStuff(mt_new->nAngles, 4, &mt_i->Angle, &mt_new->Angle);
-        // CopyStuff(mt_new->nDihedrals, 5, &mt_i->Dihedral, &mt_new->Dihedral); CopyStuff(mt_new->nImpropers, 5, &mt_i->Improper, &mt_new->Improper);
         // Molecule struct
         MOLECULE *mol_new = &System->Molecule[mt_id];
         mol_new->Type = mt_id;
@@ -812,8 +807,8 @@ void PrintOneMolType(SYSTEM System, int n) { //{{{
     count = fprintf(stdout, "  .Angle      = {");
     for (int j = 0; j < mt->nAngles; j++) {
       count += fprintf(stdout, " %d-%d-%d", mt->Angle[j][0] + 1,
-                       mt->Angle[j][1] + 1,
-                       mt->Angle[j][2] + 1);
+                                            mt->Angle[j][1] + 1,
+                                            mt->Angle[j][2] + 1);
       if (mt->Angle[j][3] != -1) {
         count += fprintf(stdout, " (%d)", mt->Angle[j][3] + 1);
         if (j != (mt->nAngles - 1)) {
@@ -832,9 +827,9 @@ void PrintOneMolType(SYSTEM System, int n) { //{{{
     count = fprintf(stdout, "  .Dihedral   = {");
     for (int j = 0; j < mt->nDihedrals; j++) {
       count += fprintf(stdout, " %d-%d-%d-%d", mt->Dihedral[j][0] + 1,
-                       mt->Dihedral[j][1] + 1,
-                       mt->Dihedral[j][2] + 1,
-                       mt->Dihedral[j][3] + 1);
+                                               mt->Dihedral[j][1] + 1,
+                                               mt->Dihedral[j][2] + 1,
+                                               mt->Dihedral[j][3] + 1);
       if (mt->Dihedral[j][4] != -1) {
         count += fprintf(stdout, " (%d)", mt->Dihedral[j][4] + 1);
         if (j != (mt->nDihedrals - 1)) {
@@ -853,9 +848,9 @@ void PrintOneMolType(SYSTEM System, int n) { //{{{
     count = fprintf(stdout, "  .Improper   = {");
     for (int j = 0; j < mt->nImpropers; j++) {
       count += fprintf(stdout, " %d-%d-%d-%d", mt->Improper[j][0] + 1,
-                       mt->Improper[j][1] + 1,
-                       mt->Improper[j][2] + 1,
-                       mt->Improper[j][3] + 1);
+                                               mt->Improper[j][1] + 1,
+                                               mt->Improper[j][2] + 1,
+                                               mt->Improper[j][3] + 1);
       if (mt->Improper[j][4] != -1) {
         count += fprintf(stdout, " (%d)", mt->Improper[j][4] + 1);
         if (j != (mt->nImpropers - 1)) {
@@ -924,6 +919,30 @@ void PrintBead(SYSTEM System) { //{{{
   for (int i = 0; i < System.Count.Bead; i++) {
     BEAD *b = &System.Bead[i];
     fprintf(stdout, " %6d", i);
+    fprintf(stdout, " (%3d);", b->Type);
+    if (b->Molecule == -1) {
+      fprintf(stdout, " %4s", "None");
+      fprintf(stdout, "      ;");
+    } else {
+      fprintf(stdout, " %4d", System.Molecule[b->Molecule].Index);
+      fprintf(stdout, " (%3d);", System.Molecule[b->Molecule].Type);
+    }
+    fprintf(stdout, " %s", b->InTimestep ? "yes" : " no");
+    putchar('\n');
+  }
+} //}}}
+void PrintBeadCoor(SYSTEM System) { //{{{
+  fprintf(stdout, "Beads\n");
+  fprintf(stdout, "<bead id>");
+  fprintf(stdout, " (<bead type id>);");
+  fprintf(stdout, " <molecule id>");
+  fprintf(stdout, " (<molecule type id>);");
+  fprintf(stdout, " <in coor>");
+  putchar('\n');
+  for (int i = 0; i < System.Count.BeadCoor; i++) {
+    int id = System.BeadCoor[i];
+    BEAD *b = &System.Bead[id];
+    fprintf(stdout, " %6d", id);
     fprintf(stdout, " (%3d);", b->Type);
     if (b->Molecule == -1) {
       fprintf(stdout, " %4s", "None");

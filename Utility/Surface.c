@@ -559,14 +559,21 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < (bins_step[0] - 1); i++) {
           for (int j = 0; j < (bins_step[1] - 1); j++) {
             // four points defining the two triangles
-            double A[3] = {-1}, B[3] = {-1}, C[3] = {-1}, D[3] = {-1};
+            double A[3]; //= {-1, -1, -1};
+            double B[3]; //= {-1, -1, -1};
+            double C[3]; //= {-1, -1, -1};
+            double D[3]; //= {-1, -1, -1};
             // top and bottom surfaces //{{{
             for (int aa = 0; aa < 2; aa++) {
+              B[0] = -1;
+              C[0] = -1;
               if (surf_step[i][j][aa] != -1 &&
                   surf_step[i+1][j+1][aa] != -1) {
-                A[0] = A[1] = 0;
+                A[0] = 0;
+                A[1] = 0;
                 A[2] = surf_step[i][j][aa];
-                D[0] = D[1] = width;
+                D[0] = width;
+                D[1] = width;
                 D[2] = surf_step[i+1][j+1][aa];
                 if (surf_step[i+1][j][aa] != -1) {
                   // B[0] = rest[0];
@@ -583,14 +590,17 @@ int main(int argc, char *argv[]) {
               }
             } //}}}
             // 'middle' surface //{{{
-            A[0] = B[0] = C[0] = D[0] = -1;
+            B[0] = -1;
+            C[0] = -1;
             if (surf_step[i][j][0] != -1 &&
                 surf_step[i][j][1] != -1 &&
                 surf_step[i+1][j+1][0] != -1 &&
                 surf_step[i+1][j+1][1] != -1) {
-              A[0] = A[1] = 0;
+              A[0] = 0;
+              A[1] = 0;
               A[2] = (surf_step[i][j][0] + surf_step[i][j][1]) / 2;
-              D[0] = D[1] = width;
+              D[0] = width;
+              D[1] = width;
               D[2] = (surf_step[i+1][j+1][0] + surf_step[i+1][j+1][1]) / 2;
 
               if (surf_step[i+1][j][0] != -1 &&
@@ -744,12 +754,19 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < (max[0] - 1); i++) {
       for (int j = 0; j < (max[1] - 1); j++) {
         // top and bottom surfaces //{{{
-        double A[3] = {-1}, B[3] = {-1}, C[3] = {-1}, D[3] = {-1};
+        double A[3]; //= {-1};
+        double B[3]; //= {-1};
+        double C[3]; //= {-1};
+        double D[3]; //= {-1};
         for (int aa = 0; aa < 2; aa++) {
+          B[0] = -1;
+          C[0] = -1;
           if (values[i][j][aa] > 0 && values[i+1][j+1][aa] > 0) {
-            A[0] = A[1] = 0;
+            A[0] = 0;
+            A[1] = 0;
             A[2] = sum_surf[i][j][aa] / values[i][j][aa];
-            D[0] = D[1] = width;
+            D[0] = width;
+            D[1] = width;
             D[2] = sum_surf[i+1][j+1][aa] / values[i+1][j+1][aa];
             if (values[i+1][j][aa] > 0) {
               B[0] = width;
@@ -765,13 +782,16 @@ int main(int argc, char *argv[]) {
           }
         } //}}}
         // 'middle' surface //{{{
-        A[0] = B[0] = C[0] = D[0] = -1;
+        B[0] = -1;
+        C[0] = -1;
         if (values[i][j][0] > 0 && values[i][j][1] > 0 &&
             values[i+1][j+1][0] > 0 && values[i+1][j+1][1] > 0) {
-          A[0] = A[1] = 0;
+          A[0] = 0;
+          A[1] = 0;
           A[2] = (sum_surf[i][j][0] / values[i][j][0] +
                   sum_surf[i][j][1] / values[i][j][1]) / 2;
-          D[0] = D[1] = width;
+          D[0] = width;
+          D[1] = width;
           D[2] = (sum_surf[i+1][j+1][0] / values[i+1][j+1][0] +
                   sum_surf[i+1][j+1][1] / values[i+1][j+1][1]) / 2;
 
