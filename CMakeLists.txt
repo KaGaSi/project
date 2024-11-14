@@ -52,6 +52,7 @@ set(UTILS AddToSystem
           GenFIELD
           Info
           JoinSystems
+          PairCorrel
           PersistenceLength
           Selected
           Surface
