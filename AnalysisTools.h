@@ -21,7 +21,7 @@ int FindBeadType(const char *name, const SYSTEM System);
 int FindMoleculeName(const char *name, const SYSTEM System);
 // identify molecule type based on name only or on other parameters too
 int FindMoleculeType(const SYSTEM Sys1, const MOLECULETYPE mt,
-                     const SYSTEM Sys2, const int mode);
+                     const SYSTEM Sys2, const int mode, const bool name);
 // Helper functions for manipulating coordinates
 // wrap coordinates into simulation box and/or join molecules
 void WrapJoinCoordinates(SYSTEM *System, const bool wrap, const bool join);

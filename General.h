@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include "Globals.h"
 #include "MathUtils.h"
 
@@ -106,9 +107,8 @@ bool IsPosRealNumber(const char *str, double *val);
 bool IsIntegerNumber(const char *str, long *val);
 bool IsNaturalNumber(const char *str, long *val);
 bool IsWholeNumber(const char *str, long *val);
-// bubble sort arrays
-void SortArrayInt(int *array, const int length, const int mode);
-void SortArrayDouble(double *array, const int length, const int mode);
+// bubble sort int/double array ascendingly/descendingly
+void SortArray(void *array, const int length, const int mode, const char type);
 // line reading and splitting
 bool ReadLine(FILE *fr, char *line);
 int SplitLine(const int max_str, char **out, char *line, const char *delim);
@@ -125,6 +125,8 @@ void InitBoolArray (bool *array, const int n, const bool val);
 void InitLong2DArray (long **arr, const int m, const int n, const long val);
 void InitDouble2DArray (double **arr, const int m, const int n,
                         const double val);
+void InitInt2DArray (int **arr, const int m, const int n, const int val);
+void InitBool2DArray (bool **arr, const int m, const int n, const bool val);
 // test whether two arrays are the same
 bool SameArrayInt(const int arr_1[], const int arr_2[], const int n);
 // safe function alternatives

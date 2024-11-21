@@ -499,7 +499,7 @@ void MergeBeadTypes(SYSTEM *System, bool detailed) {
     bool new = true;
     for (int j = 0; j < count_bt_new; j++) {
       BEADTYPE *bt_new = &System->BeadType[j];
-      if (SameBeadType(*bt_old, *bt_new)) {
+      if (SameBeadType(*bt_old, *bt_new, true)) {
         bt_new->Number += bt_old->Number;
         old_to_new[i] = j;
         new = false;
@@ -640,6 +640,14 @@ void MergeBeadTypes(SYSTEM *System, bool detailed) {
       }
     } //}}}
     // 3) merge the types, counting the new types //{{{
+    // check the allocation size - GCC complains otherwise //{{{
+    size_t num_elements = Count->BeadType;
+    size_t element_size = sizeof(BEADTYPE);
+    if (num_elements > (SIZE_MAX / element_size)) {
+      err_msg("Allocation size is too large (GCC warning-prompted)");
+      PrintError();
+      exit(1);
+    } //}}}
     BEADTYPE *temp = calloc(Count->BeadType, sizeof *temp);
     int old_bt_count = Count->BeadType, count = 0,
         *bt_older_to_old = calloc(old_bt_count, sizeof *bt_older_to_old);
@@ -938,7 +946,7 @@ void MergeMoleculeTypes(SYSTEM *System) {
   free(temp);
   RenameMoleculeTypes(System);
   RelabelMolecules(System, old_to_new);
-  free(old_to_new); //}}}
+  free(old_to_new);
 } //}}}
 
 // sort a bond/angle/dihedral/improper (i.e., Stuff) array in an ascending order
@@ -1048,8 +1056,8 @@ void RenameMoleculeTypes(SYSTEM *System) { //{{{
     }
   }
 } //}}}
-bool SameBeadType(BEADTYPE bt_1, BEADTYPE bt_2) { //{{{
-  if ((strcmp(bt_1.Name, bt_2.Name) == 0) &&
+bool SameBeadType(const BEADTYPE bt_1, const BEADTYPE bt_2, const bool name) { //{{{
+  if ((!name || strcmp(bt_1.Name, bt_2.Name) == 0) &&
       (bt_1.Charge == bt_2.Charge ||
        bt_1.Charge == HIGHNUM || bt_2.Charge == HIGHNUM) &&
       (bt_1.Mass == bt_2.Mass ||
@@ -1554,7 +1562,7 @@ void PruneSystem(SYSTEM *System) { //{{{
       int old_type = S_old.Bead[i].Type, new_type = -1;
       BEADTYPE *bt_old = &S_old.BeadType[old_type];
       for (int j = 0; j < Count->BeadType; j++) {
-        if (SameBeadType(*bt_old, System->BeadType[j])) {
+        if (SameBeadType(*bt_old, System->BeadType[j], true)) {
           new_type = j;
           break;
         }
@@ -1650,7 +1658,7 @@ void PruneSystem(SYSTEM *System) { //{{{
        * Is the molecule type already in the pruned system (check based on all
        * molecule type information)?
        */
-      int new_type = FindMoleculeType(S_old, mt_old_new, *System, 3);
+      int new_type = FindMoleculeType(S_old, mt_old_new, *System, 3, true);
       FreeMoleculeTypeEssentials(&mt_old_new);
       if (new_type != -1) { // yes, the molecule type is in the pruned system
         mol_new->Type = new_type;
@@ -2342,7 +2350,11 @@ void ChangeMolecules(SYSTEM *S_orig, SYSTEM S_add, bool name) {
   }                                                    //}}}
   for (int i = 0; i < C_orig->MoleculeType; i++) { //{{{
     MOLECULETYPE *mt_orig = &S_orig->MoleculeType[i];
-    int type = FindMoleculeType(*S_orig, S_orig->MoleculeType[i], S_add, 2);
+    printf("XXX");
+    int type = FindMoleculeType(*S_orig, *mt_orig, S_add, 2, name);
+    printf(" %s %d\n", mt_orig->Name, type);
+    // PrintAllMolTypes(*S_orig);
+    // PrintAllMolTypes(S_add);
     if (type != -1) {
       MOLECULETYPE *mt_add = &S_add.MoleculeType[type];
       // add bonds, if there are none in the original molecule type... //{{{

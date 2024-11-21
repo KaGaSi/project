@@ -12,15 +12,19 @@
 #include <stdio.h>
 #include <string.h>
 
-static void CopyStuff(const int n, int (**old)[5], int (**new)[5]);
-static void CopyAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new);
+static void CopyAndFreeStuff(const int n, int (**old)[5], int (**new)[5]);
+static void CopyAndFreeAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new);
 static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[5],
                                      const int n, const int *link_bead_ids);
+static void FillMTypeStuff(SYSTEM *System, const int type, const int size,
+                           const int (*all)[5], const int n);
+static void PrintBeadHeader();
+static void PrintOneBead(const SYSTEM System, const int id);
 
-// TODO: renumber molecules so that the lowest id is 1 while creating new output
-//       structure files - huh? What's this for?
 // General helper functions
-void InitCoorFile(FILE_TYPE file, SYSTEM System, int argc, char **argv) { //{{{
+// print initial stuff to output coordinate file //{{{
+void InitOutputCoorFile(const FILE_TYPE file, const SYSTEM System,
+                        const int argc, char **argv) {
   if (file.type == VCF_FILE) {
     PrintByline(file.name, argc, argv);
   } else if (file.type == VTF_FILE) {
@@ -87,9 +91,17 @@ static void MinimizeOneMtypeStuffIds(const int num, int (**arr)[5],
     }
   }
 } //}}}
-// FillMTypeStuff() //{{{
-void FillMTypeStuff(SYSTEM *System, const int type, const int size,
-                    const int (*all)[5], const int n) {
+// fill MoleculeType Bond/Angle/Dihedral/Improper arrays //{{{
+void FillAllMTypeStuff(SYSTEM *System, const int (*bond)[5], const int
+                       (*angle)[5], const int (*dih)[5], const int (*imp)[5]) {
+  FillMTypeStuff(System, 0, 3, bond, System->Count.Bond);
+  FillMTypeStuff(System, 1, 4, angle, System->Count.Angle);
+  FillMTypeStuff(System, 2, 5, dih, System->Count.Dihedral);
+  FillMTypeStuff(System, 3, 5, imp, System->Count.Improper);
+  MinimizeMTypeStuffIds(System);
+}
+static void FillMTypeStuff(SYSTEM *System, const int type, const int size,
+                           const int (*all)[5], const int n) {
   // fill MoleculeType[].Stuff array with bead indices
   for (int i = 0; i < n; i++) {
     int id[size];
@@ -97,7 +109,7 @@ void FillMTypeStuff(SYSTEM *System, const int type, const int size,
       id[aa] = all[i][aa];
     }
     int mol = System->Bead[id[0]].Molecule;
-    // warning - beads in different molecules (skip the bond)  //{{{
+    // warning - beads in different molecules (skip it)  //{{{
     bool err = false;
     for (int aa = 1; aa < (size - 1); aa++) {
       if (mol != System->Bead[id[aa]].Molecule || mol == -1) {
@@ -134,9 +146,9 @@ void FillMTypeStuff(SYSTEM *System, const int type, const int size,
       n_stuff = mt_mol->nDihedrals;
       count = &mt_mol->nDihedrals;
     } else if (type == 3) {
-      arr = &mt_mol->Dihedral;
-      n_stuff = mt_mol->nDihedrals;
-      count = &mt_mol->nDihedrals;
+      arr = &mt_mol->Improper;
+      n_stuff = mt_mol->nImpropers;
+      count = &mt_mol->nImpropers;
     }
     (*count)++;
     if (n_stuff == 0) {
@@ -150,7 +162,8 @@ void FillMTypeStuff(SYSTEM *System, const int type, const int size,
   }
 } //}}}
 // copy bonds/angles/dihedrals/impropers to a new molecule type //{{{
-static void CopyStuff(const int n, int (**old)[5], int (**new)[5]) {
+// Also frees the Stuff array from the old molecule type
+static void CopyAndFreeStuff(const int n, int (**old)[5], int (**new)[5]) {
   if (n > 0) {
     *new = malloc(sizeof **new * n);
     for (int j = 0; j < n; j++) {
@@ -161,11 +174,12 @@ static void CopyStuff(const int n, int (**old)[5], int (**new)[5]) {
     free(*old);
   }
 }
-static void CopyAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new) {
-  CopyStuff(mt_new->nBonds, &mt_old->Bond, &mt_new->Bond);
-  CopyStuff(mt_new->nAngles, &mt_old->Angle, &mt_new->Angle);
-  CopyStuff(mt_new->nDihedrals, &mt_old->Dihedral, &mt_new->Dihedral);
-  CopyStuff(mt_new->nImpropers, &mt_old->Improper, &mt_new->Improper);
+// Also frees the Bond/Angle/etc/ arrays
+static void CopyAndFreeAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new) {
+  CopyAndFreeStuff(mt_new->nBonds, &mt_old->Bond, &mt_new->Bond);
+  CopyAndFreeStuff(mt_new->nAngles, &mt_old->Angle, &mt_new->Angle);
+  CopyAndFreeStuff(mt_new->nDihedrals, &mt_old->Dihedral, &mt_new->Dihedral);
+  CopyAndFreeStuff(mt_new->nImpropers, &mt_old->Improper, &mt_new->Improper);
 } //}}}
 // RemoveExtraTypes() { //{{{
 /*
@@ -222,7 +236,7 @@ void RemoveExtraTypes(SYSTEM *System) {
           mt_new->Bead[j] = mt_i->Bead[j];
         }
         free(mt_i->Bead);
-        CopyAllStuff(mt_i, mt_new);
+        CopyAndFreeAllStuff(mt_i, mt_new);
         // Molecule struct
         MOLECULE *mol_new = &System->Molecule[mt_id];
         mol_new->Type = mt_id;
@@ -251,7 +265,7 @@ void WriteBoxLengthAngles(FILE *fw, const BOX box) { //{{{
 } //}}}
 
 // Read a structure file and extra info from coordinate file if necessary //{{{
-SYSTEM ReadStructure(SYS_FILES f, bool detailed) {
+SYSTEM ReadStructure(const SYS_FILES f, const bool detailed) {
   SYSTEM System;
   switch (f.stru.type) {
     case VTF_FILE:
@@ -298,7 +312,8 @@ SYSTEM ReadStructure(SYS_FILES f, bool detailed) {
   return System;
 } //}}} //}}}
 // Read a single timestep from the provided coordinate file //{{{
-bool ReadTimestep(SYS_FILES f, FILE *fr, SYSTEM *System, int *line_count) {
+bool ReadTimestep(const SYS_FILES f, FILE *fr,
+                  SYSTEM *System, int *line_count) {
   switch (f.coor.type) {
     case VTF_FILE:
     case VCF_FILE:
@@ -348,7 +363,7 @@ bool ReadTimestep(SYS_FILES f, FILE *fr, SYSTEM *System, int *line_count) {
   return true;
 } //}}}
 // Skip a single timestep from the provided coordinate file //{{{
-bool SkipTimestep(SYS_FILES f, FILE *fr, int *line_count) {
+bool SkipTimestep(const SYS_FILES f, FILE *fr, int *line_count) {
   switch (f.coor.type) {
     case VTF_FILE:
     case VCF_FILE:
@@ -464,8 +479,9 @@ int ReadAggregates(FILE *fr, const char *file, SYSTEM *System,
 } //}}}
 
 // write structure and/or coordinates to a new file (can be any format) //{{{
-void WriteOutput(SYSTEM System, const bool *write, FILE_TYPE fw,
-                 bool lmp_mass, int vsf_def, int argc, char **argv) {
+void WriteOutput(const SYSTEM System, const bool *write, FILE_TYPE fw,
+                 const bool lmp_mass, const int vsf_def,
+                 const int argc, char **argv) {
   if (fw.type == VCF_FILE) { // create vsf file if output file is vcf format
     PrintByline(fw.name, argc, argv); // byline to vcf file
     fw.name[strnlen(fw.name, LINE)-2] = 's';
@@ -493,16 +509,16 @@ void WriteOutput(SYSTEM System, const bool *write, FILE_TYPE fw,
     WriteTimestep(fw, System, 1, write, argc, argv);
   }
 }
-void WriteOutputAll(SYSTEM System, FILE_TYPE fw, bool lmp_mass,
-                    int vsf_def, int argc, char **argv) {
+void WriteOutputAll(const SYSTEM System, FILE_TYPE fw, const bool lmp_mass,
+                    const int vsf_def, const int argc, char **argv) {
   bool *write = malloc(System.Count.Bead * sizeof *write);
   InitBoolArray(write, System.Count.Bead, true);
   WriteOutput(System, write, fw, lmp_mass, vsf_def, argc, argv);
   free(write);
 } //}}}
 // Write a single timestep to output file based on the file type //{{{
-void WriteTimestep(FILE_TYPE f, SYSTEM System, int count_step,
-                   const bool *write, int argc, char **argv) {
+void WriteTimestep(const FILE_TYPE f, const SYSTEM System, const int count_step,
+                   const bool *write, const int argc, char **argv) {
   FILE *fw = OpenFile(f.name, "a");
   switch (f.type) {
     case VCF_FILE:
@@ -538,8 +554,8 @@ void WriteTimestepAll(FILE_TYPE f, SYSTEM System, int count_step,
 }
 //}}}
 // Create a structure file based on the file type (including dl_meso CONFIG) //{{{
-void WriteStructure(FILE_TYPE f, SYSTEM System, int vsf_def_type,
-                    bool lmp_mass, int argc, char **argv) {
+void WriteStructure(FILE_TYPE f, SYSTEM System, const int vsf_def_type,
+                    const bool lmp_mass, const int argc, char **argv) {
   // ensure the output file is new
   switch (f.type) {
     case VSF_FILE:
@@ -575,8 +591,8 @@ void WriteStructure(FILE_TYPE f, SYSTEM System, int vsf_def_type,
   }
 } //}}}
 // WriteAggregates() //{{{
-void WriteAggregates(int step_count, char *agg_file, SYSTEM System,
-                     AGGREGATE *Aggregate) {
+void WriteAggregates(const int step_count, const char *agg_file,
+                     const SYSTEM System, const AGGREGATE *Aggregate) {
   // get number of aggregates to write to agg_file
   int number_of_aggs = 0;
   for (int i = 0; i < System.Count.Aggregate; i++) {
@@ -604,7 +620,7 @@ void WriteAggregates(int step_count, char *agg_file, SYSTEM System,
 } //}}}
 
 // verbose output (print various structures and some such)
-void VerboseOutput(SYSTEM System) { //{{{
+void VerboseOutput(const SYSTEM System) { //{{{
   PrintCount(System.Count);
   PrintBeadType(System);
   PrintAllMolTypes(System);
@@ -616,7 +632,7 @@ void VerboseOutput(SYSTEM System) { //{{{
     PrintBox(System.Box);
   }
 } //}}}
-void PrintCount(COUNT Count) { //{{{
+void PrintCount(const COUNT Count) { //{{{
   bool coor = false;
   if (Count.Bead != Count.BeadCoor && Count.BeadCoor > 0) {
     coor = true;
@@ -666,7 +682,7 @@ void PrintCount(COUNT Count) { //{{{
   }
   fprintf(stdout, "\n\n");
 } //}}}
-void PrintBeadType(SYSTEM System) { //{{{
+void PrintBeadType(const SYSTEM System) { //{{{
   // some stuff to properly align the fields //{{{
   int precision = 3;     // number of decimal digits
   int longest_name = 0;  // longest bead type name
@@ -766,7 +782,7 @@ void PrintBeadType(SYSTEM System) { //{{{
   }
   putchar('\n');
 } //}}}
-void PrintOneMolType(SYSTEM System, int n) { //{{{
+void PrintOneMolType(const SYSTEM System, const int n) { //{{{
   int line = 80; // maximum printed line length
   MOLECULETYPE *mt = &System.MoleculeType[n];
   fprintf(stdout, "MoleculeType[%d] = {\n", n);
@@ -884,7 +900,7 @@ void PrintOneMolType(SYSTEM System, int n) { //{{{
     fprintf(stdout, "  .Charge     = n/a\n}\n");
   }
 } //}}}
-void PrintAllMolTypes(SYSTEM System) { //{{{
+void PrintAllMolTypes(const SYSTEM System) { //{{{
   for (int i = 0; i < System.Count.MoleculeType; i++) {
     PrintOneMolType(System, i);
   }
@@ -892,7 +908,7 @@ void PrintAllMolTypes(SYSTEM System) { //{{{
     putchar('\n');
   }
 } //}}}
-void Print1Molecule(SYSTEM System, int n) { //{{{
+void Print1Molecule(const SYSTEM System, const int n) { //{{{
   MOLECULE *mol = &System.Molecule[n];
   MOLECULETYPE *mtype = &System.MoleculeType[mol->Type];
   fprintf(stdout, "Molecule %3d (%d, %s):\n", n + 1, mol->Index, mtype->Name);
@@ -902,13 +918,14 @@ void Print1Molecule(SYSTEM System, int n) { //{{{
     fprintf(stdout, "   %3d; %5d\n", j + 1, mol->Bead[j]);
   }
 } //}}}
-void PrintMolecules(SYSTEM System) { //{{{
+void PrintMolecules(const SYSTEM System) { //{{{
   for (int i = 0; i < System.Count.Molecule; i++) {
     Print1Molecule(System, i);
   }
   fprintf(stdout, "\n");
 } //}}}
-void PrintBead(SYSTEM System) { //{{{
+// print bead info //{{{
+static void PrintBeadHeader() {
   fprintf(stdout, "Beads\n");
   fprintf(stdout, "<bead id>");
   fprintf(stdout, " (<bead type id>);");
@@ -916,43 +933,31 @@ void PrintBead(SYSTEM System) { //{{{
   fprintf(stdout, " (<molecule type id>);");
   fprintf(stdout, " <in coor>");
   putchar('\n');
-  for (int i = 0; i < System.Count.Bead; i++) {
-    BEAD *b = &System.Bead[i];
-    fprintf(stdout, " %6d", i);
-    fprintf(stdout, " (%3d);", b->Type);
-    if (b->Molecule == -1) {
-      fprintf(stdout, " %4s", "None");
-      fprintf(stdout, "      ;");
-    } else {
-      fprintf(stdout, " %4d", System.Molecule[b->Molecule].Index);
-      fprintf(stdout, " (%3d);", System.Molecule[b->Molecule].Type);
-    }
-    fprintf(stdout, " %s", b->InTimestep ? "yes" : " no");
-    putchar('\n');
+}
+static void PrintOneBead(const SYSTEM System, const int id) {
+  BEAD *b = &System.Bead[id];
+  fprintf(stdout, " %6d", id);
+  fprintf(stdout, " (%3d);", b->Type);
+  if (b->Molecule == -1) {
+    fprintf(stdout, " %4s", "None");
+    fprintf(stdout, "      ;");
+  } else {
+    fprintf(stdout, " %4d", System.Molecule[b->Molecule].Index);
+    fprintf(stdout, " (%3d);", System.Molecule[b->Molecule].Type);
   }
-} //}}}
-void PrintBeadCoor(SYSTEM System) { //{{{
-  fprintf(stdout, "Beads\n");
-  fprintf(stdout, "<bead id>");
-  fprintf(stdout, " (<bead type id>);");
-  fprintf(stdout, " <molecule id>");
-  fprintf(stdout, " (<molecule type id>);");
-  fprintf(stdout, " <in coor>");
+  fprintf(stdout, " %s", b->InTimestep ? "yes" : " no");
   putchar('\n');
+}
+void PrintBead(const SYSTEM System) {
+  PrintBeadHeader();
+  for (int i = 0; i < System.Count.Bead; i++) {
+    PrintOneBead(System, i);
+  }
+}
+void PrintBeadCoor(const SYSTEM System) {
+  PrintBeadHeader();
   for (int i = 0; i < System.Count.BeadCoor; i++) {
-    int id = System.BeadCoor[i];
-    BEAD *b = &System.Bead[id];
-    fprintf(stdout, " %6d", id);
-    fprintf(stdout, " (%3d);", b->Type);
-    if (b->Molecule == -1) {
-      fprintf(stdout, " %4s", "None");
-      fprintf(stdout, "      ;");
-    } else {
-      fprintf(stdout, " %4d", System.Molecule[b->Molecule].Index);
-      fprintf(stdout, " (%3d);", System.Molecule[b->Molecule].Type);
-    }
-    fprintf(stdout, " %s", b->InTimestep ? "yes" : " no");
-    putchar('\n');
+    PrintOneBead(System, System.BeadCoor[i]);
   }
 } //}}}
 // find highest values from {Bond,Angle,Dihedral,Improper}Type params //{{{
@@ -996,7 +1001,7 @@ int * HighestParam(const SYSTEM System, const int type) {
   width[3] = snprintf(NULL, 0, "%.0f", high.d);
   return width;
 } //}}}
-void PrintBondType(SYSTEM System) { //{{{
+void PrintBondType(const SYSTEM System) { //{{{
   if (System.Count.BondType > 0) {
     // TODO: eventually, there should be more than harm
     int *wid = HighestParam(System, 0);
@@ -1009,7 +1014,7 @@ void PrintBondType(SYSTEM System) { //{{{
     fprintf(stdout, "\n");
   }
 } //}}}
-void PrintAngleType(SYSTEM System) { //{{{
+void PrintAngleType(const SYSTEM System) { //{{{
   if (System.Count.AngleType > 0) {
     // TODO: eventually, there should be more than cvff
     int *wid = HighestParam(System, 1);
@@ -1022,7 +1027,7 @@ void PrintAngleType(SYSTEM System) { //{{{
     fprintf(stdout, "\n");
   }
 } //}}}
-void PrintDihedralType(SYSTEM System) { //{{{
+void PrintDihedralType(const SYSTEM System) { //{{{
   if (System.Count.DihedralType > 0) {
     // TODO: eventually, there should be more than harm
     int *wid = HighestParam(System, 2);
@@ -1037,7 +1042,7 @@ void PrintDihedralType(SYSTEM System) { //{{{
     fprintf(stdout, "\n");
   }
 } //}}}
-void PrintImproperType(SYSTEM System) { //{{{
+void PrintImproperType(const SYSTEM System) { //{{{
   if (System.Count.ImproperType > 0) {
     // TODO: eventually, there should be more than cvff
     int *wid = HighestParam(System, 2);
@@ -1051,7 +1056,7 @@ void PrintImproperType(SYSTEM System) { //{{{
     fprintf(stdout, "\n");
   }
 } //}}}
-void PrintBox(BOX Box) { //{{{
+void PrintBox(const BOX Box) { //{{{
   fprintf(stdout, "Box = {\n");
   if (Box.Low[0] != 0 || Box.Low[1] != 0 || Box.Low[2] != 0) {
     fprintf(stdout, "  .Low = ( %lf %lf %lf )\n",
@@ -1082,7 +1087,7 @@ void PrintBox(BOX Box) { //{{{
   fprintf(stdout, "  .Volume = %lf\n", Box.Volume);
   fprintf(stdout, "}\n");
 } //}}}
-void PrintByline(char *file, int argc, char **argv) { //{{{
+void PrintByline(const char *file, const int argc, char **argv) { //{{{
   FILE *fw = OpenFile(file, "w");
   fprintf(fw, "# Created by AnalysisTools v%s ", VERSION);
   fprintf(fw, " (https://github.com/KaGaSi/AnalysisTools)\n");
@@ -1090,7 +1095,7 @@ void PrintByline(char *file, int argc, char **argv) { //{{{
   PrintCommand(fw, argc, argv);
   fclose(fw);
 } //}}}
-void PrintStep(int *count_coor, int start, bool silent) { //{{{
+void PrintStep(int *count_coor, const int start, const bool silent) { //{{{
   (*count_coor)++;
   if (!silent && isatty(STDOUT_FILENO)) {
     if (*count_coor < start) {
@@ -1104,8 +1109,8 @@ void PrintStep(int *count_coor, int start, bool silent) { //{{{
     fflush(stdout);
   }
 } //}}}
-void PrintAggregate(SYSTEM System, AGGREGATE *Aggregate) { //{{{
-  COUNT *Count = &System.Count;
+void PrintAggregate(const SYSTEM System, const AGGREGATE *Aggregate) { //{{{
+  const COUNT *Count = &System.Count;
   fprintf(stdout, "Aggregates: %d\n", Count->Aggregate);
   for (int i = 0; i < Count->Aggregate; i++) {
     // print molecules

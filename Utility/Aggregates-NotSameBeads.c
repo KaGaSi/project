@@ -125,7 +125,7 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt) {
 
   // sort molecules in aggregates according to ascending ids //{{{
   for (int i = 0; i < System->Count.Aggregate; i++) {
-    SortArrayInt(Aggregate[i].Molecule, Aggregate[i].nMolecules, 0);
+    SortArray(Aggregate[i].Molecule, Aggregate[i].nMolecules, 0, 'i');
   } //}}}
 
   // assign bonded beads to Aggregate struct //{{{
@@ -209,9 +209,9 @@ int main(int argc, char *argv[]) {
 
   // parameters for aggregate check (-d and -c options)
   opt->distance = 1;
-  DoubleOption1(argc, argv, "-d", &opt->distance);
+  OneNumberOption(argc, argv, "-d", &opt->distance, 'd');
   opt->contacts = 1;
-  IntegerOption1(argc, argv, "-c", &opt->contacts);
+  OneNumberOption(argc, argv, "-c", &opt->contacts, 'i');
 
   if (!opt->c.silent) {
     PrintCommand(stdout, argc, argv);

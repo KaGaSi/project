@@ -1,4 +1,5 @@
 #include "Options.h"
+#include "Errors.h"
 
 // STATIC DECLARATIONs
 static void SilentOption(const int argc, char **argv,
@@ -139,7 +140,7 @@ COMMON_OPT CommonOptions(const int argc, char **argv, const SYS_FILES f) {
   // --silent option - silent mode
   SilentOption(argc, argv, &opt.verbose, &opt.silent);
   // starting/ending timestep
-  if (IntegerOption1(argc, argv, "-st", &opt.start)) {
+  if (OneNumberOption(argc, argv, "-st", &opt.start, 'i')) {
     if (opt.start <= 0) {
       s_strcpy(ERROR_MSG, "positive number required", LINE);
       PrintErrorOption("-st");
@@ -148,14 +149,14 @@ COMMON_OPT CommonOptions(const int argc, char **argv, const SYS_FILES f) {
   } else {
     opt.start = 1;
   }
-  if (IntegerOption1(argc, argv, "-e", &opt.end) && opt.end <= 0) {
+  if (OneNumberOption(argc, argv, "-e", &opt.end, 'i') && opt.end <= 0) {
     s_strcpy(ERROR_MSG, "positive number required", LINE);
     PrintErrorOption("-e");
     exit(1);
   }
   ErrorStartEnd(opt.start, opt.end);
   // number of timesteps to skip per one used
-  if (IntegerOption1(argc, argv, "-sk", &opt.skip) && opt.skip <= 0) {
+  if (OneNumberOption(argc, argv, "-sk", &opt.skip, 'i') && opt.skip <= 0) {
     s_strcpy(ERROR_MSG, "positive number required", LINE);
     PrintErrorOption("-sk");
     exit(1);
@@ -270,56 +271,25 @@ bool BoolOption(const int argc, char **argv, const char *opt) {
   return false;
 } // }}}
 // general option with multiple integer arguments (up to 'max') //{{{
-bool IntegerOption(const int argc, char **argv, const int max,
-                   const char *opt, int *count, int *values) {
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], opt) == 0) {
-      int n = 0, // number of arguments
-          arg = i+1+n; // argument ids in the command
-      long val;
-      while (arg < argc && IsIntegerNumber(argv[arg], &val)) {
-        values[n] = val;
-        n++;
-        arg = i+1+n;
-        if (TooManyArgsWarn(max, n, opt, count)) {
-          return true;
-        }
-      }
-      ArgumentMissingErr(n, opt);
-      *count = n;
-      return true;
-    }
-  }
-  return false;
-}
-bool IntegerOption1(const int argc, char **argv, const char *opt, int *value) {
-  int count = 0;
-  if (IntegerOption(argc, argv, 1, opt, &count, value)) {
-    ArgumentNumberErr(count, 1, opt);
-    return true; // option present
-  }
-  return false; // option not present
-}
-bool IntegerOption2(const int argc, char **argv,
-                    const char *opt, int value[2]) {
-  int count = 0;
-  if (IntegerOption(argc, argv, 2, opt, &count, value)) {
-    ArgumentNumberErr(count, 2, opt);
-    return true; // option present
-  }
-  return false; // option not present
-} //}}}
-// general option with multiple double arguments (up to 'max') //{{{
-bool DoubleOption(const int argc, char **argv, const int max,
-                  const char *opt, int *count, double values[max]) {
+bool NumbersOption(const int argc, char **argv, const int max, const char *opt,
+                   int *count, void *values, const char type) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], opt) == 0) {
       int n = 0; // number of arguments
       // read integers
       int arg = i+1+n;
-      double val;
-      while (arg < argc && IsRealNumber(argv[arg], &val)) {
-        values[n] = val;
+      while (arg < argc) {
+        if (type == 'i') {
+
+        } else {
+          double val;
+          if (!IsRealNumber(argv[arg], &val)) {
+            break;
+          }
+          double *num = (double *)values;
+          double *a = &num[n];
+          *a = val;
+        }
         n++;
         arg = i+1+n;
         if (TooManyArgsWarn(max, n, opt, count)) {
@@ -333,42 +303,37 @@ bool DoubleOption(const int argc, char **argv, const int max,
   }
   return false;
 }
-bool DoubleOption1(const int argc, char **argv,
-                   const char *opt, double *value) {
+bool OneNumberOption(const int argc, char **argv,
+                     const char *opt, void *value, const char type) {
   int count = 0;
-  if (DoubleOption(argc, argv, 1, opt, &count, value)) {
+  if (NumbersOption(argc, argv, 1, opt, &count, value, type)) {
     ArgumentNumberErr(count, 1, opt);
     return true; // option present
   }
   return false; // option not present
 }
-bool DoubleOption2(const int argc, char **argv,
-                   const char *opt, double value[2]) {
+bool TwoNumbersOption(const int argc, char **argv,
+                      const char *opt, void *value, const char type) {
   int count = 0;
-  if (DoubleOption(argc, argv, 2, opt, &count, value)) {
+  if (NumbersOption(argc, argv, 2, opt, &count, value, type)) {
     ArgumentNumberErr(count, 2, opt);
     return true; // option present
   }
   return false; // option not present
 }
-bool DoubleOption3(const int argc, char **argv,
-                   const char *opt, double value[3]) {
+bool ThreeNumbersOption(const int argc, char **argv,
+                        const char *opt, void *value, const char type) {
   int count = 0;
-  if (DoubleOption(argc, argv, 3, opt, &count, value)) {
-    if (count != 3) {
-      s_strcpy(ERROR_MSG, "three numeric arguments required", LINE);
-      PrintErrorOption(opt);
-      exit(1);
-    } else {
-      return true; // option present
-    }
+  if (NumbersOption(argc, argv, 3, opt, &count, value, type)) {
+    ArgumentNumberErr(count, 3, opt);
+    return true; // option present
   }
   return false; // option not present
 } //}}}
-// general option with filename and integer(s) arguments //{{{
-bool FileIntegerOption(const int argc, char **argv, const int min,
-                       const int max, const char *opt, int *values,
-                       int *count, char *file) {
+// general option with filename and integer(s)/double(s) arguments //{{{
+bool FileNumbersOption(const int argc, char **argv, const int min,
+                       const int max, const char *opt, void *values,
+                       int *count, char *file, const char type) {
   int n = 0;
   *count = 0;
   file[0] = '\0';
@@ -376,20 +341,30 @@ bool FileIntegerOption(const int argc, char **argv, const int min,
     if (strcmp(argv[i], opt) == 0) {
       MissingFilenameError(argc, argv, opt, i);
       snprintf(file, LINE, "%s", argv[i+1]);
-      // read integers
+      // read numbers
       if (max == 0) {
         return true;
       } else {
         while ((i+2+n) < argc && argv[i+2+n][0] != '-') {
-          // Error - non-numeric or missing argument
-          long val;
-          if (!IsIntegerNumber(argv[i+2+n], &val)) {
-            s_strcpy(ERROR_MSG, "arguments must be non-negative whole numbers",
-                     LINE);
-            PrintErrorOption(opt);
-            exit(1);
+          if (type == 'i') {
+            long val;
+            if (!IsIntegerNumber(argv[i+2+n], &val)) {
+              err_msg("arguments must be non-negative numbers");
+              goto error;
+            }
+            int *num = (int *)values;
+            int *a = &num[n];
+            *a = val;
+          } else {
+            double val;
+            if (!IsRealNumber(argv[i+2+n], &val)) {
+              err_msg("arguments must be non-negative numbers");
+              goto error;
+            }
+            double *num = (double *)values;
+            double *a = &num[n];
+            *a = val;
           }
-          values[n] = val;
           n++;
           if (TooManyArgsWarn(max, n, opt, count)) {
             return true;
@@ -397,8 +372,7 @@ bool FileIntegerOption(const int argc, char **argv, const int min,
         }
         if (n < min) {
           s_strcpy(ERROR_MSG, "not enough numeric arguments", LINE);
-          PrintErrorOption(opt);
-          exit(1);
+          goto error;
         }
       }
       *count = n;
@@ -406,50 +380,17 @@ bool FileIntegerOption(const int argc, char **argv, const int min,
     }
   }
   return false; // option not present
-}
+  error:
+    PrintErrorOption(opt);
+    exit(1);
+} //}}}
+// general option with filename //{{{
 bool FileOption(const int argc, char **argv, const char *opt, char *file) {
   int trash;
-  if (FileIntegerOption(argc, argv, 0, 0, opt, &trash, &trash, file)) {
+  if (FileNumbersOption(argc, argv, 0, 0, opt, &trash, &trash, file, 'i')) {
     return true;
   }
   return false;
-} //}}}
-// general option with filename and double(s) arguments //{{{
-bool FileDoubleOption(const int argc, char **argv, const int max,
-                      const char *opt, double *values, int *count, char *file) {
-  int n = 0;
-  *count = 0;
-  file[0] = '\0';
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], opt) == 0) {
-      MissingFilenameError(argc, argv, opt, i);
-      snprintf(file, LINE, "%s", argv[i+1]);
-      // read doubles
-      if (max == 0) {
-        return true;
-      } else {
-        while ((i+2+n) < argc && argv[i+2+n][0] != '-') {
-          // Error - non-numeric or missing argument
-          double val;
-          if (!IsRealNumber(argv[i+2+n], &val)) {
-            s_strcpy(ERROR_MSG, "arguments must be non-negative numbers",
-                     LINE);
-            PrintErrorOption(opt);
-            exit(1);
-          }
-          values[n] = val;
-          n++;
-          if (TooManyArgsWarn(max, n, opt, count)) {
-            return true;
-          }
-        }
-        ArgumentMissingErr(n, opt);
-      }
-      *count = n;
-      return true; // option present
-    }
-  }
-  return false; // option not present
 } //}}}
 
 // STATIC IMPLEMENTATIONS
@@ -466,7 +407,7 @@ static void SilentOption(const int argc, char **argv,
   }
 } //}}}
 // print AnalysisTools version number (--version) //{{{
-static bool VersionOption(const int argc, char *argv[]) {
+static bool VersionOption(const int argc, char **argv) {
   for (int i = 1; i < argc; i++) {
     if (strcmp(argv[i], "--version") == 0) {
       fprintf(stdout, "AnalysisTools by Karel Šindelka (KaGaSi), version %s"

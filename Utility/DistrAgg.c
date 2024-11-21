@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
   // -c option
   int c_sizes[100] = {0}, c_count = 0;
   char c_file[LINE] = "";
-  FileIntegerOption(argc, argv, 1, 100, "-c", c_sizes, &c_count, c_file);
+  FileNumbersOption(argc, argv, 1, 100, "-c", c_sizes, &c_count, c_file, 'i');
   //}}}
 
   // print command to stdout
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
   // '-n' option //{{{
   int range_As[2] = {1, Count->Molecule};
-  IntegerOption2(argc, argv, "-n", range_As);
+  TwoNumbersOption(argc, argv, "-n", range_As, 'i');
   if (range_As[0] > range_As[1]) {
     SwapInt(&range_As[0], &range_As[1]);
   } //}}}

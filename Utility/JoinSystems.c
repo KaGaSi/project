@@ -88,8 +88,8 @@ int main(int argc, char *argv[]) {
   opt->c = CommonOptions(argc, argv, in[0]);
   // -st option for both input systems; copied from CommonOptions()
   opt->start[0] = 1, opt->start[1] = 1;
-  IntegerOption1(argc, argv, "-st1", &opt->start[0]);
-  IntegerOption1(argc, argv, "-st2", &opt->start[1]);
+  OneNumberOption(argc, argv, "-st1", &opt->start[0], 'i');
+  OneNumberOption(argc, argv, "-st2", &opt->start[1], 'i');
   // -off option //{{{
   InitDoubleArray(opt->off, 3, 0);
   for (int i = 0; i < argc; i++) {
@@ -112,7 +112,8 @@ int main(int argc, char *argv[]) {
   } //}}}
   // output box dimensions //{{{
   InitDoubleArray(opt->box, 3, 0);
-  if (DoubleOption3(argc, argv, "-b", opt->box)) {
+  // if (DoubleOption3(argc, argv, "-b", opt->box)) {
+  if (ThreeNumbersOption(argc, argv, "-b", opt->box, 'd')) {
     if (opt->box[0] <= 0 || opt->box[1] <= 0 || opt->box[2] <= 0) {
       err_msg("three positive numbers required");
       PrintErrorOption("-b");

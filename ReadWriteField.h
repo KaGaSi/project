@@ -6,7 +6,8 @@
 #include "AnalysisTools.h"
 
 SYSTEM FieldRead(const char *file);
-void WriteField(SYSTEM System, char *file_field, int argc, char **argv);
+void WriteField(const SYSTEM System, const char *file_field,
+                const int argc, char **argv);
 
 #endif
 

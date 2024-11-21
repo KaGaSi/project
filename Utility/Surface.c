@@ -250,12 +250,13 @@ int main(int argc, char *argv[]) {
   // -wd option
   double distr_width = 0;
   int vals[2];
-  FileDoubleOption(argc, argv, 1, "-wd", &distr_width, vals, opt->width_distr);
+  FileNumbersOption(argc, argv, 0, 1, "-wd", &distr_width, vals,
+                    opt->width_distr, 'd');
   FileOption(argc, argv, "-w", opt->width_avg);
   opt->c = CommonOptions(argc, argv, in);
   opt->in = BoolOption(argc, argv, "--in");
   opt->bonded = BoolOption(argc, argv, "--bonded");
-  if (!DoubleOption1(argc, argv, "-r", &opt->probe)) {
+  if (!OneNumberOption(argc, argv, "-r", &opt->probe, 'd')) {
     opt->probe = 0.5;
   }
   // -a option
@@ -410,7 +411,7 @@ int main(int argc, char *argv[]) {
   // array for writing surface beads (if -b option is used) //{{{
   bool *write = NULL;
   if (opt->bead_file.name[0] != '\0') {
-    InitCoorFile(opt->bead_file, System, argc, argv);
+    InitOutputCoorFile(opt->bead_file, System, argc, argv);
     write = calloc(Count->Bead, sizeof *write);
   } //}}}
 

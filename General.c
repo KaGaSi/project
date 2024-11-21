@@ -11,7 +11,7 @@
  *   IsInteger() on 1) gives val=2 and returns success (i.e., true)
  *   On 2), all functions return failure (i.e., false)
  */
-bool IsRealNumber(const char str[], double *val) {
+bool IsRealNumber(const char *str, double *val) {
   char *endptr = NULL;
   *val = strtod(str, &endptr);
   if (endptr == str) {
@@ -19,14 +19,14 @@ bool IsRealNumber(const char str[], double *val) {
   }
   return true;
 }
-bool IsPosRealNumber(const char str[], double *val) {
+bool IsPosRealNumber(const char *str, double *val) {
   if (IsRealNumber(str, val) && *val > 0) {
     return true;
   } else {
     return false;
   }
 }
-bool IsIntegerNumber(const char str[], long *val) {
+bool IsIntegerNumber(const char *str, long *val) {
   char *endptr = NULL;
   *val = strtol(str, &endptr, 0);
   if (endptr == str) {
@@ -34,58 +34,60 @@ bool IsIntegerNumber(const char str[], long *val) {
   }
   return true;
 }
-bool IsNaturalNumber(const char str[], long *val) {
+bool IsNaturalNumber(const char *str, long *val) {
   if (IsIntegerNumber(str, val) && *val > 0) {
     return true;
   } else {
     return false;
   }
 }
-bool IsWholeNumber(const char str[], long *val) {
+bool IsWholeNumber(const char *str, long *val) {
   if (IsIntegerNumber(str, val) && *val >= 0) {
     return true;
   } else {
     return false;
   }
 } //}}}
-// Bubble sort an array; mode = 0: ascendingly, mode = 1: descendingly //{{{
-void SortErr(const int mode) {
+// bubble sort int/double array ascendingly/descendingly //{{{
+void SortArray(void *array, const int length, const int mode, const char type) {
   if (mode != 0 && mode != 1) {
     err_msg("SortArray*(): use 0 or 1 for sorting mode");
     PrintError();
     exit(1);
   }
-}
-void SortArrayInt(int *array, const int length, const int mode) {
-  SortErr(mode);
-  for (int i = 0; i < (length - 1); i++) {
-    bool done = true;
-    for (int j = 0; j < (length - i - 1); j++) {
-      if (mode == 0 && array[j] > array[j+1]) {
-        SwapInt(&array[j], &array[j+1]);
-        done = false;
-      }
-      if (mode == 1 && array[j] < array[j+1]) {
-        SwapInt(&array[j], &array[j+1]);
-        done = false;
-      }
-    }
-    if (done)
-      break;
+  if (type != 'i' && type != 'd') {
+    err_msg("SortArray(): use 'i' or 'd' for integer or double array");
+    PrintError();
+    exit(1);
   }
-}
-void SortArrayDouble(double *array, const int length, const int mode) {
-  SortErr(mode);
   for (int i = 0; i < (length - 1); i++) {
     bool done = true;
     for (int j = 0; j < (length - i - 1); j++) {
-      if (mode == 0 && array[j] > array[j+1]) {
-        SwapDouble(&array[j], &array[j+1]);
-        done = false;
-      }
-      if (mode == 1 && array[j] < array[j+1]) {
-        SwapDouble(&array[j], &array[j+1]);
-        done = false;
+      if (type == 'i') {
+        int *arr = (int *)array;
+        int *a = &arr[j];
+        int *b = &arr[j];
+        if (mode == 0) {
+          b = &arr[j+1];
+        } else {
+          a = &arr[j+1];
+        }
+        if (*a > *b) {
+          SwapInt(a, b);
+          done = false;
+        }
+      } else {
+        double *arr = (double *)array;
+        double *a = &arr[j];
+        double *b = &arr[j];
+        if (mode == 0) {
+          b = &arr[j+1];
+        } else {
+          a = &arr[j+1];
+        }
+        if (*a > *b) {
+          SwapDouble(a, b);
+        }
       }
     }
     if (done)
@@ -192,6 +194,20 @@ void InitLong2DArray(long **array, const int m, const int n, const long val) {
 }
 void InitDouble2DArray(double **array, const int m, const int n,
                        const double val) {
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      array[i][j] = val;
+    }
+  }
+}
+void InitInt2DArray(int **array, const int m, const int n, const int val) {
+  for (int i = 0; i < m; i++) {
+    for (int j = 0; j < n; j++) {
+      array[i][j] = val;
+    }
+  }
+}
+void InitBool2DArray(bool **array, const int m, const int n, const bool val) {
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
       array[i][j] = val;

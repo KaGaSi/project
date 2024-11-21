@@ -9,15 +9,6 @@
 #define DATE "TBD"
 #define OPT_LENGTH 15
 
-// #define CHARGE 10000.0 // 'impossible' charge
-// #define MASS 0.0 // 'impossible' mass
-// #define RADIUS 0.0 // 'impossible' radius
-// #define HIGHNUM 1000000 // high number to use in various checks
-// #define MOL_NAME 21 // maximum molecule name length (with null terminator)
-// #define BEAD_NAME 21 // maximum bead name length (with null terminator)
-//
-// #define EXTENSION 16 // maximum length of filename extension
-
 // structures for options //{{{
 typedef struct OPT OPT;
 OPT * opt_create(void);

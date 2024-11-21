@@ -1,5 +1,6 @@
 #include "AnalysisTools.h"
 #include "Errors.h"
+#include "General.h"
 #include <string.h>
 
 // TODO: consider BeadType[].Index, System.Bonded, etc. arrays - shouldn't they
@@ -286,7 +287,7 @@ int FindMoleculeName(const char *name, const SYSTEM System) {
  * name = true/false for checking/ignoring molecule name
  */
 int FindMoleculeType(const SYSTEM Sys1, const MOLECULETYPE mt_1,
-                     const SYSTEM Sys2, const int mode) {
+                     const SYSTEM Sys2, const int mode, const bool name) {
   // just to be sure the function's mode parameter is correct //{{{
   if (mode < 0 || mode > 3) {
     err_msg("FindMoleculeType() - mode parameter must be <0,3>\n");
@@ -296,7 +297,7 @@ int FindMoleculeType(const SYSTEM Sys1, const MOLECULETYPE mt_1,
   // find the same name
   for (int i = 0; i < Sys2.Count.MoleculeType; i++) {
     MOLECULETYPE *mt_2 = &Sys2.MoleculeType[i];
-    if (strcmp(mt_1.Name, mt_2->Name) == 0) {
+    if (!name || strcmp(mt_1.Name, mt_2->Name) == 0) {
       if (mode == 0) { // only name checked
         return i;
       }
@@ -310,7 +311,7 @@ int FindMoleculeType(const SYSTEM Sys1, const MOLECULETYPE mt_1,
       for (int j = 0; j < mt_1.nBeads; j++) {
         int bt_1 = mt_1.Bead[j],
             bt_2 = mt_2->Bead[j];
-        if (!SameBeadType(Sys1.BeadType[bt_1], Sys2.BeadType[bt_2])) {
+        if (!SameBeadType(Sys1.BeadType[bt_1], Sys2.BeadType[bt_2], name)) {
           goto end_loop;
         }
       }
@@ -731,7 +732,7 @@ void Gyration(const int n, const int *list, const COUNT Counts,
   for (int dd = 0; dd < 3; dd++) {
     eigen[dd] = e[dd];
   }
-  SortArrayDouble(eigen, 3, 0);
+  SortArray(eigen, 3, 0, 'd');
 } //}}}
 // evaluate contacts between molecules, creating aggregates //{{{
 static int NewAgg(AGGREGATE *Aggregate, SYSTEM *System,

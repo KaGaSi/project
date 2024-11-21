@@ -93,13 +93,13 @@ int main ( int argc, char** argv ) {
 
   // -tau option: use block method to get overall average (and stderr and tau)
   opt->tau = 0;
-  IntegerOption1(argc, argv, "-tau", &opt->tau);
+  OneNumberOption(argc, argv, "-tau", &opt->tau, 'i');
   // -b option: calculate block averages
   opt->block = 0;
-  IntegerOption1(argc, argv, "-b", &opt->block);
+  OneNumberOption(argc, argv, "-b", &opt->block, 'i');
   // -m option: calculate moving average
   opt->moving = 0;
-  IntegerOption1(argc, argv, "-m", &opt->moving);
+  OneNumberOption(argc, argv, "-m", &opt->moving, 'i');
   if (opt->moving == 0 && opt->tau == 0 && opt->block == 0) {
     err_msg("-tau, -b, or -m option must be used");
     PrintError();

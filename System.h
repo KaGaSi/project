@@ -33,7 +33,7 @@ void RenameBeadTypes(SYSTEM *System);
 void RenameMoleculeTypes(SYSTEM *System);
 
 // test whether two bead types are identical
-bool SameBeadType(BEADTYPE bt_1, BEADTYPE bt_2);
+bool SameBeadType(const BEADTYPE bt_1, const BEADTYPE bt_2, const bool name);
 
 // create new bead/molecule type, realloc'ing the appropriate array
 void NewBeadType(BEADTYPE *BeadType[], int *number_of_types, char name[],

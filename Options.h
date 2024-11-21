@@ -30,29 +30,21 @@ bool MoleculeTypeOption(const int argc, char **argv, const char *opt,
                         const bool use, bool *flag, const SYSTEM System);
 // general boolean option
 bool BoolOption(const int argc, char **argv, const char *opt);
-// general option with multiple integer arguments (up to 'max')
-bool IntegerOption(const int argc, char **argv, const int max,
-                   const char *opt, int *count, int *values);
-bool IntegerOption1(const int argc, char **argv, const char *opt, int *value);
-bool IntegerOption2(const int argc, char **argv,
-                    const char *opt, int value[2]);
-// general option with multiple double arguments (up to 'max')
-bool DoubleOption(const int argc, char **argv, const int max,
-                  const char *opt, int *count, double values[max]);
-bool DoubleOption1(const int argc, char **argv,
-                   const char *opt, double *value);
-bool DoubleOption2(const int argc, char **argv,
-                   const char *opt, double value[2]);
-bool DoubleOption3(const int argc, char **argv,
-                   const char *opt, double value[3]);
-// general option with filename and integer(s) arguments
-bool FileIntegerOption(const int argc, char **argv, const int min,
-                       const int max, const char *opt, int *values,
-                       int *count, char *file);
+// general option with multiple integer/double arguments
+bool NumbersOption(const int argc, char **argv, const int max, const char *opt,
+                   int *count, void *values, const char type);
+bool OneNumberOption(const int argc, char **argv,
+                      const char *opt, void *value, const char type);
+bool TwoNumbersOption(const int argc, char **argv,
+                      const char *opt, void *value, const char type);
+bool ThreeNumbersOption(const int argc, char **argv,
+                        const char *opt, void *value, const char type);
+// general option with filename and integer(s)/double(s) arguments
+bool FileNumbersOption(const int argc, char **argv, const int min,
+                       const int max, const char *opt, void *values,
+                       int *count, char *file, const char type);
+// general option with filename argument
 bool FileOption(const int argc, char **argv, const char *opt, char *file);
-// general option with filename and double(s) arguments
-bool FileDoubleOption(const int argc, char **argv, const int max,
-                      const char *opt, double *values, int *count, char *file);
 // print help - function body in each utility
 void Help(const char cmd[50], const bool error,
           const int n, const char opt[n][OPT_LENGTH]);

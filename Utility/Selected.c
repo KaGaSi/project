@@ -146,14 +146,15 @@ int main(int argc, char *argv[]) {
   // '-n' option - specify timestep ids //{{{
   opt->n_number = -1;
   InitIntArray(opt->n_save, 100, 0);
-  IntegerOption(argc, argv, 100, "-n", &opt->n_number, opt->n_save);
+  NumbersOption(argc, argv, 100, "-n", &opt->n_number, opt->n_save, 'i');
   // ignore -st/-e/-sk when -n is used
   if (opt->n_number != -1) {
     opt->c.start = 1;
     opt->c.end = -1;
     opt->c.skip = 1;
   }
-  SortArrayInt(opt->n_save, opt->n_number, 0); //}}}
+  // SortArrayInt(opt->n_save, opt->n_number, 0);
+  SortArray(opt->n_save, opt->n_number, 0, 'i'); //}}}
 
   if (opt->c.verbose) {
     VerboseOutput(System);

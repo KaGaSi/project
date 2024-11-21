@@ -93,8 +93,10 @@ int main(int argc, char *argv[]) {
   } //}}}
   opt->all = BoolOption(argc, argv, "--all");
   // '-d' option - specify bead ids to calculate distance between //{{{
-  FileIntegerOption(argc, argv, 0, 100, "-d",
-                    opt->n_list, &opt->n_number, opt->d_file);
+  // FileIntegerOption(argc, argv, 0, 100, "-d",
+  //                   opt->n_list, &opt->n_number, opt->d_file);
+  FileNumbersOption(argc, argv, 0, 100, "-d", opt->n_list,
+                    &opt->n_number, opt->d_file, 'i');
   // if '-d' is present without numbers, use first and last for each molecule
   int d_per_set = 2; // it's a bond, so there two beads in each
   if (opt->d_file[0] != '\0' && opt->n_number == 0) {
@@ -120,7 +122,7 @@ int main(int argc, char *argv[]) {
   } //}}}
   //}}}
   // '-w' option - bond length warning //{{{
-  if (!DoubleOption1(argc, argv, "-w", &opt->warn)) {
+  if (!OneNumberOption(argc, argv, "-w", &opt->warn, 'd')) {
     opt->warn = HIGHNUM;
   } //}}}
   //}}}
@@ -167,7 +169,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
   // arrays for all bonds in molecules //{{{
-  double ***bond_all = NULL, (**bond_all_mma)[3] = NULL;
+  double ***bond_all = NULL;
+  double (**bond_all_mma)[3] = NULL;
   if (opt->all) {
     bond_all = calloc(Count->MoleculeType, sizeof *bond_all);
     bond_all_mma = calloc(Count->MoleculeType, sizeof (**bond_all_mma)[3]);
@@ -183,7 +186,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
   // extra arrays for -d option //{{{
-  double ***bond_d, (**bond_d_mma)[3];
+  double ***bond_d = NULL;
+  double (**bond_d_mma)[3] = NULL;
   if (opt->d_file[0] != '\0') {
     bond_d = calloc(Count->MoleculeType, sizeof *bond_d),
     bond_d_mma = calloc(Count->MoleculeType, sizeof (**bond_d_mma)[3]);

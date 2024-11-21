@@ -243,8 +243,8 @@ int main(int argc, char *argv[]) {
   opt->ld = false;
   opt->hd = false;
   if (!opt->new) { // only if not generating system from scratch
-    opt->ld = DoubleOption1(argc, argv, "-ld", &opt->ldist);
-    opt->hd = DoubleOption1(argc, argv, "-hd", &opt->hdist);
+    opt->ld = OneNumberOption(argc, argv, "-ld", &opt->ldist, 'd');
+    opt->hd = OneNumberOption(argc, argv, "-hd", &opt->hdist, 'd');
   }
   // errors for -ld/-hd options //{{{
   if ((opt->ld && opt->ldist <= 0) || (opt->hd && opt->hdist <= 0)) {
@@ -294,7 +294,7 @@ int main(int argc, char *argv[]) {
         s_strcpy(str, "-cz", 4);
         break;
     }
-    if (DoubleOption2(argc, argv, str, opt->axis[dd])) {
+    if (TwoNumbersOption(argc, argv, str, opt->axis[dd], 'd')) {
       if (opt->axis[dd][0] < 0 || opt->axis[dd][1] < 0) {
         err_msg("two non-negative numbers required");
         PrintErrorOption("-cx/-cy/-cz");
@@ -326,7 +326,7 @@ int main(int argc, char *argv[]) {
   opt->no_rot = BoolOption(argc, argv, "--no-rotate");
   // output box dimensions //{{{
   InitDoubleArray(opt->angle, 3, 0);
-  if (DoubleOption3(argc, argv, "-a", opt->angle)) {
+  if (ThreeNumbersOption(argc, argv, "-a", opt->angle, 'd')) {
     opt->no_rot = false;
   } //}}}
   opt->head = BoolOption(argc, argv, "--head");
@@ -334,7 +334,7 @@ int main(int argc, char *argv[]) {
   // output box dimensions //{{{
   opt->box = InitBox;
   double temp[3] = {0, 0, 0};
-  if (DoubleOption3(argc, argv, "-b", temp)) {
+  if (ThreeNumbersOption(argc, argv, "-b", temp, 'd')) {
     opt->box.Length[0] = temp[0];
     opt->box.Length[1] = temp[1];
     opt->box.Length[2] = temp[2];
@@ -350,10 +350,10 @@ int main(int argc, char *argv[]) {
   } //}}}
   // -off option
   InitDoubleArray(opt->off, 3, 0);
-  DoubleOption3(argc, argv, "-off", opt->off);
+  ThreeNumbersOption(argc, argv, "-off", opt->off, 'd');
   // seed for random number generator (-s option)
   opt->seed = -1;
-  IntegerOption1(argc, argv, "-s", &opt->seed);
+  OneNumberOption(argc, argv, "-s", &opt->seed, 'i');
   // warn about options with no effect //{{{
   if (opt->new) {
     for (int i = 1; i < argc; i++) {

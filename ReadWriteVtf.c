@@ -51,10 +51,10 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
   COUNT *Count = &Sys.Count;
   FILE *fr = OpenFile(file, "r");
   // define variables and structures and arrays //{{{
-  int line_count = 0,   // total number of lines
-      count_atoms = 0,  // number of 'atom <id>'
-      default_atom = 0, // line number of the first 'atom default' line
-      count_bonds = 0;  // number of bonds
+  int line_count = 0;   // total number of lines
+  int count_atoms = 0;  // number of 'atom <id>'
+  int default_atom = 0; // line number of the first 'atom default' line
+  // int Bond = 0;  // number of bonds
   bool warned = false; // has 'a[tom] default' line warning been already issued?
   //}}}
   // read struct_file line by line, counting atoms and bonds //{{{
@@ -76,7 +76,7 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
         if (default_atom != 0 && !warned) { // warn of multiple defaults //{{{
           warned = true; // warn only once
           snprintf(ERROR_MSG, LINE, "multiple 'a[tom] default' lines %s, using"
-                   " line %s%d%s as the default line%s\n", ErrCyan(),
+                   " line %s%d%s as the default line%s", ErrCyan(),
                    ErrYellow(), default_atom, ErrCyan(), ErrColourReset());
           PrintWarnFile(file, "\0", "\0"); //}}}
         } else { // save line number of the first 'atom default' line
@@ -100,7 +100,7 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
         }
       } //}}}
     } else if (ltype == BOND_LINE) {
-      count_bonds++;
+      Count->Bond++;
     } else if (ltype == TIME_LINE || ltype == TIME_LINE_O) {
       break;
     } else if (ltype == COOR_LINE || ltype == COOR_LINE_O) {
@@ -147,8 +147,8 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
   } //}}}
   // array to save bonds - if there are any //{{{
   int (*bond)[5] = NULL;
-  if (count_bonds != 0) {
-    bond = calloc(count_bonds, sizeof *bond);
+  if (Count->Bond != 0) {
+    bond = calloc(Count->Bond, sizeof *bond);
     bond[0][2] = -1; // no bond types in a vtf file
   } //}}}
   // default type - may not be used
@@ -164,7 +164,7 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
    *   iii) resid keyword: save into separate Sys.MoleculeType & Sys.Molecule
    * b)ond line: save bonded bead indices into a bond struct for later use
    */
-  count_bonds = 0;
+  Count->Bond = 0;
   for (int line = 1; line <= line_count; line++) {
     // read line
     ReadAndSplitLine(fr, SPL_STR, " \t\n");
@@ -249,22 +249,22 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
         char *index[SPL_STR];
         SplitLine(SPL_STR, index, split[1], ":");
         IsIntegerNumber(index[0], &val);
-        bond[count_bonds][0] = val;
+        bond[Count->Bond][0] = val;
         IsIntegerNumber(index[1], &val);
-        bond[count_bonds][1] = val;
+        bond[Count->Bond][1] = val;
       } else { // case 'bond <id>: <id>'
         // IsIntegerNumber() ignores the trailing ':'
         IsIntegerNumber(split[1], &val);
-        bond[count_bonds][0] = val;
+        bond[Count->Bond][0] = val;
         IsIntegerNumber(split[2], &val);
-        bond[count_bonds][1] = val;
+        bond[Count->Bond][1] = val;
       }
-      bond[count_bonds][2] = -1;
+      bond[Count->Bond][2] = -1;
       // assure index1<index2 (may be unnecessary, but definitely won't hurt)
-      if (bond[count_bonds][0] > bond[count_bonds][1]) {
-        SwapInt(&bond[count_bonds][0], &bond[count_bonds][1]);
+      if (bond[Count->Bond][0] > bond[Count->Bond][1]) {
+        SwapInt(&bond[Count->Bond][0], &bond[Count->Bond][1]);
       }
-      count_bonds++; //}}}
+      Count->Bond++; //}}}
     }
   } //}}}
   fclose(fr);
@@ -301,9 +301,8 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
     exit(1);
   } //}}}
   CopyMoleculeTypeBeadsToMoleculeBeads(&Sys);
-  FillMTypeStuff(&Sys, 0, 3, bond, count_bonds);
-  MinimizeMTypeStuffIds(&Sys);
-  if (count_bonds != 0) {
+  FillAllMTypeStuff(&Sys, bond, NULL, NULL, NULL);
+  if (Count->Bond != 0) {
     free(bond);
   }
   RemoveExtraTypes(&Sys);

@@ -91,8 +91,8 @@ int main(int argc, char *argv[]) {
   } //}}}
   opt->all = BoolOption(argc, argv, "--all");
   // '-n' option - specify bead ids to calculate angles between //{{{
-  FileIntegerOption(argc, argv, 0, 100, "-n",
-                    opt->n_list, &opt->n_number, opt->n_file);
+  FileNumbersOption(argc, argv, 0, 100, "-n",
+                    opt->n_list, &opt->n_number, opt->n_file, 'i');
   // if '-n' is present without numbers, use first and last for each molecule
   int n_per_set = 3; // it's an angle, so there three beads in each
   if (opt->n_file[0] != '\0' && opt->n_number == 0) {
@@ -178,7 +178,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
   // extra arrays for -n option //{{{
-  double ***ang_n, (**ang_n_mma)[3];
+  double ***ang_n = NULL;
+  double (**ang_n_mma)[3] = NULL;
   if (opt->n_file[0] != '\0') {
     ang_n = calloc(Count->MoleculeType, sizeof *ang_n),
     ang_n_mma = calloc(Count->MoleculeType, sizeof (**ang_n_mma)[3]);

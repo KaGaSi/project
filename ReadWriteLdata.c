@@ -42,6 +42,10 @@ static void LmpDataReadDihedrals(FILE *fr, const char *file, const COUNT Count,
 static void LmpDataReadImpropers(FILE *fr, const char *file, const COUNT Count,
                                  int (*improper)[5], int *line_count);
 static bool ReadPbc(BOX *box);
+static int CheckAtomsMode(const int words, char **split, const char *file);
+static void CheckAtomsLine(const int mode, const int beads, long *id,
+                           long *resid, long *type, double *q, double pos[3],
+                           const char *file, const int line_count);
 static void WriteStuff(FILE *fw, const SYSTEM System, const int mol,
                        int *count, const int num, int (**arr)[5], const int n);
 
@@ -264,7 +268,6 @@ SYSTEM LmpDataReadStruct(const char *file) { //{{{
   CheckSystem(System, file);
   return System;
 } //}}}
-// TODO: make Atoms section type detection (i.e., # <type>) into a function
 // TODO: Atoms & Velocities section can be switched
 // TODO: add Forces section reading
 // read lammps data file as a coordinate file //{{{
@@ -328,23 +331,7 @@ int LmpDataReadTimestep(FILE *fr, const char *file,
       return -2;
     }
   } while (words == 0 || strcmp(split[0], "Atoms") != 0);
-  int mode = 0;
-  if (words > 2 && split[1][0] == '#') {
-    if (strcmp(split[2], "full") == 0) {
-      mode = 0; // for 'Atoms # bond|angle|molecular|charge'
-    } else if (strcmp(split[2], "bond") == 0 ||
-               strcmp(split[2], "angle") == 0 ||
-               strcmp(split[2], "molecular") == 0 ||
-               strcmp(split[2], "charge") == 0) {
-      mode = 1; // for 'Atoms # bond|angle|molecular'
-    } else if (strcmp(split[2], "atomic") == 0) {
-      mode = 2; // for 'Atoms # atomic'
-    } else {    // for 'Atoms # <something else>'
-      snprintf(ERROR_MSG, LINE, "unsupported atom_style (Atoms section) "
-               "%s%s; assuming 'full'", ErrYellow(), split[2]);
-      PrintWarnFile(file, "\0", "\0");
-    }
-  }
+  int mode = CheckAtomsMode(words, split, file);
   (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
     return -2;
@@ -356,46 +343,10 @@ int LmpDataReadTimestep(FILE *fr, const char *file,
     if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
       return -2;
     }
-    long id;
-    double pos[3];
-    if (mode == 0) {
-      // 'Atoms # full' or just 'Atoms':
-      // <bead id> <mol id> <bead type id> <charge> <coordinates>
-      if (words < 7 || !IsNaturalNumber(split[0], &id) ||
-          id > Count->Bead ||                // bead index
-          !IsRealNumber(split[4], &pos[0]) || // Cartesean coordinates
-          !IsRealNumber(split[5], &pos[1]) || //
-          !IsRealNumber(split[6], &pos[2])) { //
-        err_msg("wrong line in Atoms section");
-        PrintErrorFileLine(file, *line_count);
-        exit(1);
-      }
-    } else if (mode == 1 || mode == 3) {
-      // 'Atoms # bond|angle|molecular':
-      // <bead id> <mol id> <bead type id> <coordinates>
-      // or 'Atoms # charge':
-      // <bead id> <bead type id> <charge> <coordinates>
-      if (words < 6 || !IsNaturalNumber(split[0], &id) ||
-          id > Count->Bead ||                // bead index
-          !IsRealNumber(split[3], &pos[0]) || // Cartesean coordinates
-          !IsRealNumber(split[4], &pos[1]) || //
-          !IsRealNumber(split[5], &pos[2])) { //
-        err_msg("wrong line in Atoms section");
-        PrintErrorFileLine(file, *line_count);
-        exit(1);
-      }
-    } else { // mode == 2
-      // 'Atoms # atomic': <bead id> <bead type id> <coordinates>
-      if (words < 5 || !IsNaturalNumber(split[0], &id) ||
-          id > Count->Bead ||                // bead index
-          !IsRealNumber(split[2], &pos[0]) || // Cartesean coordinates
-          !IsRealNumber(split[3], &pos[1]) || //
-          !IsRealNumber(split[4], &pos[2])) { //
-        err_msg("wrong line in Atoms section");
-        PrintErrorFileLine(file, *line_count);
-        exit(1);
-      }
-    }
+    long id, resid, type;
+    double pos[3], q;
+    CheckAtomsLine(mode, Count->Bead, &id, &resid,
+                   &type, &q, pos, file, *line_count);
     id--; // in lammps data file, ids start from 1
     BEAD *b = &System->Bead[id];
     for (int dd = 0; dd < 3; dd++) {
@@ -507,24 +458,7 @@ static void LmpDataReadBody(FILE *fr, const char *file, SYSTEM *System,
       LmpDataReadImproperCoeffs(fr, file, System, line_count);
     } else if (words > 0 && strcmp(split[0], "Atoms") == 0) {
       atoms = true;
-      int mode = 0; // for 'Atoms' or 'Atoms # full'
-      if (words > 2 && split[1][0] == '#') {
-        if (strcmp(split[2], "full") == 0) {
-          mode = 0; // for 'Atoms # bond|angle|molecular'
-        } else if (strcmp(split[2], "bond") == 0 ||
-                   strcmp(split[2], "angle") == 0 ||
-                   strcmp(split[2], "molecular") == 0) {
-          mode = 1; // for 'Atoms # bond|angle|molecular'
-        } else if (strcmp(split[2], "atomic") == 0) {
-          mode = 2; // for 'Atoms # atomic'
-        } else if (strcmp(split[2], "charge") == 0) {
-          mode = 3; // for 'Atoms # charge'
-        } else {    // for 'Atoms # <something else>'
-          snprintf(ERROR_MSG, LINE, "unsupported atom_style (Atoms section) "
-                   "%s%s; assuming 'full'", ErrYellow(), split[2]);
-          PrintWarnFile(file, "\0", "\0");
-        }
-      }
+      int mode = CheckAtomsMode(words, split, file);
       LmpDataReadAtoms(fr, file, System, name_mass, atom_types, line_count,
                        mode);
     } else if (words > 0 && strcmp(split[0], "Velocities") == 0) {
@@ -621,14 +555,10 @@ static void LmpDataReadBody(FILE *fr, const char *file, SYSTEM *System,
    */
   for (int i = 0; i < Count->MoleculeType; i++) {
     MOLECULETYPE *mt = &System->MoleculeType[i];
-    SortArrayInt(mt->Bead, mt->nBeads, 0);
+    SortArray(mt->Bead, mt->nBeads, 0, 'i');
   }
   CopyMoleculeTypeBeadsToMoleculeBeads(System);
-  FillMTypeStuff(System, 0, 3, bond, Count->Bond);
-  FillMTypeStuff(System, 1, 4, angle, Count->Angle);
-  FillMTypeStuff(System, 2, 5, dihedral, Count->Dihedral);
-  FillMTypeStuff(System, 3, 5, improper, Count->Improper);
-  MinimizeMTypeStuffIds(System);
+  FillAllMTypeStuff(System, bond, angle, dihedral, improper);
   free(bond);
   free(angle);
   free(dihedral);
@@ -673,18 +603,19 @@ static void LmpDataReadMasses(FILE *fr, const char *file, BEADTYPE *name_mass,
     }
   }
 } //}}}
+// TODO: in Bond/Angle/etc/ Coeffs, read up to 4 values, don't check type (harm, etc.)
 // read Bond Coeffs section //{{{
 // TODO: non-harmonic bonds
 static void LmpDataReadBondCoeffs(FILE *fr, const char *file,
                                   SYSTEM *System, int *line_count) {
   COUNT *Count = &System->Count;
-  // error - no bond types //{{{
+  // error - no bond types
   if (Count->BondType == 0) {
     err_msg("Bond Coeffs in a file with no bond types");
     PrintWarnFile(file, "\0", "\0");
     putc('\n', stderr);
     return;
-  } //}}}
+  }
   // skip one line
   (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
@@ -699,7 +630,7 @@ static void LmpDataReadBondCoeffs(FILE *fr, const char *file,
     }
     long type;
     double a, b;
-    // error - wrong line //{{{
+    // error - wrong line
     if (words < 3 ||
         !IsNaturalNumber(split[0], &type) ||
         type > Count->BondType ||
@@ -708,9 +639,9 @@ static void LmpDataReadBondCoeffs(FILE *fr, const char *file,
       err_msg("wrong line in Bond Coeffs section");
       PrintErrorFileLine(file, *line_count);
       exit(1);
-    }                                     //}}}
-    System->BondType[type - 1].a = a * 2; // lammps uses k/2 as spring constant
-    System->BondType[type - 1].b = b;
+    }
+    System->BondType[type-1].a = a * 2; // lammps uses k/2 as spring constant
+    System->BondType[type-1].b = b;
   }
 } //}}}
 // read Angle Coeffs section //{{{
@@ -718,11 +649,11 @@ static void LmpDataReadBondCoeffs(FILE *fr, const char *file,
 static void LmpDataReadAngleCoeffs(FILE *fr, const char *file,
                                    SYSTEM *System, int *line_count) {
   COUNT *Count = &System->Count;
-  // error - no angle types //{{{
+  // error - no angle types
   if (Count->AngleType == 0) {
     err_msg("Angle Coeffs in a file with no angle types");
     PrintWarnFile(file, "\0", "\0");
-  } //}}}
+  }
   // skip one line
   (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
@@ -737,7 +668,7 @@ static void LmpDataReadAngleCoeffs(FILE *fr, const char *file,
     }
     long type;
     double a, b;
-    // error - wrong line //{{{
+    // error - wrong line
     if (words < 3 ||
         !IsNaturalNumber(split[0], &type) ||
         type > Count->AngleType ||
@@ -746,9 +677,9 @@ static void LmpDataReadAngleCoeffs(FILE *fr, const char *file,
       err_msg("wrong line in Angle Coeffs section");
       PrintErrorFileLine(file, *line_count);
       exit(1);
-    }                                      //}}}
-    System->AngleType[type - 1].a = a * 2; // lammps uses k/2 as spring constant
-    System->AngleType[type - 1].b = b;
+    }
+    System->AngleType[type-1].a = a * 2; // lammps uses k/2 as spring constant
+    System->AngleType[type-1].b = b;
   }
 } //}}}
 // read Dihedral Coeffs section //{{{
@@ -756,11 +687,11 @@ static void LmpDataReadAngleCoeffs(FILE *fr, const char *file,
 static void LmpDataReadDihedralCoeffs(FILE *fr, const char *file,
                                       SYSTEM *System, int *line_count) {
   COUNT *Count = &System->Count;
-  // error - no dihedral types //{{{
+  // error - no dihedral types
   if (Count->DihedralType == 0) {
     err_msg("Dihedral Coeffs in a file with no dihedral types");
     PrintWarnFile(file, "\0", "\0");
-  } //}}}
+  }
   // skip one line
   (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
@@ -776,7 +707,7 @@ static void LmpDataReadDihedralCoeffs(FILE *fr, const char *file,
     long type;
     double a;
     long b, c;
-    // error - wrong line //{{{
+    // error - wrong line
     // see https://docs.lammps.org/dihedral_harmonic.html for details
     if (words < 4 || !IsNaturalNumber(split[0], &type) ||
         type > Count->DihedralType ||
@@ -784,10 +715,10 @@ static void LmpDataReadDihedralCoeffs(FILE *fr, const char *file,
         (!IsIntegerNumber(split[2], &b) && labs(b) != 1) ||
         !IsWholeNumber(split[3], &c)) {
       err_msg("wrong line in Dihedral Coeffs section "
-                        "(for now, only harmonic type accepted)");
+              "(only harmonic type accepted)");
       PrintErrorFileLine(file, *line_count);
       exit(1);
-    } //}}}
+    }
     System->DihedralType[type-1].a = a * 2;
     System->DihedralType[type-1].b = b;
     System->DihedralType[type-1].c = c;
@@ -829,9 +760,9 @@ static void LmpDataReadImproperCoeffs(FILE *fr, const char *file,
       PrintErrorFileLine(file, *line_count);
       exit(1);
     } //}}}
-    System->ImproperType[type - 1].a = a * 2;
-    System->ImproperType[type - 1].b = b;
-    System->ImproperType[type - 1].c = c;
+    System->ImproperType[type-1].a = a * 2;
+    System->ImproperType[type-1].b = b;
+    System->ImproperType[type-1].c = c;
   }
 } //}}}
 // read Atoms section //{{{
@@ -854,70 +785,9 @@ static void LmpDataReadAtoms(FILE *fr, const char *file, SYSTEM *System,
       exit(1);
     }
     long id, resid, type;
-    double q;
-    double pos[3];
-    // check the line is correct & read/assign values //{{{
-    // 'Atoms # full': <bead id> <mol id> <bead type id> <charge> <coordinates>
-    if (mode == 0) {
-      if (words < 7 || !IsNaturalNumber(split[0], &id) ||
-          id > Count->Bead ||                   // bead index
-          !IsIntegerNumber(split[1], &resid) || // molecule index
-          !IsWholeNumber(split[2], &type) ||    // bead type (mass-defined)
-          (!IsRealNumber(split[3], &q) &&       // bead charge
-           strcmp(split[3], "???") != 0) ||     //
-          !IsRealNumber(split[4], &pos[0]) ||    // Cartesean coordinates
-          !IsRealNumber(split[5], &pos[1]) ||    //
-          !IsRealNumber(split[6], &pos[2])) {    //
-        err_msg("wrong line in Atoms section");
-        PrintErrorFileLine(file, *line_count);
-        exit(1);
-      }
-    } else if (mode == 1) {
-      // 'Atoms # bond|angle|molecular':
-      // <bead id> <mol id> <bead type id> <coordinates>
-      if (words < 6 || !IsNaturalNumber(split[0], &id) ||
-          id > Count->Bead ||                   // bead index
-          !IsIntegerNumber(split[1], &resid) || // molecule index
-          !IsWholeNumber(split[2], &type) ||    // bead type (mass-defined)
-          !IsRealNumber(split[3], &pos[0]) ||    // Cartesean coordinates
-          !IsRealNumber(split[4], &pos[1]) ||    //
-          !IsRealNumber(split[5], &pos[2])) {    //
-        err_msg("wrong line in Atoms section");
-        PrintErrorFileLine(file, *line_count);
-        exit(1);
-      }
-      q = CHARGE;
-    } else if (mode == 2) {
-      // 'Atoms # atomic': <bead id> <bead type id> <coordinates>
-      if (words < 5 || !IsNaturalNumber(split[0], &id) ||
-          id > Count->Bead ||                // bead index
-          !IsWholeNumber(split[1], &type) || // bead type (mass-defined)
-          !IsRealNumber(split[2], &pos[0]) || // Cartesean coordinates
-          !IsRealNumber(split[3], &pos[1]) || //
-          !IsRealNumber(split[4], &pos[2])) { //
-        err_msg("wrong line in Atoms section");
-        PrintErrorFileLine(file, *line_count);
-        exit(1);
-      }
-      resid = -1;
-      q = CHARGE;
-    } else {
-      // 'Atoms # charge': <bead id> <bead type id> <charge> <coordinates>
-      if (words < 6 || !IsNaturalNumber(split[0], &id) ||
-          id > Count->Bead ||                // bead index
-          !IsWholeNumber(split[1], &type) || // bead type (mass-defined)
-          (!IsRealNumber(split[2], &q) &&    // bead charge
-           strcmp(split[3], "???") != 0) ||  //
-          !IsRealNumber(split[3], &pos[0]) || // Cartesean coordinates
-          !IsRealNumber(split[4], &pos[1]) || //
-          !IsRealNumber(split[5], &pos[2])) { //
-        err_msg("wrong line in Atoms section");
-        PrintErrorFileLine(file, *line_count);
-        exit(1);
-      }
-      resid = -1;
-    }
-    //}}}
+    double pos[3], q;
+    CheckAtomsLine(mode, Count->Bead, &id, &resid,
+                   &type, &q, pos, file, *line_count);
     id--;   // in lammps data file, bead ids start from 1
     type--; // in lammps data file, bead type ids start from 1
     BEAD *b = &System->Bead[id];
@@ -1259,13 +1129,16 @@ static void LmpDataReadImpropers(FILE *fr, const char *file, const COUNT Count,
       err_msg("Improper type is too high");
       goto error;
     }
-    if (i_id[0] > Count.Bead || i_id[1] > Count.Bead || i_id[2] > Count.Bead ||
+    if (i_id[0] > Count.Bead ||
+        i_id[1] > Count.Bead ||
+        i_id[2] > Count.Bead ||
         i_id[3] > Count.Bead) {
       err_msg("Bead index in a improper is too high");
       goto error;
     }
     if (i_id[0] == i_id[1] || i_id[0] == i_id[2] || i_id[0] == i_id[3] ||
-        i_id[1] == i_id[2] || i_id[1] == i_id[3] || i_id[2] == i_id[3]) {
+        i_id[1] == i_id[2] || i_id[1] == i_id[3] ||
+        i_id[2] == i_id[3]) {
       err_msg("Same beads in a single improper");
       goto error;
     }
@@ -1313,6 +1186,93 @@ static bool ReadPbc(BOX *box) { //{{{
     box->transform[1][2] = yz;
   }
   return true;
+} //}}}
+// check what mode is the Atoms section //{{{
+static int CheckAtomsMode(const int words, char **split, const char *file) {
+  int mode = 0;
+  if (words > 2 && split[1][0] == '#') {
+    if (strcmp(split[2], "full") == 0) {
+      mode = 0; // for 'Atoms # bond|angle|molecular'
+    } else if (strcmp(split[2], "bond") == 0 ||
+               strcmp(split[2], "angle") == 0 ||
+               strcmp(split[2], "molecular") == 0) {
+      mode = 1; // for 'Atoms # bond|angle|molecular'
+    } else if (strcmp(split[2], "atomic") == 0) {
+      mode = 2; // for 'Atoms # atomic'
+    } else if (strcmp(split[2], "charge") == 0) {
+      mode = 3; // for 'Atoms # charge'
+    } else {    // for 'Atoms # <something else>'
+      snprintf(ERROR_MSG, LINE, "unsupported atom_style (Atoms section) "
+               "%s%s; assuming 'full'", ErrYellow(), split[2]);
+      PrintWarnFile(file, "\0", "\0");
+    }
+  }
+  return mode;
+} //}}}
+// CheckAtomsLine() //{{{
+static void CheckAtomsLine(const int mode, const int beads, long *id,
+                           long *resid, long *type, double *q, double pos[3],
+                           const char *file, const int line_count) {
+  // 'Atoms # full': <bead id> <mol id> <bead type id> <charge> <coordinates>
+  if (mode == 0) {
+    if (words < 7 || !IsNaturalNumber(split[0], id) ||
+        *id > beads ||                       // bead index
+        !IsIntegerNumber(split[1], resid) || // molecule index
+        !IsWholeNumber(split[2], type) ||    // bead type (mass-defined)
+        (!IsRealNumber(split[3], q) &&       // bead charge
+         strcmp(split[3], "???") != 0) ||    //
+        !IsRealNumber(split[4], &pos[0]) ||  // Cartesean coordinates
+        !IsRealNumber(split[5], &pos[1]) ||  //
+        !IsRealNumber(split[6], &pos[2])) {  //
+      err_msg("wrong line in Atoms section");
+      PrintErrorFileLine(file, line_count);
+      exit(1);
+    }
+  } else if (mode == 1) {
+    // 'Atoms # bond|angle|molecular':
+    // <bead id> <mol id> <bead type id> <coordinates>
+    if (words < 6 || !IsNaturalNumber(split[0], id) ||
+        *id > beads ||                       // bead index
+        !IsIntegerNumber(split[1], resid) || // molecule index
+        !IsWholeNumber(split[2], type) ||    // bead type (mass-defined)
+        !IsRealNumber(split[3], &pos[0]) ||  // Cartesean coordinates
+        !IsRealNumber(split[4], &pos[1]) ||  //
+        !IsRealNumber(split[5], &pos[2])) {  //
+      err_msg("wrong line in Atoms section");
+      PrintErrorFileLine(file, line_count);
+      exit(1);
+    }
+    *q = CHARGE;
+  } else if (mode == 2) {
+    // 'Atoms # atomic': <bead id> <bead type id> <coordinates>
+    if (words < 5 || !IsNaturalNumber(split[0], id) ||
+        *id > beads ||                      // bead index
+        !IsWholeNumber(split[1], type) ||   // bead type (mass-defined)
+        !IsRealNumber(split[2], &pos[0]) || // Cartesean coordinates
+        !IsRealNumber(split[3], &pos[1]) || //
+        !IsRealNumber(split[4], &pos[2])) { //
+      err_msg("wrong line in Atoms section");
+      PrintErrorFileLine(file, line_count);
+      exit(1);
+    }
+    *resid = -1;
+    *q = CHARGE;
+  } else {
+    // 'Atoms # charge': <bead id> <bead type id> <charge> <coordinates>
+    if (words < 6 || !IsNaturalNumber(split[0], id) ||
+        *id > beads ||                      // bead index
+        !IsWholeNumber(split[1], type) ||   // bead type (mass-defined)
+        (!IsRealNumber(split[2], q) &&      // bead charge
+         strcmp(split[3], "???") != 0) ||   //
+        !IsRealNumber(split[3], &pos[0]) || // Cartesean coordinates
+        !IsRealNumber(split[4], &pos[1]) || //
+        !IsRealNumber(split[5], &pos[2])) { //
+      err_msg("wrong line in Atoms section");
+      PrintErrorFileLine(file, line_count);
+      exit(1);
+    }
+    *resid = -1;
+  }
 } //}}}
 
 // write single bond/angle/dihedral/improper 'stuff' //{{{

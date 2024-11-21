@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
   opt->c = CommonOptions(argc, argv, in);
   // extra bead types for data output (-ebt option)
   opt->ebt = 0;
-  IntegerOption1(argc, argv, "-ebt", &opt->ebt);
+  OneNumberOption(argc, argv, "-ebt", &opt->ebt, 'i');
   // use mass only for atom type definition for data output file
   opt->lmp_mass = BoolOption(argc, argv, "--mass");
   // base bead types on name, charge, mass, and radius (vtf input file)

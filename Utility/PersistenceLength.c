@@ -97,11 +97,11 @@ int main(int argc, char *argv[]) {
          (*avg_bond)[2] = calloc(Count->MoleculeType, sizeof avg_bond[2]);
   long int ***count_stuff = calloc(Count->MoleculeType, sizeof *count_stuff);
   for (int i = 0; i < Count->MoleculeType; i++) {
-    cos_phi[i] = calloc(max_bonds, sizeof *cos_phi);
-    count_stuff[i] = calloc(max_bonds, sizeof *count_stuff);
+    cos_phi[i] = calloc(max_bonds, sizeof *cos_phi[i]);
+    count_stuff[i] = calloc(max_bonds, sizeof *count_stuff[i]);
     for (int j = 0; j < max_bonds; j++) {
-      cos_phi[i][j] = calloc(max_bonds, sizeof *cos_phi);
-      count_stuff[i][j] = calloc(max_bonds, sizeof *count_stuff);
+      cos_phi[i][j] = calloc(max_bonds, sizeof *cos_phi[i][j]);
+      count_stuff[i][j] = calloc(max_bonds, sizeof *count_stuff[i][j]);
     }
   } //}}}
 
