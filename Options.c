@@ -13,7 +13,6 @@ static bool TooManyArgsWarn(const int max, const int n,
 static void ArgumentNumberErr(const int count, const int n, const char *opt);
 static void ArgumentMissingErr(const int n, const char *opt);
 
-// THE VISIBLE FUNCTIONS
 // version/help printing and initial check of provided options //{{{
 int OptionCheck(const int argc, char **argv, const int req, const int common,
                 const int all, const bool check_extra,
@@ -393,7 +392,6 @@ bool FileOption(const int argc, char **argv, const char *opt, char *file) {
   return false;
 } //}}}
 
-// STATIC IMPLEMENTATIONS
 // option for output verbosity (--silent) //{{{
 static void SilentOption(const int argc, char **argv,
                          bool *verbose, bool *silent) {

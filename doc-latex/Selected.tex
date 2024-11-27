@@ -24,6 +24,10 @@ beads inside the box) via the \tt{--wrap} switch. If both \tt{--wrap} and
 \tt{--join} options are used, the simulation box is first wrapped and then the
 molecules are joined.
 
+Lastly, all coordinates can be scaled, i.e., each coordinate divided by a given
+value (\tt{-sc} option). The scaling happens before wrapping/joining of the
+coordinates.
+
 \vspace{1em}
 \noindent
 Usage: \tt{Selected <input> <output> <bead type(s)> [options]}
@@ -46,6 +50,7 @@ Usage: \tt{Selected <input> <output> <bead type(s)> [options]}
                          conditions)\\
   \tt{-n <int(s)>}     & save only specified timesteps\\
   \tt{--last}          & save only the last step\\
+  \tt{-sc <float>}     & divide all coordinates by given value\\
   \midrule
   \multicolumn{2}{l}{Other options (see the beginning of
                      Chapter~\ref{chap:Utils})}\\

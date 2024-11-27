@@ -6,8 +6,6 @@ doc
 docs/doxygen
 docs/_build
 cscope*
-Extra
-CMakeLists_extra.txt
 Testing
 tags
 *aux

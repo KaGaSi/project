@@ -30,6 +30,7 @@ conditions can be either stripped away or applied (which happens first if both \
           "(--last overrides this option)\n");
   fprintf(ptr, "  --last            use only the last step"
           "(-st/-e/-n options are ignored)\n");
+  fprintf(ptr, "  -sc <float>       divide all coordinates by given value\n");
   CommonHelp(error, n, opt);
 } //}}}
 
@@ -39,6 +40,7 @@ struct OPT {
        reverse,              // --reverse
        join, wrap, last;     // --join --wrap --last
   int n_save[100], n_number; // -n
+  double scale;              // -sc
   FILE_TYPE fout;            // -o
   COMMON_OPT c;
 };
@@ -46,16 +48,27 @@ OPT * opt_create(void) {
   return malloc(sizeof(OPT));
 } //}}}
 
+static void ScaleCoordinates(SYSTEM *System, const double scale) { //{{{
+  if (scale > 1) {
+    for (int i = 0; i < System->Count.BeadCoor; i++) {
+      int id = System->BeadCoor[i];
+      for (int dd = 0; dd < 3; dd++) {
+        System->Bead[id].Position[dd] /= 50;
+      }
+    }
+  }
+} //}}}
+
 int main(int argc, char *argv[]) {
 
   // define options & check their validity
-  int common = 8, all = common + 7, count = 0,
+  int common = 8, all = common + 8, count = 0,
       req_arg = 2;
   char option[all][OPT_LENGTH];
   OptionCheck(argc, argv, req_arg, common, all, true, option,
-               "-st", "-e", "-sk", "-i", "--verbose", "--silent", "--help",
-               "--version", "--reverse", "--join", "--wrap", "-n", "--last",
-               "-bt", "-mt");
+              "-st", "-e", "-sk", "-i", "--verbose", "--silent", "--help",
+              "--version", "-bt", "-mt", "--reverse", "--join", "--wrap", "-n",
+              "--last", "-sc");
 
   count = 0; // count mandatory arguments
   OPT *opt = opt_create();
@@ -76,7 +89,11 @@ int main(int argc, char *argv[]) {
   opt->reverse = BoolOption(argc, argv, "--reverse");
   opt->join = BoolOption(argc, argv, "--join");
   opt->wrap = BoolOption(argc, argv, "--wrap");
-  opt->last = BoolOption(argc, argv, "--last"); //}}}
+  opt->last = BoolOption(argc, argv, "--last");
+  if (!OneNumberOption(argc, argv, "-sc", &opt->scale, 'd')) {
+    opt->scale = 1;
+  }
+  //}}}
 
   if (!opt->c.silent) {
     PrintCommand(stdout, argc, argv);
@@ -226,6 +243,7 @@ int main(int argc, char *argv[]) {
         break;
       }
       count_saved++;
+      ScaleCoordinates(&System, opt->scale);
       WrapJoinCoordinates(&System, opt->wrap, opt->join);
       WriteTimestep(fout, System, count_coor, write, argc, argv);
       //}}}
@@ -260,6 +278,7 @@ int main(int argc, char *argv[]) {
       fsetpos(fr, &position[i]);
       line_count = bkp_line_count[i];
       if (ReadTimestep(in, fr, &System, &line_count)) {
+        ScaleCoordinates(&System, opt->scale);
         WrapJoinCoordinates(&System, opt->wrap, opt->join);
         WriteTimestep(fout, System, count_coor, write, argc, argv);
         if (!opt->c.silent) {
