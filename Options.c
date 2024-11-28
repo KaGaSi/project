@@ -279,7 +279,13 @@ bool NumbersOption(const int argc, char **argv, const int max, const char *opt,
       int arg = i+1+n;
       while (arg < argc) {
         if (type == 'i') {
-
+          long val;
+          if (!IsIntegerNumber(argv[arg], &val)) {
+            break;
+          }
+          int *num = (int *)values;
+          int *a = &num[n];
+          *a = val;
         } else {
           double val;
           if (!IsRealNumber(argv[arg], &val)) {

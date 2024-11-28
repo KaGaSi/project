@@ -519,8 +519,8 @@ int main(int argc, char *argv[]) {
                     fprintf(fw, "#   3body (%s): %lf\n",
                             System.BeadType[bt3].Name, avg);
                   }
+                  bt3 = FindMoleculeName(name_mol, System);
                   if (bt3 != -1) {
-                    bt3 = FindMoleculeName(name_mol, System);
                     bt3 = System.MoleculeType[bt3].BType[0];
                     avg = (double)(inter_3body[m1][m2][bt1][bt2][bt3]) /
                           c_mtype_mtype[m1][m2];

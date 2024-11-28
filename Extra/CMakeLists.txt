@@ -40,8 +40,7 @@ add_library(AnalysisTools
 set(UTILS GenGal
           GalContacts
           Template
-          test
-          Selected-scale)
+          test)
 foreach(utility ${UTILS})
   add_executable(${utility} ../Extra/${utility}.c)
   target_link_libraries(${utility} AnalysisTools m)
