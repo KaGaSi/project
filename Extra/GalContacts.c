@@ -174,12 +174,12 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-  } //}}}
-  int **contacts = calloc(Count->Bonded * Count->Bonded, sizeof *contacts);
-  for (int i = 0; i < (Count->Bonded * Count->Bonded); i++) {
-    contacts[i] = calloc(2, sizeof *contacts[i]);
   }
+  int *contacts1 = calloc(Count->Bonded * Count->Bonded, sizeof *contacts1);
+  int *contacts2 = calloc(Count->Bonded * Count->Bonded, sizeof *contacts2);
+  //}}}
 
+  // print initial stuff to output file //{{{
   PrintByline(fout, argc, argv);
   FILE *fw = OpenFile(fout, "a");
   count = 1;
@@ -207,7 +207,7 @@ int main(int argc, char *argv[]) {
       }
       putc('\n', fw);
     }
-  }
+  } //}}}
 
   // main loop //{{{
   FILE *fr = OpenFile(in.coor.name, "r");
@@ -250,8 +250,8 @@ int main(int argc, char *argv[]) {
                                     bead2->Position, boxlength);
                   // are the two beads are close enough?
                   if (d < dist_check) {
-                    contacts[count_contacts][0] = b1_id;
-                    contacts[count_contacts][1] = b2_id;
+                    contacts1[count_contacts] = b1_id;
+                    contacts2[count_contacts] = b2_id;
                     count_contacts++;
                   }
                 }
@@ -275,8 +275,8 @@ int main(int argc, char *argv[]) {
                                             boxlength);
                       // count contact if the two beads are close enough
                       if (d < dist_check) {
-                        contacts[count_contacts][0] = b1_id;
-                        contacts[count_contacts][1] = b2_id;
+                        contacts1[count_contacts] = b1_id;
+                        contacts2[count_contacts] = b2_id;
                         count_contacts++;
                       }
                     }
@@ -312,8 +312,8 @@ int main(int argc, char *argv[]) {
           int b3_id = System.BeadType[bt3].Index[i];
           BEAD *b3 = &System.Bead[b3_id];
           for (int j = 0; j < count_contacts; j++) {
-            int b1_id = contacts[j][0];
-            int b2_id = contacts[j][1];
+            int b1_id = contacts1[j];
+            int b2_id = contacts2[j];
             BEAD *b1 = &System.Bead[b1_id];
             BEAD *b2 = &System.Bead[b2_id];
             Types bt = SortTypes(b1->Type, b2->Type);
@@ -351,8 +351,8 @@ int main(int argc, char *argv[]) {
           GeomCentre(mt3->nBeads, mol->Bead, System.Bead, gc);
           int btype = mt3->BType[0];
           for (int j = 0; j < count_contacts; j++) {
-            int b1_id = contacts[j][0];
-            int b2_id = contacts[j][1];
+            int b1_id = contacts1[j];
+            int b2_id = contacts2[j];
             BEAD *b1 = &System.Bead[b1_id];
             BEAD *b2 = &System.Bead[b2_id];
             Types bt = SortTypes(b1->Type, b2->Type);
@@ -384,8 +384,8 @@ int main(int argc, char *argv[]) {
       }
       for (int i = 0; i < count_contacts; i++) {
         if (!three_body[i]) {
-          int b1_id = contacts[i][0];
-          int b2_id = contacts[i][1];
+          int b1_id = contacts1[i];
+          int b2_id = contacts2[i];
           BEAD *b1 = &System.Bead[b1_id];
           BEAD *b2 = &System.Bead[b2_id];
           Types bt = SortTypes(b1->Type, b2->Type);
@@ -407,21 +407,22 @@ int main(int argc, char *argv[]) {
         }
       }
 
+      // write average number of contacts to a file //{{{
       fprintf(fw, "%5d", count_used);
       for (int i = 0; i < Count->MoleculeType; i++) {
         if (opt->mt[i]) {
           for (int j = 0; j < System.MoleculeType[i].nBTypes; j++) {
             for (int k = j; k < System.MoleculeType[i].nBTypes; k++) {
-              int btj = System.MoleculeType[i].BType[j];
-              int btk = System.MoleculeType[i].BType[k];
-              if (opt->bt[btj] && opt->bt[btk]) {
-                double avg = (double)(per_step[i][btj][btk][0]) /
+              int bt_j = System.MoleculeType[i].BType[j];
+              int bt_k = System.MoleculeType[i].BType[k];
+              if (opt->bt[bt_j] && opt->bt[bt_k]) {
+                double avg = (double)(per_step[i][bt_j][bt_k][0]) /
                              System.MoleculeType[i].Number;
                 fprintf(fw, " %lf", avg);
-                avg = (double)(per_step[i][btj][btk][1]) /
+                avg = (double)(per_step[i][bt_j][bt_k][1]) /
                       System.MoleculeType[i].Number;
                 fprintf(fw, " %lf", avg);
-                avg = (double)(per_step[i][btj][btk][2]) /
+                avg = (double)(per_step[i][bt_j][bt_k][2]) /
                       System.MoleculeType[i].Number;
                 fprintf(fw, " %lf", avg);
               }
@@ -429,8 +430,8 @@ int main(int argc, char *argv[]) {
           }
         }
       }
-      putc('\n', fw);
-
+      putc('\n', fw); //}}}
+      // free temp arrays //{{{
       free(three_body);
       for (int i = 0; i < Count->MoleculeType; i++) {
         for (int j = 0; j < Count->BeadType; j++) {
@@ -441,7 +442,7 @@ int main(int argc, char *argv[]) {
         }
         free(per_step[i]);
       }
-      free(per_step);
+      free(per_step); //}}}
       //}}}
       if (count_contacts > 0) {
         fclose(out_vmd);
@@ -534,8 +535,8 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-  } //}}}
-  fclose(fw);
+  }
+  fclose(fw); //}}}
 
   // free memory - to make valgrind happy //{{{
   for (int i = 0; i < Count->MoleculeType; i++) {
@@ -571,10 +572,8 @@ int main(int argc, char *argv[]) {
   free(inter_mol);
   free(inter_3body);
   free(c_mtype_mtype);
-  for (int i = 0; i < (Count->Bonded * Count->Bonded); i++) {
-    free(contacts[i]);
-  }
-  free(contacts);
+  free(contacts1);
+  free(contacts2);
   free(opt->mt);
   free(opt->bt);
   free(opt);
