@@ -213,19 +213,10 @@ int main(int argc, char *argv[]) {
     bkp_line_count[count_coor-1] = line_count;
     // decide whether this timestep is to be saved //{{{
     bool use = false;
-    /* no -n option - use if timestep
-     *    1) is between start (-st option) and end (-e option)
-     *    and
-     *    2) isn't skipped (-sk option); skipping starts counting with 'start'
-     */
-    if (opt->n_number == -1) {
-      // definitely not use, if --last option is used
-      if (UseStep(opt->c, count_coor)) {
-        use = true;
-      } else { // includes --last option
-        use = false;
-      }
-      // -n option is used - save the timestep if it's in the list
+    // no -n option - possibly use only if --last not present
+    if (opt->n_number == -1 && !opt->last && UseStep(opt->c, count_coor)) {
+      use = true;
+    // -n option is used - save the timestep if it's in the list
     } else if (n_opt_count < opt->n_number &&
                opt->n_save[n_opt_count] == count_coor) {
       use = true;
