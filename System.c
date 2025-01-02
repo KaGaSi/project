@@ -311,7 +311,7 @@ bool CalculateBoxData(BOX *Box, int mode) {
       }
       Box->OrthoLength[2] = sqrt(sqr);
       break; //}}}
-    case 1:  // tilt & OrthoLength given //{{{
+    case 1: // tilt & OrthoLength given //{{{
       for (int dd = 0; dd < 3; dd++) {
         Box->Length[dd] = Box->OrthoLength[dd];
       }

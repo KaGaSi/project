@@ -217,19 +217,18 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
           int resid = atoi(split[value[5]]);
           MOLECULETYPE *mt_resid = &Sys.MoleculeType[resid];
           if (mt_resid->Number == 0) { // new molecule type
-            if (value[4] == -1) {
+            if (value[4] == -1) { // 'resname' vtf keyword missing
               s_strcpy(mt_resid->Name, "m", MOL_NAME);
               mt_resid->Flag = false;
-            } else {
+            } else { // 'resname' vtf keyword present
               s_strcpy(mt_resid->Name, split[value[4]], MOL_NAME);
               mt_resid->Flag = true;
             }
-            mt_resid->Name[MOL_NAME-1] = '\0'; // null-terminate!
             mt_resid->Number = 1;
             mt_resid->nBeads = 1;
             mt_resid->Bead = malloc(sizeof *mt_resid->Bead);
             mt_resid->Bead[0] = id; // bead type = bead index
-          } else {                  // not new moleclue type
+          } else { // not new moleclue type
             int bead = mt_resid->nBeads;
             mt_resid->nBeads++;
             mt_resid->Bead = s_realloc(mt_resid->Bead, sizeof *mt_resid->Bead *
