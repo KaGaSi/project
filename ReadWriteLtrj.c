@@ -102,11 +102,11 @@ SYSTEM LtrjReadStruct(const char *file) {
     if (new) { // create a new type
       int type = Count->BeadType;
       if (position[1] != -1) { // 'element' variable is present
-        NewBeadType(&Sys.BeadType, &Count->BeadType, split[position[1]], CHARGE,
-                    MASS, RADIUS);
+        NewBeadType(&Sys.BeadType, &Count->BeadType, split[position[1]],
+                    CHARGE, MASS, RADIUS);
       } else { // 'element' variable is missing
-        NewBeadType(&Sys.BeadType, &Count->BeadType, "b0", CHARGE, MASS,
-                    RADIUS);
+        NewBeadType(&Sys.BeadType, &Count->BeadType, "b0",
+                    CHARGE, MASS, RADIUS);
       }
       BEADTYPE *bt_new = &Sys.BeadType[type];
       bt_new->Number = 1;

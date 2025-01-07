@@ -11,8 +11,6 @@
 #include "General.h"
 #include "Options.h"
 #include "ReadWrite.h"
-// #include <dirent.h>
-// #include <sys/stat.h>
 
 // Helper functions for dealing with SYSTEM structure
 // identify bead type based on name

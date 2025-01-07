@@ -3,12 +3,6 @@
 
 #define _POSIX_C_SOURCE 200809L
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <math.h>
-#include <stdbool.h>
 #include "AnalysisTools.h"
 
 // version/help printing and initial check of provided options

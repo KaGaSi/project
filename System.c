@@ -2247,6 +2247,8 @@ void CheckSystem(const SYSTEM System, const char *file) {
 } //}}}
 
 // simplify system for vtf output - remove stuff vtf does not support //{{{
+// TODO: add PruneSystem() to this?
+// TODO: actually, what's the function for?
 void VtfSystem(SYSTEM *System) {
   for (int i = 0; i < System->Count.MoleculeType; i++) {
     // remove angles

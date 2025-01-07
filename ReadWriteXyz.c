@@ -56,7 +56,8 @@ SYSTEM XyzReadStruct(const char *file) { //{{{
     }
     if (new) {
       int type = Count->BeadType;
-      NewBeadType(&Sys.BeadType, &Count->BeadType, split[0], HIGHNUM, HIGHNUM, HIGHNUM);
+      NewBeadType(&Sys.BeadType, &Count->BeadType, split[0],
+                  HIGHNUM, HIGHNUM, HIGHNUM);
       BEADTYPE *bt_new = &Sys.BeadType[type];
       bt_new->Number = 1;
       b->Type = type;

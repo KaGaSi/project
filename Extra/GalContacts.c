@@ -1,5 +1,6 @@
 #include "../AnalysisTools.h"
 #include <stdio.h>
+#include <string.h>
 
 // name for the monovalent cation
 static char *name = "C";
@@ -177,6 +178,8 @@ int main(int argc, char *argv[]) {
   }
   int *contacts1 = calloc(Count->Bonded * Count->Bonded, sizeof *contacts1);
   int *contacts2 = calloc(Count->Bonded * Count->Bonded, sizeof *contacts2);
+  bool *contact_bead_ids = calloc(Count->Bead, sizeof *contact_bead_ids);
+  bool *contact_mol_ids = calloc(Count->HighestResid, sizeof *contact_mol_ids);
   //}}}
 
   // print initial stuff to output file //{{{
@@ -226,6 +229,8 @@ int main(int argc, char *argv[]) {
         count_coor--;
         break;
       }
+      InitBoolArray(contact_bead_ids, Count->Bead, false);
+      InitBoolArray(contact_mol_ids, Count->HighestResid, false);
       // go over all molecules in the coordinate file //{{{
       int count_contacts = 0;
       for (int m1 = 0; m1 < Count->MoleculeCoor; m1++) {
@@ -247,11 +252,13 @@ int main(int argc, char *argv[]) {
                 BEAD *bead2 = &System.Bead[b2_id];
                 if (opt->bt[bead2->Type]) { // use only specified bead types
                   double d = DistLength(bead1->Position,
-                                    bead2->Position, boxlength);
+                                        bead2->Position, boxlength);
                   // are the two beads are close enough?
                   if (d < dist_check) {
                     contacts1[count_contacts] = b1_id;
                     contacts2[count_contacts] = b2_id;
+                    contact_bead_ids[b1_id] = true;
+                    contact_bead_ids[b2_id] = true;
                     count_contacts++;
                   }
                 }
@@ -277,6 +284,8 @@ int main(int argc, char *argv[]) {
                       if (d < dist_check) {
                         contacts1[count_contacts] = b1_id;
                         contacts2[count_contacts] = b2_id;
+                        contact_bead_ids[b1_id] = true;
+                        contact_bead_ids[b2_id] = true;
                         count_contacts++;
                       }
                     }
@@ -298,12 +307,12 @@ int main(int argc, char *argv[]) {
         }
       }
       bool *three_body = calloc(count_contacts, sizeof *three_body);
-      char tcl[LINE] = "";
-      FILE *out_vmd = NULL;
-      if (count_contacts > 0) {
-        snprintf(tcl, LINE, "contacts-%04d.tcl", count_used);
-        out_vmd = OpenFile(tcl, "w");
-      }
+      // char tcl[LINE] = "";
+      // FILE *out_vmd = NULL;
+      // if (count_contacts > 0) {
+      //   snprintf(tcl, LINE, "contacts-%04d.tcl", count_used);
+      //   out_vmd = OpenFile(tcl, "w");
+      // }
       count_used++;
       // i) is monovalent counterion near (globally defined name)?
       int bt3 = FindBeadType(name, System);
@@ -331,12 +340,9 @@ int main(int argc, char *argv[]) {
               }
               per_step[mt.a][bt.a][bt.b][1]++;
               three_body[j] = true;
-              fprintf(out_vmd, "set rep [expr $rep + 1]\n");
-              fprintf(out_vmd, "mol addrep ${mol}\n");
-              fprintf(out_vmd, "mol modselect ${rep} ${mol} index %d %d %d\n",
-                      b1_id, b2_id, b3_id);
-              fprintf(out_vmd, "mol modstyle  ${rep} ${mol} cpk 1.0 0.0\n");
-              fprintf(out_vmd, "mol modcolor  ${rep} ${mol} ColorID 0\n");
+              contact_bead_ids[b1_id] = true;
+              contact_bead_ids[b2_id] = true;
+              contact_bead_ids[b3_id] = true;
               // break;
             }
           }
@@ -368,15 +374,11 @@ int main(int argc, char *argv[]) {
               } else {
                 inter_3body[mt.a][mt.b][bt.a][bt.b][btype]++;
               }
+              contact_bead_ids[b1_id] = true;
+              contact_bead_ids[b2_id] = true;
+              contact_mol_ids[mol->Index] = true;
               per_step[mt.a][bt.a][bt.b][2]++;
               three_body[j] = true;
-              fprintf(out_vmd, "set rep [expr $rep + 1]\n");
-              fprintf(out_vmd, "mol addrep ${mol}\n");
-              fprintf(out_vmd, "mol modselect ${rep} ${mol} index %d %d ",
-                      b1_id, b2_id);
-              fprintf(out_vmd, "or resid %d\n", mol->Index);
-              fprintf(out_vmd, "mol modstyle  ${rep} ${mol} cpk 1.0 0.0\n");
-              fprintf(out_vmd, "mol modcolor  ${rep} ${mol} ColorID 0\n");
               // break;
             }
           }
@@ -398,12 +400,8 @@ int main(int argc, char *argv[]) {
           } else {
             inter_mol[mt.a][mt.b][bt.a][bt.b]++;
           }
-          fprintf(out_vmd, "set rep [expr $rep + 1]\n");
-          fprintf(out_vmd, "mol addrep ${mol}\n");
-          fprintf(out_vmd, "mol modselect ${rep} ${mol} index %d %d\n",
-                  b1_id, b2_id);
-          fprintf(out_vmd, "mol modstyle  ${rep} ${mol} cpk 1.0 0.0\n");
-          fprintf(out_vmd, "mol modcolor  ${rep} ${mol} ColorID 0\n");
+          contact_bead_ids[b1_id] = true;
+          contact_bead_ids[b2_id] = true;
         }
       }
 
@@ -444,10 +442,47 @@ int main(int argc, char *argv[]) {
       }
       free(per_step); //}}}
       //}}}
-      if (count_contacts > 0) {
-        fclose(out_vmd);
-      }
       //}}}
+      char tcl[LINE] = "";
+      snprintf(tcl, LINE, "contacts-%04d.tcl", count_used);
+      FILE *out_vmd = OpenFile(tcl, "w");
+      fprintf(out_vmd, "set rep [expr $rep + 1]\n");
+      fprintf(out_vmd, "mol addrep ${mol}\n");
+      fprintf(out_vmd, "mol modstyle  ${rep} ${mol} cpk 1.0 0.0\n");
+      fprintf(out_vmd, "mol modcolor  ${rep} ${mol} ColorID 0\n");
+      fprintf(out_vmd, "mol modselect ${rep} ${mol} index");
+      for (int i = 0; i < Count->BeadCoor; i++) {
+        int id = System.BeadCoor[i];
+        if (contact_bead_ids[id]) {
+          BEAD *b = &System.Bead[id];
+          if (strcmp(System.BeadType[b->Type].Name, name) != 0) {
+            fprintf(out_vmd, " %d", id);
+          }
+        }
+      }
+      putc('\n', out_vmd);
+      fprintf(out_vmd, "set rep [expr $rep + 1]\n");
+      fprintf(out_vmd, "mol addrep ${mol}\n");
+      fprintf(out_vmd, "mol modstyle  ${rep} ${mol} cpk 1.0 0.0\n");
+      fprintf(out_vmd, "mol modcolor  ${rep} ${mol} ColorID 1\n");
+      fprintf(out_vmd, "mol modselect ${rep} ${mol} index");
+      for (int i = 0; i < Count->BeadCoor; i++) {
+        int id = System.BeadCoor[i];
+        if (contact_bead_ids[id]) {
+          BEAD *b = &System.Bead[id];
+          if (strcmp(System.BeadType[b->Type].Name, name) == 0) {
+            fprintf(out_vmd, " %d", id);
+          }
+        }
+      }
+      fprintf(out_vmd, " or resid");
+      for (int i = 0; i < Count->HighestResid; i++) {
+        if (contact_mol_ids[i]) {
+          fprintf(out_vmd, " %d", i);
+        }
+      }
+      putc('\n', out_vmd);
+      fclose(out_vmd);
     } else {
       if (!SkipTimestep(in, fr, &line_count)) {
         count_coor--;
@@ -574,6 +609,8 @@ int main(int argc, char *argv[]) {
   free(c_mtype_mtype);
   free(contacts1);
   free(contacts2);
+  free(contact_bead_ids);
+  free(contact_mol_ids);
   free(opt->mt);
   free(opt->bt);
   free(opt);

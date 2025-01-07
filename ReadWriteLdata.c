@@ -1015,9 +1015,9 @@ static void CheckAtomsLine(const int mode, const int beads, long *id,
       (vals[2] != -1 && !IsWholeNumber(split[vals[2]], type)) ||
       (vals[3] != -1 && !IsRealNumber(split[vals[3]], q) &&
        strcmp(split[3], "???") != 0) ||
-      (vals[4] != -1 && !IsRealNumber(split[vals[4]], &pos[0]) &&
-                        !IsRealNumber(split[vals[4]+1], &pos[1]) &&
-                        !IsRealNumber(split[vals[4]+2], &pos[2]))) {
+      (vals[4] != -1 && !IsRealNumber(split[vals[4]+0], &pos[0])) ||
+      (vals[4] != -1 && !IsRealNumber(split[vals[4]+1], &pos[1])) ||
+      (vals[4] != -1 && !IsRealNumber(split[vals[4]+2], &pos[2]))) {
     goto error;
   }
   if (mode == 1 || mode == 2) {

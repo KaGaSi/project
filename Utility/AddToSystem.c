@@ -92,9 +92,20 @@ void RandomCoordinate(BOX box, double random[3]) {
  *   1...all bonded beads
  *   2...specified bead types,
  */
+void GetMinDist(BEAD bead, double random[3], double box[3], double *min_dist) {
+  double dist[3];
+  Distance(bead.Position, random, box, dist);
+  dist[0] = VectLength(dist);
+  if (dist[0] < *min_dist) {
+    *min_dist = dist[0];
+  }
+}
 void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
                            OPT opt, double random[3]) {
   if (mode == 0) { // no distance check
+    for (int dd = 0; dd < 3; dd++) {
+      RandomCoordinate(opt.box, random);
+    }
     return;
   }
   COUNT *C_orig = &S_orig.Count;
@@ -105,26 +116,15 @@ void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
     if (mode == 1) { // use all bonded beads
       for (int i = 0; i < C_orig->BondedCoor; i++) {
         int id = S_orig.BondedCoor[i];
-        double dist[3];
-        Distance(S_orig.Bead[id].Position, random, box, dist);
-        dist[0] = VectLength(dist);
-        if (dist[0] < min_dist) {
-          min_dist = dist[0];
-        }
+        GetMinDist(S_orig.Bead[id], random, box, &min_dist);
       }
     } else if (mode == 2) { // use specified bead types
       for (int i = 0; i < C_orig->BeadType; i++) {
         if (opt.bt_use_orig[i]) {
           for (int j = 0; j < S_orig.BeadType[i].Number; j++) {
             int id = S_orig.BeadType[i].Index[j];
-            BEAD *b = &S_orig.Bead[id];
-            if (b->InTimestep) {
-              double dist[3];
-              Distance(b->Position, random, box, dist);
-              dist[0] = VectLength(dist);
-              if (dist[0] < min_dist) {
-                min_dist = dist[0];
-              }
+            if (S_orig.Bead[id].InTimestep) {
+              GetMinDist(S_orig.Bead[id], random, box, &min_dist);
             }
           }
         }
@@ -133,14 +133,8 @@ void RandomConstrainedCoor(SYSTEM S_orig, int mode, double box[3],
     } else if (mode == 3) { // use first bead of each molecule
       for (int i = 0; i < C_orig->Molecule; i++) {
         int id = S_orig.Molecule[i].Bead[0];
-        BEAD *b = &S_orig.Bead[id];
-        if (b->InTimestep) {
-          double dist[3];
-          Distance(b->Position, random, box, dist);
-          dist[0] = VectLength(dist);
-          if (dist[0] < min_dist) {
-            min_dist = dist[0];
-          }
+        if (S_orig.Bead[id].InTimestep) {
+          GetMinDist(S_orig.Bead[id], random, box, &min_dist);
         }
       }
     } else {
@@ -192,7 +186,7 @@ void Rotate(SYSTEM System, int number, const int *list,
 
 int main(int argc, char *argv[]) {
 
-  // define & check options
+  // define & check options //{{{
   int common = 6, all = common + 18, count = 0, req_arg = 3;
   char option[all][OPT_LENGTH];
   OptionCheck(argc, argv, req_arg, common, all, true, option,
@@ -202,7 +196,8 @@ int main(int argc, char *argv[]) {
                "--real", "-b", "-off", "-s");
 
   count = 0; // count mandatory arguments
-  OPT *opt = opt_create();
+  OPT *opt = opt_create(); //}}}
+
   // <input> - input coordinate (and structure) file //{{{
   SYS_FILES in = InitSysFiles;
   opt->new = true; // create new system from scratch?
@@ -224,10 +219,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <output> - coordinate and structure output file
+  // <output> - coordinate and structure output file //{{{
   FILE_TYPE fout = InitFile;
   s_strcpy(fout.name, argv[++count], LINE);
-  fout.type = CoordinateFileType(fout.name);
+  fout.type = CoordinateFileType(fout.name); //}}}
 
   // options before reading system data //{{{
   opt->c = CommonOptions(argc, argv, in);
@@ -392,6 +387,7 @@ int main(int argc, char *argv[]) {
       for (int i = 0; i < C_orig->BeadType; i++) {
         if (S_orig.BeadType[i].Number > count) {
           count = S_orig.BeadType[i].Number;
+          bt = i;
         }
       }
       opt->sw_type[bt] = true;
@@ -540,35 +536,9 @@ int main(int argc, char *argv[]) {
 
   // create output System //{{{
   SYSTEM S_out;
-  SYSTEM S_out2;
-  SYSTEM S_add2;
-  if (opt->fout.name[0] != '\0') {
-    S_add2 = CopySystem(S_add);
-  }
   COUNT *C_out = &S_out.Count;
-  // TODO: prune = false & PruneSystem() only at the end
-  bool prune = true;
   // if not switched, concatenate the new (i.e., original) and the added systems
-  if (opt->add) { // do not switch, append the new system
-    if (opt->fout.name[0] != '\0') {
-      S_out2 = CopySystem(S_orig);
-      if (opt->fout.type == VCF_FILE ||
-          opt->fout.type == VSF_FILE ||
-          opt->fout.type == VTF_FILE) {
-        VtfSystem(&S_out2);
-        VtfSystem(&S_add2);
-      }
-      ConcatenateSystems(&S_out2, S_add2, S_orig.Box, prune);
-    }
-    S_out = CopySystem(S_orig);
-    if (fout.type == VCF_FILE ||
-        fout.type == VSF_FILE ||
-        fout.type == VTF_FILE) {
-      VtfSystem(&S_out);
-      VtfSystem(&S_add);
-    }
-    ConcatenateSystems(&S_out, S_add, S_orig.Box, prune);
-  } else { // switch, so transform the system
+  if (!opt->add) { // beads are to be switched, so transform the system
     // error - too few beads to switch //{{{
     // first, count number of beads that can be exchanged
     count = 0;
@@ -585,35 +555,20 @@ int main(int argc, char *argv[]) {
     } //}}}
     for (int i = 0; i < C_add->Bead; i++) {
       for (int j = 0; j < C_orig->BeadType; j++) {
-        if (opt->sw_type[i] && S_orig.BeadType[i].Number > 0) {
-          count = S_orig.BeadType[i].Number - 1;
-          int id = S_orig.BeadType[i].Index[count];
+        if (opt->sw_type[j] && S_orig.BeadType[j].InCoor > 0) {
+          count = S_orig.BeadType[j].InCoor - 1;
+          int id = S_orig.BeadType[j].Index[count];
           S_orig.Bead[id].InTimestep = false;
-          S_orig.BeadType[i].Number--;
+          S_orig.BeadType[j].InCoor--;
           break;
         }
       }
     }
     PruneSystem(&S_orig);
-    if (opt->fout.name[0] != '\0') {
-      S_out2 = CopySystem(S_orig);
-      if (opt->fout.type == VCF_FILE ||
-          opt->fout.type == VSF_FILE ||
-          opt->fout.type == VTF_FILE) {
-        VtfSystem(&S_out2);
-        VtfSystem(&S_add2);
-      }
-      ConcatenateSystems(&S_out2, S_add2, S_orig.Box, prune);
-    }
-    S_out = CopySystem(S_orig);
-    if (fout.type == VCF_FILE ||
-        fout.type == VSF_FILE ||
-        fout.type == VTF_FILE) {
-      VtfSystem(&S_out);
-      VtfSystem(&S_add);
-    }
-    ConcatenateSystems(&S_out, S_add, S_orig.Box, prune);
-  } //}}}
+  }
+
+  S_out = CopySystem(S_orig);
+  ConcatenateSystems(&S_out, S_add, S_orig.Box, false); //}}}
 
   // define constrained box for adding beads (-cx/y/z and/or -hd options) //{{{
   opt->box = InitBox;
@@ -621,7 +576,7 @@ int main(int argc, char *argv[]) {
     opt->box.Length[dd] = S_out.Box.Length[dd];
   }
   // minimize box if -hd is used
-  if (!opt->new && opt->hd) {
+  if (opt->hd) {
     // find minimum/maximum coordinates of beads for distance check //{{{
     double max[3] = {0, 0, 0}, min[3];
     for (int dd = 0; dd < 3; dd++) {
@@ -758,56 +713,41 @@ int main(int argc, char *argv[]) {
     fprintf(stdout, "\rMolecules placed: %d\n", C_add->Molecule);
   } //}}}
 
-  // copy coordinates to the second system (for -o option) //{{{
+  // TODO: the whole VtfSystem() and S_out2 needed for it doesn't seem necessry;
+  //       who cares if some molecule is called differently because it contains
+  //       data unsaveable to vtf? Actually, it might better as it shows the
+  //       input(s) contain different molecules...
+  SYSTEM S_out2;
   if (opt->fout.name[0] != '\0') {
-    for (int i = 0; i < C_out->Bead; i++) {
-      S_out2.Bead[i] = S_out.Bead[i];
+    S_out2 = CopySystem(S_out);
+    if (opt->fout.type == VCF_FILE ||
+        opt->fout.type == VSF_FILE ||
+        opt->fout.type == VTF_FILE) {
+      VtfSystem(&S_out2);
     }
-  } //}}}
+    PruneSystem(&S_out2);
+  }
+  if (fout.type == VCF_FILE ||
+      fout.type == VSF_FILE ||
+      fout.type == VTF_FILE) {
+    VtfSystem(&S_out);
+  }
+  PruneSystem(&S_out);
 
   // print information about new system //{{{
   if (opt->c.verbose) {
     fprintf(stdout, "\n==================================================");
-    fprintf(stdout, "\nNew system (%s)", fout.name);
+    fprintf(stdout, "\nNew system");
     fprintf(stdout, "\n==================================================\n");
     VerboseOutput(S_out);
-    if (opt->fout.name[0] != '\0') {
-      fprintf(stdout, "\n==================================================");
-      fprintf(stdout, "\nNew system (%s)", opt->fout.name);
-      fprintf(stdout, "\n==================================================\n");
-      VerboseOutput(S_out2);
-    }
   } //}}}
 
   // write data to output file(s) //{{{
   bool *write = malloc(sizeof *write * C_out->Bead);
-  InitBoolArray(write, C_out->Bead, true);
-  // create vsf file if output file is vcf format
-  if (fout.type == VCF_FILE) {
-    PrintByline(fout.name, argc, argv); // byline to vcf file
-    fout.name[strnlen(fout.name, LINE)-2] = 's';
-    WriteStructure(fout, S_out, -1, false, argc, argv);
-    fout.name[strnlen(fout.name, LINE)-2] = 'c';
-  } else if (fout.type == VTF_FILE) {
-    WriteStructure(fout, S_out, -1, false, argc, argv);
-  } else { // some formats 'append' coordinates, not 'write' them
-    FILE *out = OpenFile(fout.name, "w");
-    fclose(out);
-  }
-  WriteTimestep(fout, S_out, 0, write, argc, argv);
+  InitBoolArray(write, C_out->Bead, true); // save all beads
+  WriteOutput(S_out, write, fout, false, -1, argc, argv);
   if (opt->fout.name[0] != '\0') {
-    if (opt->fout.type == VTF_FILE ||
-        opt->fout.type == VSF_FILE ||
-        opt->fout.type == FIELD_FILE) {
-      WriteStructure(opt->fout, S_out2, -1, false, argc, argv);
-    }
-    if (opt->fout.type == VTF_FILE ||
-        opt->fout.type == VCF_FILE ||
-        opt->fout.type == LTRJ_FILE ||
-        opt->fout.type == LDATA_FILE ||
-        opt->fout.type == CONFIG_FILE) {
-      WriteTimestep(opt->fout, S_out2, 0, write, argc, argv);
-    }
+    WriteOutput(S_out2, write, opt->fout, false, -1, argc, argv);
   } //}}}
 
   // free memory - to make valgrind happy //{{{
@@ -816,7 +756,7 @@ int main(int argc, char *argv[]) {
   FreeSystem(&S_out);
   if (opt->fout.name[0] != '\0') {
     FreeSystem(&S_out2);
-    FreeSystem(&S_add2);
+    // FreeSystem(&S_add2);
   }
   if (!opt->new) {
     free(opt->bt_use_orig);

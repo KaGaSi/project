@@ -9,8 +9,6 @@
 #include "Errors.h"
 #include "Structs.h"
 #include "System.h"
-#include <stdio.h>
-#include <string.h>
 
 static void CopyAndFreeStuff(const int n, int (**old)[5], int (**new)[5]);
 static void CopyAndFreeAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new);

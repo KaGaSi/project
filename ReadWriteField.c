@@ -1,6 +1,8 @@
 #include "ReadWriteField.h"
 #include "Errors.h"
 #include "General.h"
+#include "ReadWrite.h"
+#include "Structs.h"
 
 // reads the 'species' section
 static void FieldReadSpecies(const char *file, SYSTEM *System);
@@ -394,7 +396,7 @@ static void FieldReadMolecules(const char *file, SYSTEM *System) { //{{{
             bead->Position[dd] = coor[k][dd];
           }
           System->BeadType[bead->Type].Number++;
-          System->Bonded[count - Count->Unbonded] = count;
+          System->Bonded[count-Count->Unbonded] = count;
           mol->Bead[k] = count;
           count++;
         }
