@@ -226,7 +226,7 @@ SYSTEM LmpDataReadStruct(const char *file) { //{{{
   RemoveExtraTypes(&System);
   MergeBeadTypes(&System, true);
   MergeMoleculeTypes(&System);
-  FillSystemNonessentials(&System);
+  FillSystemNonessentials(&System, true);
   // take the data file as a coordinate file as well
   Count->BeadCoor = Count->Bead;
   Count->UnbondedCoor = Count->Unbonded;
@@ -784,7 +784,7 @@ static void LmpDataReadAtoms(FILE *fr, const char *file, SYSTEM *System,
       if (mt_resid->Number == 0) { // no, create new type
         char name[MOL_NAME] = "m";
         for (int j = 0; j < words; j++) {
-          if (split[j][0] == '#') {
+          if (split[j][0] == '#' && (j + 1) < words) {
             snprintf(name, MOL_NAME, "%s", split[j+1]);
             mt_resid->Flag = true;
             break;

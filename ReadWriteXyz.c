@@ -64,10 +64,7 @@ SYSTEM XyzReadStruct(const char *file) { //{{{
     }
   } //}}}
   fclose(fr);
-  FillSystemNonessentials(&Sys);
-  for (int i = 0; i < Count->Bead; i++) {
-    Sys.UnbondedCoor[i] = i;
-  }
+  FillSystemNonessentials(&Sys, false);
   CheckSystem(Sys, file);
   return Sys;
 } //}}}

@@ -20,7 +20,7 @@ void SortBonds(int (*bond)[3], int n);
 void SortAngles(int (*angle)[4], int n);
 void SortDihImp(int (*dihimp)[5], int n);
 void SortAll(MOLECULETYPE *mt);
-void FillSystemNonessentials(SYSTEM *System);
+void FillSystemNonessentials(SYSTEM *System, bool bonds);
 void FillInCoor(SYSTEM *System);
 bool CalculateBoxData(BOX *Box, int mode);
 

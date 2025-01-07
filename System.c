@@ -216,7 +216,7 @@ void CountBondAngleDihedralImproper(SYSTEM *System) { //{{{
     Count->Improper += mt_i->nImpropers * mt_i->Number;
   }
 } //}}}
-void FillSystemNonessentials(SYSTEM *System) { //{{{
+void FillSystemNonessentials(SYSTEM *System, bool bonds) { //{{{
   COUNT *Count = &System->Count;
   for (int i = 0; i < Count->MoleculeType; i++) {
     FillMoleculeTypeBType(&System->MoleculeType[i]);
@@ -229,6 +229,11 @@ void FillSystemNonessentials(SYSTEM *System) { //{{{
   // sort bonds, angles, dihedrals, and impropers
   for (int i = 0; i < Count->MoleculeType; i++) {
     SortAll(&System->MoleculeType[i]);
+  }
+  if (!bonds) {
+    for (int i = 0; i < Count->Bead; i++) {
+      System->UnbondedCoor[i] = i;
+    }
   }
 } //}}}
 void FillInCoor(SYSTEM *System) { //{{{

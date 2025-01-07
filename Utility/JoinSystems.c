@@ -221,31 +221,27 @@ int main(int argc, char *argv[]) {
   box_out.gamma = 90;
   CalculateBoxData(&box_out, 0); //}}}
   // main output file
-  // TODO: prune = false & PruneSystem() only once
-  bool prune = true;
-  SYSTEM S_in = CopySystem(Sys[1]),
-         S_out = CopySystem(Sys[0]);
+  // SYSTEM S_in = CopySystem(Sys[1]);
+  SYSTEM S_out = CopySystem(Sys[0]);
+  ConcatenateSystems(&S_out, Sys[1], box_out, false);
+  // TODO: the whole VtfSystem() stuff - what's it for, anyway?
   if (fout.type == VCF_FILE ||
       fout.type == VSF_FILE ||
       fout.type == VTF_FILE) {
     VtfSystem(&S_out);
-    VtfSystem(&S_in);
   }
-  ConcatenateSystems(&S_out, S_in, box_out, prune);
-  FreeSystem(&S_in);
+  PruneSystem(&S_out);
   // optional output file
   SYSTEM S_out_opt;
   if (opt->fout.name[0] != '\0') {
-    S_in = CopySystem(Sys[1]);
     S_out_opt = CopySystem(Sys[0]);
+    ConcatenateSystems(&S_out_opt, Sys[1], box_out, false);
     if (opt->fout.type == VCF_FILE ||
         opt->fout.type == VSF_FILE ||
         opt->fout.type == VTF_FILE) {
       VtfSystem(&S_out_opt);
-      VtfSystem(&S_in);
     }
-    ConcatenateSystems(&S_out_opt, S_in, box_out, prune);
-    FreeSystem(&S_in);
+    PruneSystem(&S_out_opt);
   }
   //}}}
 
@@ -281,6 +277,7 @@ int main(int argc, char *argv[]) {
     WriteOutput(S_out_opt, write, opt->fout, false, -1, argc, argv);
   } //}}}
 
+  // free memory //{{{
   FreeSystem(&Sys[0]);
   FreeSystem(&Sys[1]);
   FreeSystem(&S_out);
@@ -288,7 +285,7 @@ int main(int argc, char *argv[]) {
     FreeSystem(&S_out_opt);
   }
   free(write);
-  free(opt);
+  free(opt); //}}}
 
   return 0;
 }

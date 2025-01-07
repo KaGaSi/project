@@ -114,10 +114,7 @@ SYSTEM LtrjReadStruct(const char *file) {
     }
   } //}}}
   fclose(fr);
-  FillSystemNonessentials(&Sys);
-  for (int i = 0; i < Count->Bead; i++) {
-    Sys.UnbondedCoor[i] = i;
-  }
+  FillSystemNonessentials(&Sys, false);
   // AllocFillBeadTypeIndex(&Sys);
   CheckSystem(Sys, file);
   ChangeBoxByLow(&Sys, -1);

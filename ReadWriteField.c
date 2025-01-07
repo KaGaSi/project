@@ -84,7 +84,7 @@ SYSTEM FieldRead(const char *file) { //{{{
     System.MoleculeCoor = s_realloc(System.MoleculeCoor, Count->Molecule *
                                     sizeof *System.MoleculeCoor);
   }
-  FillSystemNonessentials(&System);
+  FillSystemNonessentials(&System, true);
   CheckSystem(System, file);
   return System;
 } //}}}

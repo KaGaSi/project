@@ -307,7 +307,7 @@ SYSTEM VtfReadStruct(const char *file, const bool detailed) {
   RemoveExtraTypes(&Sys);
   MergeBeadTypes(&Sys, detailed);
   MergeMoleculeTypes(&Sys);
-  FillSystemNonessentials(&Sys);
+  FillSystemNonessentials(&Sys, true);
   CheckSystem(Sys, file);
   Sys.Box = VtfReadPBC(file);
   return Sys;
