@@ -39,6 +39,7 @@ void CopyMoleculeTypeBeadsToMoleculeBeads(SYSTEM *System) { //{{{
     MOLECULE *mol_i = &System->Molecule[i];
     if (mt_i->nBeads == 1 && !mt_i->Flag) { // remove 'fake' molecules
       mt_i->Number = 0;
+      mt_i->nBeads = 0;
       System->Bead[mt_i->Bead[0]].Molecule = -1;
       free(mt_i->Bead);
       Count->Bonded--;

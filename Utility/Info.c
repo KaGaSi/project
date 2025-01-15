@@ -1,6 +1,4 @@
 #include "../AnalysisTools.h"
-#include <string.h>
-#include <stdarg.h>
 
 // Help() //{{{
 void Help(const char cmd[50], const bool error,
@@ -31,6 +29,7 @@ a coordinate file (-c option); see Examples/Info folder for details.\
   fprintf(ptr, "  --unique          make all bead/molecule names unique\n");
   fprintf(ptr, "  -def <bead name>  default bead type "
           "(output vtf structure file only)\n");
+  fprintf(ptr, "  --mol             make unbonded beads into molecules\n");
   fprintf(ptr, "  --mass            define lammps atom types by mass, but "
           "print per-atom charges in Atoms section "
           "(output lammps data file only)\n");
@@ -41,9 +40,9 @@ a coordinate file (-c option); see Examples/Info folder for details.\
 
 // structure for options //{{{
 struct OPT {
-  int vsf_def, ebt;          // -def -ebt
-  bool lmp_mass, detailed;   // --mass --detailed
-  FILE_TYPE fout;            // -o
+  int vsf_def, b_mol, ebt; // -def --mol -ebt
+  bool lmp_mass, detailed; // --mass --detailed
+  FILE_TYPE fout;          // -o
   COMMON_OPT c;
 };
 OPT * opt_create(void) {
@@ -53,12 +52,12 @@ OPT * opt_create(void) {
 int main(int argc, char *argv[]) {
 
   // define options & check their validity
-  int common = 5, all = common + 8, count = 0, req_arg = 1;
+  int common = 5, all = common + 9, count = 0, req_arg = 1;
   char option[all][OPT_LENGTH];
   OptionCheck(argc, argv, req_arg, common, all, true, option,
                "-st", "--verbose", "--silent", "--help",
                "--version", "-i", "-c", "-o", "--unique",
-               "--detailed", "-def", "--mass", "-ebt");
+               "--detailed", "-def", "--mol", "--mass", "-ebt");
 
   count = 0; // count arguments
   OPT *opt = opt_create();
@@ -90,6 +89,8 @@ int main(int argc, char *argv[]) {
   OneNumberOption(argc, argv, "-ebt", &opt->ebt, 'i');
   // use mass only for atom type definition for data output file
   opt->lmp_mass = BoolOption(argc, argv, "--mass");
+  // make unbonded beads into molecules (vtf output only)
+  opt->b_mol = BoolOption(argc, argv, "--mol");
   // base bead types on name, charge, mass, and radius (vtf input file)
   opt->detailed = BoolOption(argc, argv, "--detailed");
 
@@ -172,6 +173,63 @@ int main(int argc, char *argv[]) {
   free(def_type); //}}}
 
   PruneSystem(&System);
+
+  // make unbonded beads into molecules //{{{
+  if (opt->b_mol) {
+    // first new molid is the one higher than the last one
+    int mol_id = Count->Molecule;
+    // first new resid is one higher than the old one, so +1
+    int resid = Count->HighestResid + 1;
+    Count->HighestResid += Count->Unbonded;
+    Count->Molecule += Count->Unbonded;
+    System.Molecule = realloc(System.Molecule,
+                              Count->Molecule * sizeof *System.Molecule);
+    for (int i = 0; i < Count->BeadType; i++) {
+      count = System.BeadType[i].Number;
+      bool first = false;
+      for (int j = 0; j < count; j++) {
+        int id = System.BeadType[i].Index[j];
+        BEAD *b = &System.Bead[id];
+        BEADTYPE *bt = &System.BeadType[b->Type];
+        if (b->Molecule == -1) {
+          int n_mt = Count->MoleculeType;
+          MOLECULE *mol = &System.Molecule[mol_id];
+          mol->Bead = calloc(1, sizeof *mol->Bead);
+          if (!first) {
+            NewMolType(&System.MoleculeType, &Count->MoleculeType,
+                       bt->Name, 1, 0, 0, 0, 0);
+            MOLECULETYPE *mt = &System.MoleculeType[n_mt];
+            mt->Number = 1;
+            mt->Mass = bt->Mass;
+            mt->Charge = bt->Charge;
+            mt->Bead[0] = b->Type;
+            mt->nBTypes = 1;
+            mt->BType = malloc(sizeof *mt->BType);
+            mt->BType[0] = b->Type;
+            mol->Type = n_mt;
+            mt->Index = malloc(sizeof *mt->Index);
+            first = true;
+          } else {
+            MOLECULETYPE *mt = &System.MoleculeType[n_mt-1];
+            mt->Number++;
+            mol->Type = n_mt - 1;
+          }
+          b->Molecule = mol_id;
+          mol->Index = resid;
+          mol->Bead[0] = id;
+          mol->Aggregate = -1;
+          mol->InTimestep = true;
+          resid++;
+          mol_id++;
+        }
+      }
+    }
+    Count->Bonded += Count->Unbonded;
+    Count->Unbonded = 0;
+    FillBondedUnbonded(&System);
+    // fill all molecule type indices
+    ReFillMoleculeTypeIndex(&System);
+  } //}}}
 
   // print the system information //{{{
   fprintf(stdout, "\n==================================================");

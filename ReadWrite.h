@@ -27,8 +27,8 @@ int ReadAggregates(FILE *fr, const char *file, SYSTEM *System,
 void WriteOutput(const SYSTEM System, const bool *write, FILE_TYPE fw,
                  const bool lmp_mass, const int vsf_def,
                  const int argc, char **argv);
-void WriteOutputAll(SYSTEM System, FILE_TYPE fw, bool lmp_mass,
-                    int vsf_def, int argc, char **argv);
+void WriteOutputAll(const SYSTEM System, FILE_TYPE fw, const bool lmp_mass,
+                    const int vsf_def, const int argc, char **argv);
 void WriteTimestep(const FILE_TYPE f, const SYSTEM System, const int count_step,
                    const bool *write, const int argc, char **argv);
 void WriteTimestepAll(FILE_TYPE f, SYSTEM System, int count_step,

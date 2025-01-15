@@ -25,8 +25,9 @@ beads inside the box) via the \tt{--wrap} switch. If both \tt{--wrap} and
 molecules are joined.
 
 Lastly, all coordinates can be scaled, i.e., each coordinate divided by a given
-value (\tt{-sc} option). The scaling happens before wrapping/joining of the
-coordinates.
+value (\tt{-sc} option) and/or moved by specified vector (\tt{-m} option)
+These happen before wrapping/joining of the coordinates, and scaling takes place
+before moving.
 
 \vspace{1em}
 \noindent
@@ -51,6 +52,7 @@ Usage: \tt{Selected <input> <output> <bead type(s)> [options]}
   \tt{-n <int(s)>}     & save only specified timesteps\\
   \tt{--last}          & save only the last step\\
   \tt{-sc <float>}     & divide all coordinates by given value\\
+  \tt{-m 3×<float>}    & add specified vector to all coordinates\\
   \midrule
   \multicolumn{2}{l}{Other options (see the beginning of
                      Chapter~\ref{chap:Utils})}\\

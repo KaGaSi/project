@@ -46,7 +46,8 @@ OPT * opt_create(void) {
 } //}}}
 
 // CalculateAggregates() //{{{
-void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt) {
+void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
+                         int *agg_alloc) {
   double sqdist = Square(opt.distance);
   COUNT *Count = &System->Count;
   Count->Aggregate = 0;
@@ -126,7 +127,7 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt) {
     }
   } //}}}
 
-  EvaluateContacts(Aggregate, System, opt.contacts, contact);
+  EvaluateContacts(Aggregate, System, opt.contacts, contact, agg_alloc);
 
   // sort molecules in aggregates according to ascending ids //{{{
   for (int i = 0; i < System->Count.Aggregate; i++) {
@@ -141,10 +142,11 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt) {
       int mol = agg->Molecule[j];
       // copy all bead in molecule 'mol' to Aggregate struct
       int mtype = System->Molecule[mol].Type;
+      agg->nBeads += System->MoleculeType[mtype].nBeads;
+      agg->Bead = realloc(agg->Bead, agg->nBeads * sizeof *agg->Bead);
       for (int k = 0; k < System->MoleculeType[mtype].nBeads; k++) {
-        int beads = agg->nBeads;
+        int beads = agg->nBeads - System->MoleculeType[mtype].nBeads + k;
         agg->Bead[beads] = System->Molecule[mol].Bead[k];
-        agg->nBeads++;
       }
     }
   } //}}}
@@ -161,7 +163,7 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt) {
     }
   } //}}}
 
-  SortAggStruct(Aggregate, *System);
+  SortAggStruct(Aggregate, *System, agg_alloc);
 
   // free memory //{{{
   free(Head);
@@ -224,6 +226,11 @@ int main(int argc, char *argv[]) {
 
   SYSTEM System = ReadStructure(in, false);
   COUNT *Count = &System.Count;
+  if (Count->Molecule == 0) {
+    err_msg("No molecules in the system");
+    PrintErrorFile(in.coor.name, in.stru.name, "\0");
+    exit(1);
+  }
 
   // <bead(s)> - names of bead types to use for closeness calculation //{{{
   // TODO: necessary to assign false?
@@ -256,12 +263,14 @@ int main(int argc, char *argv[]) {
 
   // allocate Aggregate struct //{{{
   AGGREGATE *Aggregate = malloc(Count->Molecule * sizeof *Aggregate);
+  int *agg_alloc = malloc(Count->Molecule * sizeof *agg_alloc);
+  InitIntArray(agg_alloc, Count->Molecule, 10);
   for (int i = 0; i < Count->Molecule; i++) {
     AGGREGATE *agg = &Aggregate[i];
-    // assume all molecules can be in one aggregate
-    agg->Molecule = malloc(Count->Molecule * sizeof *agg->Molecule);
-    // assumes all bonded beads can be in one aggregate (memory-heavy)
-    agg->Bead = malloc(Count->Bonded * sizeof *agg->Bead);
+    // possibly realloced later
+    agg->Molecule = malloc(agg_alloc[i] * sizeof *agg->Molecule);
+    // realloced later
+    agg->Bead = malloc(sizeof *agg->Bead);
   } //}}}
 
   if (opt->c.verbose) {
@@ -287,7 +296,7 @@ int main(int argc, char *argv[]) {
       }
       count_used++;
       WrapJoinCoordinates(&System, true, false);
-      CalculateAggregates(Aggregate, &System, *opt);
+      CalculateAggregates(Aggregate, &System, *opt, agg_alloc);
       // calculate & write joined coordinatest to <out.vcf> if '-j' option is used
       if (opt->fout.name[0] != '\0') {
         WrapJoinCoordinates(&System, false, true);
@@ -299,6 +308,14 @@ int main(int argc, char *argv[]) {
         Aggregate[i].Flag = true;
       }
       WriteAggregates(count_coor, agg_file, System, Aggregate);
+      // reallocate Aggregate struct //{{{
+      InitIntArray(agg_alloc, Count->Molecule, 10);
+      for (int i = 0; i < Count->Molecule; i++) {
+        AGGREGATE *agg = &Aggregate[i];
+        agg->Molecule = realloc(agg->Molecule,
+                                agg_alloc[i] * sizeof *agg->Molecule);
+        agg->Bead = realloc(agg->Bead, sizeof *agg->Bead);
+      } //}}}
       //}}}
     } else { //{{{
       if (!SkipTimestep(in, fr, &line_count)) {
@@ -327,6 +344,7 @@ int main(int argc, char *argv[]) {
   fprintf(fw_agg, "Last Step: %d\n", count_coor);
   fclose(fw_agg);
 
+  free(agg_alloc);
   free(write);
   FreeAggregate(System.Count, Aggregate);
   FreeSystem(&System);

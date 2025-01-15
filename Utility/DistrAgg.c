@@ -466,9 +466,9 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < Count->Molecule; i++) {
     if (count_agg[i] > 0) {
       fprintf(fw, "%4d", i+1); // As
-      fprintf(fw, " %10.5f", (double)(ndistr[i]) / ndistr_norm);
-      fprintf(fw, " %10.5f", (double)(wdistr[i][0]) / wdistr_norm[0]);
-      fprintf(fw, " %10.5f", (double)(zdistr[i][0]) / zdistr_norm[0]);
+      fprintf(fw, " %lf", (double)(ndistr[i]) / ndistr_norm);
+      fprintf(fw, " %lf", (double)(wdistr[i][0]) / wdistr_norm[0]);
+      fprintf(fw, " %lf", (double)(zdistr[i][0]) / zdistr_norm[0]);
       fprintf(fw, " %6d", count_agg[i]); // number of aggregates
       // print average number of molecule types in aggregates
       for (int j = 0; j < Count->MoleculeType; j++) {

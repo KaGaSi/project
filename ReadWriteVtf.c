@@ -828,7 +828,7 @@ int VtfReadNumberOfBeads(const char *file) { //{{{
 } //}}}
 
 // VtfWriteStruct() //{{{
-void PrintBeadTypeInfo(FILE *fw, const BEADTYPE bt) {
+void WriteBeadTypeInfo(FILE *fw, const BEADTYPE bt) {
   fprintf(fw, " name %8s", bt.Name);
   if (bt.Mass != MASS && bt.Mass != HIGHNUM) {
     fprintf(fw, " mass %12f", bt.Mass);
@@ -869,7 +869,7 @@ void VtfWriteStruct(char *file, SYSTEM System, int type_def,
   if (type_def != -1) {
     BEADTYPE *bt = &System.BeadType[type_def];
     fprintf(fw, "atom default");
-    PrintBeadTypeInfo(fw, *bt);
+    WriteBeadTypeInfo(fw, *bt);
     putc('\n', fw);
   } //}}}
   // print beads //{{{
@@ -884,7 +884,7 @@ void VtfWriteStruct(char *file, SYSTEM System, int type_def,
     BEADTYPE *bt = &System.BeadType[btype];
     if (print) {
       fprintf(fw, "atom %7d", i);
-      PrintBeadTypeInfo(fw, *bt);
+      WriteBeadTypeInfo(fw, *bt);
       if (mol != -1) {
         int mtype = System.Molecule[mol].Type;
         int id = System.Molecule[mol].Index;

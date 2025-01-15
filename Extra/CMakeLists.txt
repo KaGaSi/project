@@ -39,6 +39,7 @@ add_library(AnalysisTools
 
 set(UTILS GenGal
           GalContacts
+          Selected-from_wall
           Template
           test)
 foreach(utility ${UTILS})

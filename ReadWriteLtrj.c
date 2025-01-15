@@ -1,4 +1,9 @@
 #include "ReadWriteLtrj.h"
+#include "General.h"
+
+// maximum number of variables in 'ITEM: ATOM' line
+static const int max_var = 12;
+
 /*
  * Functions to read lammpstrj file (dump style custom) as a coordinate file via
  * LtrjReadTimestep() and LtrjSkipTimestep() and as a structure file via
@@ -23,15 +28,14 @@ static bool LtrjCheckNumberAtomsLine();
 // check if words & split contain 'ITEM: BOX BOUNDS ...' line
 static bool LtrjCheckPbcLine();
 // read 'ITEM: ATOMS ...' line, defining what variables are in which columns
-static int LtrjReadAtomsLine(FILE *fr, const char *file,
-                             const int max_var, int *var_pos,
+static int LtrjReadAtomsLine(FILE *fr, const char *file, int *var_pos,
                              char vars[max_var][10], int *line_count);
 // read an atom coordinate line
 static int LtrjReadCoorLine(FILE *fr, BEAD *b, int b_count,
                             const int *var, int cols);
 // fill a helper array with possible variables in 'ITEM: ATOMS ...' line
-static void LtrjFillAtomVariables(const int n, char var[n][10]);
-static void AssignPosVelF(const BEAD in, BEAD *b);
+static void LtrjFillAtomVariables(char var[max_var][10]);
+static void AssignPosVelForce(const BEAD in, BEAD *b);
 
 // Use the first lammpstrj timestep as a definition of system composition //{{{
 SYSTEM LtrjReadStruct(const char *file) {
@@ -48,9 +52,9 @@ SYSTEM LtrjReadStruct(const char *file) {
   Sys.Bead = s_realloc(Sys.Bead, sizeof *Sys.Bead * Count->Bead);
   Sys.BeadCoor = s_realloc(Sys.BeadCoor, sizeof *Sys.BeadCoor * Count->Bead);
   // read ITEM: ATOMS line & find positions of varaibles in a coordinate line
-  int max_vars = 11, position[max_vars];
-  char var[max_vars][10];
-  int cols = LtrjReadAtomsLine(fr, file, max_vars, position, var, &line_count);
+  int position[max_var];
+  char var[max_var][10];
+  int cols = LtrjReadAtomsLine(fr, file, position, var, &line_count);
   // error - incorrect 'ITEM: ATOMS ...' line //{{{
   if (cols < 0) {
     err_msg("wrong 'ITEM: ATOMS' line in the first timestep");
@@ -78,7 +82,7 @@ SYSTEM LtrjReadStruct(const char *file) {
     int id = line.Type - 1;
     BEAD *b = &Sys.Bead[id];
     InitBead(b);
-    AssignPosVelF(line, b);
+    AssignPosVelForce(line, b);
     if (b->InTimestep == true) {
       err_msg("multiple atoms with the same id");
       PrintErrorFileLine(file, line_count);
@@ -101,13 +105,14 @@ SYSTEM LtrjReadStruct(const char *file) {
     }
     if (new) { // create a new type
       int type = Count->BeadType;
-      if (position[1] != -1) { // 'element' variable is present
-        NewBeadType(&Sys.BeadType, &Count->BeadType, split[position[1]],
-                    CHARGE, MASS, RADIUS);
-      } else { // 'element' variable is missing
-        NewBeadType(&Sys.BeadType, &Count->BeadType, "b0",
-                    CHARGE, MASS, RADIUS);
+      char name[BEAD_NAME];
+      s_strcpy(name, "b0", BEAD_NAME);
+      if (position[11] != -1) { // 'type' variable is present
+        s_strcpy(name, split[position[11]], BEAD_NAME);
+      } else if (position[1] != -1) { // 'element' variable is present
+        s_strcpy(name, split[position[1]], BEAD_NAME);
       }
+      NewBeadType(&Sys.BeadType, &Count->BeadType, name, CHARGE, MASS, RADIUS);
       BEADTYPE *bt_new = &Sys.BeadType[type];
       bt_new->Number = 1;
       b->Type = type;
@@ -138,9 +143,9 @@ int LtrjReadTimestep(FILE *fr, const char *file, SYSTEM *System,
     return System->Count.BeadCoor;
   }
   // read ITEM: ATOMS line & find positions of varaibles in a coordinate line
-  int max_vars = 11, position[max_vars];
-  char vars[max_vars][10];
-  int cols = LtrjReadAtomsLine(fr, file, max_vars, position, vars, line_count);
+  int position[max_var];
+  char vars[max_var][10];
+  int cols = LtrjReadAtomsLine(fr, file, position, vars, line_count);
   // read atom lines //{{{
   for (int i = 0; i < System->Count.BeadCoor; i++) {
     BEAD line;
@@ -152,7 +157,7 @@ int LtrjReadTimestep(FILE *fr, const char *file, SYSTEM *System,
     }
     int id = line.Type - 1;
     BEAD *b = &System->Bead[id];
-    AssignPosVelF(line, b);
+    AssignPosVelForce(line, b);
     if (b->InTimestep) {
       err_msg("multiple atoms with the same id");
       PrintErrorFileLine(file, *line_count);
@@ -390,17 +395,10 @@ static bool LtrjCheckPbcLine() { //{{{
   }
 } //}}}
 // LtrjReadAtomsLine() //{{{
-static int LtrjReadAtomsLine(FILE *fr, const char *file,
-                             const int max_vars, int *var_pos,
-                             char vars[max_vars][10], int *line_count) {
-  // check for the correct maximum number of entries //{{{
-  if (max_vars != 11) {
-    err_msg("CODING: there should be at most 11 entries in 'ITEM: ATOMS' line");
-    PrintError();
-    exit(1);
-  } //}}}
+static int LtrjReadAtomsLine(FILE *fr, const char *file, int *var_pos,
+                             char vars[max_var][10], int *line_count) {
   // generate array with possible variable names
-  LtrjFillAtomVariables(max_vars, vars);
+  LtrjFillAtomVariables(vars);
   // read ITEM: ATOMS line //{{{
   (*line_count)++;
   if (!ReadAndSplitLine(fr, SPL_STR, " \t\n")) {
@@ -414,10 +412,10 @@ static int LtrjReadAtomsLine(FILE *fr, const char *file,
     PrintErrorFileLine(file, *line_count);
     return -1;
   }                                    //}}}
-  InitIntArray(var_pos, max_vars, -1); // id, x, y, z, vx, vy, vz, fx, fy, fz
+  InitIntArray(var_pos, max_var, -1); // id, element, r[3], v[3], f[3], type
   int cols = -1;
   for (int i = 2; i < words; i++) {
-    for (int j = 0; j < max_vars; j++) {
+    for (int j = 0; j < max_var; j++) {
       if (strcmp(split[i], vars[j]) == 0) {
         var_pos[j] = i - 2;
         cols = i - 2 + 1;
@@ -454,13 +452,7 @@ static int LtrjReadCoorLine(FILE *fr, BEAD *b, int b_count,
   b->Type = id;
   return 1;
 } //}}}
-static void LtrjFillAtomVariables(const int n, char var[n][10]) { //{{{
-  // check for the correct maximum number of entries //{{{
-  if (n != 11) {
-    err_msg("CODING: there should be at most 11 entries in ITEM: ATOMS line");
-    PrintError();
-    exit(1);
-  } //}}}
+static void LtrjFillAtomVariables(char var[max_var][10]) { //{{{
   s_strcpy(var[0], "id", 10);
   s_strcpy(var[1], "element", 10);
   s_strcpy(var[2], "x", 10);
@@ -472,8 +464,9 @@ static void LtrjFillAtomVariables(const int n, char var[n][10]) { //{{{
   s_strcpy(var[8], "fx", 10);
   s_strcpy(var[9], "fy", 10);
   s_strcpy(var[10], "fz", 10);
+  s_strcpy(var[11], "type", 10);
 } //}}}
-static void AssignPosVelF(const BEAD in, BEAD *b) { //{{{
+static void AssignPosVelForce(const BEAD in, BEAD *b) { //{{{
   for (int dd = 0; dd < 3; dd++) {
     b->Position[dd] = in.Position[dd];
     b->Velocity[dd] = in.Velocity[dd];

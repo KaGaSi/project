@@ -1170,9 +1170,9 @@ void WriteLmpData(const SYSTEM System, const char *file, const bool mass,
   fprintf(fw, " %.3f ylo yhi\n", System.Box.Low[1] + System.Box.OrthoLength[1]);
   fprintf(fw, "%.3f", System.Box.Low[2]);
   fprintf(fw, " %.3f zlo zhi\n", System.Box.Low[2] + System.Box.OrthoLength[2]);
-  if (System.Box.alpha != 90 ||
-      System.Box.beta != 90 ||
-      System.Box.gamma != 90) {
+  if (fabs(System.Box.alpha - 90) > 0.00001 ||
+      fabs(System.Box.beta - 90) > 0.00001 ||
+      fabs(System.Box.gamma - 90) > 0.00001) {
     fprintf(fw, "%.3f %.3f %.3f xy xz yz\n", System.Box.transform[0][1],
                                              System.Box.transform[0][2],
                                              System.Box.transform[1][2]);

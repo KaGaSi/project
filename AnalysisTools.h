@@ -47,7 +47,7 @@ void Gyration(const int n, const int *list, const COUNT Counts,
               const BEADTYPE *BeadType, BEAD **Bead, double eigen[3]);
 // TODO: redo
 void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
-                      const int contacts, int **contact);
+                      const int contacts, int **contact, int *agg_alloc);
 void RemovePBCAggregates(const double distance, const AGGREGATE *Aggregate,
                          SYSTEM *System);
 

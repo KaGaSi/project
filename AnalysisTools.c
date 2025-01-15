@@ -1,7 +1,7 @@
 #include "AnalysisTools.h"
 #include "Errors.h"
 #include "General.h"
-#include <string.h>
+#include "ReadWrite.h"
 
 // TODO: consider BeadType[].Index, System.Bonded, etc. arrays - shouldn't they
 //       be filled based on whether the beads are in the timestep? Plus a
@@ -72,9 +72,9 @@ static void FractionalCoor(SYSTEM *System, const int mode) {
     exit(1);
   }
   BOX *box = &System->Box;
-  if (box->alpha != 90 ||
-      box->beta != 90 ||
-      box->gamma != 90) {
+  if (fabs(box->alpha - 90) > 0.00001 ||
+      fabs(box->beta - 90) > 0.00001 ||
+      fabs(box->gamma - 90) > 0.00001) {
     for (int i = 0; i < System->Count.BeadCoor; i++) {
       int id = System->BeadCoor[i];
       BEAD *b = &System->Bead[id];
@@ -590,9 +590,23 @@ void LinkedList(const SYSTEM System, int **Head, int **Link,
   for (int i = 0; i < Count->BeadCoor; i++) {
     int id = System.BeadCoor[i];
     BEAD *bead = &System.Bead[id];
-    int cell = (int)(bead->Position[0] * rl[0]) +
+    long cell = (int)(bead->Position[0] * rl[0]) +
                (int)(bead->Position[1] * rl[1]) * n_cells[0] +
                (int)(bead->Position[2] * rl[2]) * n_cells[0] * n_cells[1];
+    // TODO: check the numbers aren't too high (don't go over max int)
+    //       or change int to long?
+    // printf("\n%d %d\n", id, cell);
+    // printf("rl: %lf %lf %lf\n", rl[0], rl[1], rl[2]);
+    // printf("n_cells: %d %d %d\n", n_cells[0], n_cells[1], n_cells[2]);
+    // printf("pos: %lf %lf %lf\n", rl[0] * bead->Position[0],
+    //                              rl[1] * bead->Position[1],
+    //                              rl[2] * bead->Position[2]);
+    // printf("pos: %d %d %d\n", (int)(rl[0] * bead->Position[0]),
+    //                           (int)(rl[1] * bead->Position[1]),
+    //                           (int)(rl[2] * bead->Position[2]));
+    // printf("pos: %d %d %d\n", (int)(rl[0] * bead->Position[0]),
+    //                           (int)(rl[1] * bead->Position[1]) * n_cells[0],
+    //                           (int)(rl[2] * bead->Position[2]) * n_cells[0] * n_cells[1]);
     (*Link)[i] = (*Head)[cell];
     (*Head)[cell] = i;
   }
@@ -745,7 +759,7 @@ static int NewAgg(AGGREGATE *Aggregate, SYSTEM *System,
   return agg_j;
 }
 void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
-                      const int contacts, int **contact) {
+                      const int contacts, int **contact, int *agg_alloc) {
   COUNT *Count = &System->Count;
   // go over all pairs of molecules
   for (int i = 1; i < Count->Molecule; i++) {
@@ -765,8 +779,9 @@ void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
            */
           if (agg_i == -1) {
             int mols = Aggregate[agg_j].nMolecules;
-            Aggregate[agg_j].Molecule[mols] = i;
             Aggregate[agg_j].nMolecules++;
+            ReallocAggMolecule(Aggregate, agg_alloc, agg_j);
+            Aggregate[agg_j].Molecule[mols] = i;
             System->Molecule[i].Aggregate = agg_j;
           }
           /*
@@ -777,6 +792,7 @@ void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
             // add molecules from aggregate 'i' to aggregate 'j'
             int n_mol_old = Aggregate[agg_j].nMolecules;
             Aggregate[agg_j].nMolecules += Aggregate[agg_i].nMolecules;
+            ReallocAggMolecule(Aggregate, agg_alloc, agg_j);
             for (int k = n_mol_old; k < Aggregate[agg_j].nMolecules; k++) {
               int mol = Aggregate[agg_i].Molecule[k-n_mol_old];
               Aggregate[agg_j].Molecule[k] = mol;
@@ -785,6 +801,7 @@ void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
             // move aggregates with id greater then agg_i to id-1
             for (int k = (agg_i + 1); k < Count->Aggregate; k++) {
               Aggregate[k-1].nMolecules = Aggregate[k].nMolecules;
+              ReallocAggMolecule(Aggregate, agg_alloc, k - 1);
               // move every molecule from aggregate 'k' to aggregate 'k-1'
               for (int l = 0; l < Aggregate[k].nMolecules; l++) {
                 int mol = Aggregate[k].Molecule[l];

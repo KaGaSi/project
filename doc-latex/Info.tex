@@ -51,6 +51,11 @@ original file. Note that to add this extra information, the bead types in the
 bonds/angles/dihedrals/impropers must be the same, i.e., all their parameters
 (name, mass, charge, radius) must be the same.
 
+The \tt{--mol} option transforms unbonded beads into one-bead molecules with the
+properties of the bead type (name, charge, mass). This can be useful, for
+example, to calculate particle clusters via the \tt{Aggregates} utility because
+it can only determine structures composed of molecules, not unbonded beads.
+
 \tt{Info} can also write this information into a new file (\tt{-o} option) of
 any format. Note that only one timestep is read and, therefore, saved. Also, if
 no coordinates are read (i.e., neither \tt{-c} option nor a structure file with
@@ -105,6 +110,7 @@ Usage: \tt{Info <input> [options]}
   \tt{--mass}       & only \data structure file: define LAMMPS atom types by
     mass but print per-atom charges in the \tt{Atoms} section (default: atom
     types are the same as \tt{Info}-recognized bead types)\\
+  \tt{--mol}        & change unbonded beads into 1-bead molecules\\
   \tt{-ebt <int>}   & only \data structure file: number of extra atom types
                       (for, e.g., srp)\\
   \midrule

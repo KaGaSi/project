@@ -1092,7 +1092,8 @@ void NewBeadType(BEADTYPE *BeadType[], int *number_of_types, char name[],
 void NewMolType(MOLECULETYPE *MoleculeType[], int *n_types, char *name,
                 int n_beads, int n_bonds, int n_angles, int n_dihedrals,
                 int n_impropers) {
-  int mtype = (*n_types)++;
+  int mtype = (*n_types);
+  (*n_types)++;
   *MoleculeType = s_realloc(*MoleculeType, sizeof **MoleculeType * (*n_types));
   // copy new name to MoleculeType[].Name
   snprintf((*MoleculeType)[mtype].Name, MOL_NAME, "%s", name);
@@ -2357,7 +2358,6 @@ void ChangeMolecules(SYSTEM *S_orig, SYSTEM S_add, bool name) {
   }                                                    //}}}
   for (int i = 0; i < C_orig->MoleculeType; i++) { //{{{
     MOLECULETYPE *mt_orig = &S_orig->MoleculeType[i];
-    printf("XXX");
     int type = FindMoleculeType(*S_orig, *mt_orig, S_add, 2, name);
     printf(" %s %d\n", mt_orig->Name, type);
     // PrintAllMolTypes(*S_orig);
@@ -2483,7 +2483,15 @@ void ChangeBoxByLow(SYSTEM *System, int sign) {
   }
 } //}}}
 
-void SortAggStruct(AGGREGATE *Aggregate, SYSTEM System) { //{{{
+void ReallocAggMolecule(AGGREGATE *Agg, int *agg_alloc, const int i) { //{{{
+  if (Agg[i].nMolecules > agg_alloc[i]) {
+    agg_alloc[i] = Agg[i].nMolecules;
+    Agg[i].Molecule = s_realloc(Agg[i].Molecule,
+                                agg_alloc[i] * sizeof *Agg[i].Molecule);
+  }
+} //}}}
+
+void SortAggStruct(AGGREGATE *Aggregate, SYSTEM System, int *agg_alloc) { //{{{
   COUNT *Count = &System.Count;
   for (int i = 0; i < (Count->Aggregate - 1); i++) {
     bool done = true;
@@ -2494,8 +2502,10 @@ void SortAggStruct(AGGREGATE *Aggregate, SYSTEM System) { //{{{
         int mols; // number of molecules in the larger aggregate
         if (Aggregate[j].nMolecules > Aggregate[j+1].nMolecules) {
           mols = Aggregate[j].nMolecules;
+          ReallocAggMolecule(Aggregate, agg_alloc, j);
         } else {
           mols = Aggregate[j+1].nMolecules;
+          ReallocAggMolecule(Aggregate, agg_alloc, j + 1);
         }
         for (int k = 0; k < mols; k++) {
           SwapInt(&Aggregate[j].Molecule[k], &Aggregate[j+1].Molecule[k]);
@@ -2505,8 +2515,13 @@ void SortAggStruct(AGGREGATE *Aggregate, SYSTEM System) { //{{{
         int beads; // number of beads in the larger aggregate
         if (Aggregate[j].nBeads > Aggregate[j+1].nBeads) {
           beads = Aggregate[j].nBeads;
+          Aggregate[j].Bead = realloc(Aggregate[j].Bead, Aggregate[j].nBeads *
+                                      sizeof *Aggregate[j].Bead);
         } else {
           beads = Aggregate[j+1].nBeads;
+          Aggregate[j+1].Bead = realloc(Aggregate[j+1].Bead,
+                                        Aggregate[j+1].nBeads *
+                                        sizeof *Aggregate[j+1].Bead);
         }
         for (int k = 0; k < beads; k++) {
           SwapInt(&Aggregate[j].Bead[k], &Aggregate[j+1].Bead[k]);
