@@ -1,5 +1,4 @@
 #include "../AnalysisTools.h"
-#include <stdio.h>
 
 // Help() //{{{
 void Help(const char cmd[50], const bool error,
@@ -100,12 +99,12 @@ int main ( int argc, char** argv ) {
   // -m option: calculate moving average
   opt->moving = 0;
   OneNumberOption(argc, argv, "-m", &opt->moving, 'i');
-  if (opt->moving == 0 && opt->tau == 0 && opt->block == 0) {
-    err_msg("-tau, -b, or -m option must be used");
-    PrintError();
-    Help(argv[0], true, common, option);
-    exit(1);
-  }
+  // if (opt->moving == 0 && opt->tau == 0 && opt->block == 0) {
+  //   err_msg("one of -tau, -b, or -m options must be used");
+  //   PrintError();
+  //   Help(argv[0], true, common, option);
+  //   exit(1);
+  // }
   if ((opt->moving != 0 && opt->tau != 0) ||
       (opt->moving != 0 && opt->block != 0) ||
       (opt->tau != 0 && opt->block != 0)) {
@@ -178,6 +177,8 @@ int main ( int argc, char** argv ) {
     PrintError();
     exit(1);
   } //}}}
+
+  data_lines -= opt->c.start;
 
   // -tau mode //{{{
   if (opt->tau > 0) {
@@ -300,7 +301,7 @@ int main ( int argc, char** argv ) {
   } //}}}
 
   // -m mode //{{{
-  if (opt->moving > -1) {
+  if (opt->moving > 0) {
     PrintByline(fout, argc, argv);
     // number of input datapoints
     count = data_lines - opt->c.start;
@@ -321,11 +322,39 @@ int main ( int argc, char** argv ) {
     fclose(fw);
   } //}}}
 
+  // calculate averages and errors and print them //{{{
+  // 1) average
+  double *avg = calloc(col_count, sizeof *avg);
+  for (int i = 0; i < data_lines; i++) {
+    for (int col = 0; col < col_count; col++) {
+      avg[col] += data[col][i] / data_lines;
+    }
+  }
+  // 2) error
+  // a) calculate the sum of squared differences from the mean
+  double *sumdiff = calloc(col_count, sizeof *sumdiff);
+  for (int i = 0; i < data_lines; i++) {
+    for (int col = 0; col < col_count; col++) {
+      sumdiff[col] += Square(data[col][i] - avg[col]);
+    }
+  }
+  // b) calculate the sample standard deviation and standard error
+  double *stderr = calloc(col_count, sizeof *stderr);
+  for (int col = 0; col < col_count; col++) {
+    double sig = sqrt(sumdiff[col] / (data_lines - 1));
+    stderr[col] = sig / sqrt(data_lines);
+  }
+  // print averages and errors to standard output
+  for (int col = 0; col < col_count; col++) {
+    fprintf(stdout, "%lf %lf\n", avg[col], stderr[col]);
+  } //}}}
+
   for (int i = 0; i < col_count; i++) {
     free(data[i]);
   }
   free(data);
   free(column);
+  free(avg);
   free(opt);
 
   return 0;

@@ -1,13 +1,13 @@
 \section{Average} \label{sec:Average}
 
-This utility calculates one of three types of averages based on a used option
-from specified column(s) of data in the input text file (all \tt{\#}-starting
-lines and blank lines are ignored). It either produces an overall average with
-statistical error and an autocorrelation time estimate (\tt{-tau} option),
-block averages (\tt{-b} option), or moving averages (\tt{-m} option). While the
-\tt{-tau} option appends a single line to the output file, either of the
-\tt{-b} or \tt{-m} options creates a new output file with somewhat smoother
-data.
+This utility calculates simple average and standard error from specified
+column(s) of data in the input text file (all \tt{\#}-starting lines and blank
+lines are ignored), printing it to standard output. It can also calculate one of
+three types of averages based on a used option -- an overall average with
+statistical error and an autocorrelation time estimate (\tt{-tau} option), block
+averages (\tt{-b} option), or moving averages (\tt{-m} option). While the
+\tt{-tau} option appends a single line to the output file, either of the \tt{-b}
+or \tt{-m} options creates a new output file with somewhat smoother data.
 
 The first and last lines used for the average calculation can be controlled
 using the standard \tt{-st} and \tt{-e} options.
