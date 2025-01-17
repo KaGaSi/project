@@ -19,6 +19,7 @@ tags
 .ccls-cache
 *json
 *bkp
+*bkp2
 .gdb_history
 .cache
 profile

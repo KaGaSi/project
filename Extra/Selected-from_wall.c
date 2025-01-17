@@ -1,10 +1,10 @@
 #include "../AnalysisTools.h"
 
-const double wall_dist = 17.241-9.055;
-const int axis = 2; // wall orientation: 0..x, 1..y, 2..z
-// these names will be inserted befor '.' in the <output>
-const char *name_w = "_S";
-const char *name_b = "_B";
+// const double wall_dist1 = 0;
+// const double wall_dist2 = 17.241-9.055;
+double wall_dist1 = 17.241 - (9.85 - 9.055) / 2;
+double wall_dist2 = 17.241;
+int axis = 2; // wall orientation: 0..x, 1..y, 2..z
 
 // Help() //{{{
 void Help(const char cmd[50], const bool error,
@@ -15,20 +15,23 @@ void Help(const char cmd[50], const bool error,
   } else {
     ptr = stdout;
     fprintf(ptr, "\
-Apart from the following, this 'Extra' version also saves data into two output \
-files with one containing beads in the 'bulk' and the other near the 'wall' \
-(i.e., near the sides of the box along given axis). Variables governing \
-the details of this behaviour are hardcoded at the file beginning.\n\n\
+Apart from classic Selected, this 'Extra' version restricts coordinates \
+of the saved beads in a specified axis direction to two regions symmetrically \
+aligned according to the two provided coordinates - e.g., with z axis box \
+size 10 and provided coordinates 1 2, only beads with z coordinates <1,2> \
+or <8,9> are saved. \n\n\
 Selected creates new coordinate file in the extension-specified format \
 that contains specified bead and/or molecule types. Periodic boundary \
 conditions can be either stripped away or applied (which happens first if both \
 '--join' and '--wrap' options are used).\n\n");
   }
 
-  fprintf(ptr, "Usage: %s <input> <output> [options]\n\n", cmd);
+  fprintf(ptr, "Usage: %s <input> <output> <axis> 2×<coor> [options]\n\n", cmd);
 
   fprintf(ptr, "<input>             input coordinate file\n");
   fprintf(ptr, "<output>            output coordinate file\n");
+  fprintf(ptr, "<axis>              x, y, or z\n");
+  fprintf(ptr, "2×<coor>            interval for constraining coordinates\n");
   fprintf(ptr, "[options]\n");
   fprintf(ptr, "  -bt <bead type>   bead types to exclude\n");
   fprintf(ptr, "  -mt <mol type>    molecule types to exclude\n");
@@ -82,16 +85,24 @@ static void MoveCoordinates(SYSTEM *System, const double move[3]) { //{{{
 } //}}}
 
 static void WriteWall(SYSTEM System, bool *write, bool *write_wall) { //{{{
-  double dist[2];
-  dist[0] = wall_dist;
-  dist[1] = System.Box.Length[axis] - wall_dist;
+  double dist1[2], dist2[2];
+  dist1[0] = wall_dist1;
+  dist1[1] = System.Box.Length[axis] - wall_dist1;
+  dist2[0] = wall_dist2;
+  dist2[1] = System.Box.Length[axis] - wall_dist2;
+  // printf("\ndist1[0] %lf dist1[1] %lf\n", dist1[0], dist1[1]);
+  // printf("dist2[0] %lf dist2[1] %lf\n", dist2[0], dist2[1]);
   for (int i = 0; i < System.Count.BeadCoor; i++) {
     int id = System.BeadCoor[i];
-    if (write[id] && (System.Bead[id].Position[axis] <= dist[0] ||
-                      System.Bead[id].Position[axis] >= dist[1])) {
-      write_wall[id] = true;
-    } else {
-      write_wall[id] = false;
+    write_wall[id] = false;
+    BEAD *b = &System.Bead[id];
+    if (write[id]) {
+      if (b->Position[axis] >= dist1[0] && b->Position[axis] <= dist2[0]) {
+        write_wall[id] = true;
+      }
+      if (b->Position[axis] <= dist1[1] && b->Position[axis] >= dist2[1]) {
+        write_wall[id] = true;
+      }
     }
   }
 }
@@ -106,7 +117,7 @@ int main(int argc, char *argv[]) {
 
   // define options & check their validity
   int common = 8, all = common + 8, count = 0,
-      req_arg = 2;
+      req_arg = 5;
   char option[all][OPT_LENGTH];
   OptionCheck(argc, argv, req_arg, common, all, true, option,
               "-st", "-e", "-sk", "-i", "--verbose", "--silent", "--help",
@@ -122,21 +133,40 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // <output> - output coordinate file //{{{
+  // <output> - output coordinate file
   FILE_TYPE fout;
   s_strcpy(fout.name, argv[++count], LINE);
   fout.type = CoordinateFileType(fout.name);
-  FILE_TYPE fout1, fout2;
-  fout1.type = fout.type;
-  fout2.type = fout.type;
-  const char *last_dot = strrchr(fout.name, '.');
-  if (last_dot != NULL) {
-    size_t prefix = last_dot - fout.name;
-    snprintf(fout1.name, LINE, "%.*s%s%s",
-             (int)prefix, fout.name, name_w, last_dot);
-    snprintf(fout2.name, LINE, "%.*s%s%s",
-             (int)prefix, fout.name, name_b, last_dot);
-  } //}}}
+
+  if (argv[++count][0] == 'x') {
+    axis = 0;
+  } else if (argv[count][0] == 'y') {
+    axis = 1;
+  } else if (argv[count][0] == 'z') {
+    axis = 2;
+  } else {
+    err_msg("<axis> must by 'x', 'y', or 'z'");
+    PrintError();
+    PrintCommand(stderr, argc, argv);
+    Help(argv[0], true, common, option);
+    exit(1);
+  }
+
+  if (!IsRealNumber(argv[++count], &wall_dist1)) {
+    err_msg("<coor> must by a real number");
+    PrintError();
+    PrintCommand(stderr, argc, argv);
+    Help(argv[0], true, common, option);
+    exit(1);
+  }
+  if (!IsRealNumber(argv[++count], &wall_dist2)) {
+    err_msg("<coor> must by a real number");
+    PrintError();
+    PrintCommand(stderr, argc, argv);
+    Help(argv[0], true, common, option);
+    exit(1);
+  }
+
 
   // options before reading system data //{{{
   opt->c = CommonOptions(argc, argv, in);
@@ -238,15 +268,11 @@ int main(int argc, char *argv[]) {
 
   // print initial stuff to output coordinate file //{{{
   if (fout.type == VCF_FILE) {
-    PrintByline(fout1.name, argc, argv);
-    PrintByline(fout2.name, argc, argv);
+    PrintByline(fout.name, argc, argv);
   } else if (fout.type == VTF_FILE) {
-    WriteStructure(fout1, System, -1, false, argc, argv);
-    WriteStructure(fout2, System, -1, false, argc, argv);
+    WriteStructure(fout, System, -1, false, argc, argv);
   } else { // ensure it's a new file
-    FILE *out = OpenFile(fout1.name, "w");
-    fclose(out);
-    out = OpenFile(fout2.name, "w");
+    FILE *out = OpenFile(fout.name, "w");
     fclose(out);
   } //}}}
 
@@ -291,7 +317,7 @@ int main(int argc, char *argv[]) {
     if (use) { // read and write the timestep, if it should be saved //{{{
       if (fout.type == LDATA_FILE && count_saved == 1) {
         err_msg("only one timestep can be saved to lammps data file");
-        PrintWarnFile(fout1.name, fout2.name, "\0");
+        PrintWarnFile(fout.name, "\0", "\0");
         count_coor--;
         break;
       }
@@ -304,9 +330,7 @@ int main(int argc, char *argv[]) {
       MoveCoordinates(&System, opt->move);
       WrapJoinCoordinates(&System, opt->wrap, opt->join);
       WriteWall(System, write, write_wall);
-      WriteTimestep(fout1, System, count_coor, write_wall, argc, argv);
-      InvertWriteWall(System, write_wall);
-      WriteTimestep(fout2, System, count_coor, write_wall, argc, argv);
+      WriteTimestep(fout, System, count_coor, write_wall, argc, argv);
       //}}}
     } else { // skip the timestep, if it shouldn't be saved //{{{
       if (!SkipTimestep(in, fr, &line_count)) {
@@ -342,9 +366,7 @@ int main(int argc, char *argv[]) {
         ScaleCoordinates(&System, opt->scale);
         WrapJoinCoordinates(&System, opt->wrap, opt->join);
         WriteWall(System, write, write_wall);
-        WriteTimestep(fout1, System, count_coor, write_wall, argc, argv);
-        InvertWriteWall(System, write_wall);
-        WriteTimestep(fout2, System, count_coor, write_wall, argc, argv);
+        WriteTimestep(fout, System, count_coor, write_wall, argc, argv);
         if (!opt->c.silent) {
           if (isatty(STDOUT_FILENO)) {
             fprintf(stdout, "\r                          \r");
@@ -360,13 +382,11 @@ int main(int argc, char *argv[]) {
       }
     } //}}}
   } else if (count_coor == 0) { // error - input file without a valid timestep //{{{
-    remove(fout1.name);
-    remove(fout2.name);
+    remove(fout.name);
     err_msg("no valid timestep found");
     PrintErrorFile(in.coor.name, "\0", "\0"); //}}}
   } else if (opt->c.start > count_coor) { // warn if no timesteps were written //{{{
-    remove(fout1.name);
-    remove(fout2.name);
+    remove(fout.name);
     err_msg("no coordinates written (starting timestep is higher "
             "than the total number of timesteps)");
     PrintWarning(); //}}}
@@ -386,25 +406,6 @@ int main(int argc, char *argv[]) {
   free(position);
   free(bkp_line_count);
   free(opt);
-
-  // // reading file from the end //{{{
-  // FILE *fr = OpenFile(in_coor, "r");
-  // fseek(fr, -1, SEEK_END);
-  // char test = fgetc(fr);
-  // if (test == '\n') {
-  //   printf("empty line\n");
-  //   fseek(fr, -2, SEEK_END);
-  // }
-  // test = fgetc(fr);
-  // printf("%c", test);
-  // do {
-  //   fseek(fr, -2, SEEK_CUR);
-  //   test = fgetc(fr);
-  //   printf("%c", test);
-  // } while (test != '\n');
-  // fgets(in_coor, LINE, fr);
-  // printf("%s", in_coor);
-  // fclose(fr); //}}}
 
   return 0;
 }
