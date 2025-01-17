@@ -591,8 +591,8 @@ void LinkedList(const SYSTEM System, int **Head, int **Link,
     int id = System.BeadCoor[i];
     BEAD *bead = &System.Bead[id];
     long cell = (int)(bead->Position[0] * rl[0]) +
-               (int)(bead->Position[1] * rl[1]) * n_cells[0] +
-               (int)(bead->Position[2] * rl[2]) * n_cells[0] * n_cells[1];
+                (int)(bead->Position[1] * rl[1]) * n_cells[0] +
+                (int)(bead->Position[2] * rl[2]) * n_cells[0] * n_cells[1];
     // TODO: check the numbers aren't too high (don't go over max int)
     //       or change int to long?
     // printf("\n%d %d\n", id, cell);

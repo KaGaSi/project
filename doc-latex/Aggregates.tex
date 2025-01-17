@@ -54,6 +54,19 @@ between molecules 2 and 3.
   \label{fig:AggCheck}
 \end{figure}
 
+If \tt{-w} option is used, the utilities also take the found aggregates, testing
+which are touching the specified wall(s) and saving those touching the wall(s)
+and those in bulk into two extra \tt{.agg} files. The wall(s) are specified via
+the \tt{<a>} argument, which defines the axis perpendicular to the wall (the
+argument must be \tt{x}, \tt{y}, or \tt{z}), and numeric argument(s), which
+define the coordinate(s) of the wall(s) along the axis. For example, assuming a
+simulation box with size $10^3$ and a slit configuration with two walls in the
+xy-plane 1 distance unit from the box edges, then \tt{-w z 1 9} would be used.
+The distance for checking whether a bead touches the wall is the same as the one
+for determining bead contact pairs. Aggregate data are saved into two extra
+\tt{.agg} files with names based on the main output \tt{<out.agg>} -- \tt{-w}
+and \tt{-no_w} is placed before the \tt{.agg} extension.
+
 Note that when \tt{-st}, \tt{-e}, or \tt{-sk} options are used, the resulting
 \tt{agg} file is no longer coupled to the original coordinate file (i.e., they
 cannot be used together for further analyses), but it is coupled to the optional

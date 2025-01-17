@@ -26,6 +26,8 @@ types 'A' and 'B' are given, it considers only 'A-B' pairs.\n\n");
           "(default: 1)\n");
   fprintf(ptr, "  -c                minimum number of contacts (default: 1)\n");
   fprintf(ptr, "  -j <output>       output file with joined coordinates\n");
+  fprintf(ptr, "  -w <a> <float(s)> position of wall perpendicular to "
+          "given axis <a> at the axis' coordinate(s)\n");
   CommonHelp(error, n, opt);
 } //}}}
 
@@ -34,6 +36,9 @@ struct OPT {
   double distance; // -d
   int contacts;    // -c
   FILE_TYPE fout;  // -j
+  double wall[100];     // -w
+  int w_count, axis;    // -w
+  char w_file[2][LINE]; // -w
   COMMON_OPT c;
 };
 OPT * opt_create(void) {
@@ -67,7 +72,7 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
   int n_cells[3], *Head, *Link, Dc[14][3];
   LinkedList(*System, &Head, &Link, cell_size, n_cells, Dc);
 
-  // count contacts between all molecules pairs (using cell linked list) //{{{
+  // count contacts between all molecule pairs (using cell linked list) //{{{
   int c1[3];
   for (c1[2] = 0; c1[2] < n_cells[2]; c1[2]++) {
     for (c1[1] = 0; c1[1] < n_cells[1]; c1[1]++) {
@@ -160,13 +165,13 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
 
   SortAggStruct(Aggregate, *System, agg_alloc);
 
-  // allocate Aggregate struct //{{{
+  // reallocate Aggregate struct //{{{
   InitIntArray(agg_alloc, Count->Molecule, 10);
   for (int i = 0; i < Count->Molecule; i++) {
     AGGREGATE *agg = &Aggregate[i];
-    agg->Molecule = realloc(agg->Molecule,
-                            agg_alloc[i] * sizeof *agg->Molecule);
-    agg->Bead = realloc(agg->Bead, sizeof *agg->Bead);
+    agg->Molecule = s_realloc(agg->Molecule,
+                              agg_alloc[i] * sizeof *agg->Molecule);
+    agg->Bead = s_realloc(agg->Bead, sizeof *agg->Bead);
   } //}}}
 
   // free memory //{{{
@@ -181,12 +186,11 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
 int main(int argc, char *argv[]) {
 
   // define options & check their validity
-  int common = 8, all = common + 3, count = 0,
-      req_arg = 4;
+  int common = 8, all = common + 4, req_arg = 4, count = 0;
   char option[all][OPT_LENGTH];
-  OptionCheck(argc, argv, req_arg, common, all, true, option,
+  OptionCheck(argc, argv, req_arg, common, all, false, option,
                "-st", "-e", "-sk", "-i", "--verbose", "--silent",
-               "--help", "--version", "-d", "-c", "-j");
+               "--help", "--version", "-d", "-c", "-j", "-w");
 
   count = 0; // count mandatory arguments
   OPT *opt = opt_create();
@@ -209,20 +213,48 @@ int main(int argc, char *argv[]) {
     exit(1);
   } //}}}
 
-  // options before reading system data
+  // options before reading system data //{{{
   opt->c = CommonOptions(argc, argv, in);
-
-  // -j option - save coordinates of joined aggregates //{{{
+  // -j option - save coordinates of joined aggregates
   opt->fout = InitFile;
   if (FileOption(argc, argv, "-j", opt->fout.name)) {
     opt->fout.type = CoordinateFileType(opt->fout.name);
-  } //}}}
-
+  }
   // parameters for aggregate check (-d and -c options)
   opt->distance = 1;
   OneNumberOption(argc, argv, "-d", &opt->distance, 'd');
   opt->contacts = 1;
   OneNumberOption(argc, argv, "-c", &opt->contacts, 'i');
+  // wall options //{{{
+  // -w option - wall axis and wall coordinates
+  opt->w_count = 0;
+  char str[LINE];
+  if (FileNumbersOption(argc, argv, 1, 100, "-w", opt->wall,
+                        &opt->w_count, str, 'd')) {
+    if (str[0] == 'x') {
+      opt->axis = 0;
+    } else if (str[0] == 'y') {
+      opt->axis = 1;
+    } else if (str[0] == 'z') {
+      opt->axis = 2;
+    } else {
+      err_msg("<a> requires argument 'x', 'y', or 'z'");
+      PrintErrorOption("-w");
+      exit(1);
+    }
+    // copy the agg_file to a new string, ending before '.agg'
+    s_strcpy(str, agg_file, LINE);
+    str[strlen(str)-4] = '\0';
+    // append proper endings to the new string
+    if (snprintf(opt->w_file[0], LINE, "%s-w.agg", str) < 0) {
+      ErrorSnprintf();
+    }
+    if (snprintf(opt->w_file[1], LINE, "%s-no_w.agg", str) < 0) {
+      ErrorSnprintf();
+    }
+  }
+  //}}}
+ //}}}
 
   if (!opt->c.silent) {
     PrintCommand(stdout, argc, argv);
@@ -262,14 +294,11 @@ int main(int argc, char *argv[]) {
   // print command to output .agg (and, possibly, coordinate) file
   PrintByline(agg_file, argc, argv);
   if (opt->fout.name[0] != '\0') {
-    if (opt->fout.type == VCF_FILE) {
-      PrintByline(opt->fout.name, argc, argv);
-    } else if (opt->fout.type == VTF_FILE) {
-      WriteStructure(opt->fout, System, -1, false, argc, argv);
-    } else {
-      FILE *out = OpenFile(opt->fout.name, "w");
-      fclose(out);
-    }
+    InitOutputCoorFile(opt->fout, System, argc, argv);
+  }
+  if (opt->w_count > 0) {
+    PrintByline(opt->w_file[0], argc, argv);
+    PrintByline(opt->w_file[1], argc, argv);
   }
 
   // allocate Aggregate struct //{{{
@@ -297,9 +326,7 @@ int main(int argc, char *argv[]) {
     PrintStep(&count_coor, opt->c.start, opt->c.silent);
     // decide whether this timestep is to be saved
     bool use = false;
-    if (count_coor >= opt->c.start &&
-        (count_coor <= opt->c.end || opt->c.end == -1) &&
-        ((count_coor - opt->c.start) % opt->c.skip) == 0) {
+    if (UseStep(opt->c, count_coor)) {
       use = true;
     }
     if (use) { //{{{
@@ -321,13 +348,44 @@ int main(int argc, char *argv[]) {
         Aggregate[i].Flag = true;
       }
       WriteAggregates(count_coor, agg_file, System, Aggregate);
+
+      // wall? //{{{
+      if (opt->w_count > 0) {
+        for (int i = 0; i < Count->Aggregate; i++) {
+          Aggregate[i].Flag = false;
+          for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+            int mol_id = Aggregate[i].Molecule[j];
+            MOLECULE *mol = &System.Molecule[mol_id];
+            for (int k = 0; k < System.MoleculeType[mol->Type].nBeads; k++) {
+              BEAD *b = &System.Bead[mol->Bead[k]];
+              if (System.BeadType[b->Type].Flag) {
+                for (int l = 0; l < opt->w_count; l++) {
+                  double dist = b->Position[opt->axis] - opt->wall[l];
+                  if (fabs(dist) < opt->distance) {
+                    Aggregate[i].Flag = true;
+                    goto next;
+                  }
+                }
+              }
+            }
+          }
+          next:
+          ;
+        }
+        WriteAggregates(count_coor, opt->w_file[0], System, Aggregate);
+        for (int i = 0; i < Count->Aggregate; i++) {
+          Aggregate[i].Flag = !Aggregate[i].Flag;
+        }
+        WriteAggregates(count_coor, opt->w_file[1], System, Aggregate);
+      } //}}}
+
       // reallocate Aggregate struct //{{{
       InitIntArray(agg_alloc, Count->Molecule, 10);
       for (int i = 0; i < Count->Molecule; i++) {
         AGGREGATE *agg = &Aggregate[i];
-        agg->Molecule = realloc(agg->Molecule,
-                                agg_alloc[i] * sizeof *agg->Molecule);
-        agg->Bead = realloc(agg->Bead, sizeof *agg->Bead);
+        agg->Molecule = s_realloc(agg->Molecule,
+                                  agg_alloc[i] * sizeof *agg->Molecule);
+        agg->Bead = s_realloc(agg->Bead, sizeof *agg->Bead);
       } //}}}
       //}}}
     } else { //{{{
@@ -356,10 +414,17 @@ int main(int argc, char *argv[]) {
   FILE *fw_agg = OpenFile(agg_file, "a");
   fprintf(fw_agg, "Last Step: %d\n", count_coor);
   fclose(fw_agg);
+  if (opt->w_count > 0) {
+    for (int i = 0; i < 2; i++) {
+      fw_agg = OpenFile(opt->w_file[i], "a");
+      fprintf(fw_agg, "Last Step: %d\n", count_coor);
+      fclose(fw_agg);
+    }
+  }
 
   free(agg_alloc);
   free(write);
-  FreeAggregate(System.Count, Aggregate);
+  FreeAggregate(*Count, Aggregate);
   FreeSystem(&System);
   free(opt);
 
