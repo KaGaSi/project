@@ -1,7 +1,0 @@
-version = 1
-[[ analyzers ]]
-name = "cxx"
-enabled = true
-[analyzers.meta]
-  misra_compliance = true
-  cyclomatic_complexity_threshold = "very-high"

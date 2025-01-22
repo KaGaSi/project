@@ -165,15 +165,6 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
 
   SortAggStruct(Aggregate, *System, agg_alloc);
 
-  // reallocate Aggregate struct //{{{
-  InitIntArray(agg_alloc, Count->Molecule, 10);
-  for (int i = 0; i < Count->Molecule; i++) {
-    AGGREGATE *agg = &Aggregate[i];
-    agg->Molecule = s_realloc(agg->Molecule,
-                              agg_alloc[i] * sizeof *agg->Molecule);
-    agg->Bead = s_realloc(agg->Bead, sizeof *agg->Bead);
-  } //}}}
-
   // free memory //{{{
   free(Head);
   free(Link);
