@@ -96,7 +96,8 @@ SYSTEM LtrjReadStruct(const char *file) {
     bool new = true;
     for (int j = 0; j < Count->BeadType; j++) {
       BEADTYPE *bt = &Sys.BeadType[j];
-      if (position[1] == -1 || strcmp(split[position[1]], bt->Name) == 0) {
+      if ((position[1] != -1 && strcmp(split[position[1]], bt->Name) == 0) ||
+          (position[11] != -1 && strcmp(split[position[11]], bt->Name) == 0)) {
         bt->Number++;
         b->Type = j;
         new = false;

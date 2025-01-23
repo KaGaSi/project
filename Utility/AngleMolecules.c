@@ -36,8 +36,8 @@ angles between any three beads in those molecule types (-n option).\n\n");
 
 // structure for options //{{{
 struct OPT {
-  bool join, // --joined
-       *mt,  // -m
+  bool join,       // --joined
+       *mt,          // -m
        all;          // --all
   int n_list[100],   // -n (list of bead id pairs)
       n_number;      // -n (total number of beads in the pairs)

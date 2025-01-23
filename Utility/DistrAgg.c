@@ -123,8 +123,7 @@ int main(int argc, char *argv[]) {
   } //}}}
   // '-x' option //{{{
   bool *mtype_x_opt = calloc(Count->MoleculeType, sizeof *mtype_x_opt);
-  if (!MoleculeTypeOption(argc, argv, "-x", true, mtype_x_opt, System)) {
-  } //}}}
+  MoleculeTypeOption(argc, argv, "-x", true, mtype_x_opt, System); //}}}
   // error - molecules specified by -only and -x must differ //{{{
   overlap = true; // do the two array fully overlap?
   for (int i = 0; i < Count->MoleculeType; i++) {

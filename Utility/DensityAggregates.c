@@ -59,8 +59,8 @@ int main(int argc, char *argv[]) {
       req_arg = 5;
   char option[all][OPT_LENGTH];
   OptionCheck(argc, argv, req_arg, common, all, true, option,
-               "-st", "-e", "-sk", "-i", "--verbose", "--silent",
-               "--help", "--version", "--joined");
+              "-st", "-e", "-sk", "-i", "--verbose", "--silent",
+              "--help", "--version", "--joined");
 
   count = 0; // count mandatory arguments
   OPT *opt = opt_create();
@@ -260,7 +260,6 @@ int main(int argc, char *argv[]) {
         if (correct_size != -1) {
           double com[3];
           CentreOfMass(Aggregate[i].nBeads, Aggregate[i].Bead, System, com);
-          printf("(x-%lf)^2+(y-%lf)^2+(z-%lf)^2<\n", com[0], com[1], com[2]);
 
           // free temporary density array //{{{
           for (int j = 0; j < Count->BeadType; j++) {

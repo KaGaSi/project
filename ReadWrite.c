@@ -189,75 +189,79 @@ static void CopyAndFreeAllStuff(MOLECULETYPE *mt_old, MOLECULETYPE *mt_new) {
  */
 void RemoveExtraTypes(SYSTEM *System) {
   COUNT *Count = &System->Count;
-  // BeadType & Bead[].Type
-  int count = 0;
-  int *bt_old_to_new = malloc(sizeof *bt_old_to_new * Count->BeadType);
-  for (int i = 0; i < Count->BeadType; i++) {
-    if (System->BeadType[i].Number != 0) {
-      int bt_id = count;
-      count++;
-      if (bt_id != i) {
-        System->BeadType[bt_id] = System->BeadType[i];
-      }
-      bt_old_to_new[i] = bt_id;
-    }
-  }
-  Count->BeadType = count;
-  for (int i = 0; i < Count->Bead; i++) {
-    int old_type = System->Bead[i].Type;
-    System->Bead[i].Type = bt_old_to_new[old_type];
-  }
-  // sync MoleculeType[].Bead (i.e., bead types) with the new BeadType
-  for (int i = 0; i < Count->MoleculeType; i++) {
-    if (System->MoleculeType[i].Number != 0) {
-      for (int j = 0; j < System->MoleculeType[i].nBeads; j++) {
-        int id = System->MoleculeType[i].Bead[j];
-        System->MoleculeType[i].Bead[j] = bt_old_to_new[id];
-      }
-    }
-  }
-  free(bt_old_to_new);
-  // MoleculeType & Molecule
-  count = 0;
-  Count->Molecule = 0;
-  for (int i = 0; i < Count->MoleculeType; i++) {
-    MOLECULETYPE *mt_i = &System->MoleculeType[i];
-    if (mt_i->Number != 0) {
-      Count->Molecule += mt_i->Number;
-      int mt_id = count;
-      count++;
-      if (mt_id != i) {
-        // MoleculeType struct
-        MOLECULETYPE *mt_new = &System->MoleculeType[mt_id];
-        *mt_new = *mt_i;
-        mt_new->Bead = malloc(sizeof *mt_new->Bead * mt_new->nBeads);
-        for (int j = 0; j < mt_new->nBeads; j++) {
-          mt_new->Bead[j] = mt_i->Bead[j];
+  if (Count->Bead > 0) {
+    // BeadType & Bead[].Type
+    int count = 0;
+    int *bt_old_to_new = malloc(sizeof *bt_old_to_new * Count->BeadType);
+    for (int i = 0; i < Count->BeadType; i++) {
+      if (System->BeadType[i].Number != 0) {
+        int bt_id = count;
+        count++;
+        if (bt_id != i) {
+          System->BeadType[bt_id] = System->BeadType[i];
         }
-        free(mt_i->Bead);
-        CopyAndFreeAllStuff(mt_i, mt_new);
-        // Molecule struct
-        MOLECULE *mol_new = &System->Molecule[mt_id];
-        mol_new->Type = mt_id;
-        mol_new->Index = i;
-        mol_new->Bead = malloc(sizeof *mol_new->Bead * mt_new->nBeads);
-        for (int j = 0; j < mt_new->nBeads; j++) {
-          int id = System->Molecule[i].Bead[j];
-          System->Molecule[mt_id].Bead[j] = id;
-          System->Bead[id].Molecule = mt_id;
-        }
-        free(System->Molecule[i].Bead);
+        bt_old_to_new[i] = bt_id;
       }
     }
+    Count->BeadType = count;
+    for (int i = 0; i < Count->Bead; i++) {
+      int old_type = System->Bead[i].Type;
+      System->Bead[i].Type = bt_old_to_new[old_type];
+    }
+    // sync MoleculeType[].Bead (i.e., bead types) with the new BeadType
+    for (int i = 0; i < Count->MoleculeType; i++) {
+      if (System->MoleculeType[i].Number != 0) {
+        for (int j = 0; j < System->MoleculeType[i].nBeads; j++) {
+          int id = System->MoleculeType[i].Bead[j];
+          System->MoleculeType[i].Bead[j] = bt_old_to_new[id];
+        }
+      }
+    }
+    free(bt_old_to_new);
+    // MoleculeType & Molecule
+    count = 0;
+    Count->Molecule = 0;
+    for (int i = 0; i < Count->MoleculeType; i++) {
+      MOLECULETYPE *mt_i = &System->MoleculeType[i];
+      if (mt_i->Number != 0) {
+        Count->Molecule += mt_i->Number;
+        int mt_id = count;
+        count++;
+        if (mt_id != i) {
+          // MoleculeType struct
+          MOLECULETYPE *mt_new = &System->MoleculeType[mt_id];
+          *mt_new = *mt_i;
+          mt_new->Bead = malloc(sizeof *mt_new->Bead * mt_new->nBeads);
+          for (int j = 0; j < mt_new->nBeads; j++) {
+            mt_new->Bead[j] = mt_i->Bead[j];
+          }
+          free(mt_i->Bead);
+          CopyAndFreeAllStuff(mt_i, mt_new);
+          // Molecule struct
+          MOLECULE *mol_new = &System->Molecule[mt_id];
+          mol_new->Type = mt_id;
+          mol_new->Index = i;
+          mol_new->Bead = malloc(sizeof *mol_new->Bead * mt_new->nBeads);
+          for (int j = 0; j < mt_new->nBeads; j++) {
+            int id = System->Molecule[i].Bead[j];
+            System->Molecule[mt_id].Bead[j] = id;
+            System->Bead[id].Molecule = mt_id;
+          }
+          free(System->Molecule[i].Bead);
+        }
+      }
+    }
+    Count->MoleculeType = count;
   }
-  Count->MoleculeType = count;
 } //}}}
 void WriteBoxLengthAngles(FILE *fw, const BOX box) { //{{{
   if (box.Volume != -1) {
     fprintf(fw, "pbc %.3f %.3f %.3f", box.Length[0],
                                       box.Length[1],
                                       box.Length[2]);
-    if (box.alpha != 90 || box.beta != 90 || box.gamma != 90) {
+    if (fabs(box.alpha - 90) > 0.00001 ||
+        fabs(box.beta - 90) > 0.00001 ||
+        fabs(box.gamma - 90) > 0.00001) {
       fprintf(fw, " %lf %lf %lf", box.alpha, box.beta, box.gamma);
     }
   }

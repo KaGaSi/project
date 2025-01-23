@@ -529,7 +529,7 @@ bool InputCoorStruct(const int argc, char **argv, SYS_FILES *f) {
 int StructureFileType(const char *name) { //{{{
   int ft = FindFileType(name);
   if (ft == VTF_FILE || ft == VSF_FILE || ft == FIELD_FILE ||
-      ft == LDATA_FILE || ft == LTRJ_FILE) {
+      ft == LDATA_FILE || ft == LTRJ_FILE || ft == XYZ_FILE) {
     return ft;
   } else {
     err_msg("Not a structure file");
