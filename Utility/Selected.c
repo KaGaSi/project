@@ -33,17 +33,28 @@ conditions can be either stripped away or applied (which happens first if both \
   fprintf(ptr, "  -sc <float>       divide all coordinates by given value\n");
   fprintf(ptr, "  -m <3xfloat>      move all coordinates by given vector "
           "(-sc option is applied first)\n");
+  fprintf(ptr, "  -cx 2×<float>     constrain x-coordinate to specified "
+          "dimensions (in fraction of output box); multiple pairs possible\n");
+  fprintf(ptr, "  -cy 2×<float>     constrain y-coordinate to specified "
+          "dimensions (in fraction of output box); multiple pairs possible\n");
+  fprintf(ptr, "  -cz 2×<float>     constrain z-coordinate to specified "
+          "dimensions (in fraction of output box); multiple pairs possible\n");
+  fprintf(ptr, "  --real            use real coordinates for "
+          "-cx/-cy/-cz options instead of box fractions\n");
   CommonHelp(error, n, opt);
 } //}}}
 
 // structure for options //{{{
 struct OPT {
-  bool bt, mt,               // -bt/-mt
+  bool bt, mt,             // -bt/-mt
        reverse,              // --reverse
-       join, wrap, last;     // --join --wrap --last
+       join, wrap, last,   // --join --wrap --last
+       real;                 // --real
   int n_save[100], n_number; // -n
   double scale,              // -sc
          move[3];            // -m
+  double ca[3][100];         // -cx/y/z ... slice(s)' coordinates
+  int ca_count[3];           // -cx/y/z ... number of slices per axis
   COMMON_OPT c;
 };
 OPT * opt_create(void) {
@@ -70,17 +81,70 @@ static void MoveCoordinates(SYSTEM *System, const double move[3]) { //{{{
     }
   }
 } //}}}
+static void CopyWrite(const int num, bool *new, bool *old) { //{{{
+  for (int i = 0; i < num; i++) {
+    new[i] = old[i];
+  }
+} //}}}
+// ConstrainCoordinates() //{{{
+static void ConstrainCoordinates(SYSTEM *System, const OPT opt,
+                                 bool *write_new, bool **write_orig) {
+  if (opt.ca_count[0] == 0 && opt.ca_count[1] == 0 && opt.ca_count[2] == 0) {
+    return;
+  }
+  // recalculate constraints if --real was not used
+  double con[3][100];
+  for (int dd = 0; dd < 3; dd++) {
+    for (int i = 0; i < opt.ca_count[dd]; i++) {
+      con[dd][i] = opt.ca[dd][i];
+      if (!opt.real) {
+        con[dd][i] *= System->Box.Length[dd];
+      }
+    }
+  }
+  COUNT *Count = &System->Count;
+  // allocate array to store the original 'write'
+  *write_orig = malloc(Count->Bead * sizeof *write_orig);
+  // save the original 'write' array
+  CopyWrite(Count->Bead, *write_orig, write_new);
+  // go over beads in the coordinate file
+  for (int i = 0; i < Count->BeadCoor; i++) {
+    int id = System->BeadCoor[i];
+    // skip constraints for beads not to be written
+    if (!(*write_orig)[id]) {
+      continue;
+    }
+    // check -cx/-cy/-cz constraint
+    double (*pos)[3] = &System->Bead[id].Position;
+    bool save[3] = {true, true, true};
+    for (int dd = 0; dd < 3; dd++) {
+      for (int j = 0; j < opt.ca_count[dd]; j+=2) {
+        if ((*pos)[dd] <= con[dd][j] || (*pos)[dd] >= con[dd][j+1]) {
+          save[dd] = false;
+          break;
+        }
+      }
+      if (!save[dd]) {
+        break;
+      }
+    }
+    // if at least one axis constraint isn't met, don't save the bead
+    if (!save[0] || !save[1] || !save[2]) {
+      write_new[id] = false;
+    }
+  }
+} //}}}
 
 int main(int argc, char *argv[]) {
 
   // define options & check their validity
-  int common = 8, all = common + 9, count = 0,
+  int common = 8, all = common + 13, count = 0,
       req_arg = 2;
   char option[all][OPT_LENGTH];
   OptionCheck(argc, argv, req_arg, common, all, true, option,
               "-st", "-e", "-sk", "-i", "--verbose", "--silent", "--help",
               "--version", "-bt", "-mt", "--reverse", "--join", "--wrap", "-n",
-              "--last", "-sc", "-m");
+              "--last", "-sc", "-m", "-cx", "-cy", "-cz", "--real");
 
   count = 0; // count mandatory arguments
   OPT *opt = opt_create();
@@ -110,6 +174,68 @@ int main(int argc, char *argv[]) {
       opt->move[dd] = 0;
     }
   }
+  opt->real = BoolOption(argc, argv, "--real");
+  // constraints (-cx/-cy/-cz) //{{{
+  for (int dd = 0; dd < 3; dd++) {
+    char option[10];
+    if (dd == 0) {
+      s_strcpy(option, "-cx", 10);
+    } else if (dd == 1) {
+      s_strcpy(option, "-cy", 10);
+    } else {
+      s_strcpy(option, "-cz", 10);
+    }
+    if (!NumbersOption(argc, argv, 100, option,
+                       &opt->ca_count[dd], opt->ca[dd], 'd')) {
+      opt->ca_count[dd] = 0;
+    } else if ((opt->ca_count[dd] % 2) != 0) { // not even number of numbers
+      goto err_constraint;
+    }
+    for (int i = 0; i < opt->ca_count[dd]; i+=2 ) {
+      if (fabs(opt->ca[0][i] - opt->ca[dd][i+1]) < 0.0001) { // same numbers in a pair
+        goto err_constraint;
+      } else if (!opt->real && (opt->ca[dd][i] < 0 || opt->ca[dd][i] > 1 ||
+                                opt->ca[dd][i+1] < 0 || opt->ca[dd][i+1] > 1)) {
+        goto err_constraint;
+      } else if (opt->ca[dd][i] > opt->ca[dd][i+1]) { // switch so [i] < [i+1]
+        SwapDouble(&opt->ca[dd][i], &opt->ca[dd][i+1]);
+      }
+    }
+  }
+  // // -cy
+  // if (!NumbersOption(argc, argv, 100, "-cy", &opt->c_count[1], opt->cy, 'd')) {
+  //   opt->c_count[1] = 0;
+  // } else if ((opt->c_count[1] % 2) != 0) { // not even number of numbers
+  //   goto err_constraint;
+  // }
+  // for (int i = 0; i < opt->c_count[1]; i+=2 ) { // same numbers in a pair
+  //   if (fabs(opt->cy[i] - opt->cy[i+1]) < 0.0001) {
+  //     goto err_constraint;
+  //   } else if (opt->cy[i] > opt->cy[i+1]) { // switch so [i] < [i+1]
+  //     SwapDouble(&opt->cy[i], &opt->cy[i+1]);
+  //   }
+  // }
+  // // -cz
+  // if (!NumbersOption(argc, argv, 100, "-cz", &opt->c_count[2], opt->cz, 'd')) {
+  //   opt->c_count[2] = 0;
+  // } else if ((opt->c_count[2] % 2) != 0) { // not even number of numbers
+  //   goto err_constraint;
+  // }
+  // for (int i = 0; i < opt->c_count[2]; i+=2 ) { // same numbers in a pair
+  //   if (fabs(opt->cz[i] - opt->cz[i+1]) < 0.0001) {
+  //     goto err_constraint;
+  //   } else if (opt->cz[i] > opt->cz[i+1]) { // switch so [i] < [i+1]
+  //     SwapDouble(&opt->cz[i], &opt->cz[i+1]);
+  //   }
+  // }
+  // error - triggers only via goto command
+  if (false) {
+    err_constraint:
+      err_msg("requires coordinate pairs (with two distinct numbers per pair) "
+              "in units of box fraction, i.e., <0,1> (unless --real is used)");
+      PrintErrorOption("-cx/-cy/-cz");
+      exit(1);
+  } //}}}
   //}}}
 
   if (!opt->c.silent) {
@@ -253,8 +379,16 @@ int main(int argc, char *argv[]) {
       count_saved++;
       ScaleCoordinates(&System, opt->scale);
       MoveCoordinates(&System, opt->move);
+      bool *write2 = NULL; // used in case of -cx/-cy/-cz constraints
+      ConstrainCoordinates(&System, *opt, write, &write2);
       WrapJoinCoordinates(&System, opt->wrap, opt->join);
       WriteTimestep(fout, System, count_coor, write, argc, argv);
+      if (opt->ca_count[0] > 0 || opt->ca_count[1] > 0 || opt->ca_count[2] > 0) {
+        // restore the original 'write' array
+        CopyWrite(Count->Bead, write, write2);
+        // free the array alloc'd in ConstrainCoordinates()
+        free(write2);
+      }
       //}}}
     } else { // skip the timestep, if it shouldn't be saved //{{{
       if (!SkipTimestep(in, fr, &line_count)) {
