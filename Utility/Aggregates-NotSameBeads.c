@@ -39,6 +39,7 @@ struct OPT {
   double wall[100];     // -w
   int w_count, axis;    // -w
   char w_file[2][LINE]; // -w
+  FILE_TYPE j_file[2];  // -w (if -j)
   COMMON_OPT c;
 };
 OPT * opt_create(void) {
@@ -57,9 +58,8 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
     Aggregate[i].nBeads = 0;
   }
 
-  // allocate & zeroize contact[][] (triangular matrix) and moved array //{{{
+  // allocate & zeroize contact[][] (triangular matrix) //{{{
   int **contact = malloc(sizeof *contact * Count->Molecule);
-  int *moved = calloc(Count->Molecule, sizeof *moved);
   for (int i = 0; i < Count->Molecule; i++) {
     contact[i] = calloc(i + 1, sizeof *contact[i]);
   }
@@ -67,12 +67,12 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
     System->Molecule[i].Aggregate = -1;
   } //}}}
 
+  // count contacts between all molecule pairs (using cell linked list) //{{{
   // create cell-linked list
   double cell_size = sqrt(sqdist);
   int n_cells[3], *Head, *Link, Dc[14][3];
   LinkedList(*System, &Head, &Link, cell_size, n_cells, Dc);
-
-  // count contacts between all molecule pairs (using cell linked list) //{{{
+  // go over all cells (and beads inside)
   int c1[3];
   for (c1[2] = 0; c1[2] < n_cells[2]; c1[2]++) {
     for (c1[1] = 0; c1[1] < n_cells[1]; c1[1]++) {
@@ -96,12 +96,10 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
                    *b_j = &System->Bead[System->BeadCoor[j]];
               int mol_i = b_i->Molecule,
                   mol_j = b_j->Molecule;
-              if (mol_i != -1 &&
-                  mol_j != -1) { // both i and j must be in molecule
+              if (mol_i != -1 && mol_j != -1) { // i and j must be in molecule
                 if (System->BeadType[b_i->Type].Flag &&
                     System->BeadType[b_j->Type].Flag &&
-                    b_i->Type != b_j->Type) {
-                  // TODO: fractionals?
+                    b_i->Type != b_j->Type) { // the NotSameBeads bit
                   // calculate distance between i and j beads
                   double rij[3];
                   Distance(b_i->Position, b_j->Position,
@@ -125,9 +123,17 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
         }
       }
     }
-  } //}}}
+  }
+  free(Head);
+  free(Link); //}}}
 
   EvaluateContacts(Aggregate, System, opt.contacts, contact, agg_alloc);
+
+  // free contact array //{{{
+  for (int i = 0; i < System->Count.Molecule; i++) {
+    free(contact[i]);
+  }
+  free(contact); //}}}
 
   // sort molecules in aggregates according to ascending ids //{{{
   for (int i = 0; i < System->Count.Aggregate; i++) {
@@ -164,14 +170,6 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
   } //}}}
 
   SortAggStruct(Aggregate, *System, agg_alloc);
-
-  // free memory //{{{
-  free(Head);
-  free(Link);
-  for (int i = 0; i < System->Count.Molecule; i++)
-    free(contact[i]);
-  free(contact);
-  free(moved); //}}}
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -210,6 +208,8 @@ int main(int argc, char *argv[]) {
   opt->fout = InitFile;
   if (FileOption(argc, argv, "-j", opt->fout.name)) {
     opt->fout.type = CoordinateFileType(opt->fout.name);
+    opt->j_file[0].type = opt->fout.type;
+    opt->j_file[1].type = opt->fout.type;
   }
   // parameters for aggregate check (-d and -c options)
   opt->distance = 1;
@@ -243,8 +243,18 @@ int main(int argc, char *argv[]) {
     if (snprintf(opt->w_file[1], LINE, "%s-no_w.agg", str) < 0) {
       ErrorSnprintf();
     }
-  }
-  //}}}
+    if (opt->fout.name[0] != '\0') {
+      char *last_dot = strrchr(opt->fout.name, '.');
+      size_t len_before_dot = last_dot - opt->fout.name;
+      s_strcpy(str, opt->fout.name, len_before_dot + 1);
+      if (snprintf(opt->j_file[0].name, LINE, "%s-w%s", str, last_dot) < 0) {
+        ErrorSnprintf();
+      }
+      if (snprintf(opt->j_file[1].name, LINE, "%s-no_w%s", str, last_dot) < 0) {
+        ErrorSnprintf();
+      }
+    }
+  } //}}}
  //}}}
 
   if (!opt->c.silent) {
@@ -259,7 +269,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  // <bead names> - names of bead types to use for closeness calculation //{{{
+  // <bead(s)> - names of bead types to use for closeness calculation //{{{
   // TODO: necessary to assign false?
   for (int i = 0; i < Count->BeadType; i++) {
     System.BeadType[i].Flag = false;
@@ -278,14 +288,14 @@ int main(int argc, char *argv[]) {
     System.BeadType[type].Flag = true;
   } //}}}
 
-  // set all beads to write to output coordinate file
-  bool *write = calloc(Count->Bead, sizeof *write);
-  InitBoolArray(write, Count->Bead, true);
-
   // print command to output .agg (and, possibly, coordinate) file
   PrintByline(agg_file, argc, argv);
   if (opt->fout.name[0] != '\0') {
     InitOutputCoorFile(opt->fout, System, argc, argv);
+    if (opt->w_count > 0) {
+      InitOutputCoorFile(opt->j_file[0], System, argc, argv);
+      InitOutputCoorFile(opt->j_file[1], System, argc, argv);
+    }
   }
   if (opt->w_count > 0) {
     PrintByline(opt->w_file[0], argc, argv);
@@ -328,11 +338,14 @@ int main(int argc, char *argv[]) {
       count_used++;
       WrapJoinCoordinates(&System, true, false);
       CalculateAggregates(Aggregate, &System, *opt, agg_alloc);
-      // calculate & write joined coordinatest to <out.vcf> if '-j' option is used
+      // calculate & write joined coordinatest (-j option)
       if (opt->fout.name[0] != '\0') {
         WrapJoinCoordinates(&System, false, true);
         RemovePBCAggregates(opt->distance, Aggregate, &System);
+        bool *write = calloc(Count->Bead, sizeof *write);
+        InitBoolArray(write, Count->Bead, true);
         WriteTimestep(opt->fout, System, count_coor, write, argc, argv);
+        free(write);
       }
 
       for (int i = 0; i < Count->Aggregate; i++) {
@@ -340,8 +353,9 @@ int main(int argc, char *argv[]) {
       }
       WriteAggregates(count_coor, agg_file, System, Aggregate);
 
-      // wall? //{{{
+      // are there walls (-w option)? //{{{
       if (opt->w_count > 0) {
+        // find aggregates touching a wall
         for (int i = 0; i < Count->Aggregate; i++) {
           Aggregate[i].Flag = false;
           for (int j = 0; j < Aggregate[i].nMolecules; j++) {
@@ -363,15 +377,44 @@ int main(int argc, char *argv[]) {
           next:
           ;
         }
+        // write the aggregates to *-w.agg file
         WriteAggregates(count_coor, opt->w_file[0], System, Aggregate);
+        // write joined coordinates to *-w* file (-j option)?
+        if (opt->fout.name[0] != '\0') {
+          bool *write = calloc(Count->Bead, sizeof *write);
+          for (int i = 0; i < Count->Aggregate; i++) {
+            if (Aggregate[i].Flag) {
+              for (int j = 0; j < Aggregate[i].nBeads; j++) {
+                write[Aggregate[i].Bead[j]] = true;
+              }
+            }
+          }
+          WriteTimestep(opt->j_file[0], System, count_coor, write, argc, argv);
+          free(write);
+        }
+        // reverse the Aggregate[].Flag to select aggregates in bulk
         for (int i = 0; i < Count->Aggregate; i++) {
           Aggregate[i].Flag = !Aggregate[i].Flag;
         }
+        // write the aggregates to *-no_w.agg file
         WriteAggregates(count_coor, opt->w_file[1], System, Aggregate);
+        // write joined coordinates to *-no_w* file (-j option)?
+        if (opt->fout.name[0] != '\0') {
+          bool *write = calloc(Count->Bead, sizeof *write);
+          for (int i = 0; i < Count->Aggregate; i++) {
+            if (Aggregate[i].Flag) {
+              for (int j = 0; j < Aggregate[i].nBeads; j++) {
+                write[Aggregate[i].Bead[j]] = true;
+              }
+            }
+          }
+          WriteTimestep(opt->j_file[1], System, count_coor, write, argc, argv);
+          free(write);
+        }
       } //}}}
 
       // reallocate Aggregate struct //{{{
-      InitIntArray(agg_alloc, Count->Molecule, 10);
+      InitIntArray(agg_alloc, Count->Molecule, 1);
       for (int i = 0; i < Count->Molecule; i++) {
         AGGREGATE *agg = &Aggregate[i];
         agg->Molecule = s_realloc(agg->Molecule,
@@ -414,7 +457,6 @@ int main(int argc, char *argv[]) {
   }
 
   free(agg_alloc);
-  free(write);
   FreeAggregate(*Count, Aggregate);
   FreeSystem(&System);
   free(opt);
