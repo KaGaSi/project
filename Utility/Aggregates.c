@@ -36,7 +36,8 @@ extension).\n\n");
   fprintf(ptr, "[options]\n");
   fprintf(ptr, "  -d                maximum distance for contact "
           "(default: 1)\n");
-  fprintf(ptr, "  -c                minimum number of contacts (default: 1)\n");
+  fprintf(ptr, "  -c                minimum number of contacts (default: 1, "
+          "max: 255)");
   fprintf(ptr, "  -j <output>       output file with joined coordinates\n");
   fprintf(ptr, "  -w <a> <float(s)> position of wall perpendicular to "
           "given axis <a> at the axis' coordinate(s)\n");
@@ -59,8 +60,7 @@ OPT * opt_create(void) {
 } //}}}
 
 // CalculateAggregates() //{{{
-void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
-                         int *agg_alloc) {
+void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt) {
   double sqdist = Square(opt.distance);
   COUNT *Count = &System->Count;
   Count->Aggregate = 0;
@@ -70,14 +70,16 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
     Aggregate[i].nBeads = 0;
   }
 
-  // allocate & zeroize contact[][] (triangular matrix) //{{{
-  int **contact = malloc(sizeof *contact * Count->Molecule);
+  // allocate 2D triangular contact array
+  uint8_t **contact = malloc(sizeof *contact * Count->Molecule);
   for (int i = 0; i < Count->Molecule; i++) {
     contact[i] = calloc(i + 1, sizeof *contact[i]);
   }
+
+  // assign in no aggregate to each molecule
   for (int i = 0; i < Count->Molecule; i++) {
     System->Molecule[i].Aggregate = -1;
-  } //}}}
+  }
 
   // count contacts between all molecule pairs (using cell linked list) //{{{
   // create cell-linked list
@@ -118,7 +120,6 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
                   rij[0] = Square(rij[0]) + Square(rij[1]) + Square(rij[2]);
                   // are 'i' and 'j' close enough?
                   if (mol_i != mol_j && rij[0] <= sqdist) {
-                    // xm option
                     if (mol_i > mol_j) {
                       contact[mol_i][mol_j]++;
                     } else {
@@ -138,7 +139,7 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
   free(Head);
   free(Link); //}}}
 
-  EvaluateContacts(Aggregate, System, opt.contacts, contact, agg_alloc);
+  EvaluateContacts(Aggregate, System, opt.contacts, contact);
 
   // free contact array //{{{
   for (int i = 0; i < System->Count.Molecule; i++) {
@@ -160,7 +161,7 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
       // copy all bead in molecule 'mol' to Aggregate struct
       int mtype = System->Molecule[mol].Type;
       agg->nBeads += System->MoleculeType[mtype].nBeads;
-      agg->Bead = realloc(agg->Bead, agg->nBeads * sizeof *agg->Bead);
+      agg->Bead = s_realloc(agg->Bead, agg->nBeads * sizeof *agg->Bead);
       for (int k = 0; k < System->MoleculeType[mtype].nBeads; k++) {
         int beads = agg->nBeads - System->MoleculeType[mtype].nBeads + k;
         agg->Bead[beads] = System->Molecule[mol].Bead[k];
@@ -180,7 +181,7 @@ void CalculateAggregates(AGGREGATE *Aggregate, SYSTEM *System, OPT opt,
     }
   } //}}}
 
-  SortAggStruct(Aggregate, *System, agg_alloc);
+  SortAggStruct(Aggregate, *System);
 } //}}}
 
 int main(int argc, char *argv[]) {
@@ -227,6 +228,11 @@ int main(int argc, char *argv[]) {
   OneNumberOption(argc, argv, "-d", &opt->distance, 'd');
   opt->contacts = 1;
   OneNumberOption(argc, argv, "-c", &opt->contacts, 'i');
+  if (opt->contacts > 255 || opt->contacts <= 0) {
+    err_msg("requires whole number between 0 and 255");
+    PrintErrorOption("-c");
+    exit(1);
+  }
   // wall options //{{{
   // -w option - wall axis and wall coordinates
   opt->w_count = 0;
@@ -313,17 +319,8 @@ int main(int argc, char *argv[]) {
     PrintByline(opt->w_file[1], argc, argv);
   }
 
-  // allocate Aggregate struct //{{{
-  AGGREGATE *Aggregate = malloc(Count->Molecule * sizeof *Aggregate);
-  int *agg_alloc = malloc(Count->Molecule * sizeof *agg_alloc);
-  InitIntArray(agg_alloc, Count->Molecule, 10);
-  for (int i = 0; i < Count->Molecule; i++) {
-    AGGREGATE *agg = &Aggregate[i];
-    // possibly realloced later
-    agg->Molecule = malloc(agg_alloc[i] * sizeof *agg->Molecule);
-    // realloced later
-    agg->Bead = malloc(sizeof *agg->Bead);
-  } //}}}
+  AGGREGATE *Aggregate = NULL;
+  InitAggregate(System, &Aggregate);
 
   if (opt->c.verbose) {
     VerboseOutput(System);
@@ -348,7 +345,7 @@ int main(int argc, char *argv[]) {
       }
       count_used++;
       WrapJoinCoordinates(&System, true, false);
-      CalculateAggregates(Aggregate, &System, *opt, agg_alloc);
+      CalculateAggregates(Aggregate, &System, *opt);
       // calculate & write joined coordinatest (-j option)
       if (opt->fout.name[0] != '\0') {
         WrapJoinCoordinates(&System, false, true);
@@ -424,14 +421,7 @@ int main(int argc, char *argv[]) {
         }
       } //}}}
 
-      // reallocate Aggregate struct //{{{
-      InitIntArray(agg_alloc, Count->Molecule, 1);
-      for (int i = 0; i < Count->Molecule; i++) {
-        AGGREGATE *agg = &Aggregate[i];
-        agg->Molecule = s_realloc(agg->Molecule,
-                                  agg_alloc[i] * sizeof *agg->Molecule);
-        agg->Bead = s_realloc(agg->Bead, sizeof *agg->Bead);
-      } //}}}
+      ReInitAggregate(System, Aggregate);
       //}}}
     } else { //{{{
       if (!SkipTimestep(in, fr, &line_count)) {
@@ -467,7 +457,6 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  free(agg_alloc);
   FreeAggregate(*Count, Aggregate);
   FreeSystem(&System);
   free(opt);

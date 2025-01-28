@@ -759,7 +759,7 @@ static int NewAgg(AGGREGATE *Aggregate, SYSTEM *System,
   return agg_j;
 }
 void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
-                      const int contacts, int **contact, int *agg_alloc) {
+                      const int contacts, uint8_t **contact) {
   COUNT *Count = &System->Count;
   // go over all pairs of molecules
   for (int i = 1; i < Count->Molecule; i++) {
@@ -779,9 +779,11 @@ void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
            */
           if (agg_i == -1) {
             int mols = Aggregate[agg_j].nMolecules;
-            Aggregate[agg_j].nMolecules++;
-            ReallocAggMolecule(Aggregate, agg_alloc, agg_j);
-            Aggregate[agg_j].Molecule[mols] = i;
+            AGGREGATE *Agg = &Aggregate[agg_j];
+            Agg->nMolecules++;
+            Agg->Molecule = s_realloc(Agg->Molecule,
+                                      Agg->nMolecules * sizeof *Agg->Molecule);
+            Agg->Molecule[mols] = i;
             System->Molecule[i].Aggregate = agg_j;
           }
           /*
@@ -791,21 +793,28 @@ void EvaluateContacts(AGGREGATE *Aggregate, SYSTEM *System,
           if (agg_i != -1 && agg_j != -1 && agg_i != agg_j) {
             // add molecules from aggregate 'i' to aggregate 'j'
             int n_mol_old = Aggregate[agg_j].nMolecules;
-            Aggregate[agg_j].nMolecules += Aggregate[agg_i].nMolecules;
-            ReallocAggMolecule(Aggregate, agg_alloc, agg_j);
-            for (int k = n_mol_old; k < Aggregate[agg_j].nMolecules; k++) {
-              int mol = Aggregate[agg_i].Molecule[k-n_mol_old];
-              Aggregate[agg_j].Molecule[k] = mol;
+            AGGREGATE *Agg_i = &Aggregate[agg_i];
+            AGGREGATE *Agg_j = &Aggregate[agg_j];
+            Agg_j->nMolecules += Agg_i->nMolecules;
+            Agg_j->Molecule = s_realloc(Agg_j->Molecule,
+                                      Agg_j->nMolecules * sizeof *Agg_j->Molecule);
+            for (int k = n_mol_old; k < Agg_j->nMolecules; k++) {
+              int mol = Agg_i->Molecule[k-n_mol_old];
+              Agg_j->Molecule[k] = mol;
               System->Molecule[mol].Aggregate = agg_j;
             }
             // move aggregates with id greater then agg_i to id-1
             for (int k = (agg_i + 1); k < Count->Aggregate; k++) {
-              Aggregate[k-1].nMolecules = Aggregate[k].nMolecules;
-              ReallocAggMolecule(Aggregate, agg_alloc, k - 1);
+              AGGREGATE *Agg_k = &Aggregate[k];
+              AGGREGATE *Agg_k1 = &Aggregate[k-1];
+              Agg_k1->nMolecules = Agg_k->nMolecules;
+              Agg_k1->Molecule = s_realloc(Agg_k1->Molecule,
+                                           Agg_k1->nMolecules *
+                                           sizeof *Agg_k1->Molecule);
               // move every molecule from aggregate 'k' to aggregate 'k-1'
-              for (int l = 0; l < Aggregate[k].nMolecules; l++) {
-                int mol = Aggregate[k].Molecule[l];
-                Aggregate[k-1].Molecule[l] = mol;
+              for (int l = 0; l < Agg_k->nMolecules; l++) {
+                int mol = Agg_k->Molecule[l];
+                Agg_k1->Molecule[l] = mol;
                 System->Molecule[mol].Aggregate = k - 1;
               }
             }

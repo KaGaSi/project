@@ -1,4 +1,5 @@
 #include "ReadWrite.h"
+#include "General.h"
 #include "ReadWriteVtf.h"
 #include "ReadWriteXyz.h"
 #include "ReadWriteLtrj.h"
@@ -441,12 +442,15 @@ int ReadAggregates(FILE *fr, const char *file, SYSTEM *System,
   Count->Aggregate = val;
   // go through all aggregates, filling in the molecules
   for (int i = 0; i < Count->Aggregate; i++) {
-    fscanf(fr, "%d :", &Aggregate[i].nMolecules);
-    for (int j = 0; j < Aggregate[i].nMolecules; j++) {
+    AGGREGATE *Agg = &Aggregate[i];
+    fscanf(fr, "%d :", &Agg->nMolecules);
+    Agg->Molecule = s_realloc(Agg->Molecule,
+                              Agg->nMolecules * sizeof *Agg->Molecule);
+    for (int j = 0; j < Agg->nMolecules; j++) {
       int mol;
       fscanf(fr, "%d", &mol);
       mol--; // in agg file, the numbers correspond to vmd
-      Aggregate[i].Molecule[j] = mol;
+      Agg->Molecule[j] = mol;
       System->Molecule[mol].Aggregate = i;
     }
     int ch;
@@ -457,8 +461,9 @@ int ReadAggregates(FILE *fr, const char *file, SYSTEM *System,
   for (int i = 0; i < Count->Aggregate; i++) {
     int count = 0;
     double mass = 0;
-    for (int j = 0; j < Aggregate[i].nMolecules; j++) {
-      MOLECULE *mol = &System->Molecule[Aggregate[i].Molecule[j]];
+    AGGREGATE *Agg = &Aggregate[i];
+    for (int j = 0; j < Agg->nMolecules; j++) {
+      MOLECULE *mol = &System->Molecule[Agg->Molecule[j]];
       MOLECULETYPE *mt = &System->MoleculeType[mol->Type];
       if (mt->Mass == MASS || mass == -1) {
         mass = -1;
@@ -466,16 +471,18 @@ int ReadAggregates(FILE *fr, const char *file, SYSTEM *System,
         mass += mt->Mass;
       }
       mol->Aggregate = i;
+      Agg->Bead = s_realloc(Agg->Bead,
+                            (count + mt->nBeads) * sizeof *Agg->Bead);
       for (int k = 0; k < mt->nBeads; k++) {
-        Aggregate[i].Bead[count] = mol->Bead[k];
+        Agg->Bead[count] = mol->Bead[k];
         count++;
       }
     }
-    Aggregate[i].nBeads = count;
+    Agg->nBeads = count;
     if (mass == -1) {
-      Aggregate[i].Mass = MASS; // unspecified mass
+      Agg->Mass = MASS; // unspecified mass
     } else {
-      Aggregate[i].Mass = mass; // valid mass
+      Agg->Mass = mass; // valid mass
     }
   }
   return 1;

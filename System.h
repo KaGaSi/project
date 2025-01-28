@@ -67,8 +67,7 @@ void ChangeMolecules(SYSTEM *Sys_orig, SYSTEM Sys_add, bool name);
 // add/subtract Box.Low to/from coordinates
 void ChangeBoxByLow(SYSTEM *System, int sign);
 
-void ReallocAggMolecule(AGGREGATE *Agg, int *agg_alloc, const int i);
-void SortAggStruct(AGGREGATE *Aggregate, SYSTEM System, int *agg_alloc);
+void SortAggStruct(AGGREGATE *Aggregate, SYSTEM System);
 
 // memory-freeing functions
 void FreeSystem(SYSTEM *System);

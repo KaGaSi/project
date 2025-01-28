@@ -188,5 +188,6 @@ typedef struct Aggregate { //{{{
   double Mass; // total mass of the aggregate
   bool Flag; // should aggregate be used for calculation?
 } AGGREGATE;
-void InitAggregate(SYSTEM System, AGGREGATE **Aggregate); //}}}
+void InitAggregate(SYSTEM System, AGGREGATE **Aggregate);
+void ReInitAggregate(SYSTEM System, AGGREGATE *Aggregate); //}}}
 #endif

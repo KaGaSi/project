@@ -2483,48 +2483,43 @@ void ChangeBoxByLow(SYSTEM *System, int sign) {
   }
 } //}}}
 
-void ReallocAggMolecule(AGGREGATE *Agg, int *agg_alloc, const int i) { //{{{
-  if (Agg[i].nMolecules > agg_alloc[i]) {
-    agg_alloc[i] = Agg[i].nMolecules;
-    Agg[i].Molecule = s_realloc(Agg[i].Molecule,
-                                agg_alloc[i] * sizeof *Agg[i].Molecule);
-  }
-} //}}}
-
-void SortAggStruct(AGGREGATE *Aggregate, SYSTEM System, int *agg_alloc) { //{{{
+void SortAggStruct(AGGREGATE *Aggregate, SYSTEM System) { //{{{
   COUNT *Count = &System.Count;
   for (int i = 0; i < (Count->Aggregate - 1); i++) {
     bool done = true;
     for (int j = 0; j < (Count->Aggregate - i - 1); j++) {
-      if (Aggregate[j].Molecule[0] > Aggregate[j+1].Molecule[0]) {
-        SwapInt(&Aggregate[j].nMolecules, &Aggregate[j+1].nMolecules);
+      AGGREGATE *Agg_j = &Aggregate[j];
+      AGGREGATE *Agg_j1 = &Aggregate[j+1];
+      if (Agg_j->Molecule[0] > Agg_j1->Molecule[0]) {
+        SwapInt(&Agg_j->nMolecules, &Agg_j1->nMolecules);
         // switch the whole Aggregate[].Molecule array
         int mols; // number of molecules in the larger aggregate
-        if (Aggregate[j].nMolecules > Aggregate[j+1].nMolecules) {
-          mols = Aggregate[j].nMolecules;
-          ReallocAggMolecule(Aggregate, agg_alloc, j);
+        if (Agg_j->nMolecules > Agg_j1->nMolecules) {
+          mols = Agg_j->nMolecules;
+          Agg_j->Molecule = s_realloc(Agg_j->Molecule, Agg_j->nMolecules *
+                                      sizeof *Agg_j->Molecule);
         } else {
-          mols = Aggregate[j+1].nMolecules;
-          ReallocAggMolecule(Aggregate, agg_alloc, j + 1);
+          mols = Agg_j1->nMolecules;
+          Agg_j1->Molecule = s_realloc(Agg_j1->Molecule, Agg_j1->nMolecules *
+                                      sizeof *Agg_j1->Molecule);
         }
         for (int k = 0; k < mols; k++) {
-          SwapInt(&Aggregate[j].Molecule[k], &Aggregate[j+1].Molecule[k]);
+          SwapInt(&Agg_j->Molecule[k], &Agg_j1->Molecule[k]);
         }
         // switch bonded beads array
-        SwapInt(&Aggregate[j].nBeads, &Aggregate[j+1].nBeads);
+        SwapInt(&Agg_j->nBeads, &Agg_j1->nBeads);
         int beads; // number of beads in the larger aggregate
-        if (Aggregate[j].nBeads > Aggregate[j+1].nBeads) {
+        if (Agg_j->nBeads > Agg_j1->nBeads) {
           beads = Aggregate[j].nBeads;
-          Aggregate[j].Bead = realloc(Aggregate[j].Bead, Aggregate[j].nBeads *
-                                      sizeof *Aggregate[j].Bead);
+          Agg_j->Bead = realloc(Agg_j->Bead, Agg_j->nBeads *
+                                sizeof *Agg_j->Bead);
         } else {
-          beads = Aggregate[j+1].nBeads;
-          Aggregate[j+1].Bead = realloc(Aggregate[j+1].Bead,
-                                        Aggregate[j+1].nBeads *
-                                        sizeof *Aggregate[j+1].Bead);
+          beads = Agg_j1->nBeads;
+          Agg_j1->Bead = realloc(Agg_j1->Bead, Agg_j1->nBeads *
+                                 sizeof *Agg_j1->Bead);
         }
         for (int k = 0; k < beads; k++) {
-          SwapInt(&Aggregate[j].Bead[k], &Aggregate[j+1].Bead[k]);
+          SwapInt(&Agg_j->Bead[k], &Agg_j1->Bead[k]);
         }
         done = false;
       }

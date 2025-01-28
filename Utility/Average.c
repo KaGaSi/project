@@ -1,5 +1,7 @@
 #include "../AnalysisTools.h"
 
+// TODO: remove <output> in favour of -tau/-b/-m <output> <int> options
+
 // Help() //{{{
 void Help(const char cmd[50], const bool error,
           const int n, const char opt[n][OPT_LENGTH]) {
