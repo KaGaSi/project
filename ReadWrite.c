@@ -1119,6 +1119,15 @@ void PrintStep(int *count_coor, const int start, const bool silent) { //{{{
     fflush(stdout);
   }
 } //}}}
+void PrintLastStep(const int coor, const int used, const bool silent) { //{{{
+  if (!silent) {
+    if (isatty(STDOUT_FILENO)) {
+      fflush(stdout);
+      fprintf(stdout, "\r                          \r");
+    }
+    fprintf(stdout, "Last Step: %d (used %d)\n", coor, used);
+  }
+} //}}}
 void PrintAggregate(const SYSTEM System, const AGGREGATE *Aggregate) { //{{{
   const COUNT *Count = &System.Count;
   fprintf(stdout, "Aggregates: %d\n", Count->Aggregate);

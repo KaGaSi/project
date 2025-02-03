@@ -423,15 +423,8 @@ int main(int argc, char *argv[]) {
       break;
     }
   }
-  // print last step count?
-  if (!opt->c.silent) {
-    if (isatty(STDOUT_FILENO)) {
-      fflush(stdout);
-      fprintf(stdout, "\r                          \r");
-    }
-    fprintf(stdout, "Last Step: %d (used %d)\n", count_coor, count_used);
-  } //}}}
   fclose(fr);
+  PrintLastStep(count_coor, count_used, opt->c.silent); //}}}
 
   // print last step number to <output.agg>
   // open output .agg file for appending

@@ -177,14 +177,8 @@ int main(int argc, char *argv[]) {
     }
   } //}}}
 
-  // allocate Aggregate struct //{{{
-  AGGREGATE *Aggregate = calloc(Count->Molecule, sizeof *Aggregate);
-  for (int i = 0; i < Count->Molecule; i++) {
-    // assumes all bonded beads can be in one aggregate - memory-heavy, but reliable
-    Aggregate[i].Bead = calloc(Count->Bonded, sizeof *Aggregate[i].Bead);
-    // maximum of all molecules can be in one aggregate
-    Aggregate[i].Molecule = calloc(Count->Molecule, sizeof *Aggregate[i].Molecule);
-  } //}}}
+  AGGREGATE *Aggregate = NULL;
+  InitAggregate(System, &Aggregate);
 
   if (opt->c.verbose) {
     VerboseOutput(System);
@@ -211,7 +205,6 @@ int main(int argc, char *argv[]) {
       }
       count_used++;
       // TODO: join aggregates
-      // TODO: will change (probably)
       ReadAggregates(agg, input_agg, &System, Aggregate, &line_count_agg);
 
       // TODO: proper allocation...
@@ -342,14 +335,7 @@ int main(int argc, char *argv[]) {
   }
   fclose(fr);
   fclose(agg);
-  // print last step?
-  if (!opt->c.silent) {
-    if (isatty(STDOUT_FILENO)) {
-      fflush(stdout);
-      fprintf(stdout, "\r                          \r");
-    }
-    fprintf(stdout, "Last Step: %d (used %d)\n", count_coor, count_used);
-  } //}}}
+  PrintLastStep(count_coor, count_used, opt->c.silent); //}}}
 
   // write densities to output file(s) //{{{
   for (int i = 0; i < aggs; i++) {

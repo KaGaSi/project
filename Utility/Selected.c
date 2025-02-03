@@ -1,4 +1,5 @@
 #include "../AnalysisTools.h"
+#include <stdio.h>
 
 // Help() //{{{
 void Help(const char cmd[50], const bool error,
@@ -456,31 +457,35 @@ int main(int argc, char *argv[]) {
   } //}}}
   fclose(fr);
 
+  // // reading file from the end //{{{
+  // fr = OpenFile(in.coor.name, "r");
+  // fseek(fr, 0, SEEK_END); // move to the end of the file
+  // long pos = ftell(fr); // save the pointer position
+  // pos--; // skip EOF character
+  // pos--; // assume the last character in the file is '\n', so skip that too
+  // char test;
+  // line_count = 0;
+  // while (pos >= 0) {
+  //   fseek(fr, pos, SEEK_SET); // decrement pointer position and go there
+  //   test = fgetc(fr);
+  //   if (test == '\n' || pos == 0) {
+  //     line_count++;
+  //     if (pos == 0) {
+  //       ungetc(test, fr);
+  //     }
+  //     ReadAndSplitLine(fr, SPL_STR, " \t\n");
+  //     printf("%5d|%d: %s\n", line_count, words, split[0]);
+  //   }
+  //   pos--;
+  // }
+  // fclose(fr); //}}}
+
   // free memory
   FreeSystem(&System);
   free(write);
   free(position);
   free(bkp_line_count);
   free(opt);
-
-  // // reading file from the end //{{{
-  // FILE *fr = OpenFile(in_coor, "r");
-  // fseek(fr, -1, SEEK_END);
-  // char test = fgetc(fr);
-  // if (test == '\n') {
-  //   printf("empty line\n");
-  //   fseek(fr, -2, SEEK_END);
-  // }
-  // test = fgetc(fr);
-  // printf("%c", test);
-  // do {
-  //   fseek(fr, -2, SEEK_CUR);
-  //   test = fgetc(fr);
-  //   printf("%c", test);
-  // } while (test != '\n');
-  // fgets(in_coor, LINE, fr);
-  // printf("%s", in_coor);
-  // fclose(fr); //}}}
 
   return 0;
 }

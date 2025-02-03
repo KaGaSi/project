@@ -691,14 +691,7 @@ int main(int argc, char *argv[]) {
     }
   }
   fclose(fr);
-  // print last step?
-  if (!opt->c.silent) {
-    if (isatty(STDOUT_FILENO)) {
-      fflush(stdout);
-      fprintf(stdout, "\r                          \r");
-    }
-    fprintf(stdout, "Last Step: %d (used %d)\n", count_coor, count_used);
-  } //}}}
+  PrintLastStep(count_coor, count_used, opt->c.silent); //}}}
 
   // find highest grid point with non-zero surface values //{{{
   int max[2] = {-1, -1};

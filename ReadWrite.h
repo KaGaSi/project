@@ -59,5 +59,6 @@ void PrintAngleTypes(const COUNT Counts, const PARAMS *angle_type);
 void PrintBox(const BOX Box);
 void PrintByline(const char *file, const int argc, char **argv);
 void PrintStep(int *count_coor, const int start, const bool silent);
+void PrintLastStep(const int coor, const int used, const bool silent);
 void PrintAggregate(const SYSTEM System, const AGGREGATE *Aggregate);
 #endif

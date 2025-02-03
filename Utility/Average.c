@@ -92,7 +92,7 @@ int main ( int argc, char** argv ) {
   opt->c = CommonOptions(argc, argv, trash);
   opt->c.start--; // discarded steps rather than starting step //TODO: change
 
-  // -tau option: use block method to get overall average (and stderr and tau)
+  // -tau option: use block method to get overall average (and std_err and tau)
   opt->tau = 0;
   OneNumberOption(argc, argv, "-tau", &opt->tau, 'i');
   // -b option: calculate block averages
@@ -327,28 +327,31 @@ int main ( int argc, char** argv ) {
   // calculate averages and errors and print them //{{{
   // 1) average
   double *avg = calloc(col_count, sizeof *avg);
-  for (int i = 0; i < data_lines; i++) {
-    for (int col = 0; col < col_count; col++) {
-      avg[col] += data[col][i] / data_lines;
+  for (int col = 0; col < col_count; col++) {
+    for (int i = 0; i < data_lines; i++) {
+      avg[col] += data[col][i];
     }
+    avg[col] /=  data_lines;
   }
   // 2) error
   // a) calculate the sum of squared differences from the mean
-  double *sumdiff = calloc(col_count, sizeof *sumdiff);
-  for (int i = 0; i < data_lines; i++) {
-    for (int col = 0; col < col_count; col++) {
-      sumdiff[col] += Square(data[col][i] - avg[col]);
+  double *std_dev = calloc(col_count, sizeof *std_dev);
+  for (int col = 0; col < col_count; col++) {
+    for (int i = 0; i < data_lines; i++) {
+      std_dev[col] += Square(data[col][i] - avg[col]);
     }
+    std_dev[col] = sqrt(std_dev[col] / (data_lines - 1));
   }
   // b) calculate the sample standard deviation and standard error
-  double *stderr = calloc(col_count, sizeof *stderr);
+  double *std_err = calloc(col_count, sizeof *std_err);
   for (int col = 0; col < col_count; col++) {
-    double sig = sqrt(sumdiff[col] / (data_lines - 1));
-    stderr[col] = sig / sqrt(data_lines);
+    // double sig = std_dev[col];
+    std_err[col] = std_dev[col] / sqrt(data_lines);
   }
   // print averages and errors to standard output
   for (int col = 0; col < col_count; col++) {
-    fprintf(stdout, "%lf %lf\n", avg[col], stderr[col]);
+    // fprintf(stdout, "%lf %lf %lf\n", avg[col], std_dev[col], std_err[col]);
+    fprintf(stdout, "%lf %lf\n", avg[col], std_err[col]);
   } //}}}
 
   for (int i = 0; i < col_count; i++) {

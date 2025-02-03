@@ -188,14 +188,7 @@ int main(int argc, char *argv[]) {
     }
   }
   fclose(fr);
-  // print last step?
-  if (!opt->c.silent) {
-    if (isatty(STDOUT_FILENO)) {
-      fflush(stdout);
-      fprintf(stdout, "\r                          \r");
-    }
-    fprintf(stdout, "Last Step: %d (used %d)\n", count_coor, count_used);
-  } //}}}
+  PrintLastStep(count_coor, count_used, opt->c.silent); //}}}
 
   // write densities to output file(s) //{{{
   for (int ax = 0; ax < 3; ax++) {
