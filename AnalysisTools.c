@@ -526,18 +526,20 @@ bool InputCoorStruct(const int argc, char **argv, SYS_FILES *f) {
   }
   return true;
 } //}}}
-int StructureFileType(const char *name) { //{{{
+int StructureFileType(const char *path) { //{{{
+  const char *name = StripPath(path);
   int ft = FindFileType(name);
   if (ft == VTF_FILE || ft == VSF_FILE || ft == FIELD_FILE ||
       ft == LDATA_FILE || ft == LTRJ_FILE || ft == XYZ_FILE) {
     return ft;
   } else {
     err_msg("Not a structure file");
-    PrintErrorFile(name, "\0", "\0");
+    PrintErrorFile(path, "\0", "\0");
     exit(1);
   }
 } //}}}
-int CoordinateFileType(const char *name) { //{{{
+int CoordinateFileType(const char *path) { //{{{
+  const char *name = StripPath(path);
   int ft = FindFileType(name);
   if (ft == VTF_FILE ||
       ft == VCF_FILE ||
@@ -548,7 +550,7 @@ int CoordinateFileType(const char *name) { //{{{
     return ft;
   } else {
     err_msg("Not a coordinate file");
-    PrintErrorFile(name, "\0", "\0");
+    PrintErrorFile(path, "\0", "\0");
     exit(1);
   }
 } //}}}
